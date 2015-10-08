@@ -1,0 +1,4 @@
+extensions:
+  - id: urls
+    path: /gohan/v0.1/schem.*
+    url: file://./urls.js

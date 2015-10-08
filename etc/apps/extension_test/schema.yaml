@@ -1,0 +1,42 @@
+extensions:
+- id: filter_networks
+  path: /v2.0/network.*
+  url: file://./filter_networks.js
+- id: validators
+  path: ""
+  url: file://./validators.js
+schemas:
+- description: Network
+  id: network
+  parent: ""
+  plural: networks
+  schema:
+    properties:
+      id:
+        format: uuid
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: true
+      name:
+        default: ""
+        permission:
+        - create
+        - update
+        title: Name
+        type: string
+        unique: false
+      tenant_id:
+        format: uuid
+        permission:
+        - create
+        title: Tenant id
+        type: string
+        unique: false
+    propertiesOrder:
+    - name
+    - id
+    - tenant_id
+  singular: network
+  title: Network

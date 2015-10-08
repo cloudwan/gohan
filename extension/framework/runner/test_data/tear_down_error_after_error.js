@@ -1,0 +1,10 @@
+var SCHEMAS = ["./schema.yaml"];
+var PATH = "/v1.0/networks";
+
+function tearDown() {
+  throw new Error("tearDown");
+}
+
+function testTearDownErrorAfterError() {
+  throw new Error("original");
+}

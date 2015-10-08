@@ -1,0 +1,908 @@
+extensions:
+- id: network
+  path: /v2.0/network.*
+  url: file://./neutron/network.js
+- id: subnet_validate
+  path: /v2.0/subnets
+  url: file://./neutron/subnet_validate.js
+- id: exceptions
+  path: ""
+  url: file://./neutron/exceptions.js
+- id: ipValidator
+  path: ""
+  url: file://./neutron/validators/ip_address.js
+- id: port_notify
+  path: (/v2.0/port.*)|(/v1.0/heat_stack.*)
+  url: file://./neutron/port_notify.js
+- id: heat_stack_status_field
+  path: /v1.0/heat_stack.*
+  url: file://./neutron/heat_stack.js
+- id: port
+  path: /v2.0/port.*
+  url: file://./neutron/port.js
+- id: jinja
+  path: ""
+  url: file://../extensions/jinja.js
+- id: test
+  path: ""
+  url: file://./neutron/test.js
+heat_stacks: []
+heat_templates:
+- id: network
+  parameter_mappings:
+    name: Pid
+  template_file: |
+    heat_template_version: 2013-05-23
+
+    description: >
+      Network template
+
+    parameters:
+      name:
+        type: string
+        label: Virtual Network Name
+        description: Name of the virtual network that will be created.
+      forwarding_mode:
+        type: string
+        label: Forwarding Mode
+        description: Forwarding Mode.
+        default: 'l2_l3'
+      route_targets:
+        type: comma_delimited_list
+        label: Route Targets list
+        default: []
+      shared:
+        type: boolean
+        label: Shared Network
+        default: false
+      external:
+        type: boolean
+        label: External Network
+        default: true
+      allow_transit:
+        type: boolean
+        label: Allow Trnasit
+        default: false
+
+    resources:
+      network:
+        type: OS::Contrail::VirtualNetwork
+        properties:
+          name: { get_param: name }
+          forwarding_mode: { get_param: forwarding_mode }
+          route_targets: { get_param: route_targets }
+
+    outputs:
+      id:
+        description: A unique id for the virtual network.
+        value: { get_resource: network }
+      name:
+        description: The name of the virtual network.
+        value: { get_attr: [network, name] }
+      fq_name:
+        description: The FQ name of the virtual network.
+        value: { get_attr: [network, fq_name] }
+      route_targets:
+        description: The name of the virtual network.
+        value: { get_attr: [network, route_targets] }
+  watch: []
+- id: subnet
+  parameter_mappings:
+    allocation_pools: Pallocation_pools
+    cidr: Pcidr
+    dns_nameservers: Pdns_nameservers
+    enable_dhcp: Penable_dhcp
+    gateway_ip: Pgateway_ip
+    ipam: C
+    name: Pid
+    network_id: Mnetwork:network_id:id
+  template_file: |
+    heat_template_version: 2013-05-23
+
+    description: >
+      Subnet template
+
+    parameters:
+      name:
+        type: string
+        label: Local Subnet Name
+        description: Name of the local subnet that will be created.
+      network_id:
+        type: string
+        label: Network ID
+        description: ID of the network for which subnet will be created.
+      cidr:
+        type: string
+        label: Local Subnet IP prefix
+        description: IP prefix of the local subnet that will be created.
+      gateway_ip:
+        type: string
+        label: Default Gateway
+        description: Default gateway for the local subnet that will be created.
+      ipam:
+        type: string
+        label: IP Address Management
+        description: IPAM for the local subnet that will be created.
+        default: ''
+      enable_dhcp:
+        type: boolean
+        label: Enable DHCP
+        description: Enable DHCP
+        default: true
+      allocation_pools:
+        type: string
+        label: Allocation Pools
+        description: Allocation Pools
+        default: []
+      dns_nameservers:
+        type: comma_delimited_list
+        label: DNS Nameservers List
+        description: DNS Nameservers List
+        default: []
+      host_routes:
+        type: string
+        label: Host Routes
+        description: Host Routes
+        default: []
+
+    resources:
+      subnet:
+        type: OS::Contrail::VnSubnet
+        properties:
+          name: { get_param: name }
+          network_id: { get_param: network_id }
+          ip_prefix: { get_param: cidr }
+          default_gateway: { get_param: gateway_ip }
+          ipam: { get_param: ipam }
+          enable_dhcp: { get_param: enable_dhcp }
+          dns_nameservers: { get_param: dns_nameservers }
+          allocation_pools: { get_param: allocation_pools }
+          host_routes: { get_param: host_routes }
+
+    outputs:
+      id:
+        description: A unique id for the local subnet.
+        value: { get_resource: subnet }
+      name:
+        description: The name of the local subnet.
+        value: { get_attr: [subnet, name] }
+      network_id:
+        description: A unique id for the network.
+        value: { get_attr: [subnet, network_id] }
+      ip_prefix:
+        description: IP prefix of local subnet.
+        value: { get_attr: [subnet, ip_prefix] }
+      default_gateway:
+        description: Default gateway of local subnet.
+        value: { get_attr: [subnet, default_gateway] }
+      ipam:
+        description: IPAM this local subnet uses.
+        value: { get_attr: [subnet, ipam] }
+  watch: []
+- id: port
+  parameter_mappings:
+    jinja_fixed_ips: Pfixed_ips
+    jinja_subnet_mapping: Ksubnet:Lid+fixed_ips+subnet_id:id
+    name: Pid
+    virtual_machine_interface_mac_address: Pmac_address
+    virtual_network: Mnetwork:network_id:id
+  template_file: |
+    heat_template_version: 2013-05-23
+
+    description: >
+      Virtual Machine Interface Template
+
+    parameters:
+      name:
+        type: string
+        label: Virtual Interface ID
+        description: A unique id for the Virtual Interface.
+      virtual_machine_interface_mac_address:
+        type: string
+        label: Virtual machine interface mac address.
+      virtual_network:
+        type: string
+        label: Virtual Network.
+
+    resources:
+      virtual_machine_interface:
+        type: OS::Contrail::VirtualMachineInterface
+        properties:
+          name: { get_param: name }
+          virtual_machine_interface_mac_addresses: [ { get_param: virtual_machine_interface_mac_address } ]
+          virtual_networks: [ { get_param: virtual_network } ]
+
+    {% for fixed_ip in jinja_fixed_ips %}
+    {% set instance_ip_id = 'instance_ip_' + (loop.index0|string) %}
+      {{ instance_ip_id }}:
+        type: OS::Contrail::InstanceIp
+        properties:
+          name:
+            str_replace:
+              template: '%name%_%zone%'
+              params:
+                "%name%": { get_param: name }
+                "%zone%": {{ fixed_ip.subnet_id }}
+          ip_address: {{ fixed_ip.ip_address }}
+          subnet_id: {{ jinja_subnet_mapping.get(fixed_ip.subnet_id) }}
+          network_id: { get_param: virtual_network }
+          virtual_machine_interfaces: [ { get_resource: virtual_machine_interface } ]
+    {% endfor %}
+
+    outputs:
+      id:
+        description: A unique id for the virtual machine interface.
+        value: { get_resource: virtual_machine_interface }
+      mac_address:
+        description: Virtual machine interface mac address.
+        value: { get_attr: [virtual_machine_interface, virtual_machine_interface_mac_addresses] }
+      virtual_network:
+        description: Virtual network.
+        value: { get_attr: [virtual_machine_interface, virtual_networks] }
+  watch: []
+namespaces:
+- description: Neutron API
+  id: neutron
+  name: Neutron
+  prefix: neutron
+- description: Version 2.0 of Neutron API
+  id: neutronV2
+  name: Neutron 2.0
+  parent: neutron
+  prefix: v2.0
+  version: "2.0"
+networks: []
+ports: []
+schemas:
+- description: Network
+  id: network
+  namespace: neutronV2
+  parent: ""
+  plural: networks
+  schema:
+    properties:
+      admin_state_up:
+        default: false
+        permission:
+        - create
+        - update
+        title: Admin state up
+        type: boolean
+        unique: false
+      id:
+        format: uuid
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: true
+      name:
+        default: ""
+        permission:
+        - create
+        - update
+        title: Name
+        type: string
+        unique: false
+      router:external:
+        default: false
+        permission:
+        - create
+        - update
+        title: External
+        type: boolean
+        unique: false
+      shared:
+        default: false
+        permission:
+        - create
+        - update
+        title: Shared
+        type: boolean
+        unique: false
+      status:
+        title: Status
+        type: string
+        unique: false
+      subnets:
+        default: []
+        items:
+          format: uuid
+          type: string
+        title: Subnets
+        type: array
+        unique: false
+      tenant_id:
+        format: uuid
+        permission:
+        - create
+        title: Tenant id
+        type: string
+        unique: false
+    propertiesOrder:
+    - name
+    - id
+    - tenant_id
+    - status
+    - shared
+    - admin_state_up
+    - subnets
+  singular: network
+  title: Network
+- description: Subnet
+  id: subnet
+  namespace: neutronV2
+  parent: network
+  plural: subnets
+  schema:
+    properties:
+      allocation_pools:
+        default: []
+        items:
+          properties:
+            end:
+              permission:
+              - create
+              - update
+              title: End
+              type: string
+              unique: false
+            start:
+              permission:
+              - create
+              - update
+              title: Start
+              type: string
+              unique: false
+          propertiesOrder:
+          - start
+          - end
+          type: object
+        permission:
+        - create
+        - update
+        title: Allocation pools
+        type: array
+        unique: false
+      cidr:
+        permission:
+        - create
+        title: CIDR
+        type: string
+        unique: false
+      dns_nameservers:
+        default: []
+        items:
+          type: string
+        permission:
+        - create
+        - update
+        title: DNS nameservers
+        type: array
+        unique: false
+      enable_dhcp:
+        default: false
+        permission:
+        - create
+        - update
+        title: Enable DHCP
+        type: boolean
+        unique: false
+      gateway_ip:
+        default: ""
+        permission:
+        - create
+        - update
+        title: Gateway IP
+        type: string
+        unique: false
+      host_routes:
+        default: []
+        items:
+          properties:
+            destination:
+              title: Destination
+              type: string
+            nexthop:
+              title: Nexthop
+              type: string
+          type: object
+        permission:
+        - create
+        - update
+        title: Host routes
+        type: array
+        unique: false
+      id:
+        format: uuid
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: true
+      ip_version:
+        enum:
+        - 4
+        - 6
+        permission:
+        - create
+        title: IP version
+        type: integer
+        unique: false
+      ipv6_address_mode:
+        default: static
+        enum:
+        - dhcpv6-stateful
+        - dhcpv6-stateless
+        - static
+        permission:
+        - create
+        title: IPv6 address mode
+        type: string
+        unique: false
+      ipv6_ra_mode:
+        default: static
+        enum:
+        - dhcpv6-stateful
+        - dhcpv6-stateless
+        - static
+        permission:
+        - create
+        title: IPv6 ra mode
+        type: string
+        unique: false
+      name:
+        default: ""
+        permission:
+        - create
+        - update
+        title: Name
+        type: string
+        unique: false
+      network_id:
+        format: uuid
+        permission:
+        - create
+        relation: network
+        title: Network id
+        type: string
+        unique: false
+      tenant_id:
+        format: uuid
+        permission:
+        - create
+        title: Tenant id
+        type: string
+        unique: false
+    propertiesOrder:
+    - name
+    - id
+    - tenant_id
+    - network_id
+    - cidr
+    - ip_version
+    - ipv6_address_mode
+    - ipv6_ra_mode
+    - gateway_ip
+    - enable_dhcp
+    - allocation_pools
+    - dns_nameservers
+    - host_routes
+    type: object
+  singular: subnet
+  title: Subnet
+- description: Port
+  id: port
+  namespace: neutronV2
+  parent: network
+  plural: ports
+  schema:
+    properties:
+      admin_state_up:
+        default: false
+        permission:
+        - create
+        - update
+        title: Admin state up
+        type: boolean
+        unique: false
+      allowed_address_pairs:
+        default: []
+        items:
+          properties:
+            ip_address:
+              title: IP address
+              type: string
+            mac_address:
+              title: MAC address
+              type: string
+          type: object
+        permission:
+        - create
+        title: Allowed address pairs
+        type: array
+        unique: false
+      device_id:
+        format: uuid
+        permission:
+        - create
+        title: Device id
+        type: string
+        unique: false
+      device_owner:
+        permission:
+        - create
+        title: Device owner
+        type: string
+        unique: false
+      extra_dhcp_opts:
+        default: []
+        items:
+          properties:
+            opt_name:
+              title: Name
+              type: string
+            opt_value:
+              title: Value
+              type: string
+          type: object
+        permission:
+        - create
+        title: Extra DHCP opts
+        type: array
+        unique: false
+      fixed_ips:
+        default: []
+        items:
+          properties:
+            ip_address:
+              title: IP address
+              type: string
+            subnet_id:
+              format: uuid
+              title: Subnet id
+              type: string
+          type: object
+        permission:
+        - create
+        - update
+        title: Fixed IPs
+        type: array
+        unique: false
+      id:
+        format: uuid
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: true
+      mac_address:
+        default: ""
+        permission:
+        - create
+        title: MAC address
+        type: string
+        unique: false
+      name:
+        default: ""
+        permission:
+        - create
+        - update
+        title: Name
+        type: string
+        unique: false
+      network_id:
+        default: ""
+        format: uuid
+        permission:
+        - create
+        title: Network id
+        type: string
+        unique: false
+      security_groups:
+        default: []
+        items:
+          type: string
+        permission:
+        - create
+        - update
+        title: Security groups
+        type: array
+        unique: false
+      status:
+        title: Status
+        type: string
+        unique: false
+      subnet_id:
+        default: ""
+        format: uuid
+        permission:
+        - create
+        title: Subnet id
+        type: string
+        unique: false
+      tenant_id:
+        format: uuid
+        permission:
+        - create
+        title: Tenant id
+        type: string
+        unique: false
+    propertiesOrder:
+    - name
+    - id
+    - tenant_id
+    - admin_state_up
+    - mac_address
+    - fixed_ips
+    - subnet_id
+    - security_groups
+    - network_id
+    - allowed_address_pairs
+    - device_owner
+    - device_id
+    - extra_dhcp_opts
+    - status
+    singular: port
+    type: object
+  title: Port
+- description: Heat Template
+  id: heat_template
+  parent: ""
+  plural: heat_templates
+  prefix: /v1.0
+  schema:
+    properties:
+      handler:
+        permission:
+        - create
+        title: Handler
+        type: string
+        unique: false
+      id:
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: true
+      parameter_mappings:
+        format: yaml
+        permission:
+        - create
+        - update
+        title: Parameters mapping
+        type: object
+        unique: false
+      template_file:
+        format: yaml
+        permission:
+        - create
+        - update
+        title: Template File
+        type: string
+        unique: false
+      watch:
+        default: []
+        items:
+          type: string
+        permission:
+        - create
+        - update
+        title: Watch list
+        type: array
+        unique: false
+    propertiesOrder:
+    - id
+    - watch
+    - handler
+    - parameter_mappings
+    - template_file
+    type: object
+  singular: heat_template
+  title: Heat Template
+- description: Heat Stacks
+  id: heat_stack
+  parent: ""
+  plural: heat_stacks
+  prefix: /v1.0
+  schema:
+    properties:
+      id:
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: true
+      input:
+        default: ""
+        permission:
+        - create
+        - update
+        title: Input
+        type: string
+        unique: false
+      last_index:
+        default: ""
+        permission:
+        - create
+        - update
+        title: Last Index
+        type: integer
+        unique: false
+      output:
+        default: ""
+        permission:
+        - create
+        - update
+        title: Output
+        type: string
+        unique: false
+      related_stacks:
+        default: ""
+        permission:
+        - create
+        - update
+        title: Related Stacks
+        type: string
+        unique: false
+      stack_id:
+        default: ""
+        permission:
+        - create
+        - update
+        title: Stack ID
+        type: string
+        unique: false
+      stack_status:
+        default: ""
+        permission:
+        - create
+        - update
+        title: Stack Status
+        type: string
+        unique: false
+      status_reason:
+        default: ""
+        permission:
+        - create
+        - update
+        title: Status Reason
+        type: string
+        unique: false
+    propertiesOrder:
+    - id
+    - stack_id
+    - input
+    - output
+    - stack_status
+    - status_reason
+    - last_index
+    - related_stacks
+    type: object
+  singular: heat_stack
+  title: Heat Stacks
+- description: Worker Data
+  id: worker_data
+  parent: ""
+  plural: worker_datas
+  prefix: /v1.0
+  schema:
+    properties:
+      id:
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: true
+      value:
+        default: ""
+        permission:
+        - create
+        - update
+        title: Value
+        type: string
+        unique: false
+    propertiesOrder:
+    - id
+    - value
+    type: object
+  singular: worker_data
+  title: Worker Data
+- description: Floating IP
+  id: floatingip
+  namespace: neutronV2
+  parent: ""
+  plural: floatingips
+  schema:
+    properties:
+      fixed_ip_address:
+        title: Fixed IP address
+        type: string
+        unique: false
+      floating_ip_address:
+        title: Floating IP address
+        type: string
+        unique: false
+      floating_network_id:
+        format: uuid
+        title: Floating network ID
+        type: string
+        unique: false
+      id:
+        title: ID
+        type: string
+        unique: true
+      port_id:
+        format: uuid
+        title: Port ID
+        type: string
+        unique: false
+      router_id:
+        format: uuid
+        title: Router ID
+        type: string
+        unique: false
+      status:
+        enum:
+        - ACTIVE
+        - DOWN
+        title: Status
+        type: string
+        unique: false
+      tenant_id:
+        title: Tenant ID
+        type: string
+        unique: false
+  singular: floatingip
+  title: Floating IPs
+- description: Neutron 2.0 extension
+  id: neutron_extension
+  namespace: neutronV2
+  parent: ""
+  plural: extensions
+  schema:
+    properties:
+      alias:
+        title: Alias
+        type: string
+        unique: true
+      description:
+        default: ""
+        title: Description
+        type: string
+        unique: false
+      id:
+        title: ID
+        type: string
+        unique: true
+      links:
+        default: []
+        items:
+          properties:
+            href:
+              title: href
+              type: string
+              unique: false
+            rel:
+              title: rel
+              type: string
+              unique: false
+          type: object
+        title: Links
+        type: array
+        unique: false
+      name:
+        title: Name
+        type: string
+        unique: false
+      namespace:
+        title: Namespace
+        type: string
+        unique: false
+      updated:
+        title: Updated
+        type: string
+        unique: false
+  singular: extension
+  title: Neutron extension
+subnets: []

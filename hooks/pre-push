@@ -1,0 +1,21 @@
+#!/bin/bash
+
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+PUSH_COMMAND=$(ps -ocommand= -p $PPID)
+
+if [[ $BRANCH =~ master|development && $PUSH_COMMAND =~ force|delete|-f ]]; then
+  echo "Prevented force-push to $BRANCH. This is deprecated as it will overwrite"
+  echo "the history of commits that other developers have already downloaded."
+  echo "Try to use it only on your own branches."
+  echo "If you really have to do this, use --no-verify to bypass this pre-push hook."
+  exit 1
+elif [[ $BRANCH =~ master|development ]]; then
+  read -p "Are you sure you want to Push to $BRANCH?(y/n)" -n 1 < /dev/tty
+  if [[ ! $REPLY =~ y|Y ]]; then
+    echo
+    exit 1
+  fi
+fi
+
+#Do not delete this line
+./hooks/run_local_hook.sh $@

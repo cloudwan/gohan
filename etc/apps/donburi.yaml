@@ -1,0 +1,456 @@
+extensions:
+- id: network
+  code_type: donburi
+  code: |
+    tasks:
+      - contrail:
+          schema: "virtual-network"
+          allow_update: []
+          id: "{{ .response.contrail_virtual_network }}"
+          properties:
+            parent_type: "project"
+            fq_name:
+              - default-domain
+              - "{{ .tenant_name }}"
+              - "{{ .response.id }}"
+        register: network_response
+      - vars:
+          status: "ACTIVE"
+        when: network_response.status_code == 200
+        else:
+          - vars:
+              status: "ERROR"
+          - vars:
+              response_code: 409
+            when: network_response.status_code != 404 && event_type == "pre_delete"
+      - update:
+          schema: "network"
+          properties:
+            id: "{{ .response.id }}"
+            contrail_virtual_network: '{{ index .network_response "data" "virtual-network" "uuid" }}'
+            status: "{{ .status }}"
+  path: "/v2.0/network.*"
+- id: subnet
+  code_type: donburi
+  code: |
+    tasks:
+      - fetch:
+          schema: "network"
+          id: "{{ .response.network_id }}"
+          tenant_id: "{{ .tenant }}"
+        register: network
+      - debug: "vn: {{ .network.contrail_virtual_network }} "
+      - contrail:
+          schema: "virtual-network-subnet"
+          network_id: "{{ .network.contrail_virtual_network}}"
+          allow_update: []
+          properties:
+            subnet_uuid: "{{ .response.id }}"
+            dns_nameservers: []
+            allocation_pools: []
+            dhcp_option_list: null
+            host_routes: null
+            subnet_cidr: "{{ .response.cidr}}"
+        register: subnet_response
+      - vars:
+          status: "ACTIVE"
+        when: subnet_response.status_code == 200
+        else:
+          - vars:
+              status: "ERROR"
+          - vars:
+              response_code: 409
+            when: subnet_response.status_code != 404 && event_type == "pre_delete"
+      - update:
+          schema: "subnet"
+          properties:
+            id: "{{ .response.id }}"
+            status: "{{ .status }}"
+  path: "/v2.0/subnet.*"
+- id: server
+  code_type: donburi
+  code: |
+    tasks:
+      - fetch:
+          schema: "network"
+          id: "{{ .response.network_id }}"
+          tenant_id: "{{ .tenant }}"
+        register: network
+      - fetch:
+          schema: "heat_stack"
+          id: "{{ .response.id }}"
+          tenant_id: "{{ .tenant }}"
+        register: heat_stack
+        when: event_type != "post_create"
+      - heat:
+          stack_name: "server_{{ .response.id }}"
+          id: "{{ .heat_stack.heat_stack_id }}"
+          template:
+            heat_template_version: 2013-05-23
+            parameters: {}
+            resources:
+                server:
+                  type: OS::Nova::Server
+                  properties:
+                    image: "tinycore-in-network-nat"
+                    flavor: "m1.tiny"
+                    networks:
+                        - network: "{{ .network.contrail_virtual_network}}"
+            outputs:
+              server_networks:
+                description: The networks of the deployed server
+                value: { get_attr: [server, networks] }
+        register: heat_response
+      - resource:
+          schema: "heat_stack"
+          id: "{{ .response.id }}"
+          properties:
+            name: "{{ .response.name }}"
+            body: "{{ .heat_response.body }}"
+            tenant_id: "{{ .tenant }}"
+            heat_stack_id: "{{ .heat_response.data.stack.id }}"
+  path: "/v2.0/server.*"
+- id: device
+  code_type: donburi
+  code: |
+    tasks:
+      - block:
+          - netconf_open:
+              host: "{{.response.management_ip}}"
+              username: "admin"
+            register: session
+          - netconf_exec:
+              connection: session
+              command: "<get-config><source><running/></source></get-config>"
+            register: output
+          - debug: "{{.output.output.RawReply}}"
+        always:
+          - netconf_close: session
+      - block:
+          - ssh_open:
+              host: "{{.response.management_ip}}:22"
+              username: "admin"
+            register: session
+            rescue:
+              - debug: "{{.error}}"
+          - ssh_exec:
+              connection: session
+              command: "show interfaces"
+            register: output
+            rescue:
+              - debug: "{{.error}}"
+          - debug: "{{.output.output}}"
+        always:
+          - ssh_close: session
+  path: "/v2.0/device.*"
+- id: amqp_notification
+  code_type: donburi
+  path: "amqp://orchestration.stack"
+  code: |
+    tasks:
+      - vars:
+         stack_id: "{{ .event.payload.stack_name }}"
+         state: "{{ .event.payload.state }}"
+      - eval: "stack_id = stack_id.slice(7)"
+      - vars:
+          state: "ACTIVE"
+        when: state == "CREATE_COMPLETE"
+      - update:
+          schema: "server"
+          properties:
+            id: "{{ .stack_id }}"
+            status: "{{ .state }}"
+        rescue:
+          - debug: "{{ .error }}"
+- id: sync_notification
+  code_type: donburi
+  path: "sync://v2.0/servers/"
+  code: |
+    tasks:
+      - debug: "synced {{ .action }} "
+- id: snmp
+  code_type: donburi
+  path: "snmp://"
+  code: |
+    tasks:
+      - debug: "remote host: {{ .remote }} {{ .trap }} "
+      - debug: "traps: {{ .item.key }} {{ .item.value }} "
+        with_dict: "trap"
+- id: cron_job
+  code_type: donburi
+  path: "cron://cron_job_sample"
+  code: |
+    tasks:
+      - debug: "cron job"
+policies:
+- action: '*'
+  effect: allow
+  id: admin_statement
+  principal: admin
+  resource:
+    path: .*
+schemas:
+- id: network
+  plural: networks
+  prefix: /v2.0
+  description: Network
+  schema:
+    properties:
+      id:
+        permission:
+        - create
+        title: ID
+        type: string
+        format: uuid
+        unique: true
+        description: ID
+      name:
+        permission:
+        - create
+        - update
+        title: Name
+        type: string
+        unique: false
+        description: Name
+      contrail_virtual_network:
+        title: contrail_virtual_network
+        type: string
+        unique: false
+        description: VN ID
+      status:
+        title: status
+        type: string
+        unique: false
+        description: status
+      tenant_id:
+        title: TenantID
+        permission:
+        - create
+        type: string
+        unique: false
+        description: TenantID
+    propertiesOrder:
+    - id
+    - name
+    - contrail_virtual_network
+    - status
+    - tenant_id
+    type: object
+  singular: network
+  title: Network
+- id: subnet
+  plural: subnets
+  prefix: /v2.0
+  description: subnet
+  schema:
+    properties:
+      id:
+        permission:
+        - create
+        title: ID
+        type: string
+        format: uuid
+        unique: true
+        description: ID
+      name:
+        permission:
+        - create
+        - update
+        title: Name
+        type: string
+        unique: false
+        description: Name
+      cidr:
+        permission:
+        - create
+        - update
+        title: Cidr
+        type: string
+        unique: false
+        description: cidr
+      network_id:
+        permission:
+        - create
+        relation: network
+        title: Network id
+        type: string
+        unique: false
+        description: network_id
+      status:
+        title: status
+        type: string
+        unique: false
+        description: status
+      tenant_id:
+        title: TenantID
+        permission:
+        - create
+        type: string
+        unique: false
+        description: TenantID
+    propertiesOrder:
+    - id
+    - name
+    - cidr
+    - network_id
+    - status
+    - tenant_id
+    type: object
+  singular: subnet
+  title: Subnet
+- id: server
+  plural: servers
+  prefix: /v2.0
+  description: server
+  schema:
+    properties:
+      id:
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: true
+        format: uuid
+        description: ID
+      name:
+        permission:
+        - create
+        - update
+        title: Name
+        type: string
+        unique: false
+        description: Name
+      network_id:
+        permission:
+        - create
+        relation: network
+        title: network id
+        type: string
+        unique: false
+        description: Network ID
+      status:
+        permission: []
+        title: Status
+        type: string
+        unique: false
+        description: status
+      tenant_id:
+        title: TenantID
+        permission:
+        - create
+        type: string
+        unique: false
+        description: TenantID
+    propertiesOrder:
+    - id
+    - name
+    - network_id
+    - status
+    - tenant_id
+    type: object
+  singular: server
+  title: Server
+- id: heat_stack
+  plural: heat_stacks
+  prefix: /v2.0
+  description: heat_stack
+  schema:
+    properties:
+      id:
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: true
+        format: uuid
+        description: ID
+      name:
+        permission:
+        - create
+        - update
+        title: Name
+        type: string
+        unique: false
+        description: Name
+      body:
+        permission:
+        - create
+        title: heat_output
+        type: string
+        unique: false
+        description: Body
+      heat_stack_id:
+        permission:
+          - update
+        title: Stack ID
+        type: string
+        unique: false
+        description: Heat STack ID
+      tenant_id:
+        title: TenantID
+        permission:
+        - create
+        type: string
+        unique: false
+        description: TenantID
+    propertiesOrder:
+    - id
+    - name
+    - body
+    - heat_stack_id
+    - tenant_id
+    type: object
+  singular: heat_stack
+  title: Heat Stack
+- id: device
+  plural: devices
+  prefix: /v2.0
+  description: device
+  schema:
+    properties:
+      id:
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: true
+        format: uuid
+        description: ID
+      name:
+        permission:
+        - create
+        - update
+        title: Name
+        type: string
+        unique: false
+        description: Name
+      management_ip:
+        permission:
+        - create
+        title: management ip address
+        type: string
+        unique: false
+        description: Management IP
+      status:
+        permission: []
+        title: Status
+        type: string
+        unique: false
+        description: status
+      tenant_id:
+        title: TenantID
+        permission:
+        - create
+        type: string
+        unique: false
+        description: TenantID
+    propertiesOrder:
+    - id
+    - name
+    - management_ip
+    - status
+    - tenant_id
+    type: object
+  singular: device
+  title: Device
+

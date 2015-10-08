@@ -1,0 +1,8 @@
+{
+    "tests": [
+        {"tenant_id": "tenant0", "test_string": "obj0"},
+        {"tenant_id": "tenant0", "test_string": "obj1"},
+        {"tenant_id": "tenant1", "test_string": "obj2"},
+        {"tenant_id": "tenant1", "test_string": "obj3"}
+    ]
+}

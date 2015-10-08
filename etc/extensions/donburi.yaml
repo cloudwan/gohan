@@ -1,0 +1,7 @@
+extensions:
+- id: contrail_config
+  path: .*
+  url: file://../contrail/extensions/contrail_extension_config.js
+- id: donburi
+  path: .*
+  url: file://./donburi.js

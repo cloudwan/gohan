@@ -1,0 +1,27 @@
+#!/bin/bash
+
+files=$(git diff --cached --name-only --diff-filter=ACM)
+
+for file in $files; do
+  if [ $file != ${file%.go} ]; then
+    go fmt $file
+    git add $file
+    GOLINT_RESPONSE=$(golint $file)
+    if [ "$GOLINT_RESPONSE" ]; then
+      echo $GOLINT_RESPONSE
+      echo "You should not commit wrong syle code. Fix above (golint $file)."
+      exit 1
+    fi
+    GOVET_RESPONSE=$(go vet $file 2>&1)
+    if [ "$GOVET_RESPONSE" ]; then
+      echo $GOVET_RESPONSE
+      echo "Your code has some suspicious constructs. Fix above (go vet $file)."
+      exit 1
+    fi
+  else
+    sed --in-place 's/[[:space:]]\+$//' $file
+  fi
+done
+
+#Do not delete this line
+./hooks/run_local_hook.sh $@
