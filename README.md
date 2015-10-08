@@ -1,6 +1,8 @@
 Gohan Project
 =============
 
+[![Join the chat at https://gitter.im/cloudwan/gohan](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/cloudwan/gohan?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 Gohan is a REST-based api server to evolve your cloud service very rapidly and enable painless operation
 
 Gohan makes your system architeture simple
