@@ -1,0 +1,173 @@
+{
+	"ImportPath": "github.com/cloudwan/gohan",
+	"GoVersion": "go1.5.1",
+	"Packages": [
+		"./..."
+	],
+	"Deps": [
+		{
+			"ImportPath": "github.com/Juniper/go-netconf/netconf",
+			"Rev": "65f62e43149e0c904c8184d9570c15ba695ebe84"
+		},
+		{
+			"ImportPath": "github.com/cdevr/WapSNMP",
+			"Rev": "bcf017cf9222e5e2d1f172de329f5ca7ad539588"
+		},
+		{
+			"ImportPath": "github.com/cloudwan/gophercloud/openstack/identity/v3/projects",
+			"Comment": "v1.0.0-648-ga074ef1",
+			"Rev": "a074ef15e5912e61bf0c6853cf7c3ef0e9ea23fa"
+		},
+		{
+			"ImportPath": "github.com/codegangsta/cli",
+			"Rev": "142e6cd241a4dfbf7f07a018f1f8225180018da4"
+		},
+		{
+			"ImportPath": "github.com/codegangsta/inject",
+			"Comment": "v1.0-rc1-10-g33e0aa1",
+			"Rev": "33e0aa1cb7c019ccc3fbe049a8262a6403d30504"
+		},
+		{
+			"ImportPath": "github.com/coreos/go-etcd/etcd",
+			"Comment": "v0.2.0-rc1-120-g23142f6",
+			"Rev": "23142f6773a676cc2cae8dd0cb90b2ea761c853f"
+		},
+		{
+			"ImportPath": "github.com/dop251/otto",
+			"Rev": "067fe36de1367c555aed4e1d7caf06e5592b7f6e"
+		},
+		{
+			"ImportPath": "github.com/drone/routes",
+			"Rev": "853bef2b231162bb7b09355720416d3af1510d88"
+		},
+		{
+			"ImportPath": "github.com/go-martini/martini",
+			"Comment": "v1.0-107-g627d985",
+			"Rev": "627d985ef9f202fbfc53531f1da96ef92ae3fb3e"
+		},
+		{
+			"ImportPath": "github.com/go-sql-driver/mysql",
+			"Comment": "v1.2-26-g9543750",
+			"Rev": "9543750295406ef070f7de8ae9c43ccddd44e15e"
+		},
+		{
+			"ImportPath": "github.com/jmoiron/sqlx",
+			"Comment": "sqlx-v1.0-26-g65a9444",
+			"Rev": "65a94448495c675514bd4eb183b94f6dea516227"
+		},
+		{
+			"ImportPath": "github.com/lann/builder",
+			"Rev": "c603884a2c1fcf331c71940f3227a8111d29f3ba"
+		},
+		{
+			"ImportPath": "github.com/lann/squirrel",
+			"Rev": "e13dbacee404686afd0acf2d44b8d34869605e03"
+		},
+		{
+			"ImportPath": "github.com/mattn/go-sqlite3",
+			"Rev": "5fb02bd99d5afadebf47931775cf6b4bf8468330"
+		},
+		{
+			"ImportPath": "github.com/mitchellh/mapstructure",
+			"Rev": "442e588f213303bec7936deba67901f8fc8f18b1"
+		},
+		{
+			"ImportPath": "github.com/mndrix/ps",
+			"Rev": "33ddf69629c1bcea76b04f4a4e9e00e4cce82eb6"
+		},
+		{
+			"ImportPath": "github.com/olekukonko/tablewriter",
+			"Rev": "bc39950e081b457853031334b3c8b95cdfe428ba"
+		},
+		{
+			"ImportPath": "github.com/onsi/ginkgo",
+			"Comment": "v1.2.0-8-g25380c6",
+			"Rev": "25380c62e61d3f90436be125b8127dbae578fdef"
+		},
+		{
+			"ImportPath": "github.com/onsi/gomega",
+			"Comment": "v1.0-50-gd6c945f",
+			"Rev": "d6c945f9fdbf6cad99e85b0feff591caa268e0db"
+		},
+		{
+			"ImportPath": "github.com/op/go-logging",
+			"Rev": "fb0230561a6ba1cab17beb95f1faedc16584fdb8"
+		},
+		{
+			"ImportPath": "github.com/rackspace/gophercloud",
+			"Comment": "v1.0.0-607-ge52d480",
+			"Rev": "1d8b6f1e17ae0fa96301f1b4b815f7d7ff0a63f6"
+		},
+		{
+			"ImportPath": "github.com/robertkrimen/otto/ast",
+			"Rev": "c2346f4ada7cdbda7f3523c87d986c91d4677b98"
+		},
+		{
+			"ImportPath": "github.com/robertkrimen/otto/dbg",
+			"Rev": "c2346f4ada7cdbda7f3523c87d986c91d4677b98"
+		},
+		{
+			"ImportPath": "github.com/robertkrimen/otto/file",
+			"Rev": "c2346f4ada7cdbda7f3523c87d986c91d4677b98"
+		},
+		{
+			"ImportPath": "github.com/robertkrimen/otto/parser",
+			"Rev": "c2346f4ada7cdbda7f3523c87d986c91d4677b98"
+		},
+		{
+			"ImportPath": "github.com/robertkrimen/otto/token",
+			"Rev": "c2346f4ada7cdbda7f3523c87d986c91d4677b98"
+		},
+		{
+			"ImportPath": "github.com/robfig/cron",
+			"Comment": "v1-2-g67823cd",
+			"Rev": "67823cd24dece1b04cced3a0a0b3ca2bc84d875e"
+		},
+		{
+			"ImportPath": "github.com/streadway/amqp",
+			"Rev": "1aedb1f9e106db5d7403222313a0504a06def5b3"
+		},
+		{
+			"ImportPath": "github.com/stretchr/objx",
+			"Rev": "1a9d0bb9f541897e62256577b352fdbc1fb4fd94"
+		},
+		{
+			"ImportPath": "github.com/stretchr/testify/assert",
+			"Comment": "v1.0-49-g2b15294",
+			"Rev": "2b15294402a895a4224659d181866f545991021e"
+		},
+		{
+			"ImportPath": "github.com/stretchr/testify/mock",
+			"Comment": "v1.0-49-g2b15294",
+			"Rev": "2b15294402a895a4224659d181866f545991021e"
+		},
+		{
+			"ImportPath": "github.com/twinj/uuid",
+			"Rev": "70cac2bcd273ef6a371bb96cde363d28b68734c3"
+		},
+		{
+			"ImportPath": "github.com/xeipuuv/gojsonpointer",
+			"Rev": "636edb2500d21f2ed09ea96a00deb36bbd07cf70"
+		},
+		{
+			"ImportPath": "github.com/xeipuuv/gojsonreference",
+			"Rev": "bc91f381155d8aab2993d3c1ac02ce5a7f7822ab"
+		},
+		{
+			"ImportPath": "github.com/xeipuuv/gojsonschema",
+			"Rev": "eb966db2a6901073163758bd7473008c0d9a1167"
+		},
+		{
+			"ImportPath": "github.com/ziutek/telnet",
+			"Rev": "49d9be70897fe0a7400a152121453075b2835866"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/ssh",
+			"Rev": "77de70a8d459abbd88b95faa92f4a69bd2f5a7d8"
+		},
+		{
+			"ImportPath": "gopkg.in/yaml.v2",
+			"Rev": "bef53efd0c76e49e6de55ead051f886bea7e9420"
+		}
+	]
+}

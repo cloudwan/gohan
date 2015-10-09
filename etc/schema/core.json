@@ -1,0 +1,152 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "allOf": [
+        {
+            "$ref": "http://json-schema.org/draft-04/schema#"
+        }
+    ],
+    "definitions": {
+        "resource": {
+            "description": "Resource definition",
+            "properties": {
+                "description": {
+                    "default": "",
+                    "description": "Description",
+                    "title": "description",
+                    "type": "string"
+                },
+                "id": {
+                    "description": "id",
+                    "title": "id",
+                    "type": "string"
+                },
+                "parent": {
+                    "default": "",
+                    "description": "Parent of this schema",
+                    "title": "parent",
+                    "type": "string"
+                },
+                "plural": {
+                    "description": "Plural of this schema",
+                    "title": "Plural",
+                    "type": "string"
+                },
+                "prefix": {
+                    "default": "",
+                    "description": "Prefix",
+                    "title": "prefix",
+                    "type": "string"
+                },
+                "schema": {
+                    "$ref": "#"
+                },
+                "title": {
+                    "description": "Label of this schema",
+                    "title": "title",
+                    "type": "string"
+                },
+                "actions": {
+                    "description": "Resource Actions",
+                    "patternProperties": {
+                        ".*": {
+                            "properties": {
+                                "input": {
+                                    "$ref": "#"
+                                },
+                                "output": {
+                                    "$ref": "#"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    },
+                    "title": "Actions",
+                    "type": "object"
+                }
+            },
+            "required": [
+                "id",
+                "title",
+                "schema",
+                "plural",
+                "prefix"
+            ],
+            "title": "gohan resource",
+            "type": "object"
+        },
+        "statement": {
+            "action": {
+                "type": "string"
+            },
+            "condition": {
+                "items": {
+                    "type": "string"
+                },
+                "type": "array"
+            },
+            "description": "policy statement for describing policy for API",
+            "effect": {
+                "enum": [
+                    "allow",
+                    "deny"
+                ],
+                "type": "string"
+            },
+            "id": {
+                "description": "id",
+                "title": "id",
+                "type": "string"
+            },
+            "principal": {
+                "type": "string"
+            },
+            "resource": {
+                "permission": [
+                    "create",
+                    "update"
+                ],
+                "properties": {
+                    "path": {
+                        "type": "string"
+                    },
+                    "properties": {
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array"
+                    }
+                },
+                "type": "object"
+            },
+            "title": "policy statement"
+        },
+        "stringArray": {
+            "items": {
+                "type": "string"
+            },
+            "type": "array"
+        }
+    },
+    "description": "A representation of a gohan resources",
+    "properties": {
+        "description": {
+            "type": "string"
+        },
+        "policy": {
+            "items": {
+                "$ref": "#/definitions/statement"
+            },
+            "type": "array"
+        },
+        "resources": {
+            "items": {
+                "$ref": "#/definitions/resource"
+            },
+            "type": "array"
+        },
+        "title": {
+            "type": "string"
+        }
+    },
+    "type": "object"
+}

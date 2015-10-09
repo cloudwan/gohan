@@ -1,0 +1,438 @@
+extensions:
+- code: |
+    gohan_register_handler("pre_create_in_transaction", function (context){
+        context.response_code = 390
+        context.response = "Dummy error."
+    });
+  event: list
+  id: test
+  path: /v2.0/test.*
+- code: |
+    gohan_register_handler("hello", function (context) {
+        context.response_code = 200;
+        context.response = {"output": "Hello, " + context.input.name + "!"};
+    });
+  id: test
+  path: /v2.0/responder
+- code: |
+    gohan_register_handler("hi", function (context) {
+        context.response_code = 200;
+        context.response = {"output": "Hi, " + context.input.name + "!"};
+    });
+  id: test
+  path: /v2.0/responder
+
+networks: []
+
+policies:
+- action: '*'
+  effect: allow
+  id: admin_statement
+  principal: admin
+  resource:
+    path: .*
+- action: hello
+  effect: allow
+  id: member_hello
+  principal: _member_
+  resource:
+    path: /v2.0/responder.*
+- action: '*'
+  condition:
+  - is_owner
+  - action: '*'
+    tenant_id: fc394f2ab2df4114bde39905f800dc57
+    type: belongs_to
+  effect: allow
+  id: power_user_statement
+  principal: _member_
+  resource:
+    path: /v2.0/network.*
+  tenant_id: acf5662bbff44060b93a.*
+- action: '*'
+  effect: allow
+  id: member_user_schemas
+  principal: _member_
+  resource:
+    path: /v0.1/schema.*
+- action: '*'
+  condition:
+  - is_owner
+  - action: read
+    tenant_id: acf5662bbff44060b93ac3db3c25a590
+    type: belongs_to
+  - action: update
+    tenant_id: acf5662bbff44060b93ac3db3c25a590
+    type: belongs_to
+  effect: allow
+  id: member_statement
+  principal: _member_
+  resource:
+    path: /v2.0/networks/[^/]+/?$
+    properties:
+    - id
+    - description
+    - name
+    - tenant_id
+- action: '*'
+  condition:
+  - is_owner
+  - action: read
+    tenant_id: acf5662bbff44060b93ac3db3c25a590
+    type: belongs_to
+  effect: allow
+  id: member_statement2
+  principal: _member_
+  resource:
+    path: /v2.0/networks/?$
+    properties:
+    - id
+    - description
+    - name
+    - tenant_id
+- action: '*'
+  condition:
+  - is_owner
+  effect: allow
+  id: member_statement_test
+  principal: _member_
+  resource:
+    path: /v2.0/test.*
+- action: '*'
+  condition:
+  - is_owner
+  effect: allow
+  id: member_statement3
+  principal: Member
+  resource:
+    path: /v2.0/subnet.*
+- action: '*'
+  condition:
+  - is_owner
+  effect: allow
+  id: member_statement3
+  principal: _member_
+  resource:
+    path: /_all.*
+
+
+schemas:
+- description: Network
+  id: network
+  metadata:
+    state_versioning: true
+  plural: networks
+  prefix: /v2.0
+  schema:
+    properties:
+      description:
+        description: Description
+        default: ""
+        permission:
+        - create
+        - update
+        title: Description
+        type: string
+        unique: false
+      id:
+        description: ID
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: false
+      name:
+        description: Name
+        permission:
+        - create
+        - update
+        title: Name
+        type: string
+        unique: false
+      providor_networks:
+        description: Providor networks
+        default: {}
+        permission:
+        - create
+        - update
+        properties:
+          segmentaion_type:
+            enum:
+            - vlan
+            - vxlan
+            - gre
+            type: string
+          segmentation_id:
+            minimum: 0
+            type: integer
+        title: Provider Networks
+        type: object
+        unique: false
+      route_targets:
+        description: Route targets
+        default: []
+        items:
+          type: string
+        permission:
+        - create
+        - update
+        title: RouteTargets
+        type: array
+        unique: false
+      tenant_id:
+        description: Tenant ID
+        permission:
+        - create
+        title: Tenant
+        type: string
+        unique: false
+      shared:
+        description: Shared
+        permission:
+        - create
+        - update
+        title: Shared
+        type: boolean
+        unique: false
+        default: false
+    propertiesOrder:
+    - id
+    - name
+    - description
+    - providor_networks
+    - route_targets
+    - tenant_id
+    - shared
+    type: object
+  singular: network
+  title: Network
+- description: Subnet
+  id: subnet
+  metadata:
+    state_versioning: true
+  parent: network
+  plural: subnets
+  prefix: /v2.0
+  schema:
+    properties:
+      cidr:
+        description: CIDR
+        permission:
+        - create
+        title: Cidr
+        type: string
+        unique: false
+      description:
+        description: Description
+        default: ""
+        permission:
+        - create
+        - update
+        title: Description
+        type: string
+        unique: false
+      id:
+        description: ID
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: false
+      name:
+        description: Name
+        default: ""
+        permission:
+        - create
+        - update
+        title: Name
+        type:
+        - string
+        - "null"
+        unique: false
+      tenant_id:
+        description: Tenant ID
+        permission:
+        - create
+        title: TenantID
+        type: string
+        unique: false
+    propertiesOrder:
+    - id
+    - name
+    - tenant_id
+    - cidr
+    - description
+    type: object
+    required:
+    - cidr
+  singular: subnet
+  title: subnet
+- id: server
+  metadata:
+    state_versioning: true
+  plural: servers
+  prefix: /v2.0
+  description: server
+  schema:
+    properties:
+      id:
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: true
+        format: uuid
+        description: ID
+      name:
+        permission:
+        - create
+        - update
+        title: Name
+        type: string
+        unique: false
+        description: Name
+      network_id:
+        permission:
+        - create
+        relation: network
+        relation_property: network
+        title: network id
+        type: string
+        unique: false
+        description: Network ID
+      status:
+        permission: []
+        title: Status
+        type: string
+        unique: false
+        description: status
+      tenant_id:
+        title: TenantID
+        permission:
+        - create
+        type: string
+        unique: false
+        description: TenantID
+    propertiesOrder:
+    - id
+    - name
+    - network_id
+    - status
+    - tenant_id
+    type: object
+  singular: server
+  title: Server
+- description: Test
+  id: test
+  metadata:
+    state_versioning: true
+  plural: tests
+  prefix: /v2.0
+  schema:
+    properties:
+      id:
+        description: ID
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: true
+      tenant_id:
+        description: Tenant ID
+        permission:
+        - create
+        title: TenantID
+        type: string
+        unique: false
+      test_string:
+        default: ""
+        description: Test string
+        permission:
+        - create
+        - update
+        title: Test string
+        type: string
+        unique: false
+    propertiesOrder:
+    - id
+    - tenant_id
+    type: object
+  singular: test
+  title: Test
+- description: Admin only
+  id: admin_only
+  plural: admin_onlys
+  prefix: /v2.0
+  schema:
+    properties:
+      id:
+        description: ID
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: true
+    propertiesOrder:
+    - id
+    type: object
+  singular: admin_only
+  title: Admin Only
+- description: Responder
+  id: responder
+  plural: responders
+  prefix: /v2.0
+  schema:
+    properties:
+      id:
+        description: ID
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: true
+      pattern:
+        description: Pattern
+        permission:
+        - create
+        - update
+        title: Responder
+        type: string
+      tenant_id:
+        description: Tenant ID
+        permission:
+        - create
+        title: TenantID
+        type: string
+        unique: false
+    propertiesOrder:
+    - id
+    - pattern
+    - tenant_id
+    type: object
+  singular: reponder
+  title: Responder
+  actions:
+    hello:
+      method: POST
+      path: /:id/hello
+      input:
+        properties:
+          name:
+            type: string
+        required: [name]
+        additionalProperties: false
+        type: object
+      output:
+        type: string
+    hi:
+      method: POST
+      path: /:id/hi
+      input:
+        properties:
+          name:
+            type: string
+        type: object
+      output:
+        type: string
+
+subnets: []

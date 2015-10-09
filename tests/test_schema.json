@@ -1,0 +1,311 @@
+{
+    "networks": [],
+    "policies": [
+        {
+            "action": "*",
+            "effect": "allow",
+            "id": "admin_statement",
+            "principal": "admin",
+            "resource": {
+                "path": ".*"
+            }
+        },
+        {
+            "action": "*",
+            "condition": [
+                "is_owner"
+            ],
+            "effect": "allow",
+            "id": "member_statement",
+            "principal": "_member_",
+            "resource": {
+                "path": "/v2.0/network/[^/]+/?$",
+                "properties": [
+                    "id",
+                    "description",
+                    "name"
+                ]
+            }
+        },
+        {
+            "action": "*",
+            "condition": [
+                "is_owner"
+            ],
+            "effect": "allow",
+            "id": "member_statement2",
+            "principal": "_member_",
+            "resource": {
+                "path": "/v2.0/networks/?$",
+                "properties": [
+                    "id",
+                    "description",
+                    "name"
+                ]
+            }
+        }
+    ],
+    "schemas": [
+        {
+            "id": "network",
+            "metadata": {
+                "state_versioning": true
+            },
+            "plural": "networks",
+            "prefix": "/v2.0",
+            "schema": {
+                "properties": {
+                    "description": {
+                        "default": "",
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "title": "Description",
+                        "description": "Description",
+                        "type": "string",
+                        "unique": false
+                    },
+                    "id": {
+                        "format": "uuid",
+                        "permission": [
+                            "create"
+                        ],
+                        "title": "ID",
+                        "description": "ID",
+                        "type": "string",
+                        "unique": false
+                    },
+                    "name": {
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "title": "Name",
+                        "description": "Name",
+                        "type": "string",
+                        "unique": false
+                    },
+                    "providor_networks": {
+                        "default": {},
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "properties": {
+                            "segmentaion_type": {
+                                "enum": [
+                                    "vlan",
+                                    "vxlan",
+                                    "gre"
+                                ],
+                                "type": "string"
+                            },
+                            "segmentation_id": {
+                                "minimum": 0,
+                                "type": "integer"
+                            }
+                        },
+                        "title": "Provider Networks",
+                        "description": "Provider Networks",
+                        "type": "object",
+                        "unique": false
+                    },
+                    "route_targets": {
+                        "default": [],
+                        "items": {
+                            "type": "string"
+                        },
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "title": "RouteTargets",
+                        "description": "RouteTargets",
+                        "type": "array",
+                        "unique": false
+                    },
+                    "tenant_id": {
+                        "permission": [
+                            "create"
+                        ],
+                        "title": "Tenant",
+                        "description": "Tenant",
+                        "type": "string",
+                        "unique": false
+                    }
+                },
+                "propertiesOrder": [
+                    "description",
+                    "id",
+                    "name",
+                    "providor_networks",
+                    "route_targets",
+                    "tenant_id"
+                ],
+                "type": "object"
+            },
+            "title": "Network",
+            "description": "network",
+            "singular": "network"
+        },
+        {
+            "id": "subnet",
+            "metadata": {
+                "state_versioning": true
+            },
+            "parent": "network",
+            "plural": "subnets",
+            "prefix": "/v2.0/network/:network",
+            "schema": {
+                "properties": {
+                    "cidr": {
+                        "permission": [
+                            "create"
+                        ],
+                        "title": "Cidr",
+                        "description": "Cidr",
+                        "type": "string",
+                        "unique": false
+                    },
+                    "description": {
+                        "default": "",
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "title": "Description",
+                        "description": "Description",
+                        "type": "string",
+                        "unique": false
+                    },
+                    "id": {
+                        "format": "uuid",
+                        "permission": [
+                            "create"
+                        ],
+                        "title": "ID",
+                        "description": "ID",
+                        "type": "string",
+                        "unique": false
+                    },
+                    "name": {
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "title": "Name",
+                        "description": "Name",
+                        "type": "string",
+                        "unique": false
+                    },
+                    "tenant_id": {
+                        "format": "uuid",
+                        "permission": [
+                            "create"
+                        ],
+                        "title": "TenantID",
+                        "description": "TenantID",
+                        "type": "string",
+                        "unique": false
+                    }
+                },
+                "propertiesOrder": [
+                    "cidr",
+                    "description",
+                    "id",
+                    "name",
+                    "tenant_id"
+                ],
+                "required": ["cidr"],
+                "type": "object"
+            },
+            "title": "subnet",
+            "description": "subnet",
+            "singular": "subnet"
+        },
+        {
+            "id": "net",
+            "plural": "nets",
+            "prefix": "/v2.0",
+            "schema": {
+                "required": [],
+                "properties": {
+                    "cidr": {
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "title": "CIDR",
+                        "description": "CIDR",
+                        "type": "string",
+                        "unique": false,
+                        "format": "cidr",
+                        "default": "10.0.0.0/24"
+                    },
+                    "mac": {
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "title": "MAC",
+                        "description": "MAC",
+                        "type": "string",
+                        "unique": false,
+                        "format": "mac",
+                        "default": "ab:ba:ab:ba:11:22"
+                    },
+                    "id": {
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "title": "UUID",
+                        "description": "UUID",
+                        "type": "string",
+                        "unique": false,
+                        "format": "uuid",
+                        "default": "de305d54-75b4-431b-adb2-eb6b9e546014"
+                    },
+                    "port": {
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "title": "port",
+                        "description": "port",
+                        "type": "string",
+                        "unique": false,
+                        "format": "port",
+                        "default": "42"
+                    },
+                    "regex": {
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "title": "regex",
+                        "description": "regex",
+                        "type": "string",
+                        "unique": false,
+                        "format": "regex",
+                        "default": ".*"
+                    }
+                },
+                "propertiesOrder": [
+                    "cidr",
+                    "mac",
+                    "id",
+                    "port",
+                    "regex"
+                ],
+                "type": "object"
+            },
+            "title": "net",
+            "description": "net",
+            "singular": "net"
+        }
+    ],
+    "subnets": [],
+    "nets": []
+}

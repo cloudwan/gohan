@@ -1,0 +1,749 @@
+{
+    "policies": [
+        {
+            "action": "*",
+            "effect": "allow",
+            "id": "admin_statement",
+            "principal": "admin",
+            "resource": {
+                "path": ".*"
+            }
+        }
+    ],
+    "schemas": [
+        {
+            "description": "The main metaschema",
+            "id": "schema",
+            "metadata": {
+                "type": "metaschema"
+            },
+            "plural": "schemas",
+            "prefix": "/gohan/v0.1",
+            "schema": {
+                "additionalProperties": false,
+                "properties": {
+                    "description": {
+                        "default": "",
+                        "description": "Description",
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "title": "Description",
+                        "type": "string"
+                    },
+                    "id": {
+                        "description": "Schema ID",
+                        "permission": [
+                            "create"
+                        ],
+                        "title": "ID",
+                        "type": "string",
+                        "unique": true
+                    },
+                    "metadata": {
+                        "default": {},
+                        "description": "metadata for application developer",
+                        "format": "yaml",
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "title": "Metadata",
+                        "type": "object"
+                    },
+                    "namespace": {
+                        "default": "",
+                        "description": "Namespace the schema belongs to",
+                        "permission": [
+                            "create"
+                        ],
+                        "title": "Namespace",
+                        "type": "string"
+                    },
+                    "parent": {
+                        "default": "",
+                        "description": "Parent of this schema",
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "title": "Parent",
+                        "type": "string"
+                    },
+                    "plural": {
+                        "description": "Plural of this schema",
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "title": "Plural",
+                        "type": "string"
+                    },
+                    "prefix": {
+                        "default": "",
+                        "description": "prefix",
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "title": "Prefix",
+                        "type": "string"
+                    },
+                    "schema": {
+                        "default": {
+                            "properties": {
+                                "id": {
+                                    "permission": [
+                                        "create"
+                                    ],
+                                    "type": "string"
+                                }
+                            },
+                            "type": "object"
+                        },
+                        "description": "The inner metaschema",
+                        "detail_view": true,
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "properties": {
+                            "additionalProperties": {
+                                "type": "boolean"
+                            },
+                            "properties": {
+                                "patternProperties": {
+                                    "^.*$": {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                            "additionalProperties": {
+                                                "title": "Additional properties",
+                                                "type": "boolean"
+                                            },
+                                            "default": {
+                                                "anyOf": [
+                                                    {
+                                                        "type": "array"
+                                                    },
+                                                    {
+                                                        "type": "boolean"
+                                                    },
+                                                    {
+                                                        "type": "integer"
+                                                    },
+                                                    {
+                                                        "type": "number"
+                                                    },
+                                                    {
+                                                        "type": "object"
+                                                    },
+                                                    {
+                                                        "type": "string"
+                                                    }
+                                                ],
+                                                "title": "Default"
+                                            },
+                                            "description": {
+                                                "title": "Description",
+                                                "type": "string"
+                                            },
+                                            "detail_view": {
+                                                "title": "Detail View Only",
+                                                "type": "boolean"
+                                            },
+                                            "enum": {
+                                                "minItems": 1,
+                                                "title": "Enum",
+                                                "type": "array",
+                                                "uniqueItems": true
+                                            },
+                                            "format": {
+                                                "title": "format",
+                                                "type": "string"
+                                            },
+                                            "id": {
+                                                "title": "ID",
+                                                "type": "string"
+                                            },
+                                            "items": {
+                                                "format": "yaml",
+                                                "title": "Items",
+                                                "type": "object"
+                                            },
+                                            "pattern": {
+                                                "format": "regex",
+                                                "title": "Pattern",
+                                                "type": "string"
+                                            },
+                                            "permission": {
+                                                "items": {
+                                                    "enum": [
+                                                        "create",
+                                                        "update"
+                                                    ],
+                                                    "type": "string"
+                                                },
+                                                "title": "Permission",
+                                                "type": "array"
+                                            },
+                                            "properties": {
+                                                "format": "yaml",
+                                                "title": "Properties",
+                                                "type": "object"
+                                            },
+                                            "patternProperties": {
+                                                "format": "yaml",
+                                                "title": "Pattern Properties",
+                                                "type": "object"
+                                            },
+                                            "additionalProperties": {
+                                                "title": "Additional properties",
+                                                "type": "boolean"
+                                            },
+                                            "relation": {
+                                                "title": "Relation",
+                                                "type": "string"
+                                            },
+                                            "relation_property": {
+                                                "title": "Relation Property",
+                                                "type": "string"
+                                            },
+                                            "required": {
+                                                "items": {
+                                                    "type": "string"
+                                                },
+                                                "title": "Required fields",
+                                                "type": "array",
+                                                "uniqueItems": true
+                                            },
+                                            "sql": {
+                                                "title": "SQL type",
+                                                "type": "string"
+                                            },
+                                            "title": {
+                                                "title": "Title",
+                                                "type": "string"
+                                            },
+                                            "type": {
+                                                "oneOf": [
+                                                    {
+                                                        "enum": [
+                                                            "array",
+                                                            "boolean",
+                                                            "integer",
+                                                            "null",
+                                                            "number",
+                                                            "object",
+                                                            "string"
+                                                        ],
+                                                        "title": "Type",
+                                                        "type": "string"
+                                                    },
+                                                    {
+                                                        "items": {
+                                                            "enum": [
+                                                                "array",
+                                                                "boolean",
+                                                                "integer",
+                                                                "null",
+                                                                "number",
+                                                                "object",
+                                                                "string"
+                                                            ]
+                                                        },
+                                                        "title": "Type",
+                                                        "type": "array",
+                                                        "uniqueItems": true
+                                                    }
+                                                ]
+                                            },
+                                            "unique": {
+                                                "title": "Unique",
+                                                "type": "boolean"
+                                            },
+                                            "uniqueItems": {
+                                                "title": "Unique items",
+                                                "type": "boolean"
+                                            },
+                                            "view": {
+                                                "title": "view configuraion on UI",
+                                                "type": "array"
+                                            }
+                                        },
+                                        "propertiesOrder": [
+                                            "id",
+                                            "title",
+                                            "type",
+                                            "format",
+                                            "default",
+                                            "permission",
+                                            "unique",
+                                            "properties",
+                                            "patternProperties",
+                                            "items",
+                                            "uniqueItems",
+                                            "pattern",
+                                            "enum",
+                                            "relation",
+                                            "detail_view",
+                                            "sql",
+                                            "required"
+                                        ],
+                                        "required": [
+                                            "description",
+                                            "type",
+                                            "title"
+                                        ],
+                                        "type": "object"
+                                    }
+                                },
+                                "title": "Properties",
+                                "type": "object"
+                            },
+                            "propertiesOrder": {
+                                "items": {
+                                    "type": "string"
+                                },
+                                "title": "Properties Order",
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                },
+                                "uniqueItems": true
+                            },
+                            "required": {
+                                "items": {
+                                    "type": "string"
+                                },
+                                "title": "Required properties",
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                },
+                                "uniqueItems": true
+                            },
+                            "type": {
+                                "title": "Type",
+                                "type": "string"
+                            }
+                        },
+                        "title": "JSON schema",
+                        "type": "object"
+                    },
+                    "singular": {
+                        "description": "Singular name of this schema",
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "title": "Singular",
+                        "type": "string"
+                    },
+                    "title": {
+                        "description": "Label of this schema",
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "title": "Title",
+                        "type": "string"
+                    },
+                    "actions": {
+                        "default": {},
+                        "description": "Resource actions",
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "patternProperties": {
+                            ".*": {
+                                "properties": {
+                                    "input": {
+                                        "type": "object"
+                                    },
+                                    "output": {
+                                        "type": "object"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        },
+                        "title": "Actions",
+                        "type": ["object", "null"]
+                    }
+                },
+                "propertiesOrder": [
+                    "id",
+                    "singular",
+                    "plural",
+                    "title",
+                    "prefix",
+                    "schema",
+                    "description",
+                    "parent",
+                    "namespace",
+                    "metadata",
+                    "actions"
+                ],
+                "required": [
+                    "id",
+                    "singular",
+                    "plural",
+                    "schema",
+                    "title"
+                ],
+                "title": "Schema Definition",
+                "type": "object"
+            },
+            "singular": "schema",
+            "title": "Gohan Schema"
+        },
+        {
+            "description": "The policy metaschema",
+            "id": "policy",
+            "metadata": {
+                "type": "metaschema"
+            },
+            "plural": "policies",
+            "prefix": "/gohan/v0.1",
+            "schema": {
+                "properties": {
+                    "action": {
+                        "description": "action",
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "title": "Action",
+                        "type": "string"
+                    },
+                    "condition": {
+                        "default": [],
+                        "description": "condition",
+                        "items": {
+                            "type": "string"
+                        },
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "title": "Condition",
+                        "type": "array"
+                    },
+                    "effect": {
+                        "description": "effect",
+                        "enum": [
+                            "allow",
+                            "deny"
+                        ],
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "title": "Effect",
+                        "type": "string"
+                    },
+                    "id": {
+                        "description": "id",
+                        "permission": [
+                            "create"
+                        ],
+                        "title": "ID",
+                        "type": "string"
+                    },
+                    "principal": {
+                        "description": "principal",
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "title": "Principal",
+                        "type": "string"
+                    },
+                    "resource": {
+                        "description": "resource",
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "properties": {
+                            "path": {
+                                "title": "Path",
+                                "type": "string"
+                            },
+                            "properties": {
+                                "items": {
+                                    "type": "string"
+                                },
+                                "title": "Properties",
+                                "type": "array"
+                            }
+                        },
+                        "title": "Resource",
+                        "type": "object"
+                    }
+                },
+                "propertiesOrder": [
+                    "id",
+                    "principal",
+                    "resource",
+                    "action",
+                    "effect",
+                    "condition"
+                ],
+                "type": "object"
+            },
+            "singular": "policy",
+            "title": "Gohan Policy"
+        },
+        {
+            "description": "The extension metaschema",
+            "id": "extension",
+            "metadata": {
+                "type": "metaschema"
+            },
+            "plural": "extensions",
+            "prefix": "/gohan/v0.1",
+            "schema": {
+                "properties": {
+                    "code": {
+                        "default": "",
+                        "description": "code",
+                        "format": "javascript",
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "title": "Code",
+                        "type": "string"
+                    },
+                    "code_type": {
+                        "default": "javascript",
+                        "description": "code type",
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "title": "Code Type",
+                        "type": "string"
+                    },
+                    "id": {
+                        "description": "id",
+                        "permission": [
+                            "create"
+                        ],
+                        "title": "ID",
+                        "type": "string"
+                    },
+                    "path": {
+                        "description": "path",
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "title": "Path",
+                        "type": "string"
+                    },
+                    "url": {
+                        "default": "",
+                        "description": "URL",
+                        "format": "url",
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "title": "URL",
+                        "type": "string"
+                    }
+                },
+                "propertiesOrder": [
+                    "id",
+                    "code_type",
+                    "url",
+                    "path",
+                    "code"
+                ],
+                "type": "object"
+            },
+            "singular": "extension",
+            "title": "Gohan Extension"
+        },
+        {
+            "description": "The event metaschema",
+            "id": "event",
+            "metadata": {
+                "nosync": true,
+                "type": "metaschema"
+            },
+            "plural": "events",
+            "prefix": "/gohan/v0.1",
+            "schema": {
+                "properties": {
+                    "body": {
+                        "description": "body",
+                        "format": "yaml",
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "title": "Event body",
+                        "type": "object"
+                    },
+                    "version": {
+                        "description": "The version of the config this event created",
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "title": "Config version",
+                        "type": "integer"
+                    },
+                    "id": {
+                        "description": "id",
+                        "permission": [
+                            "create"
+                        ],
+                        "sql": "integer primary key auto_increment ",
+                        "title": "ID",
+                        "type": "integer"
+                    },
+                    "path": {
+                        "default": "",
+                        "description": "Event path",
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "title": "Path",
+                        "type": "string"
+                    },
+                    "timestamp": {
+                        "default": "",
+                        "description": "Event timestamp (unixtime)",
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "title": "Timestamp",
+                        "type": "integer"
+                    },
+                    "type": {
+                        "default": "",
+                        "description": "Event type",
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "title": "Type",
+                        "type": "string"
+                    }
+                },
+                "propertiesOrder": [
+                    "id",
+                    "type",
+                    "path",
+                    "timestamp",
+                    "version",
+                    "body"
+                ],
+                "type": "object"
+            },
+            "singular": "event",
+            "title": "Gohan Event Log"
+        },
+        {
+            "description": "The namespace schema",
+            "id": "namespace",
+            "plural": "namespaces",
+            "prefix": "/gohan/v0.1",
+            "metadata": {
+                "nosync": true,
+                "type": "metaschema"
+            },
+            "schema": {
+                "properties": {
+                    "description": {
+                        "default": "",
+                        "description": "description",
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "title": "Description",
+                        "type": "string"
+                    },
+                    "id": {
+                        "description": "id",
+                        "permission": [
+                            "create"
+                        ],
+                        "title": "ID",
+                        "type": "string"
+                    },
+                    "metadata": {
+                        "default": {},
+                        "description": "metadata",
+                        "format": "yaml",
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "title": "Metadata",
+                        "type": "object"
+                    },
+                    "name": {
+                        "default": "",
+                        "description": "name",
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "title": "Name",
+                        "type": "string"
+                    },
+                    "parent": {
+                        "default": "",
+                        "description": "Parent of this namespace",
+                        "permission": [
+                            "create"
+                        ],
+                        "title": "parent",
+                        "type": "string"
+                    },
+                    "prefix": {
+                        "default": "",
+                        "description": "prefix",
+                        "permission": [
+                            "create"
+                        ],
+                        "title": "prefix",
+                        "type": "string"
+                    },
+                    "version": {
+                        "default": "",
+                        "description": "version",
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "title": "Version",
+                        "type": "string"
+                    }
+                },
+                "propertiesOrder": [
+                    "id",
+                    "name",
+                    "description",
+                    "prefix",
+                    "parent",
+                    "version",
+                    "metadata"
+                ],
+                "type": "object"
+            },
+            "singular": "namespace",
+            "title": "Gohan Namespace"
+        }
+    ]
+}

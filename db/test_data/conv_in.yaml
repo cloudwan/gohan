@@ -1,0 +1,218 @@
+extensions:
+- code: console.log(Object.keys(gohan_context));
+  code_type: javascript
+  url: ""
+  event: list
+  id: test
+  path: /v2.0/.*
+networks:
+- description: test
+  id: f55241f8-bccd-4d35-9f23-16d167c127b6
+  name: networkRed
+  providor_networks:
+    segmentation_type: vlan
+    segmentation_id: 10
+  route_targets:
+  - 1000:10000
+  - 2000:20000
+  tenant_id: admin
+- description: test
+  id: b485c80c-54c0-4067-9310-3eb4b299f0c1
+  name: networkBlue
+  providor_networks:
+    segmentation_type: vlan
+    segmentation_id: 12
+  route_targets:
+  - 1001:10001
+  tenant_id: admin
+policies:
+- action: '*'
+  effect: allow
+  id: admin_statement
+  principal: admin
+  resource:
+    path: .*
+- action: '*'
+  condition:
+  - is_owner
+  effect: allow
+  id: member_statement
+  principal: _member_
+  resource:
+    path: /v2.0/network/[^/]+/?$
+    properties:
+    - id
+    - description
+    - name
+- action: '*'
+  condition:
+  - is_owner
+  effect: allow
+  id: member_statement2
+  principal: _member_
+  resource:
+    path: /v2.0/networks/?$
+    properties:
+    - id
+    - description
+    - name
+schemas:
+- id: network
+  description: The network schema
+  plural: networks
+  prefix: /v2.0
+  singular: network
+  namespace: ""
+  parent: ""
+  metadata: {}
+  schema:
+    properties:
+      description:
+        description: The description
+        default: ""
+        permission:
+        - create
+        - update
+        title: Description
+        type: string
+        unique: false
+      id:
+        description: The ID
+        format: uuid
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: false
+      name:
+        description: The name
+        permission:
+        - create
+        - update
+        title: Name
+        type: string
+        unique: false
+      providor_networks:
+        default: {}
+        description: The providor networks
+        permission:
+        - create
+        - update
+        properties:
+          segmentation_type:
+            enum:
+            - vlan
+            - vxlan
+            - gre
+            type: string
+          segmentation_id:
+            minimum: 0
+            type: integer
+        title: Provider Networks
+        type: object
+        unique: false
+      route_targets:
+        default: []
+        description: The route targets
+        items:
+          type: string
+        permission:
+        - create
+        - update
+        title: RouteTargets
+        type: array
+        unique: false
+      tenant_id:
+        description: The tenant ID
+        format: uuid
+        permission:
+        - create
+        title: Tenant
+        type: string
+        unique: false
+    propertiesOrder:
+    - id
+    - name
+    - description
+    - providor_networks
+    - route_targets
+    - tenant_id
+    type: object
+  title: Network
+- id: subnet
+  description: The subnet schema
+  parent: network
+  plural: subnets
+  singular: subnet
+  prefix: /v2.0
+  namespace: ""
+  metadata: {}
+  schema:
+    properties:
+      cidr:
+        description: The CIDR
+        permission:
+        - create
+        title: Cidr
+        type: string
+        unique: false
+      description:
+        default: ""
+        description: The description
+        permission:
+        - create
+        - update
+        title: Description
+        type: string
+        unique: false
+      id:
+        description: The ID
+        format: uuid
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: false
+      name:
+        description: The name
+        permission:
+        - create
+        - update
+        title: Name
+        type: string
+        unique: false
+      tenant_id:
+        description: The tenant ID
+        format: uuid
+        permission:
+        - create
+        title: TenantID
+        type: string
+        unique: false
+    propertiesOrder:
+    - cidr
+    - description
+    - id
+    - name
+    - tenant_id
+    type: object
+  title: Subnet
+subnets:
+- cidr: 10.10.10.0/24
+  id: 68b76a6f-9d26-4ce7-903d-f0006ddb3e6d
+  name: subnetRedA
+  description: A crimson subnet
+  network_id: f55241f8-bccd-4d35-9f23-16d167c127b6
+  tenant_id: admin
+- cidr: 10.10.12.0/24
+  id: 9a7e0f57-ca38-4714-97d5-2c580c851e1c
+  name: subnetRedB
+  description: The crimson subnet
+  network_id: f55241f8-bccd-4d35-9f23-16d167c127b6
+  tenant_id: admin
+- cidr: 10.10.10.0/24
+  id: a67d69b6-8c8c-4447-9ecc-28933a86baad
+  name: subnetBlueA
+  description: A lazure subnet
+  network_id: b485c80c-54c0-4067-9310-3eb4b299f0c1
+  tenant_id: admin

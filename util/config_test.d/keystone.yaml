@@ -1,0 +1,6 @@
+keystone:
+    use_keystone: true
+    auth_url: "http://localhost:19090/v2.0"
+    user_name: "admin"
+    tenant_name: "admin"
+    password: "gohan"

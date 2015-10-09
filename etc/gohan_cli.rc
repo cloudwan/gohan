@@ -1,0 +1,9 @@
+export GOHAN_SCHEMA_URL=/gohan/v0.1/schemas
+export GOHAN_REGION=RegionOne
+export GOHAN_SERVICE_NAME=gohan
+export OS_PASSWORD=gohan
+export OS_AUTH_URL=https://localhost:9443/v2.0
+export OS_USERNAME=admin
+export GOHAN_CACHE_SCHEMAS=true
+export GOHAN_CACHE_TIMEOUT=5m
+export GOHAN_CACHE_PATH=~/.cached-gohan-schemas

@@ -1,0 +1,17 @@
+{
+  "name": "gohan",
+  "description": "Gohan is a REST-based api server to evolve your cloud service very rapidly and enable painless operation",
+  "keywords": [
+    "go",
+    "api server",
+    "cloud",
+    "json schema"
+  ],
+  "image": "heroku/go:1.5",
+  "mount_dir": "src/github.com/cloudwan/gohan",
+  "website": "http://cloudwan.github.com/gohan/",
+  "repository": "http://github.com/cloudwan/gohan",
+  "env": {
+    "BUILDPACK_URL": "https://github.com/cloudwan/heroku-buildpack-go.git"
+  }
+}

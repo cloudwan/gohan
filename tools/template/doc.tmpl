@@ -1,0 +1,163 @@
+# for schema in schemas:
+
+{{ schema.title }}
+============================
+
+Description: {{ schema.description }}
+
+Properties
+------------
+
+.. csv-table:: Properties
+  :header: "Key", "Title", "Description", "Type", "Default", "Format", "Permission"
+
+
+#   set jsonschema = schema.schema
+#   for key in jsonschema.propertiesOrder:
+#       set property = jsonschema.properties[key]
+  "{{ key }}", "{{ property.title }}", "{{property.description}}", "{{ property.type }}", "{{ property.default }}", "{{ property.format }}", "{{ property.permission | join(', ') }}"
+#   endfor
+{##}
+{##}
+
+
+Note: it is mandatory property if there is no default value specified.
+id is an exception. if id property is null, gohan server will put uuid.
+
+
+API Endpoint
+
+List API
+-----------
+
+GET {{schema.prefix}}/{{schema.plural}}
+
+Sample Output
+
+.. code-block:: javascript
+
+  {
+    "{{schema.plural}}": [
+      {
+#   set jsonschema = schema.schema
+#   for key in jsonschema.propertiesOrder:
+#       set property = jsonschema.properties[key]
+        "{{ key }}": xxx{% if not loop.last %},{%endif%}
+#   endfor
+      }
+    ]
+  }
+{##}
+{##}
+
+
+POST API
+-----------
+
+POST {{schema.prefix}}/{{schema.plural}}
+
+GET {{schema.prefix}}/{{schema.plural}}
+
+Sample Request
+
+.. code-block:: javascript
+
+    {
+#   set jsonschema = schema.schema
+#   for key in jsonschema.propertiesOrder:
+#       set property = jsonschema.properties[key]
+#       if "create" in property.permission:
+        "{{ key }}": xxx{% if not loop.last %},{%endif%}
+#        endif
+#   endfor
+    }
+{##}
+{##}
+
+Sample Response
+
+.. code-block:: javascript
+
+  {
+    "{{schema.id}}": {
+#   set jsonschema = schema.schema
+#   for key in jsonschema.propertiesOrder:
+#       set property = jsonschema.properties[key]
+        "{{ key }}": xxx{% if not loop.last %},{%endif%}
+#   endfor
+    }
+  }
+{##}
+{##}
+
+
+SHOW API
+-----------
+
+GET {{schema.prefix}}/{{schema.id}}/{id}
+
+Sample Response
+
+.. code-block:: javascript
+
+  {
+    "{{schema.id}}": {
+#   set jsonschema = schema.schema
+#   for key in jsonschema.propertiesOrder:
+#       set property = jsonschema.properties[key]
+        "{{ key }}": xxx{% if not loop.last %},{%endif%}
+#   endfor
+    }
+  }
+{##}
+{##}
+
+
+Update API
+------------
+
+PUT {{schema.prefix}}/{{schema.id}}/{id}
+
+Sample Request
+
+.. code-block:: javascript
+
+    {
+#   set jsonschema = schema.schema
+#   for key in jsonschema.propertiesOrder:
+#       set property = jsonschema.properties[key]
+#       if "update" in property.permission:
+        "{{ key }}": xxx{% if not loop.last %},{%endif%}
+#       endif
+#   endfor
+    }
+{##}
+{##}
+
+Sample Response
+
+.. code-block:: javascript
+
+  {
+    "{{schema.id}}": {
+#   set jsonschema = schema.schema
+#   for key in jsonschema.propertiesOrder:
+#       set property = jsonschema.properties[key]
+        "{{ key }}": xxx{% if not loop.last %},{%endif%}
+#   endfor
+    }
+  }
+{##}
+{##}
+
+DELETE API
+------------
+
+DELETE {{schema.prefix}}/{{schema.id}}/{id}
+
+# endfor
+
+
+
+
+

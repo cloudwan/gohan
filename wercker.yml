@@ -1,0 +1,64 @@
+box:
+  id: nati/gohan_builder
+  entrypoint: /bin/bash -c
+
+build:
+  steps:
+    - script:
+        name: go env setup
+        code: |
+          export GOPATH=/go
+          export PATH=/go/bin:$PATH
+          export GOSRC=$GOPATH/src
+          export REPO_PATH=$GOSRC/github.com/cloudwan
+          ln -s /pipeline/source $REPO_PATH/gohan
+    - script:
+        name: make
+        code: |
+          echo $REPO_PATH
+          cd $REPO_PATH/gohan
+          make
+
+deploy:
+  steps:
+    - script:
+        name: build docs
+        code: |
+         sudo apt-get install -y python-sphinx
+         cd ${WERCKER_SOURCE_DIR}/docs/
+         make html
+         touch build/html/.nojekyll
+    - script:
+        name: cross compile
+        code: |
+          export PATH=/go/bin:$PATH
+          cd /
+          TARGETS="linux/amd64 linux/386 darwin/amd64 darwin/386 windows/386" ./build.sh github.com/cloudwan/gohan
+    - script:
+        name: zip
+        code: |
+          cd /build
+          mkdir -p ${WERCKER_OUTPUT_DIR}
+          for binary in $(ls); do
+              canonical_name=$(echo ${binary} | sed -e 's/-[a-zA-Z0-9-]*//')
+              cp ${binary} ${canonical_name}
+              archive_name=$(echo ${binary} | sed -e 's/.exe$//').zip
+              zip -r ${WERCKER_OUTPUT_DIR}/${archive_name} ${canonical_name}
+          done
+    - tcnksm/ghr:
+        token: $GITHUB_TOKEN
+        input: ${WERCKER_OUTPUT_DIR}
+        replace: true
+    - lukevivier/gh-pages@0.2.1:
+        token: $GITHUB_TOKEN
+        domain: cloudwan.github.io
+        basedir: ${WERCKER_SOURCE_DIR}/docs/build/html
+    - script:
+        name: trigger ansible-gohan build
+        code: |
+            sudo apt-get install -y curl
+            curl  -H 'Content-Type: application/json' \
+                  -H  "Authorization: Bearer ${WERCKER_TOKEN}" \
+                  -X POST \
+                  -d '{"applicationId": "'${ANSIBLE_GOHAN_APP_ID}'", "message":"build triggered from gohan repo"}' \
+                  https://app.wercker.com/api/v3/builds

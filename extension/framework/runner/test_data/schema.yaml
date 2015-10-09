@@ -1,0 +1,242 @@
+extensions:
+- id: extension1
+  path: /v1.0/network.*
+  url: file://./extension1.js
+- id: extension2
+  path: /v1.0/subnet.*
+  url: file://./extension2.js
+namespaces:
+- description: Neutron API
+  id: neutron
+  name: Neutron
+  prefix: neutron
+- description: Version 2.0 of Neutron API
+  id: neutronV2
+  name: Neutron 2.0
+  parent: neutron
+  prefix: v2.0
+  version: "2.0"
+networks: []
+schemas:
+- description: Network
+  id: network
+  namespace: neutronV2
+  parent: ""
+  plural: networks
+  schema:
+    properties:
+      admin_state_up:
+        default: false
+        permission:
+        - create
+        - update
+        title: Admin state up
+        type: boolean
+        unique: false
+      id:
+        format: uuid
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: true
+      name:
+        default: ""
+        permission:
+        - create
+        - update
+        title: Name
+        type: string
+        unique: false
+      shared:
+        default: false
+        permission:
+        - create
+        - update
+        title: Shared
+        type: boolean
+        unique: false
+      status:
+        title: Status
+        type: string
+        unique: false
+      tenant_id:
+        format: uuid
+        permission:
+        - create
+        title: Tenant id
+        type: string
+        unique: false
+    propertiesOrder:
+    - name
+    - id
+    - tenant_id
+    - status
+    - shared
+    - admin_state_up
+    - subnets
+  singular: network
+  title: Network
+- description: Subnet
+  id: subnet
+  namespace: neutronV2
+  parent: ""
+  plural: subnets
+  schema:
+    properties:
+      allocation_pools:
+        default: []
+        items:
+          properties:
+            end:
+              permission:
+              - create
+              - update
+              title: End
+              type: string
+              unique: false
+            start:
+              permission:
+              - create
+              - update
+              title: Start
+              type: string
+              unique: false
+          propertiesOrder:
+          - start
+          - end
+          type: object
+        permission:
+        - create
+        - update
+        title: Allocation pools
+        type: array
+        unique: false
+      cidr:
+        permission:
+        - create
+        title: CIDR
+        type: string
+        unique: false
+      dns_nameservers:
+        default: []
+        items:
+          type: string
+        permission:
+        - create
+        - update
+        title: DNS nameservers
+        type: array
+        unique: false
+      enable_dhcp:
+        default: false
+        permission:
+        - create
+        - update
+        title: Enable DHCP
+        type: boolean
+        unique: false
+      gateway_ip:
+        default: ""
+        permission:
+        - create
+        - update
+        title: Gateway IP
+        type: string
+        unique: false
+      host_routes:
+        default: []
+        items:
+          properties:
+            destination:
+              title: Destination
+              type: string
+            nexthop:
+              title: Nexthop
+              type: string
+          type: object
+        permission:
+        - create
+        - update
+        title: Host routes
+        type: array
+        unique: false
+      id:
+        format: uuid
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: true
+      ip_version:
+        enum:
+        - 4
+        - 6
+        permission:
+        - create
+        title: IP version
+        type: integer
+        unique: false
+      ipv6_address_mode:
+        default: static
+        enum:
+        - dhcpv6-stateful
+        - dhcpv6-stateless
+        - static
+        permission:
+        - create
+        title: IPv6 address mode
+        type: string
+        unique: false
+      ipv6_ra_mode:
+        default: static
+        enum:
+        - dhcpv6-stateful
+        - dhcpv6-stateless
+        - static
+        permission:
+        - create
+        title: IPv6 ra mode
+        type: string
+        unique: false
+      name:
+        default: ""
+        permission:
+        - create
+        - update
+        title: Name
+        type: string
+        unique: false
+      network_id:
+        format: uuid
+        permission:
+        - create
+        relation: network
+        title: Network id
+        type: string
+        unique: false
+      tenant_id:
+        format: uuid
+        permission:
+        - create
+        title: Tenant id
+        type: string
+        unique: false
+    propertiesOrder:
+    - name
+    - id
+    - tenant_id
+    - network_id
+    - cidr
+    - ip_version
+    - ipv6_address_mode
+    - ipv6_ra_mode
+    - gateway_ip
+    - enable_dhcp
+    - allocation_pools
+    - dns_nameservers
+    - host_routes
+    type: object
+  singular: subnet
+  title: Subnet
+subnets: []

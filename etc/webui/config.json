@@ -1,0 +1,7 @@
+{
+    "auth_url": "https://__HOST__/v2.0",
+    "gohan": {
+        "schema": "/gohan/v0.1/schemas",
+        "url": "https://__HOST__"
+    }
+}

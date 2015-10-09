@@ -1,0 +1,35 @@
+schemas:
+- description: Test object
+  id: test_object
+  parent: ""
+  plural: test_objects
+  schema:
+    properties:
+      id:
+        format: uuid
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: true
+      name:
+        default: ""
+        permission:
+        - create
+        - update
+        title: Name
+        type: string
+        unique: false
+      tenant_id:
+        format: uuid
+        permission:
+        - create
+        title: Tenant id
+        type: string
+        unique: false
+    propertiesOrder:
+    - name
+    - id
+    - tenant_id
+  singular: test_object
+  title: Test Object
