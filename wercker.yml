@@ -24,10 +24,12 @@ deploy:
     - script:
         name: build docs
         code: |
-         sudo apt-get install -y python-sphinx
-         cd ${WERCKER_SOURCE_DIR}/docs/
-         make html
-         touch build/html/.nojekyll
+          sudo apt-get update
+          sudo apt-get install -y python-sphinx python-pip
+          sudo pip install sphinx_rtd_theme
+          cd ${WERCKER_SOURCE_DIR}/docs/
+          make html
+          touch build/html/.nojekyll
     - script:
         name: cross compile
         code: |
