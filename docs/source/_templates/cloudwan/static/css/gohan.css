@@ -1,0 +1,82 @@
+﻿.test {
+    color:#ccc;
+}
+
+.wy-nav-side {
+  top: 40px;
+  /*background: #f1f8fe;*/
+}
+
+div.version {
+  display: none;
+}
+
+.wy-grid-for-nav {
+  padding-top: 40px;
+}
+
+.wy-side-nav-search {
+  background: #343131;
+  margin-bottom: 5px;
+  margin-top: 10px;
+}
+
+
+
+.wy-side-nav-search .icon-home {
+  display: none;
+}
+
+.gohan_header {
+  position: fixed;
+  top: 0px;
+  width: 100%;
+  z-index: 300;
+  display: table;
+  height: 40px;
+  background: #fff;
+  box-shadow: #ccc 0px 2px 3px;
+}
+
+.gohan_header > div{
+  display: table-cell;
+  padding:10px;
+  line-height: 20px;
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+.gohan_header > div.logo {
+  width: 20%;
+  padding: 5px 10px;
+  line-height: 30px;
+}
+
+.gohan_header > div.logo img {
+  display: block;
+}
+.gohan_header > div.nav {
+  width: 80%;
+  text-align: right;
+}
+
+.nav ul li a {
+  color: #2980B9;
+  text-decoration: none;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+
+.nav ul li a:hover {
+    text-decoration: underline;
+}
+
+.nav ul {overflow: hidden; display: inline-block;}
+.nav ul li {float: left; margin: 0 10px;}
+
+
+.wy-menu-vertical a:active {
+    background-color: #4e4a4a;
+    cursor: pointer;
+    color: #fff;
+}
