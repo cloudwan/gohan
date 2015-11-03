@@ -40,6 +40,7 @@ import (
 var (
 	server           *srv.Server
 	baseURL          = "http://localhost:19090"
+	schemaURL        = baseURL + "/gohan/v0.1/schemas"
 	networkPluralURL = baseURL + "/v2.0/networks"
 	subnetPluralURL  = baseURL + "/v2.0/subnets"
 	testPluralURL    = baseURL + "/v2.0/tests"
@@ -289,6 +290,7 @@ var _ = Describe("Server package test", func() {
 			testURL("GET", baseURL, memberTokenID, nil, http.StatusNotFound)
 			testURL("GET", networkPluralURL, memberTokenID, nil, http.StatusOK)
 			testURL("GET", networkPluralURL, "", nil, http.StatusUnauthorized)
+			testURL("GET", schemaURL, memberTokenID, nil, http.StatusOK)
 
 			network = map[string]interface{}{
 				"id":   "networkred",
