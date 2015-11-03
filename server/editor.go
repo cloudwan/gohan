@@ -38,9 +38,9 @@ func setupEditor(server *Server) {
 					if err != nil {
 						return err
 					}
-					s := trimmedSchema.Data()
-					s["url"] = currentSchema.URL
 					if trimmedSchema != nil {
+						s := trimmedSchema.Data()
+						s["url"] = currentSchema.URL
 						list = append(list, s)
 						total = total + 1
 					}
