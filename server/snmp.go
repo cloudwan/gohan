@@ -73,27 +73,14 @@ func startSNMPProcess(server *Server) {
 				oid := listInfo[1].(wapsnmp.Oid)
 				trap[oid.String()] = fmt.Sprintf("%v", listInfo[2])
 			}
-			err = func() error {
-				tx, err := server.db.Begin()
-				defer tx.Close()
-				context := map[string]interface{}{
-					"trap":   trap,
-					"remote": remote,
-				}
-				if err != nil {
-					return err
-				}
-				if err := env.HandleEvent("notification", context); err != nil {
-					log.Warning(fmt.Sprintf("extension error: %s", err))
-					return err
-				}
-				err = tx.Commit()
-				if err != nil {
-					log.Error(fmt.Sprintf("commit error : %s", err))
-					return err
-				}
-				return nil
-			}()
+
+			context := map[string]interface{}{
+				"trap":   trap,
+				"remote": remote,
+			}
+			if err := env.HandleEvent("notification", context); err != nil {
+				log.Warning(fmt.Sprintf("extension error: %s", err))
+			}
 		}
 	}()
 }
