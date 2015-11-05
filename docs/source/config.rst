@@ -83,6 +83,20 @@ later, so we don't recommend to have duplicated config file key in multiple file
 
   include: gohan.d
 
+Environment Value
+--------------------
+
+You can use Environemnt value in the configuraion.
+
+.. code-block:: yaml
+
+  address: {{ .GOHAN_IP}}:{{ .GOHAN_PORT}}
+
+
+Note you need to use {{ and }}, and you need to put . before
+your env key.
+We are using golang text template package, so please take a
+look more at https://golang.org/pkg/text/template/
 
 Database
 --------------------

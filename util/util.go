@@ -16,6 +16,7 @@
 package util
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -24,6 +25,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"text/template"
 	"time"
 
 	"golang.org/x/crypto/ssh"
@@ -77,6 +79,33 @@ func LoadFile(filePath string) (map[string]interface{}, error) {
 	} else if strings.HasSuffix(filePath, ".yaml") {
 		var documentYAML map[interface{}]interface{}
 		err = yaml.Unmarshal(bodyBuff, &documentYAML)
+		if err != nil {
+			return map[string]interface{}{}, err
+		}
+		document := DecodeYAMLLibObject(documentYAML)
+		return document.(map[string]interface{}), nil
+	}
+	return nil, err
+}
+
+//LoadTemplate loads object from file. suffix of filepath will be
+// used as file type. currently, json and yaml is supported
+func LoadTemplate(filePath string, params interface{}) (map[string]interface{}, error) {
+	templateSource, err := GetContent(filePath)
+	t := template.Must(template.New("tmpl").Parse(string(templateSource[:])))
+	outputBuffer := bytes.NewBuffer(make([]byte, 0, 100))
+	t.Execute(outputBuffer, params)
+	data := outputBuffer.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	if strings.HasSuffix(filePath, ".json") {
+		var document map[string]interface{}
+		err = json.Unmarshal(data, &document)
+		return document, err
+	} else if strings.HasSuffix(filePath, ".yaml") {
+		var documentYAML map[interface{}]interface{}
+		err = yaml.Unmarshal(data, &documentYAML)
 		if err != nil {
 			return map[string]interface{}{}, err
 		}
