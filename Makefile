@@ -24,7 +24,6 @@ savedeps:
 
 format:
 	@echo "$(OK_COLOR)==> Formatting$(NO_COLOR)"
-	python tools/license.py
 	go fmt ./...
 
 test:
