@@ -53,8 +53,6 @@ func startCRONProcess(server *Server) {
 			defer func() {
 				server.sync.Unlock(lockKey)
 			}()
-			tx, err := server.db.Begin()
-			defer tx.Close()
 			context := map[string]interface{}{
 				"path": path,
 			}
@@ -63,11 +61,6 @@ func startCRONProcess(server *Server) {
 				return
 			}
 			if err := env.HandleEvent("notification", context); err != nil {
-				log.Warning(fmt.Sprintf("extension error: %s", err))
-				return
-			}
-			err = tx.Commit()
-			if err != nil {
 				log.Warning(fmt.Sprintf("extension error: %s", err))
 				return
 			}

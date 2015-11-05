@@ -507,24 +507,13 @@ func runExtensionOnSync(server *Server, response *gohan_sync.Event, env extensio
 	defer func() {
 		server.sync.Unlock(lockKey)
 	}()
-	tx, err := server.db.Begin()
-	defer tx.Close()
 	context := map[string]interface{}{
-		"transaction": tx,
-		"action":      response.Action,
-		"data":        response.Data,
-		"key":         response.Key,
-	}
-	if err != nil {
-		return
+		"action": response.Action,
+		"data":   response.Data,
+		"key":    response.Key,
 	}
 	if err := env.HandleEvent("notification", context); err != nil {
 		log.Warning(fmt.Sprintf("extension error: %s", err))
-		return
-	}
-	err = tx.Commit()
-	if err != nil {
-		log.Error(fmt.Sprintf("commit error : %s", err))
 		return
 	}
 	return

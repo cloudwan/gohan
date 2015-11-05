@@ -123,28 +123,13 @@ func listenAMQP(server *Server) {
 						for _, event := range events {
 							if strings.HasPrefix(eventType, event) {
 								env := extensions[event]
-								err = func() error {
-									tx, err := server.db.Begin()
-									defer tx.Close()
-									context := map[string]interface{}{
-										"transaction": tx,
-										"event":       message,
-									}
-									if err != nil {
-										return err
-									}
-									if err := env.HandleEvent("notification", context); err != nil {
-										log.Warning(fmt.Sprintf("extension error: %s", err))
-										return err
-									}
-									err = tx.Commit()
-									if err != nil {
-										log.Error(fmt.Sprintf("commit error : %s", err))
-										return err
-									}
-									return nil
-								}()
-								break
+
+								context := map[string]interface{}{
+									"event": message,
+								}
+								if err := env.HandleEvent("notification", context); err != nil {
+									log.Warning(fmt.Sprintf("extension error: %s", err))
+								}
 							}
 						}
 					}
