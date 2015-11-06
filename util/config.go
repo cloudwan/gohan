@@ -18,6 +18,7 @@ package util
 import (
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 //Config stores configuration paramters for api server
@@ -38,10 +39,26 @@ func GetConfig() *Config {
 	return gohanConfig
 }
 
+//GetEnvMap reads environemnt vars and return key value
+func GetEnvMap() map[string]string {
+	envStrings := os.Environ()
+	envMap := map[string]string{}
+	for _, envKeyValue := range envStrings {
+		keyValue := strings.Split(envKeyValue, "=")
+		if len(keyValue) == 2 {
+			key := keyValue[0]
+			value := keyValue[1]
+			envMap[key] = value
+		}
+	}
+	return envMap
+}
+
 //ReadConfig reads data from config file
 //Config file can be yaml or json file
 func (config *Config) ReadConfig(path string) error {
-	data, err := LoadFile(path)
+	envMap := GetEnvMap()
+	data, err := LoadTemplate(path, envMap)
 	//(TODO) nati: verification for config data using json schema
 	if err != nil {
 		return err
