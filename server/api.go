@@ -304,6 +304,13 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 			putSingleFunc(w, r, p, identityService, context)
 		})
 
+	route.Patch(singleURL, middleware.Authorization(schema.ActionUpdate), putSingleFunc)
+	route.Patch(singleURLWithParents, middleware.Authorization(schema.ActionUpdate),
+		func(w http.ResponseWriter, r *http.Request, p martini.Params, identityService middleware.IdentityService, context middleware.Context) {
+			addParamToQuery(r, schema.FormatParentID(s.Parent), p[s.Parent])
+			putSingleFunc(w, r, p, identityService, context)
+		})
+
 	//Custom action support
 	for _, actionExt := range s.Actions {
 		action := actionExt

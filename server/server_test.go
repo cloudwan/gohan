@@ -18,6 +18,7 @@ package server_test
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -127,7 +128,7 @@ var _ = Describe("Server package test", func() {
 				testURL("DELETE", getNetworkSingularURL("red"), adminTokenID, nil, http.StatusNoContent)
 			})
 
-			Describe("updating network", func() {
+			Describe("updating network using PUT", func() {
 				networkUpdate := map[string]interface{}{
 					"name": "NetworkRed2",
 				}
@@ -145,6 +146,31 @@ var _ = Describe("Server package test", func() {
 
 				It("should update and get updated network", func() {
 					result = testURL("PUT", getNetworkSingularURL("red"), adminTokenID, networkUpdate, http.StatusOK)
+					Expect(result).To(HaveKeyWithValue("network", util.MatchAsJSON(networkUpdated)))
+					result = testURL("GET", getNetworkSingularURL("red"), adminTokenID, nil, http.StatusOK)
+					Expect(result).To(HaveKeyWithValue("network", util.MatchAsJSON(networkUpdated)))
+				})
+			})
+
+			Describe("updating network using PATCH", func() {
+				networkUpdate := map[string]interface{}{
+					"name": "NetworkRed2",
+				}
+				invalidNetwork := map[string]interface{}{
+					"id":   10,
+					"name": "NetworkRed",
+				}
+				networkUpdated := network
+				networkUpdated["name"] = "NetworkRed2"
+
+				It("should not update network with invalid or the same network", func() {
+					testURL("PATCH", getNetworkSingularURL("red"), adminTokenID, invalidNetwork, http.StatusBadRequest)
+					testURL("PATCH", getNetworkSingularURL("red"), adminTokenID, network, http.StatusBadRequest)
+				})
+
+				It("should update and get updated network", func() {
+					result = testURL("PATCH", getNetworkSingularURL("red"), adminTokenID, networkUpdate, http.StatusOK)
+					By(fmt.Sprintf("%s", result))
 					Expect(result).To(HaveKeyWithValue("network", util.MatchAsJSON(networkUpdated)))
 					result = testURL("GET", getNetworkSingularURL("red"), adminTokenID, nil, http.StatusOK)
 					Expect(result).To(HaveKeyWithValue("network", util.MatchAsJSON(networkUpdated)))
