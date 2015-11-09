@@ -31,10 +31,10 @@ import (
 
 	"db"
 	"db/transaction"
+	gohan_sync "gohan/sync"
+	gohan_etcd "gohan/sync/etcd"
 	"schema"
 	srv "server"
-	gohan_sync "sync"
-	gohan_etcd "sync/etcd"
 	"util"
 )
 

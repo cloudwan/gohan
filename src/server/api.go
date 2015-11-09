@@ -22,12 +22,12 @@ import (
 
 	"db"
 	"extension"
+	"github.com/drone/routes"
+	"github.com/go-martini/martini"
+	"gohan/sync"
 	"schema"
 	"server/middleware"
 	"server/resources"
-	"sync"
-	"github.com/drone/routes"
-	"github.com/go-martini/martini"
 )
 
 var (

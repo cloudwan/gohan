@@ -21,7 +21,7 @@ import (
 	"os"
 	"time"
 
-	"sync"
+	"gohan/sync"
 
 	"github.com/coreos/go-etcd/etcd"
 	"github.com/twinj/uuid"

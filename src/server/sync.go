@@ -27,8 +27,8 @@ import (
 	"db/transaction"
 	"extension"
 
+	gohan_sync "gohan/sync"
 	"schema"
-	gohan_sync "sync"
 	"util"
 )
 

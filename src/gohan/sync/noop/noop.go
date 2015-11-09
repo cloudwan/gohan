@@ -15,7 +15,7 @@
 
 package noop
 
-import "sync"
+import "gohan/sync"
 
 //Sync is struct for noop
 type Sync struct {

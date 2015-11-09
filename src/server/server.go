@@ -26,13 +26,13 @@ import (
 
 	"cloud"
 	"db"
-	l "log"
+	"github.com/go-martini/martini"
+	l "gohan/log"
+	"gohan/sync"
+	"gohan/sync/etcd"
 	"schema"
 	"server/middleware"
-	"sync"
-	"sync/etcd"
 	"util"
-	"github.com/go-martini/martini"
 	//Import gohan extension buildins
 )
 

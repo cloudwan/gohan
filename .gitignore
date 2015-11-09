@@ -39,3 +39,6 @@ node_modules
 .idea
 etc/gohan.log
 etc/gohan.db
+
+bin/
+pkg/

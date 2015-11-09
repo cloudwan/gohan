@@ -18,7 +18,7 @@ package middleware
 import (
 	"github.com/op/go-logging"
 
-	l "log"
+	l "gohan/log"
 )
 
 var log = logging.MustGetLogger(l.GetModuleName())
