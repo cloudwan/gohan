@@ -1,0 +1,20 @@
+extensions:
+- id: donburi
+  path: .*
+  url: https://raw.githubusercontent.com/cloudwan/gohan/master/etc/extensions/donburi.js
+- id: check
+  code_type: donburi
+  code: |
+    tasks:
+    - eval: |
+       context.resource = JSON.parse(data.body);
+    - debug: "{{.resource}}"
+    - command:
+        name: "./test_create_network.sh"
+        args:
+        - "{{ .resource.id }}"
+      register: output
+      rescue:
+        - debug: "{{ .exception }}"
+    - debug: "done {{.output}}"
+  path: "sync://config/v2.0/networks"

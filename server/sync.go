@@ -276,14 +276,6 @@ func (server *Server) Sync() error {
 
 //StateUpdate updates the state in the db based on the sync event
 func StateUpdate(response *gohan_sync.Event, server *Server) error {
-	lockKey := lockPath + response.Key
-	err := server.sync.Lock(lockKey, false)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		server.sync.Unlock(lockKey)
-	}()
 	dataStore := server.db
 	schemaPath := "/" + strings.TrimPrefix(response.Key, statePrefix)
 	var curSchema *schema.Schema
@@ -367,14 +359,6 @@ func StateUpdate(response *gohan_sync.Event, server *Server) error {
 
 //MonitoringUpdate updates the state in the db based on the sync event
 func MonitoringUpdate(response *gohan_sync.Event, server *Server) error {
-	lockKey := lockPath + response.Key
-	err := server.sync.Lock(lockKey, false)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		server.sync.Unlock(lockKey)
-	}()
 	dataStore := server.db
 	schemaPath := "/" + strings.TrimPrefix(response.Key, monitoringPrefix)
 	var curSchema *schema.Schema
@@ -440,7 +424,9 @@ func MonitoringUpdate(response *gohan_sync.Event, server *Server) error {
 	return tx.Commit()
 }
 
+//TODO(nati) integrate with watch process
 func startStateUpdatingProcess(server *Server) {
+
 	stateResponseChan := make(chan *gohan_sync.Event)
 	stateStopChan := make(chan bool)
 
@@ -454,11 +440,21 @@ func startStateUpdatingProcess(server *Server) {
 
 	go func() {
 		for server.running {
-			err := server.sync.Watch(statePrefix, stateResponseChan, stateStopChan)
+			lockKey := lockPath + "state"
+			err := server.sync.Lock(lockKey, true)
+			if err != nil {
+				log.Warning("Can't start state watch process due to lock", err)
+				time.Sleep(5 * time.Second)
+				continue
+			}
+			defer func() {
+				server.sync.Unlock(lockKey)
+			}()
+
+			err = server.sync.Watch(statePrefix, stateResponseChan, stateStopChan)
 			if err != nil {
 				log.Error(fmt.Sprintf("sync watch error: %s", err))
 			}
-			time.Sleep(5 * time.Second)
 		}
 	}()
 	go func() {
@@ -475,11 +471,20 @@ func startStateUpdatingProcess(server *Server) {
 	monitoringStopChan := make(chan bool)
 	go func() {
 		for server.running {
-			err := server.sync.Watch(monitoringPrefix, monitoringResponseChan, monitoringStopChan)
+			lockKey := lockPath + "monitoring"
+			err := server.sync.Lock(lockKey, true)
+			if err != nil {
+				log.Warning("Can't start state watch process due to lock", err)
+				time.Sleep(5 * time.Second)
+				continue
+			}
+			defer func() {
+				server.sync.Unlock(lockKey)
+			}()
+			err = server.sync.Watch(monitoringPrefix, monitoringResponseChan, monitoringStopChan)
 			if err != nil {
 				log.Error(fmt.Sprintf("sync watch error: %s", err))
 			}
-			time.Sleep(5 * time.Second)
 		}
 	}()
 	go func() {
@@ -499,14 +504,6 @@ func stopStateUpdatingProcess(server *Server) {
 
 //Run extension on sync
 func runExtensionOnSync(server *Server, response *gohan_sync.Event, env extension.Environment) {
-	lockKey := lockPath + response.Key
-	err := server.sync.Lock(lockKey, false)
-	if err != nil {
-		return
-	}
-	defer func() {
-		server.sync.Unlock(lockKey)
-	}()
 	context := map[string]interface{}{
 		"action": response.Action,
 		"data":   response.Data,
@@ -529,6 +526,7 @@ func startSyncWatchProcess(server *Server) {
 	if watch == nil {
 		return
 	}
+
 	extensions := map[string]extension.Environment{}
 	for _, event := range events {
 		path := "sync://" + event
@@ -544,11 +542,20 @@ func startSyncWatchProcess(server *Server) {
 	for _, path := range watch {
 		go func(path string) {
 			for server.running {
-				err := server.sync.Watch(path, responseChan, stopChan)
+				lockKey := lockPath + "watch"
+				err := server.sync.Lock(lockKey, true)
+				if err != nil {
+					log.Warning("Can't start watch process due to lock", err)
+					time.Sleep(5 * time.Second)
+					continue
+				}
+				defer func() {
+					server.sync.Unlock(lockKey)
+				}()
+				err = server.sync.Watch(path, responseChan, stopChan)
 				if err != nil {
 					log.Error(fmt.Sprintf("sync watch error: %s", err))
 				}
-				time.Sleep(5 * time.Second)
 			}
 		}(path)
 	}
@@ -570,7 +577,7 @@ func startSyncWatchProcess(server *Server) {
 					//match extensions
 					if strings.HasPrefix(response.Key, "/"+event) {
 						env := extensions[event]
-						runExtensionOnSync(server, response, env)
+						runExtensionOnSync(server, response, env.Clone())
 						return
 					}
 				}

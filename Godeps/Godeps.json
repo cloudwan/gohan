@@ -128,6 +128,10 @@
 			"Rev": "1aedb1f9e106db5d7403222313a0504a06def5b3"
 		},
 		{
+			"ImportPath": "github.com/streamrail/concurrent-map",
+			"Rev": "d9fcb63c5922e9219f204bbe9b141f238074805e"
+		},
+		{
 			"ImportPath": "github.com/stretchr/objx",
 			"Rev": "1a9d0bb9f541897e62256577b352fdbc1fb4fd94"
 		},

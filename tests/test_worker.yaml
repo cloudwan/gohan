@@ -1,0 +1,82 @@
+#######################################################
+#  Gohan API Server example configuraion
+######################################################
+
+# Sample Configuraion for testing worker condition we get 401 from etcd
+# TODO(nati) automate this
+#
+# How to test worker
+# (1) Start gohan
+#   gohan server --config-file tests/test_worker.yaml
+# (2) Start etcd
+#   etcd
+# (3) Watch result
+#   watch wc tests/worker_test.log
+# (4) Create 10000 resources
+#   seq 1 10000 | xargs -I% gohan client network create
+# (5) Test get success  if you see 10000 lines in worker_test.log
+# (6) Restart gohan
+# (7) You should be able to see 20000 lines after some time
+
+
+# database connection configuraion
+database:
+    # yaml, json, sqlite3 and mysql supported
+    # yaml and json db is for schema development purpose
+    type: "sqlite3"
+    # connection string
+    # it is file path for yaml, json and sqlite3 backend
+    connection: "./gohan.db"
+# schema path
+    drop_on_create: true
+schemas:
+    - "../etc/schema/gohan.json"
+    - "../etc/extensions/gohan_extension.yaml"
+    - "./test_worker_extension.yaml"
+    - "../etc/example_schema.yaml"
+
+editable_schema: ./example_schema.yaml
+
+# listen address for gohan
+address: ":9091"
+tls:
+    # browsers need to add exception as long as we use self-signed certificates
+    # so lets leave it disabled for now
+    enabled: false
+    key_file: ./keys/key.pem
+    cert_file: ./keys/cert.pem
+# document root of gohan API server
+# Note: only static and schema directoriy will be served
+document_root: "."
+# list of etcd backend servers
+etcd:
+    - "http://127.0.0.1:4001"
+# keystone configuraion
+keystone:
+    use_keystone: true
+    fake: true
+    auth_url: "https://localhost:9091/v2.0"
+    user_name: "admin"
+    tenant_name: "admin"
+    password: "gohan"
+# CORS (Cross-origin resource sharing (CORS)) configuraion for javascript based client
+cors: "*"
+
+# allowed levels  "CRITICAL", "ERROR", "WARNING", "NOTICE", "INFO", "DEBUG",
+logging:
+    stderr:
+        enabled: true
+        level: INFO
+    file:
+        enabled: true
+        level: INFO
+        filename: ./gohan.log
+
+watch:
+    keys:
+      - config/v2.0/
+    # Watch entire key
+    events:
+      - config/v2.0/networks
+      # kick extension which meets extension path
+    worker_count: 10
