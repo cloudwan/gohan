@@ -18,7 +18,7 @@ package extension
 import (
 	"fmt"
 
-	"github.com/cloudwan/gohan/schema"
+	"schema"
 )
 
 var modules = map[string]interface{}{}

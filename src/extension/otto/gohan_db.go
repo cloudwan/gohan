@@ -18,9 +18,9 @@ package otto
 import (
 	"github.com/dop251/otto"
 
-	"github.com/cloudwan/gohan/db/sql"
-	"github.com/cloudwan/gohan/db/transaction"
-	"github.com/cloudwan/gohan/schema"
+	"db/sql"
+	"db/transaction"
+	"schema"
 )
 
 func init() {

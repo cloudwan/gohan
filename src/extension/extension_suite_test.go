@@ -19,7 +19,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/cloudwan/gohan/db"
+	"db"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

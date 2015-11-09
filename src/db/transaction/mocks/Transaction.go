@@ -16,9 +16,9 @@
 package mocks
 
 import (
-	"github.com/cloudwan/gohan/db/pagination"
-	"github.com/cloudwan/gohan/db/transaction"
-	"github.com/cloudwan/gohan/schema"
+	"db/pagination"
+	"db/transaction"
+	"schema"
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/mock"
 )

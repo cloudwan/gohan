@@ -22,10 +22,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cloudwan/gohan/extension"
+	"extension"
 
-	"github.com/cloudwan/gohan/schema"
-	"github.com/cloudwan/gohan/util"
+	"schema"
+	"util"
 	"github.com/streadway/amqp"
 	"github.com/twinj/uuid"
 )

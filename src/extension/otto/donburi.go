@@ -16,7 +16,7 @@
 package otto
 
 import (
-	"github.com/cloudwan/gohan/util"
+	"util"
 	"gopkg.in/yaml.v2"
 )
 

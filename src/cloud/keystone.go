@@ -20,7 +20,7 @@ import (
 	"net/http"
 	"regexp"
 
-	"github.com/cloudwan/gohan/schema"
+	"schema"
 	v3tenants "github.com/cloudwan/gophercloud/openstack/identity/v3/projects"
 	"github.com/rackspace/gophercloud"
 	"github.com/rackspace/gophercloud/openstack"

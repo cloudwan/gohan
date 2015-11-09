@@ -18,10 +18,10 @@ package db_test
 import (
 	"os"
 
-	"github.com/cloudwan/gohan/db"
-	"github.com/cloudwan/gohan/db/transaction"
-	"github.com/cloudwan/gohan/schema"
-	"github.com/cloudwan/gohan/util"
+	"db"
+	"db/transaction"
+	"schema"
+	"util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

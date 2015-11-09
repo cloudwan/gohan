@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cloudwan/gohan/util"
+	"util"
 	. "github.com/onsi/gomega"
 )
 

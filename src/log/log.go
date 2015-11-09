@@ -25,7 +25,7 @@ import (
 
 	logging "github.com/op/go-logging"
 
-	"github.com/cloudwan/gohan/util"
+	"util"
 )
 
 var defaultLoggerName = "unknown"

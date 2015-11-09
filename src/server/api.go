@@ -20,12 +20,12 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/cloudwan/gohan/db"
-	"github.com/cloudwan/gohan/extension"
-	"github.com/cloudwan/gohan/schema"
-	"github.com/cloudwan/gohan/server/middleware"
-	"github.com/cloudwan/gohan/server/resources"
-	"github.com/cloudwan/gohan/sync"
+	"db"
+	"extension"
+	"schema"
+	"server/middleware"
+	"server/resources"
+	"sync"
 	"github.com/drone/routes"
 	"github.com/go-martini/martini"
 )

@@ -22,7 +22,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cloudwan/gohan/schema"
+	"schema"
 )
 
 var (

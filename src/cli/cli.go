@@ -23,14 +23,14 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/cloudwan/gohan/schema"
-	"github.com/cloudwan/gohan/util"
+	"schema"
+	"util"
 
-	"github.com/cloudwan/gohan/cli/client"
-	"github.com/cloudwan/gohan/db"
-	"github.com/cloudwan/gohan/db/sql"
-	"github.com/cloudwan/gohan/extension/framework"
-	"github.com/cloudwan/gohan/server"
+	"cli/client"
+	"db"
+	"db/sql"
+	"extension/framework"
+	"server"
 	"github.com/codegangsta/cli"
 )
 

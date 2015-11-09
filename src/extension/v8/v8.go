@@ -32,8 +32,8 @@
 package v8
 
 import (
-	ext "github.com/cloudwan/gohan/extension"
-	"github.com/cloudwan/gohan/schema"
+	ext "extension"
+	"schema"
 	"github.com/twinj/uuid"
 )
 

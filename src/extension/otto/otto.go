@@ -18,10 +18,10 @@ package otto
 import (
 	"fmt"
 
-	"github.com/cloudwan/gohan/db"
-	ext "github.com/cloudwan/gohan/extension"
-	"github.com/cloudwan/gohan/schema"
-	"github.com/cloudwan/gohan/server/middleware"
+	"db"
+	ext "extension"
+	"schema"
+	"server/middleware"
 
 	"github.com/dop251/otto"
 

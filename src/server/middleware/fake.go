@@ -24,8 +24,8 @@ import (
 
 	"github.com/go-martini/martini"
 
-	"github.com/cloudwan/gohan/schema"
-	"github.com/cloudwan/gohan/util"
+	"schema"
+	"util"
 )
 
 type tenant struct {

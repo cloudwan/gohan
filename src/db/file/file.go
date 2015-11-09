@@ -22,11 +22,11 @@ import (
 
 	"github.com/jmoiron/sqlx"
 
-	"github.com/cloudwan/gohan/db/pagination"
-	"github.com/cloudwan/gohan/db/transaction"
+	"db/pagination"
+	"db/transaction"
 
-	"github.com/cloudwan/gohan/schema"
-	"github.com/cloudwan/gohan/util"
+	"schema"
+	"util"
 )
 
 //DB is yaml implementation of DB

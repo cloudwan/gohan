@@ -19,9 +19,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/cloudwan/gohan/extension"
-	"github.com/cloudwan/gohan/extension/otto"
-	"github.com/cloudwan/gohan/server/middleware"
+	"extension"
+	"extension/otto"
+	"server/middleware"
 )
 
 var _ = Describe("Environment manager", func() {

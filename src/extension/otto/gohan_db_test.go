@@ -18,11 +18,11 @@ package otto_test
 import (
 	"errors"
 
-	"github.com/cloudwan/gohan/db/transaction"
-	"github.com/cloudwan/gohan/db/transaction/mocks"
-	"github.com/cloudwan/gohan/extension/otto"
-	"github.com/cloudwan/gohan/schema"
-	"github.com/cloudwan/gohan/server/middleware"
+	"db/transaction"
+	"db/transaction/mocks"
+	"extension/otto"
+	"schema"
+	"server/middleware"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

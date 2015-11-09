@@ -24,7 +24,7 @@ import (
 
 	"github.com/xeipuuv/gojsonschema"
 
-	"github.com/cloudwan/gohan/util"
+	"util"
 )
 
 //manager singleton schema manager

@@ -22,17 +22,17 @@ import (
 	"path/filepath"
 	"reflect"
 
-	"github.com/cloudwan/gohan/db"
-	"github.com/cloudwan/gohan/db/transaction"
-	"github.com/cloudwan/gohan/extension"
-	"github.com/cloudwan/gohan/schema"
-	"github.com/cloudwan/gohan/server/middleware"
+	"db"
+	"db/transaction"
+	"extension"
+	"schema"
+	"server/middleware"
 	"github.com/dop251/otto"
 
 	//Import otto underscore lib
 	_ "github.com/dop251/otto/underscore"
 
-	gohan_otto "github.com/cloudwan/gohan/extension/otto"
+	gohan_otto "extension/otto"
 )
 
 const (

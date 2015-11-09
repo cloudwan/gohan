@@ -16,8 +16,8 @@
 package transaction
 
 import (
-	"github.com/cloudwan/gohan/db/pagination"
-	"github.com/cloudwan/gohan/schema"
+	"db/pagination"
+	"schema"
 	"github.com/jmoiron/sqlx"
 )
 

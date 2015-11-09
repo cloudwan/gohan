@@ -20,8 +20,8 @@ import (
 
 	"github.com/robfig/cron"
 
-	"github.com/cloudwan/gohan/schema"
-	"github.com/cloudwan/gohan/util"
+	"schema"
+	"util"
 )
 
 //CRON Process

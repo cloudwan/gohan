@@ -30,7 +30,7 @@ import (
 	"github.com/dop251/otto"
 	"github.com/twinj/uuid"
 
-	"github.com/cloudwan/gohan/schema"
+	"schema"
 )
 
 const (

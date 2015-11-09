@@ -32,7 +32,7 @@
 package v8
 
 import (
-	"github.com/cloudwan/gohan/extension"
+	"extension"
 )
 
 //NewEnvironment create new gohan extension environment based on context

@@ -21,7 +21,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/cloudwan/gohan/schema"
+	"schema"
 )
 
 // Cache ...

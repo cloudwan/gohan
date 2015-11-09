@@ -21,7 +21,7 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"github.com/cloudwan/gohan/extension/framework/runner"
+	"extension/framework/runner"
 	"github.com/codegangsta/cli"
 	logging "github.com/op/go-logging"
 )

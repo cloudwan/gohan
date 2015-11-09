@@ -18,12 +18,12 @@ package otto
 import (
 	"github.com/dop251/otto"
 
-	"github.com/cloudwan/gohan/schema"
+	"schema"
 
-	"github.com/cloudwan/gohan/extension"
+	"extension"
 	"github.com/op/go-logging"
 
-	l "github.com/cloudwan/gohan/log"
+	l "log"
 )
 
 var log = logging.MustGetLogger(l.GetModuleName())

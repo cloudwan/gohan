@@ -18,12 +18,12 @@ package resources_test
 import (
 	"fmt"
 
-	"github.com/cloudwan/gohan/extension"
-	"github.com/cloudwan/gohan/extension/otto"
-	"github.com/cloudwan/gohan/schema"
-	"github.com/cloudwan/gohan/server/middleware"
-	"github.com/cloudwan/gohan/server/resources"
-	"github.com/cloudwan/gohan/util"
+	"extension"
+	"extension/otto"
+	"schema"
+	"server/middleware"
+	"server/resources"
+	"util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cloudwan/gohan/schema"
+	"schema"
 	"github.com/go-martini/martini"
 )
 

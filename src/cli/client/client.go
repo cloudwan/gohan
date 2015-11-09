@@ -30,7 +30,7 @@ import (
 
 	"bytes"
 
-	"github.com/cloudwan/gohan/schema"
+	"schema"
 )
 
 var (

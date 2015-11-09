@@ -18,9 +18,9 @@ package otto
 import (
 	"github.com/dop251/otto"
 
-	"github.com/cloudwan/gohan/extension"
-	"github.com/cloudwan/gohan/schema"
-	"github.com/cloudwan/gohan/server/resources"
+	"extension"
+	"schema"
+	"server/resources"
 )
 
 const (

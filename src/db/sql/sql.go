@@ -22,10 +22,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cloudwan/gohan/db/pagination"
-	"github.com/cloudwan/gohan/db/transaction"
+	"db/pagination"
+	"db/transaction"
 
-	"github.com/cloudwan/gohan/schema"
+	"schema"
 	"github.com/jmoiron/sqlx"
 	sq "github.com/lann/squirrel"
 	// DB import

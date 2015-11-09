@@ -20,7 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/cloudwan/gohan/util"
+	"util"
 	"github.com/olekukonko/tablewriter"
 )
 

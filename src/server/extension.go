@@ -32,10 +32,10 @@
 package server
 
 import (
-	"github.com/cloudwan/gohan/db"
-	"github.com/cloudwan/gohan/extension"
-	"github.com/cloudwan/gohan/extension/otto"
-	"github.com/cloudwan/gohan/server/middleware"
+	"db"
+	"extension"
+	"extension/otto"
+	"server/middleware"
 )
 
 func newEnvironment(dataStore db.DB, identity middleware.IdentityService) extension.Environment {

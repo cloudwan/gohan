@@ -16,7 +16,7 @@
 package main
 
 import (
-	"github.com/cloudwan/gohan/cli"
+	"cli"
 )
 
 func main() {

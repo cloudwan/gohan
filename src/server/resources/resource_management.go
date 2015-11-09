@@ -19,13 +19,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/cloudwan/gohan/db"
-	"github.com/cloudwan/gohan/db/pagination"
-	"github.com/cloudwan/gohan/db/transaction"
-	"github.com/cloudwan/gohan/extension"
+	"db"
+	"db/pagination"
+	"db/transaction"
+	"extension"
 
-	"github.com/cloudwan/gohan/schema"
-	"github.com/cloudwan/gohan/server/middleware"
+	"schema"
+	"server/middleware"
 	"github.com/twinj/uuid"
 )
 

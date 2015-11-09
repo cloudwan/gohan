@@ -22,7 +22,7 @@ import (
 
 	"github.com/rackspace/gophercloud"
 
-	"github.com/cloudwan/gohan/schema"
+	"schema"
 )
 
 var (

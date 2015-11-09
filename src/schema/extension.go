@@ -22,7 +22,7 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"github.com/cloudwan/gohan/util"
+	"util"
 )
 
 //Extension is a small plugin for gohan

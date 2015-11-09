@@ -29,13 +29,13 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/cloudwan/gohan/db"
-	"github.com/cloudwan/gohan/db/transaction"
-	"github.com/cloudwan/gohan/schema"
-	srv "github.com/cloudwan/gohan/server"
-	gohan_sync "github.com/cloudwan/gohan/sync"
-	gohan_etcd "github.com/cloudwan/gohan/sync/etcd"
-	"github.com/cloudwan/gohan/util"
+	"db"
+	"db/transaction"
+	"schema"
+	srv "server"
+	gohan_sync "sync"
+	gohan_etcd "sync/etcd"
+	"util"
 )
 
 var (

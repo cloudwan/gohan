@@ -28,7 +28,7 @@ import (
 	"github.com/rackspace/gophercloud"
 	"github.com/twinj/uuid"
 
-	"github.com/cloudwan/gohan/schema"
+	"schema"
 )
 
 var _ = Describe("CLI functions", func() {

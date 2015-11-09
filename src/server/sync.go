@@ -22,14 +22,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cloudwan/gohan/db"
-	"github.com/cloudwan/gohan/db/pagination"
-	"github.com/cloudwan/gohan/db/transaction"
-	"github.com/cloudwan/gohan/extension"
+	"db"
+	"db/pagination"
+	"db/transaction"
+	"extension"
 
-	"github.com/cloudwan/gohan/schema"
-	gohan_sync "github.com/cloudwan/gohan/sync"
-	"github.com/cloudwan/gohan/util"
+	"schema"
+	gohan_sync "sync"
+	"util"
 )
 
 const (

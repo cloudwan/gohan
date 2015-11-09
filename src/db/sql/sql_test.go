@@ -20,10 +20,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/cloudwan/gohan/db"
-	. "github.com/cloudwan/gohan/db/sql"
-	"github.com/cloudwan/gohan/db/transaction"
-	"github.com/cloudwan/gohan/schema"
+	"db"
+	. "db/sql"
+	"db/transaction"
+	"schema"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

@@ -19,9 +19,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/cloudwan/gohan/db"
-	"github.com/cloudwan/gohan/schema"
-	"github.com/cloudwan/gohan/server/middleware"
+	"db"
+	"schema"
+	"server/middleware"
 	. "github.com/onsi/gomega"
 )
 

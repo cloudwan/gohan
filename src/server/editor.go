@@ -18,9 +18,9 @@ package server
 import (
 	"fmt"
 
-	"github.com/cloudwan/gohan/extension"
-	"github.com/cloudwan/gohan/schema"
-	"github.com/cloudwan/gohan/util"
+	"extension"
+	"schema"
+	"util"
 )
 
 func setupEditor(server *Server) {

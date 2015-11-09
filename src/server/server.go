@@ -24,14 +24,14 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/cloudwan/gohan/cloud"
-	"github.com/cloudwan/gohan/db"
-	l "github.com/cloudwan/gohan/log"
-	"github.com/cloudwan/gohan/schema"
-	"github.com/cloudwan/gohan/server/middleware"
-	"github.com/cloudwan/gohan/sync"
-	"github.com/cloudwan/gohan/sync/etcd"
-	"github.com/cloudwan/gohan/util"
+	"cloud"
+	"db"
+	l "log"
+	"schema"
+	"server/middleware"
+	"sync"
+	"sync/etcd"
+	"util"
 	"github.com/go-martini/martini"
 	//Import gohan extension buildins
 )

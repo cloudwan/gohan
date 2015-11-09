@@ -20,8 +20,8 @@ import (
 	"net"
 
 	"github.com/cdevr/WapSNMP"
-	"github.com/cloudwan/gohan/schema"
-	"github.com/cloudwan/gohan/util"
+	"schema"
+	"util"
 )
 
 //SNMP Process

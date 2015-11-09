@@ -16,7 +16,7 @@
 package runner_test
 
 import (
-	"github.com/cloudwan/gohan/extension/framework/runner"
+	"extension/framework/runner"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

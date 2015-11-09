@@ -19,11 +19,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/cloudwan/gohan/db/file"
-	"github.com/cloudwan/gohan/db/sql"
-	"github.com/cloudwan/gohan/db/transaction"
+	"db/file"
+	"db/sql"
+	"db/transaction"
 
-	"github.com/cloudwan/gohan/schema"
+	"schema"
 )
 
 const noSchemasInManagerError = "No schemas in Manager. Did you remember to load them?"

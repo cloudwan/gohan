@@ -21,7 +21,7 @@ import (
 
 	g "github.com/onsi/gomega"
 
-	"github.com/cloudwan/gohan/schema"
+	"schema"
 )
 
 func getAuthRequest() interface{} {

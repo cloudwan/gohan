@@ -22,7 +22,7 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"github.com/Juniper/go-netconf/netconf"
-	"github.com/cloudwan/gohan/util"
+	"util"
 	//Import otto underscore lib
 	_ "github.com/dop251/otto/underscore"
 )

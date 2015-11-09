@@ -20,7 +20,7 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/cloudwan/gohan/schema"
+	"schema"
 )
 
 const (

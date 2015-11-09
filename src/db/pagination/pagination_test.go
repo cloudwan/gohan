@@ -19,7 +19,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/cloudwan/gohan/schema"
+	"schema"
 	. "github.com/onsi/gomega"
 )
 

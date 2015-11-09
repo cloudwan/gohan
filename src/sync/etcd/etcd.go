@@ -21,7 +21,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/cloudwan/gohan/sync"
+	"sync"
 
 	"github.com/coreos/go-etcd/etcd"
 	"github.com/twinj/uuid"

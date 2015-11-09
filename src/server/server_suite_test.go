@@ -22,8 +22,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/cloudwan/gohan/db"
-	"github.com/cloudwan/gohan/schema"
+	"db"
+	"schema"
 )
 
 const (

@@ -18,7 +18,7 @@ package schema
 import (
 	"github.com/op/go-logging"
 
-	l "github.com/cloudwan/gohan/log"
+	l "log"
 )
 
 var log = logging.MustGetLogger(l.GetModuleName())
