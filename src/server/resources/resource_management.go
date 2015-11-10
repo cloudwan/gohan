@@ -24,9 +24,9 @@ import (
 	"db/transaction"
 	"extension"
 
+	"github.com/twinj/uuid"
 	"schema"
 	"server/middleware"
-	"github.com/twinj/uuid"
 )
 
 //ResourceProblem describes the kind of problem that occurred during resource manipulation.

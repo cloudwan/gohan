@@ -20,9 +20,9 @@ import (
 	"testing"
 
 	"db"
+	. "github.com/onsi/gomega"
 	"schema"
 	"server/middleware"
-	. "github.com/onsi/gomega"
 )
 
 var (
@@ -49,7 +49,7 @@ func TestDonburiFlows(t *testing.T) {
 	defer afterEach()
 	donburi, err := schema.NewExtension(map[string]interface{}{
 		"id":   "donburi",
-		"url":  "file://../../etc/extensions/donburi.js",
+		"url":  "file://../../../etc/extensions/donburi.js",
 		"path": ".*",
 	})
 	if err != nil {
@@ -130,7 +130,7 @@ func TestDefine(t *testing.T) {
 	defer afterEach()
 	donburi, err := schema.NewExtension(map[string]interface{}{
 		"id":   "donburi",
-		"url":  "file://../../etc/extensions/donburi.js",
+		"url":  "file://../../../etc/extensions/donburi.js",
 		"path": ".*",
 	})
 	if err != nil {
@@ -177,7 +177,7 @@ func TestDonburiExec(t *testing.T) {
 	defer afterEach()
 	donburi, err := schema.NewExtension(map[string]interface{}{
 		"id":   "donburi",
-		"url":  "file://../../etc/extensions/donburi.js",
+		"url":  "file://../../../etc/extensions/donburi.js",
 		"path": ".*",
 	})
 	if err != nil {
@@ -229,7 +229,7 @@ func TestDonburiInjectionAttack(t *testing.T) {
 	defer afterEach()
 	donburi, err := schema.NewExtension(map[string]interface{}{
 		"id":   "donburi",
-		"url":  "file://../../etc/extensions/donburi.js",
+		"url":  "file://../../../etc/extensions/donburi.js",
 		"path": ".*",
 	})
 	if err != nil {
@@ -282,7 +282,7 @@ func TestDonburiResources(t *testing.T) {
 	defer afterEach()
 	donburi, err := schema.NewExtension(map[string]interface{}{
 		"id":   "donburi",
-		"url":  "file://../../etc/extensions/donburi.js",
+		"url":  "file://../../../etc/extensions/donburi.js",
 		"path": ".*",
 	})
 	if err != nil {
@@ -336,7 +336,7 @@ func BenchmarkDonburi(b *testing.B) {
 	defer afterEach()
 	donburi, _ := schema.NewExtension(map[string]interface{}{
 		"id":   "donburi",
-		"url":  "file://../../etc/extensions/donburi.js",
+		"url":  "file://../../../etc/extensions/donburi.js",
 		"path": ".*",
 	})
 	extension, _ := schema.NewExtension(map[string]interface{}{

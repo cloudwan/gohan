@@ -104,7 +104,7 @@ var _ = Describe("Otto extension manager", func() {
 			It("should read the file and run the extension", func() {
 				extension, err := schema.NewExtension(map[string]interface{}{
 					"id":   "test_extension",
-					"url":  "file://../tests/sample_extension.js",
+					"url":  "file://../../tests/sample_extension.js",
 					"path": ".*",
 				})
 				Expect(err).ToNot(HaveOccurred())

@@ -17,8 +17,8 @@ package transaction
 
 import (
 	"db/pagination"
-	"schema"
 	"github.com/jmoiron/sqlx"
+	"schema"
 )
 
 //ResourceState represents the state of a resource

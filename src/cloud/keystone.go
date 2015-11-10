@@ -20,13 +20,13 @@ import (
 	"net/http"
 	"regexp"
 
-	"schema"
 	v3tenants "github.com/cloudwan/gophercloud/openstack/identity/v3/projects"
 	"github.com/rackspace/gophercloud"
 	"github.com/rackspace/gophercloud/openstack"
 	v2tenants "github.com/rackspace/gophercloud/openstack/identity/v2/tenants"
 	v3tokens "github.com/rackspace/gophercloud/openstack/identity/v3/tokens"
 	"github.com/rackspace/gophercloud/pagination"
+	"schema"
 )
 
 const maxReauthAttempts = 3

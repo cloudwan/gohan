@@ -16,8 +16,8 @@
 package otto
 
 import (
-	"util"
 	"gopkg.in/yaml.v2"
+	"util"
 )
 
 //runDonburi converts Donburi script to javascript

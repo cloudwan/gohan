@@ -23,8 +23,8 @@ import (
 	"strings"
 	"time"
 
-	"schema"
 	"github.com/go-martini/martini"
+	"schema"
 )
 
 type responseHijacker struct {

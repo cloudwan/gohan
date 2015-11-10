@@ -20,8 +20,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"util"
 	"github.com/olekukonko/tablewriter"
+	"util"
 )
 
 var errorKey = "error"
