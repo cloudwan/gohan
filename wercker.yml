@@ -11,6 +11,7 @@ build:
           export PATH=/go/bin:$PATH
           export GOSRC=$GOPATH/src
           export REPO_PATH=$GOSRC/github.com/cloudwan
+          go get github.com/constabulary/gb/...
           ln -s /pipeline/source $REPO_PATH/gohan
     - script:
         name: make
