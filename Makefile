@@ -21,7 +21,7 @@ deps:
 
 format:
 	@echo "$(OK_COLOR)==> Formatting$(NO_COLOR)"
-	(go fmt ./src/...)
+	go fmt ./src/...
 
 test:
 	@echo "$(OK_COLOR)==> Testing$(NO_COLOR)"
@@ -29,8 +29,8 @@ test:
 
 lint:
 	@echo "$(OK_COLOR)==> Linting$(NO_COLOR)"
-	(golint ./src/... )
-	(go vet ./src/... )
+	golint ./src/...
+	go vet ./src/...
 
 build:
 	@echo "$(OK_COLOR)==> Building$(NO_COLOR)"
