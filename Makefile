@@ -1,4 +1,5 @@
 prefix=${prefix, "/usr/local"}
+mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
 NO_COLOR=\033[0m
 OK_COLOR=\033[32;01m
 ERROR_COLOR=\033[31;01m
@@ -34,7 +35,7 @@ lint:
 
 build:
 	@echo "$(OK_COLOR)==> Building$(NO_COLOR)"
-	gb build
+	gb build -R $(mkfile_path) -v
 
 install:
 	@echo "$(OK_COLOR)==> Installing$(NO_COLOR)"
