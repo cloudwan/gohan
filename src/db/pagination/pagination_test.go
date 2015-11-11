@@ -19,8 +19,8 @@ import (
 	"net/url"
 	"testing"
 
-	"schema"
 	. "github.com/onsi/gomega"
+	"schema"
 )
 
 func TestNewPaginator(t *testing.T) {

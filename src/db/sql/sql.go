@@ -25,9 +25,9 @@ import (
 	"db/pagination"
 	"db/transaction"
 
-	"schema"
 	"github.com/jmoiron/sqlx"
 	sq "github.com/lann/squirrel"
+	"schema"
 	// DB import
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/mattn/go-sqlite3"

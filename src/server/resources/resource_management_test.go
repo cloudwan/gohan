@@ -20,12 +20,12 @@ import (
 
 	"extension"
 	"extension/otto"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	"schema"
 	"server/middleware"
 	"server/resources"
 	"util"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Resource manager", func() {

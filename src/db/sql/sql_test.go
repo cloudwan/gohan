@@ -48,7 +48,7 @@ var _ = Describe("Sql", func() {
 		dbc, err := db.ConnectDB(dbType, conn)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manager.LoadSchemasFromFiles(
-			"../../etc/schema/gohan.json", "../../tests/test_schema.yaml")).To(Succeed())
+			"../../../etc/schema/gohan.json", "../../../tests/test_schema.yaml")).To(Succeed())
 		db.InitDBWithSchemas(dbType, conn, true, false)
 
 		// Insert fixture data

@@ -1,3 +1,4 @@
+prefix=${prefix, "/usr/local"}
 NO_COLOR=\033[0m
 OK_COLOR=\033[32;01m
 ERROR_COLOR=\033[31;01m
@@ -16,15 +17,11 @@ all: format lint build test
 
 deps:
 	@echo "$(OK_COLOR)==> Installing dependencies$(NO_COLOR)"
-	godep restore
-
-savedeps:
-	@echo "$(OK_COLOR)==> Updating all dependencies$(NO_COLOR)"
-	godep save ./...
+	gb vendor restore
 
 format:
 	@echo "$(OK_COLOR)==> Formatting$(NO_COLOR)"
-	go fmt ./...
+	(cd src; go fmt ./...)
 
 test:
 	@echo "$(OK_COLOR)==> Testing$(NO_COLOR)"
@@ -32,13 +29,13 @@ test:
 
 lint:
 	@echo "$(OK_COLOR)==> Linting$(NO_COLOR)"
-	golint ./...
-	go vet ./...
+	(cd src; golint ./... )
+	(cd src; go vet ./... )
 
-build: deps
+build:
 	@echo "$(OK_COLOR)==> Building$(NO_COLOR)"
-	$(GO_BUILD)
+	gb build
 
 install:
 	@echo "$(OK_COLOR)==> Installing$(NO_COLOR)"
-	go install ./...
+	install bin/gohan $(prefix)/bin

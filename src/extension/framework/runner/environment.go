@@ -25,9 +25,9 @@ import (
 	"db"
 	"db/transaction"
 	"extension"
+	"github.com/dop251/otto"
 	"schema"
 	"server/middleware"
-	"github.com/dop251/otto"
 
 	//Import otto underscore lib
 	_ "github.com/dop251/otto/underscore"

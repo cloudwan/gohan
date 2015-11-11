@@ -33,8 +33,8 @@ package v8
 
 import (
 	ext "extension"
-	"schema"
 	"github.com/twinj/uuid"
+	"schema"
 )
 
 var inits = []func(env *Environment){}

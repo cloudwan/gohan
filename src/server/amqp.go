@@ -24,10 +24,10 @@ import (
 
 	"extension"
 
-	"schema"
-	"util"
 	"github.com/streadway/amqp"
 	"github.com/twinj/uuid"
+	"schema"
+	"util"
 )
 
 const connectionWait = 10 * time.Second

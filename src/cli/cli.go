@@ -30,8 +30,8 @@ import (
 	"db"
 	"db/sql"
 	"extension/framework"
-	"server"
 	"github.com/codegangsta/cli"
+	"server"
 )
 
 //Run execute main command

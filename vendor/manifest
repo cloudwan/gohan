@@ -72,6 +72,20 @@
 			"branch": "master"
 		},
 		{
+			"importpath": "github.com/golang/protobuf/proto",
+			"repository": "https://github.com/golang/protobuf",
+			"revision": "d3d78384b82d449651d2435ed329d70f7c48aa56",
+			"branch": "master",
+			"path": "/proto"
+		},
+		{
+			"importpath": "github.com/golang/protobuf/proto/testdata",
+			"repository": "https://github.com/golang/protobuf",
+			"revision": "d3d78384b82d449651d2435ed329d70f7c48aa56",
+			"branch": "master",
+			"path": "/proto/testdata"
+		},
+		{
 			"importpath": "github.com/jmoiron/sqlx",
 			"repository": "https://github.com/jmoiron/sqlx",
 			"revision": "ad7f2641d00865a3d5b860ccdade6f8e63dbdae6",
@@ -114,10 +128,22 @@
 			"branch": "master"
 		},
 		{
+			"importpath": "github.com/onsi/ginkgo",
+			"repository": "",
+			"revision": "",
+			"branch": ""
+		},
+		{
 			"importpath": "github.com/onsi/gomega",
 			"repository": "https://github.com/onsi/gomega",
 			"revision": "2152b45fa28a361beba9aab0885972323a444e28",
 			"branch": "master"
+		},
+		{
+			"importpath": "github.com/onsi/gomega",
+			"repository": "",
+			"revision": "",
+			"branch": ""
 		},
 		{
 			"importpath": "github.com/op/go-logging",

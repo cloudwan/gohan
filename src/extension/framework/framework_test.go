@@ -22,8 +22,8 @@ import (
 	"testing"
 	"time"
 
-	"util"
 	. "github.com/onsi/gomega"
+	"util"
 )
 
 func TestGetTestFiles(t *testing.T) {

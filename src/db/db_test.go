@@ -20,10 +20,10 @@ import (
 
 	"db"
 	"db/transaction"
-	"schema"
-	"util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"schema"
+	"util"
 )
 
 var _ = Describe("Database operation test", func() {
@@ -47,7 +47,7 @@ var _ = Describe("Database operation test", func() {
 
 	BeforeEach(func() {
 		manager = schema.GetManager()
-		Expect(manager.LoadSchemaFromFile("../etc/schema/gohan.json")).To(Succeed())
+		Expect(manager.LoadSchemaFromFile("../../etc/schema/gohan.json")).To(Succeed())
 	})
 
 	AfterEach(func() {
@@ -63,7 +63,7 @@ var _ = Describe("Database operation test", func() {
 		)
 
 		BeforeEach(func() {
-			Expect(manager.LoadSchemaFromFile("../tests/test_schema.yaml")).To(Succeed())
+			Expect(manager.LoadSchemaFromFile("../../tests/test_schema.yaml")).To(Succeed())
 			networkSchema, ok = manager.Schema("network")
 			Expect(ok).To(BeTrue())
 			subnetSchema, ok = manager.Schema("subnet")
@@ -222,7 +222,7 @@ var _ = Describe("Database operation test", func() {
 		BeforeEach(func() {
 			conn = "test.db"
 			dbType = "sqlite3"
-			Expect(manager.LoadSchemaFromFile("../tests/test_schema.yaml")).To(Succeed())
+			Expect(manager.LoadSchemaFromFile("../../tests/test_schema.yaml")).To(Succeed())
 		})
 
 		It("Should initialize the database without error", func() {

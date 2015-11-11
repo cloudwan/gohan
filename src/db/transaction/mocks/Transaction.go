@@ -18,9 +18,9 @@ package mocks
 import (
 	"db/pagination"
 	"db/transaction"
-	"schema"
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/mock"
+	"schema"
 )
 
 // Transaction mock
