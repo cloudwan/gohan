@@ -129,21 +129,15 @@
 		},
 		{
 			"importpath": "github.com/onsi/ginkgo",
-			"repository": "",
-			"revision": "",
-			"branch": ""
+			"repository": "https://github.com/onsi/ginkgo",
+			"revision": "39d2c24f8a92c88f7e7f4d8ec6c80d3cc8f5ac65",
+			"branch": "master"
 		},
 		{
 			"importpath": "github.com/onsi/gomega",
 			"repository": "https://github.com/onsi/gomega",
 			"revision": "2152b45fa28a361beba9aab0885972323a444e28",
 			"branch": "master"
-		},
-		{
-			"importpath": "github.com/onsi/gomega",
-			"repository": "",
-			"revision": "",
-			"branch": ""
 		},
 		{
 			"importpath": "github.com/op/go-logging",
@@ -203,6 +197,12 @@
 			"importpath": "github.com/robfig/cron",
 			"repository": "https://github.com/robfig/cron",
 			"revision": "e4280929dd5d1064616a07bc7912264525e845e5",
+			"branch": "master"
+		},
+		{
+			"importpath": "github.com/ry/v8worker",
+			"repository": "https://github.com/ry/v8worker",
+			"revision": "c37b85265197fabd5544a39d46decd3838fc21a1",
 			"branch": "master"
 		},
 		{

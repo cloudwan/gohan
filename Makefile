@@ -7,9 +7,9 @@ WARN_COLOR=\033[33;01m
 # You need v8worker https://github.com/ry/v8worker installed in your env
 # in order to enable v8 support on extension. then set ENABLE_V8=true
 ifeq "$(ENABLE_V8)" "true"
-	GO_BUILD=go build -tags=v8 ./...
+	GO_BUILD=gb build -tags 'v8'
 else
-	GO_BUILD=go build ./...
+	GO_BUILD=gb build
 endif
 
 
@@ -21,7 +21,7 @@ deps:
 
 format:
 	@echo "$(OK_COLOR)==> Formatting$(NO_COLOR)"
-	(cd src; go fmt ./...)
+	(go fmt ./src/...)
 
 test:
 	@echo "$(OK_COLOR)==> Testing$(NO_COLOR)"
@@ -29,8 +29,8 @@ test:
 
 lint:
 	@echo "$(OK_COLOR)==> Linting$(NO_COLOR)"
-	(cd src; golint ./... )
-	(cd src; go vet ./... )
+	(golint ./src/... )
+	(go vet ./src/... )
 
 build:
 	@echo "$(OK_COLOR)==> Building$(NO_COLOR)"
