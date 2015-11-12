@@ -18,14 +18,17 @@ package schema
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"os"
 )
 
 var _ = Describe("Resources", func() {
 	BeforeEach(func() {
 		manager := GetManager()
-		gohanSchemaPath := "../etc/schema/core.json"
-		schemaPath := "../tests/test_schema.json"
+		dir, _ := os.Getwd()
+		gohanSchemaPath := dir + "/../../etc/schema/core.json"
+		schemaPath := dir + "/../../tests/test_schema.json"
 		Expect(manager.ValidateSchema(gohanSchemaPath, schemaPath)).To(Succeed())
+
 		Expect(manager.LoadSchemaFromFile(schemaPath)).To(Succeed())
 	})
 

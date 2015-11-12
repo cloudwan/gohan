@@ -29,7 +29,7 @@ var _ = Describe("Schema", func() {
 		BeforeEach(func() {
 			var exists bool
 			manager := GetManager()
-			schemaPath := "../tests/test_schema.json"
+			schemaPath := "../../tests/test_schema.json"
 			Expect(manager.LoadSchemaFromFile(schemaPath)).To(Succeed())
 			netSchema, exists = manager.Schema("net")
 			Expect(exists).To(BeTrue())
