@@ -1,5 +1,7 @@
 #!/bin/bash
 
+GOPATH=`pwd`:`pwd`/vendor
+
 cd src
 
 # Run Unit Test for mysql
@@ -14,7 +16,7 @@ etcd -data-dir $DATA_DIR &
 ETCD_PID=$!
 
 if [[ $ENABLE_V8 == "true" ]]; then
-	TAGS="-tags 'v8'"
+	TAGS="-tags v8"
 fi
 
 # Run test coverage on each subdirectories and merge the coverage profile.
@@ -26,8 +28,7 @@ for dir in $(find . -type d);
 do
 result=0
 if ls $dir/*.go &> /dev/null; then
-    echo "gb test $TAGS $dir"
-    gb test $TAGS $dir
+    go test $TAGS $dir
     result=$?
     if [ -f $dir/profile.tmp ]
     then
