@@ -1,8 +1,8 @@
 #!/bin/bash
 
-cd src;
-# Run Unit Test for mysql
+cd src
 
+# Run Unit Test for mysql
 if [[ $MYSQL_TEST == "true" ]]; then
   # set MYSQL_TEST true if you want to run test against Mysql.
   # you need running mysql on local without root password for testing.
@@ -14,17 +14,19 @@ etcd -data-dir $DATA_DIR &
 ETCD_PID=$!
 
 if [[ $ENABLE_V8 == "true" ]]; then
-	TAGS="-tags v8"
+	TAGS="-tags 'v8'"
 fi
 
 # Run test coverage on each subdirectories and merge the coverage profile.
 echo "mode: count" > profile.cov
 
 # Standard go tooling behavior is to ignore dirs with leading underscors
+echo `pwd`
 for dir in $(find . -type d);
 do
 result=0
 if ls $dir/*.go &> /dev/null; then
+    echo "gb test $TAGS $dir"
     gb test $TAGS $dir
     result=$?
     if [ -f $dir/profile.tmp ]
