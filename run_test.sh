@@ -1,8 +1,10 @@
 #!/bin/bash
 
-cd src;
-# Run Unit Test for mysql
+GOPATH=`pwd`:`pwd`/vendor
 
+cd src
+
+# Run Unit Test for mysql
 if [[ $MYSQL_TEST == "true" ]]; then
   # set MYSQL_TEST true if you want to run test against Mysql.
   # you need running mysql on local without root password for testing.
@@ -21,11 +23,12 @@ fi
 echo "mode: count" > profile.cov
 
 # Standard go tooling behavior is to ignore dirs with leading underscors
+echo `pwd`
 for dir in $(find . -type d);
 do
 result=0
 if ls $dir/*.go &> /dev/null; then
-    gb test $TAGS $dir
+    go test $TAGS $dir
     result=$?
     if [ -f $dir/profile.tmp ]
     then

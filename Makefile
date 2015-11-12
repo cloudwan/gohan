@@ -13,7 +13,7 @@ else
 endif
 
 
-all: format lint build test
+all: format lint deps build test
 
 deps:
 	@echo "$(OK_COLOR)==> Installing dependencies$(NO_COLOR)"
@@ -34,7 +34,7 @@ lint:
 
 build:
 	@echo "$(OK_COLOR)==> Building$(NO_COLOR)"
-	gb build
+	gb build -R $(CURDIR)
 
 install:
 	@echo "$(OK_COLOR)==> Installing$(NO_COLOR)"
