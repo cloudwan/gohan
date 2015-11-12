@@ -1,10 +1,10 @@
 #!/bin/bash
 
-GOPATH=`pwd`:`pwd`/vendor
-
-cd src
+TOP_DIR=$(cd $(dirname "$0") && pwd)
+GOPATH=$TOP_DIR:$TOP_DIR/vendor
 
 # Run Unit Test for mysql
+
 if [[ $MYSQL_TEST == "true" ]]; then
   # set MYSQL_TEST true if you want to run test against Mysql.
   # you need running mysql on local without root password for testing.
@@ -23,12 +23,11 @@ fi
 echo "mode: count" > profile.cov
 
 # Standard go tooling behavior is to ignore dirs with leading underscors
-echo `pwd`
-for dir in $(find . -type d);
+for dir in $(find src -maxdepth 10 -not -path './.git*' -not -path '*/_*' -type d);
 do
 result=0
 if ls $dir/*.go &> /dev/null; then
-    go test $TAGS $dir
+    go test $TAGS -covermode=count -coverprofile=$dir/profile.tmp ./$dir --ginkgo.randomizeAllSpecs --ginkgo.failOnPending --ginkgo.trace --ginkgo.progress
     result=$?
     if [ -f $dir/profile.tmp ]
     then
@@ -41,9 +40,9 @@ if ls $dir/*.go &> /dev/null; then
 fi
 done
 
-#if [ $result -eq 0 ]; then
-#    gb tool cover -func profile.cov
-#fi
+if [ $result -eq 0 ]; then
+    go tool cover -func profile.cov
+fi
 
 kill $ETCD_PID
 exit $result

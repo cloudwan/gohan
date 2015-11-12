@@ -52,7 +52,7 @@ var _ = Describe("Util functions", func() {
 		})
 
 		It("should get contents form file", func() {
-			_, err := GetContent("file://../tests/test_schema.yaml")
+			_, err := GetContent("file://../../tests/test_schema.yaml")
 			Expect(err).ToNot(HaveOccurred())
 		})
 	})

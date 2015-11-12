@@ -176,6 +176,7 @@ func (manager *Manager) ValidateSchema(schemaPath, filePath string) error {
 	documentLoader := gojsonschema.NewReferenceLoader("file://" + filePath)
 	result, err := gojsonschema.Validate(schemaLoader, documentLoader)
 	if err != nil {
+		fmt.Println(err.Error())
 		panic(err.Error())
 	}
 	if result.Valid() {
