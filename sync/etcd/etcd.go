@@ -22,8 +22,8 @@ import (
 	"time"
 
 	"github.com/cloudwan/gohan/sync"
-
 	"github.com/coreos/go-etcd/etcd"
+	cmap "github.com/streamrail/concurrent-map"
 	"github.com/twinj/uuid"
 )
 
@@ -31,14 +31,14 @@ const masterTTL = 10
 
 //Sync is struct for etcd based sync
 type Sync struct {
-	locks      map[string]bool
+	locks      cmap.ConcurrentMap
 	etcdClient *etcd.Client
 	processID  string
 }
 
 //NewSync initialize new etcd sync
 func NewSync(etcdServers []string) *Sync {
-	sync := &Sync{locks: map[string]bool{}}
+	sync := &Sync{locks: cmap.New()}
 	sync.etcdClient = etcd.NewClient(etcdServers)
 	hostname, _ := os.Hostname()
 	sync.processID = hostname + uuid.NewV4().String()
@@ -68,8 +68,9 @@ func (s *Sync) Fetch(key string) (interface{}, error) {
 
 //HasLock checks current process owns lock or not
 func (s *Sync) HasLock(path string) bool {
-	value, ok := s.locks[path]
-	return value && ok
+	value, ok := s.locks.Get(path)
+	isLocked, _ := value.(bool)
+	return isLocked && ok
 }
 
 // Lock locks resources on sync
@@ -82,7 +83,7 @@ func (s *Sync) Lock(path string, block bool) error {
 		_, err := s.etcdClient.Create(path, s.processID, masterTTL)
 		if err != nil {
 			log.Notice("failed to lock path %s: %s", path, err)
-			s.locks[path] = false
+			s.locks.Set(path, false)
 			if !block {
 				return err
 			}
@@ -90,15 +91,15 @@ func (s *Sync) Lock(path string, block bool) error {
 			continue
 		}
 		log.Info("Locked %s", path)
-		s.locks[path] = true
+		s.locks.Set(path, true)
 		//Refresh master token
 		go func() {
-			for s.locks[path] {
+			for s.HasLock(path) {
 				_, err := s.etcdClient.CompareAndSwap(
 					path, s.processID, masterTTL, s.processID, 0)
 				if err != nil {
 					log.Notice("failed to keepalive lock for %s %s", path, err)
-					s.locks[path] = false
+					s.locks.Set(path, false)
 					return
 				}
 				time.Sleep(masterTTL / 2 * time.Second)
@@ -110,7 +111,7 @@ func (s *Sync) Lock(path string, block bool) error {
 
 //Unlock path
 func (s *Sync) Unlock(path string) error {
-	s.locks[path] = false
+	s.locks.Set(path, false)
 	s.etcdClient.CompareAndDelete(path, s.processID, 0)
 	log.Info("Unlocked path %s", path)
 	return nil
@@ -135,8 +136,22 @@ func (s *Sync) Watch(path string, responseChan chan *sync.Event, stopChan chan b
 	etcdResponseChan = make(chan *etcd.Response)
 	response, err := s.etcdClient.Get(path, true, true)
 	if err != nil {
-		log.Error(fmt.Sprintf("watch error: %s", err))
-		return err
+		if etcdError, ok := err.(*etcd.EtcdError); ok {
+			switch etcdError.ErrorCode {
+			case 100:
+				response, err = s.etcdClient.CreateDir(path, 0)
+				if err != nil {
+					log.Error(fmt.Sprintf("failed to create dir: %s", err))
+					return err
+				}
+			default:
+				log.Error(fmt.Sprintf("etcd error[%d]: %s ", etcdError.ErrorCode, etcdError))
+				return err
+			}
+		} else {
+			log.Error(fmt.Sprintf("watch error: %s", err))
+			return err
+		}
 	}
 	lastIndex := response.EtcdIndex + 1
 	eventsFromNode(response.Action, response.Node, responseChan)
@@ -144,6 +159,7 @@ func (s *Sync) Watch(path string, responseChan chan *sync.Event, stopChan chan b
 		_, err = s.etcdClient.Watch(path, lastIndex, true, etcdResponseChan, stopChan)
 		if err != nil {
 			log.Error(fmt.Sprintf("watch error: %s", err))
+			stopChan <- true
 			return
 		}
 	}()
