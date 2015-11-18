@@ -4,58 +4,47 @@ Project Site: http://gohan.cloudwan.io/
 
 Gohan is an REST API framework which has
 
-- Schema: Gohan makes REST-based api server, db backend, CLI ,and WebUI from JSON schema.
-- Exension: Gohan supports custom logic using Go, JavaScript or Gohan DSL.
-- Policy: Gohan supports RBAC-based policy enforcement for your API.
-- Integration: Gohan can integrated with 3rd party system using Sync (etcd) and OpenStack Keystone
+- Schemas: Gohan provides a REST-based API server, database backend, CLI, and WebUI generated from a JSON schema.
+- Extensions: Gohan supports custom logic using Go, JavaScript, or Gohan DSL.
+- Policies: Gohan supports RBAC-based policy enforcement for your API.
+- Integrations: Gohan can integrate with 3rd-party system using Sync (etcd) and OpenStack Keystone.
 
 [![gohan demo](https://github.com/cloudwan/gohan_website/raw/master/gohan_demo.gif)](https://www.youtube.com/watch?v=cwI44wQcxHU)
 
-[![Join the chat at https://gitter.im/cloudwan/gohan](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/cloudwan/gohan?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-
-[![GoDoc](https://godoc.org/github.com/cloudwan/gohan?status.svg)](https://godoc.org/github.com/cloudwan/gohan)
+[![Join the chat at https://gitter.im/cloudwan/gohan](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/cloudwan/gohan?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) [![GoDoc](https://godoc.org/github.com/cloudwan/gohan?status.svg)](https://godoc.org/github.com/cloudwan/gohan)
 
 [![wercker status](https://app.wercker.com/status/cab137b4bfdd05c97cfface7ac12c039/m "wercker status")](https://app.wercker.com/project/bykey/cab137b4bfdd05c97cfface7ac12c039)
 
-# Getting started #
+# Getting started
 
-You can do step1 and step2 on Heroku using this button.
-
-## Setup ##
+You can satisfy the first two steps of **Setup** on Heroku using this button:
 
 [![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/cloudwan/gohan.git)
 
- or
+## Setup
+* Download Gohan binary and sample configuration: https://github.com/cloudwan/ansible-gohan/releases
+* Start server: `./gohan server --config-file etc/gohan.yaml`
 
-* Download Gohan binary + sample configuraion https://github.com/cloudwan/ansible-gohan/releases
-
-* Start server
-
-```
-./gohan server --config-file etc/gohan.yaml
-```
-
-## WebUI client ##
-
+## WebUI client
 ```
 https://localhost:9443/webui/ (or https://$APPNAME.herokuapp.com/webui/ )
 ```
 
-login with this ID/Password
+Login with this ID/password
 
 ```
 ID: admin
 Password: gohan
 ```
 
-You can also access schema editing webui by adding "?type=metaschema" on URL.
+You can also access schema editing webUI by adding `?type=metaschema` on URL.
 
 ```
 https://localhost:9443/webui/?type=metaschema
 ```
 
-## Try CLI client ##
-
+## Try CLI client
+### Local
 ```
 export GOHAN_SCHEMA_URL=/gohan/v0.1/schemas
 export GOHAN_REGION=RegionOne
@@ -70,8 +59,7 @@ export OS_AUTH_URL=https://localhost:9443/v2.0
 ./gohan client
 ```
 
-For Heroku
-
+### Heroku
 ```
 export GOHAN_SCHEMA_URL=/gohan/v0.1/schemas
 export GOHAN_REGION=RegionOne
@@ -87,12 +75,11 @@ export GOHAN_ENDPOINT_URL=https://$APPNAME.herokuapp.com
 ./gohan client
 ```
 
-# Example #
+# Examples
+## Define your resource model
 
-## Define your resource model ##
-
-You can define your resource model using JSON schema.
-You can use YAML format as described in this example.
+You can define your resource model using a JSON schema.
+Alternatively you can use YAML format as described in this example.
 
 ```yaml
   schemas:
@@ -140,24 +127,22 @@ You can use YAML format as described in this example.
     title: Network
 ```
 
-## Define your application policy ##
+## Define your application policy
 
-Gohan can use OpenStack Keystone as Identity management system.
-You can configure API access policy based on role information on Keystone.
+Gohan can use OpenStack Keystone as an identity management system. You can
+configure API access policy based on role information in Keystone.
 
-Policy has following properties.
+A policy has the following properties:
 
-- id : Identitfy of the policy
-- principal : Keystone Role
-- action: one of `create`, `read`, `update`, `delete` for CRUD operations
-  on resource or any custom actions defined by schema performed on a
+- `id`: identity of the policy
+- `principal`: Keystone Role
+- `action`: one of `create`, `read`, `update`, `delete` for CRUD operations on
+resource or any custom actions defined by schema performed on a
   resource or `*` for all actions
-- effect : Allow api access or not
-- resource : target resource
-  you can specify target resource using "path" and "properties"
-- condition : addtional condition (see below)
-- tenant_id : regexp matching the tenant, defaults to ``.*``
-
+- `effect`: Allow API access or not
+- `resource`: target resource you can specify target resource using "path" and "properties"
+- `condition` : additional condition (see below)
+- `tenant_id` : regexp matching the tenant, defaults to `.*`
 
 ```yaml
   policies:
@@ -169,11 +154,11 @@ Policy has following properties.
       path: .*
 ```
 
-## Implement custom logic ##
+## Implement custom logic
 
-you can add your custom logic for each CRUD event.
+You can add your custom logic for each CRUD event.
 
-Javascript
+### Javascript
 
 ```yaml
 extensions:
@@ -186,7 +171,7 @@ extensions:
   path: /v2.0/network.*
 ```
 
-[Experimental] Donburi (Ansible inspired Gohan DSL)
+### [Experimental] Donburi (Ansible inspired Gohan DSL)
 
 ```yaml
 extensions:
@@ -223,17 +208,17 @@ extensions:
   path: "/v2.0/network.*"
 ```
 
-You can also find an example for Go based extension in here
+You can also find an example for Go based extensions in here
 https://github.com/cloudwan/gohan/tree/master/exampleapp
 
-see more description in doc
+See more information in the documentation.
 
-## Integrate Gohan with your system ##
+## Integrate Gohan with your system
 
-Every CRUD event will be pushed to sync layer (currently etcd is supproted), so your worker can be syncroniced.
+Every CRUD event will be pushed to a sync layer (currently *etcd* is supported), so your worker can be synchronized.
 
-You can also use Gohan as a worker.
-Gohan support AMQP (OpenStack notification), SNMP (experimental) and CRON, and execute extension.
+You can also use Gohan as a worker. Gohan supports AMQP (OpenStack
+  notification), SNMP (experimental), and CRON, to execute extensions.
 
 ```yaml
 # Watch etcd and execute extension
@@ -281,11 +266,11 @@ Gohan support AMQP (OpenStack notification), SNMP (experimental) and CRON, and e
       - debug: "cron job"
 ```
 
-# More examples #
+# More examples
 
-see more on https://github.com/cloudwan/gohan_apps
+See more at https://github.com/cloudwan/gohan_apps
 
-# Development #
+# Development
 
 - Setup Go env
 - Install development tools
@@ -305,42 +290,44 @@ make
 make install
 ```
 
-- Send a pull request for github
+- Send a pull request to Github
 
-# Why Gohan? #
+# Why Gohan?
 
-- Gohan is a REST-based api server to evolve your cloud service very rapidly and enable painless operation
+- Gohan is a REST-based API server to evolve your cloud service very rapidly and enable painless CRUD operations.
 
-- Gohan makes your system architeture simple
+- Gohan makes your system architecture simple
+- Gohan enables you to create / modify new services very rapidly with minimum coding
+- Gohan can be easily integrate into your system using a sync layer and custom extensions
 
-- Gohan enables you to create / modify new service very rapidly with minimum coding
-
-- Gohan can be easiliy integrated to your system using sync layer and custom extension
-
-## SINGLE PROCESS for REST based "micro" services ##
+## Single process for REST based micro-services
 
 Traditional “fat” services are difficult to manage: subsystems become tightly coupled making it hard to introduce changes. Micro-service based architectures are meant to solve this issue; however they come with additional problems such as process management and orchestration. (see Criticism on https://en.wikipedia.org/wiki/Microservices)
 
-Gohan enables you to define many "micro" services within single unified process, so that you can keep your system architecture and deployment model simple. Moreover, Gohan supports transactional management for microservices orchestration.
+Gohan enables you to define many micro-services within a single, unified process, so that you can keep your system architecture and deployment model simple. Moreover, Gohan supports transactional management for micro-services orchestration.
 
-## SCHEMA-DRIVEN Service Develoment ##
+## Scheme-driven service development
 
-Similar structure code everywhere.
-Typical Schema-driven development tools reduces number of code lines by automatic code generation. Down side of the code generation method is adding complexity to the code management.
+Similar structure and code everywhere. Typical schema-driven development tools
+reduces the number of code lines by automatic code generation. The down side of
+the code generation method is adding complexity to the code management.
 
-In Gohan project, we are challenging to have powerful schema-driven development without those complexity.
+In the Gohan project, we are challenged to have powerful schema-driven
+development without those complexities.
 
-## SINGLE PLACE to keep Service related poilcy, config and code ##
+## Single place to keep service related policy, config, and code
 
-Cloud service management is not simple.
-Typical cloud architecutre has three layers, i.e. Controller, Communication and Agent layer. When you develop a new service on this archtecutre, configurations and codes will be distributed across three layers. This makes hard to diagnose issue and manage services.
+Cloud service management is not simple. A typical cloud architecture has three layers:
+* Controller
+* Communication
+* Agent
 
-In Gohan, each layer can understand service definition file, so that you can unify service related configuraion and code on one place.
+When you develop a new service on this architecture, configuration and code will be distributed across three layers. This makes it hard to diagnose issues and manage services.
 
-# License #
+In Gohan, each layer can understand service definition file, so that you can unify service related configuration and code on one place.
 
+# License
 Apache2
 
-# Docs #
-
-see more docs http://gohan.cloudwan.io/gohan/
+# Additional resources
+See more documentation at http://gohan.cloudwan.io/gohan/
