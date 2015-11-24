@@ -23,6 +23,29 @@ import (
 )
 
 var _ = Describe("Schema", func() {
+	Describe("Schema manager", func() {
+		It("should reorder schemas if it is DAG", func() {
+			manager := GetManager()
+			schemaPath := "../tests/test_schema_dag_dependency.yaml"
+			Expect(manager.LoadSchemaFromFile(schemaPath)).To(Succeed())
+			Expect(manager.schemaOrder).To(Equal(
+				[]string{"red_resource",
+					"blue_resource",
+					"green_resource",
+					"orange_resource"}))
+		})
+
+		It("should read schemas even if it isn't DAG", func() {
+			manager := GetManager()
+			schemaPath := "../tests/test_schema_non_dag_dependency.yaml"
+			Expect(manager.LoadSchemaFromFile(schemaPath)).To(Succeed())
+		})
+
+		AfterEach(func() {
+			ClearManager()
+		})
+	})
+
 	Describe("Formatters", func() {
 		var netSchema *Schema
 
