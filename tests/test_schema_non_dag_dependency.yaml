@@ -1,0 +1,66 @@
+schemas:
+- description: red_resource
+  id: red_resource
+  plural: red_resources
+  prefix: /
+  schema:
+    properties:
+      id:
+        description: ID
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: false
+      green_resource_id:
+        description: green_resource
+        permission:
+        - create
+        title: green_resource
+        type: string
+        relation: green_resource
+        unique: false
+    propertiesOrder:
+    - id
+    - green_resource
+    type: object
+  singular: green_resource
+  title: green_resource
+- description: blue_resource
+  id: blue_resource
+  plural: blue_resources
+  parent: red_resource
+  prefix: /
+  schema:
+    properties:
+      id:
+        description: ID
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: false
+    propertiesOrder:
+    - id
+    type: object
+  singular: blue_resource
+  title: blue_resource
+- description: green_resource
+  id: green_resource
+  plural: green_resources
+  parent: blue_resource
+  prefix: /
+  schema:
+    properties:
+      id:
+        description: ID
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: false
+    propertiesOrder:
+    - id
+    type: object
+  singular: green_resource
+  title: green_resource

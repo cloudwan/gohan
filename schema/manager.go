@@ -136,6 +136,68 @@ func (manager *Manager) OrderedSchemas() []*Schema {
 	return res
 }
 
+//reorderSchema tries reorder schemas using Tarjan's algorithm
+type state int
+
+const (
+	notVisited state = iota
+	visited
+	temporaryVisited
+)
+
+func visitSchema(schemas []*Schema, schemaList []string, schema *Schema, visitedSchema map[string]state) ([]string, error) {
+	if visitedSchema[schema.ID] == temporaryVisited {
+		return nil, fmt.Errorf("Schemas aren't DAG. We can't reorder automatically")
+	}
+	if visitedSchema[schema.ID] == visited {
+		return schemaList, nil
+	}
+	visitedSchema[schema.ID] = temporaryVisited
+	relatedSchemas := schema.relatedSchemas()
+	var err error
+	for _, relatedSchemaID := range relatedSchemas {
+		for _, candidate := range schemas {
+			if candidate.ID == relatedSchemaID {
+				schemaList, err = visitSchema(schemas, schemaList, candidate, visitedSchema)
+				if err != nil {
+					return nil, err
+				}
+				break
+			}
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+	visitedSchema[schema.ID] = visited
+	schemaList = append(schemaList, schema.ID)
+	return schemaList, nil
+}
+
+func reorderSchemas(schemas []*Schema) ([]string, error) {
+	var err error
+	schemaList := []string{}
+	visitedSchema := map[string]state{}
+	for _, schema := range schemas {
+		visitedSchema[schema.ID] = notVisited
+	}
+	for {
+		var schema *Schema
+		for _, s := range schemas {
+			if visitedSchema[s.ID] == notVisited {
+				schema = s
+			}
+		}
+		if schema == nil {
+			return schemaList, nil
+		}
+		schemaList, err = visitSchema(schemas, schemaList, schema, visitedSchema)
+		if err != nil {
+			return nil, err
+		}
+	}
+}
+
 //Policies gets policies from manager
 func (manager *Manager) Policies() []*Policy {
 	return manager.policies
@@ -229,17 +291,36 @@ func (manager *Manager) LoadSchemaFromFile(filePath string) error {
 			return err
 		}
 	}
+
+	schemaObjList := []*Schema{}
+	schemaMap := map[string]*Schema{}
 	list, _ := schemas["schemas"].([]interface{})
 	for _, schemaData := range list {
 		schemaObj, err := NewSchemaFromObj(schemaData)
+		schemaMap[schemaObj.ID] = schemaObj
 		if err != nil {
 			return err
 		}
+		schemaObjList = append(schemaObjList, schemaObj)
+	}
+
+	schemaOrder, err := reorderSchemas(schemaObjList)
+	if err == nil {
+		schemaObjList = []*Schema{}
+		for _, id := range schemaOrder {
+			schemaObjList = append(schemaObjList, schemaMap[id])
+		}
+	} else {
+		log.Warning("Error in reordering schema %s", err)
+	}
+
+	for _, schemaObj := range schemaObjList {
 		err = manager.RegisterSchema(schemaObj)
 		if err != nil {
 			return err
 		}
 	}
+
 	policies, _ := schemas["policies"].([]interface{})
 	if policies != nil {
 		for _, policyData := range policies {

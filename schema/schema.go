@@ -356,3 +356,13 @@ func (schema *Schema) StateVersioning() bool {
 func FormatParentID(parent string) string {
 	return fmt.Sprintf("%s_id", parent)
 }
+
+func (schema *Schema) relatedSchemas() []string {
+	schemas := []string{}
+	for _, p := range schema.Properties {
+		if p.Relation != "" {
+			schemas = append(schemas, p.Relation)
+		}
+	}
+	return schemas
+}
