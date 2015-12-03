@@ -115,12 +115,7 @@
                             "properties": {
                                 "patternProperties": {
                                     "^.*$": {
-                                        "additionalProperties": false,
                                         "properties": {
-                                            "additionalProperties": {
-                                                "title": "Additional properties",
-                                                "type": "boolean"
-                                            },
                                             "default": {
                                                 "anyOf": [
                                                     {
@@ -433,9 +428,14 @@
                     "condition": {
                         "default": [],
                         "description": "condition",
-                        "items": {
-                            "type": "string"
-                        },
+                        "items": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "object"
+                            }
+                        ],
                         "permission": [
                             "create",
                             "update"

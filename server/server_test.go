@@ -44,6 +44,7 @@ var (
 	schemaURL        = baseURL + "/gohan/v0.1/schemas"
 	networkPluralURL = baseURL + "/v2.0/networks"
 	subnetPluralURL  = baseURL + "/v2.0/subnets"
+	serverPluralURL  = baseURL + "/v2.0/servers"
 	testPluralURL    = baseURL + "/v2.0/tests"
 )
 
@@ -347,7 +348,7 @@ var _ = Describe("Server package test", func() {
 			Expect(result).To(HaveKeyWithValue("network", networkExpected))
 
 			result = testURL("GET", baseURL+"/_all", memberTokenID, nil, http.StatusOK)
-			Expect(result).To(HaveLen(3))
+			Expect(result).To(HaveLen(4))
 			Expect(result).To(HaveKeyWithValue("networks", []interface{}{networkExpected}))
 			Expect(result).To(HaveKey("schemas"))
 			Expect(result).To(HaveKey("tests"))
@@ -364,6 +365,38 @@ var _ = Describe("Server package test", func() {
 			testURL("DELETE", getSubnetSingularURL("red"), memberTokenID, nil, http.StatusUnauthorized)
 			testURL("DELETE", getNetworkSingularURL("red"), memberTokenID, nil, http.StatusNoContent)
 			testURL("DELETE", getNetworkSingularURL("red"), memberTokenID, nil, http.StatusNotFound)
+		})
+		It("should work with property based condition", func() {
+			network := map[string]interface{}{
+				"id":   "networkred",
+				"name": "Networkred",
+			}
+			testURL("POST", networkPluralURL, memberTokenID, network, http.StatusCreated)
+
+			serverID := "serverRed"
+			serverNG := map[string]interface{}{
+				"id":         serverID,
+				"name":       "Server Red",
+				"network_id": "networkred",
+				"status":     "ERROR",
+			}
+			serverOK := map[string]interface{}{
+				"id":         serverID,
+				"name":       "Server Red",
+				"network_id": "networkred",
+				"status":     "ACTIVE",
+			}
+			serverUpdate := map[string]interface{}{
+				"name":   "Server Red2",
+				"status": "ERROR",
+			}
+			testURL("GET", serverPluralURL, memberTokenID, nil, http.StatusOK)
+			testURL("POST", serverPluralURL, memberTokenID, serverNG, http.StatusUnauthorized)
+			testURL("POST", serverPluralURL, memberTokenID, serverOK, http.StatusCreated)
+			testURL("PUT", serverPluralURL+"/"+serverID, memberTokenID, serverUpdate, http.StatusOK)
+			testURL("PUT", serverPluralURL+"/"+serverID, memberTokenID, serverUpdate, http.StatusUnauthorized)
+			testURL("DELETE", serverPluralURL+"/"+serverID, memberTokenID, nil, http.StatusUnauthorized)
+			testURL("DELETE", serverPluralURL+"/"+serverID, adminTokenID, nil, http.StatusNoContent)
 		})
 	})
 

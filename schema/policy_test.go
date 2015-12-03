@@ -308,19 +308,107 @@ var _ = Describe("Policies", func() {
 					},
 				}
 				policy, _ = NewPolicy(testPolicy)
-				policy.Check("create", &authorization, data)
+				err := policy.Check("create", &authorization, data)
+				Expect(err).ToNot(HaveOccurred())
 			})
 
 			It("should pass check - tenant_name", func() {
 				testPolicy["condition"] = []interface{}{
 					"is_owner",
 					map[string]interface{}{
-						"type":      "belongs_to",
-						"tenant_id": "ownerName",
+						"type":        "belongs_to",
+						"tenant_name": "ownerName",
 					},
 				}
 				policy, _ = NewPolicy(testPolicy)
-				policy.Check("create", &authorization, data)
+				err := policy.Check("create", &authorization, data)
+				Expect(err).ToNot(HaveOccurred())
+			})
+		})
+
+		Describe("Property based condition", func() {
+			It("should work with string condition based on property", func() {
+				testPolicy["condition"] = []interface{}{
+					map[string]interface{}{
+						"type":   "property",
+						"action": "read",
+						"match": map[string]interface{}{
+							"status": "ACTIVE",
+						},
+					},
+				}
+
+				policy, _ = NewPolicy(testPolicy)
+				Expect(policy.ApplyPropertyConditionFilter("read", map[string]interface{}{
+					"status": "ACTIVE",
+				}, nil)).To(Succeed())
+				Expect(policy.ApplyPropertyConditionFilter("read", map[string]interface{}{
+					"status": "ERROR",
+				}, nil)).NotTo(Succeed())
+				Expect(policy.ApplyPropertyConditionFilter("read", map[string]interface{}{}, nil)).NotTo(Succeed())
+			})
+
+			It("should work with string array condition based on propery", func() {
+				testPolicy["condition"] = []interface{}{
+					map[string]interface{}{
+						"type":   "property",
+						"action": "read",
+						"match": map[string]interface{}{
+							"status": []interface{}{
+								"ACTIVE", "CREATING"},
+						},
+					},
+					map[string]interface{}{
+						"type":   "property",
+						"action": "create",
+						"match": map[string]interface{}{
+							"status": []interface{}{
+								"ACTIVE"},
+						},
+					},
+					map[string]interface{}{
+						"type":   "property",
+						"action": "update",
+						"match": map[string]interface{}{
+							"status": map[string]interface{}{
+								"ACTIVE": []interface{}{"UPDATING", "ERROR"},
+							},
+						},
+					},
+				}
+
+				policy, _ = NewPolicy(testPolicy)
+				Expect(policy.ApplyPropertyConditionFilter("create", map[string]interface{}{
+					"status": "ACTIVE",
+				}, nil)).To(Succeed())
+				Expect(policy.ApplyPropertyConditionFilter("read", map[string]interface{}{
+					"status": "ACTIVE",
+				}, nil)).To(Succeed())
+				Expect(policy.ApplyPropertyConditionFilter("read", map[string]interface{}{
+					"status": "CREATING",
+				}, nil)).To(Succeed())
+				Expect(policy.ApplyPropertyConditionFilter("read", map[string]interface{}{
+					"status": "ERROR",
+				}, nil)).NotTo(Succeed())
+				Expect(policy.ApplyPropertyConditionFilter("update", map[string]interface{}{
+					"status": "ACTIVE",
+				}, map[string]interface{}{
+					"status": "UPDATING",
+				})).To(Succeed())
+				Expect(policy.ApplyPropertyConditionFilter("update", map[string]interface{}{
+					"status": "ACTIVE",
+				}, map[string]interface{}{
+					"status": "ERROR",
+				})).To(Succeed())
+				Expect(policy.ApplyPropertyConditionFilter("update", map[string]interface{}{
+					"status": "ACTIVE",
+				}, map[string]interface{}{
+					"status": "FATAL_ERROR",
+				})).NotTo(Succeed())
+				Expect(policy.ApplyPropertyConditionFilter("read", map[string]interface{}{
+					"status": "ERROR",
+				}, nil)).NotTo(Succeed())
+				Expect(policy.ApplyPropertyConditionFilter("read", map[string]interface{}{}, nil)).NotTo(Succeed())
 			})
 		})
 	})

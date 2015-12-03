@@ -20,7 +20,7 @@ Policy has following properties.
 Conditions
 ----------
 
-Gohan supports two types of conditions
+Gohan supports several types of conditions
 
 - :code:`is_owner` - Gohan will enforce access privileges for the resources
   specified in the policy. By default access to resources of all other tenants
@@ -85,3 +85,51 @@ Example policy
     resource:
       path: /v2.0/server/?$
 
+- :code: type `property` - You can add condition based on resource value.
+  You can specify allowed values in match.
+  if it is a value, we check exact match.
+  if it is a list, we check if the value is in the list
+  if it is a dict, we check if we have a key for this value and, updated value matches it.
+  Note that this is only valid for update action.
+
+.. code-block:: yaml
+    policy:
+      - action: 'read'
+        condition:
+        - type: property:
+          match:
+            status:
+              - ACTIVE
+              - CREATE_IN_PROGRESS
+              - UPDATE_IN_PROGRESS
+              - DELETE_IN_PROGRESS
+              - ERROR
+        effect: allow
+        id: member
+        principal: Member
+      - action: 'update'
+        condition:
+        - property:
+            status:
+              ACTIVE:
+              - UPDATE_IN_PROGRESS
+              - ERROR
+        effect: allow
+        id: member
+        principal: Member
+      - action: 'reboot'
+        condition:
+        - property:
+            status: ACTIVE
+        effect: allow
+        id: member
+        principal: Member
+      - action: 'delete'
+        condition:
+        - property:
+            status:
+            - ACTIVE
+            - ERROR
+        effect: allow
+        id: member
+        principal: Member
