@@ -1,7 +1,7 @@
 extensions:
 - id: donburi
   path: .*
-  url: https://raw.githubusercontent.com/cloudwan/gohan/master/etc/extensions/donburi.js
+  url: embed://etc/extensions/donburi.js
 - id: check
   code_type: donburi
   code: |

@@ -311,6 +311,14 @@ HTTPS
     cert_file: "./etc/cert.pem"
     key_file: "./etc/key.pem"
 
+Path
+--------------
+
+By default, any path get considerted as file.
+You can also specify schemes including file://, http://, https:// and embed://.
+For embed scheme, you can read embedded data in gohan binary.
+Currenlty, contents under etc/schema and etc/extentions are embedded.
+
 
 Misc
 --------------
