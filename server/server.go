@@ -50,6 +50,7 @@ type Server struct {
 	sync             sync.Sync
 	running          bool
 	martini          *martini.ClassicMartini
+	timelimit        int
 	keystoneIdentity middleware.IdentityService
 }
 
@@ -264,7 +265,7 @@ func NewServer(configFile string) (*Server, error) {
 			rw.Header().Add("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE")
 		})
 	}
-
+	server.timelimit = config.GetInt("extention/timelimit", 30)
 	documentRoot := config.GetString("document_root", "./")
 	log.Info("Static file serving from %s", documentRoot)
 	documentRootABS, err := filepath.Abs(documentRoot)

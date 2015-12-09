@@ -17,6 +17,7 @@ package otto
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/cloudwan/gohan/db"
 	ext "github.com/cloudwan/gohan/extension"
@@ -38,13 +39,20 @@ type Environment struct {
 	VM          *otto.Otto
 	goCallbacks []ext.GoCallback
 	DataStore   db.DB
+	timelimit   time.Duration
 	Identity    middleware.IdentityService
 }
 
 //NewEnvironment create new gohan extension environment based on context
-func NewEnvironment(dataStore db.DB, identity middleware.IdentityService) *Environment {
+func NewEnvironment(dataStore db.DB, identity middleware.IdentityService, timelimit time.Duration) *Environment {
 	vm := otto.New()
-	env := &Environment{VM: vm, DataStore: dataStore, Identity: identity}
+	vm.Interrupt = make(chan func(), 1)
+	env := &Environment{
+		VM:        vm,
+		DataStore: dataStore,
+		Identity:  identity,
+		timelimit: timelimit,
+	}
 	env.SetUp()
 	return env
 }
@@ -141,8 +149,37 @@ func convertNilsToNulls(object interface{}) {
 }
 
 //HandleEvent handles event
-func (env *Environment) HandleEvent(event string, context map[string]interface{}) error {
+func (env *Environment) HandleEvent(event string, context map[string]interface{}) (err error) {
 	vm := env.VM
+	var halt = fmt.Errorf("exceed timeout for extention execution")
+
+	defer func() {
+		if caught := recover(); caught != nil {
+			if caught == halt {
+				log.Error(halt.Error())
+				err = halt
+				return
+			}
+			panic(caught) // Something else happened, repanic!
+		}
+	}()
+	timer := time.NewTimer(env.timelimit)
+	successCh := make(chan bool)
+	go func() {
+		for {
+			select {
+			case <-timer.C:
+				vm.Interrupt <- func() {
+					panic(halt)
+				}
+				return
+			case <-successCh:
+				// extention executed successfully
+				return
+			}
+		}
+	}()
+
 	//FIXME(timorl): This is needed only because of a bug in Otto, where nils are converted to undefineds instead of nulls.
 	convertNilsToNulls(context)
 	contextInVM, err := vm.ToValue(context)
@@ -168,12 +205,15 @@ func (env *Environment) HandleEvent(event string, context map[string]interface{}
 			return err
 		}
 	}
+
+	timer.Stop()
+	successCh <- true
 	return err
 }
 
 //Clone makes clone of the environment
 func (env *Environment) Clone() ext.Environment {
-	newEnv := NewEnvironment(env.DataStore, env.Identity)
+	newEnv := NewEnvironment(env.DataStore, env.Identity, env.timelimit)
 	newEnv.VM = env.VM.Copy()
 	newEnv.goCallbacks = env.goCallbacks
 	return newEnv

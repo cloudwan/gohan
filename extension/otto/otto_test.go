@@ -38,11 +38,13 @@ var _ = Describe("Otto extension manager", func() {
 	var (
 		manager            *schema.Manager
 		environmentManager *extension.Manager
+		timelimit          time.Duration
 	)
 
 	BeforeEach(func() {
 		manager = schema.GetManager()
 		environmentManager = extension.GetManager()
+		timelimit = time.Second
 	})
 
 	AfterEach(func() {
@@ -82,7 +84,7 @@ var _ = Describe("Otto extension manager", func() {
 				badExtension.URL = "bad_extension.js"
 
 				extensions := []*schema.Extension{goodExtension, badExtension}
-				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{})
+				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
 				err = env.LoadExtensionsForPath(extensions, "test_path")
 				Expect(err).To(HaveOccurred(), "Expected compilation errors.")
 
@@ -110,7 +112,7 @@ var _ = Describe("Otto extension manager", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				extensions := []*schema.Extension{extension}
-				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{})
+				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
 				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
 
 				context := map[string]interface{}{
@@ -141,7 +143,7 @@ var _ = Describe("Otto extension manager", func() {
 				})
 				Expect(err).ToNot(HaveOccurred())
 				extensions := []*schema.Extension{extension}
-				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{})
+				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
 				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
 
 				context := map[string]interface{}{
@@ -177,7 +179,7 @@ var _ = Describe("Otto extension manager", func() {
 				badExtension.URL = "bad_extension.js"
 
 				extensions := []*schema.Extension{goodExtension, badExtension}
-				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{})
+				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
 				err = env.LoadExtensionsForPath(extensions, "test_path")
 
 				context := map[string]interface{}{
@@ -212,7 +214,7 @@ var _ = Describe("Otto extension manager", func() {
 				goodExtension.URL = "good_extension.js"
 
 				extensions := []*schema.Extension{goodExtension}
-				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{})
+				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
 				err = env.LoadExtensionsForPath(extensions, "test_path")
 
 				context := map[string]interface{}{
@@ -244,7 +246,7 @@ var _ = Describe("Otto extension manager", func() {
 				})
 				Expect(err).ToNot(HaveOccurred())
 				extensions := []*schema.Extension{extension}
-				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{})
+				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
 				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
 
 				context := map[string]interface{}{
@@ -269,7 +271,7 @@ var _ = Describe("Otto extension manager", func() {
 				})
 				Expect(err).ToNot(HaveOccurred())
 				extensions := []*schema.Extension{extension}
-				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{})
+				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
 				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
 
 				context := map[string]interface{}{
@@ -354,7 +356,7 @@ var _ = Describe("Otto extension manager", func() {
 			context["auth"] = auth
 			context["identity_service"] = &middleware.FakeIdentity{}
 
-			env = otto.NewEnvironment(testDB, &middleware.FakeIdentity{})
+			env = otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
 			environmentManager.RegisterEnvironment(schemaID, env)
 			extensions = []*schema.Extension{}
 			for event, javascript := range events {
@@ -420,7 +422,7 @@ var _ = Describe("Otto extension manager", func() {
 					})
 					Expect(err).ToNot(HaveOccurred())
 					extensions := []*schema.Extension{extension}
-					env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{})
+					env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
 					env.LoadExtensionsForPath(extensions, "test_path")
 
 					context := map[string]interface{}{
@@ -462,7 +464,7 @@ var _ = Describe("Otto extension manager", func() {
 					})
 					Expect(err).ToNot(HaveOccurred())
 					extensions := []*schema.Extension{extension}
-					env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{})
+					env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
 					env.LoadExtensionsForPath(extensions, "test_path")
 
 					context := map[string]interface{}{
@@ -1147,7 +1149,7 @@ var _ = Describe("Otto extension manager", func() {
 					readSubnetContext["auth"] = auth
 					readSubnetContext["identity_service"] = &middleware.FakeIdentity{}
 
-					subnetEnv = otto.NewEnvironment(testDB, &middleware.FakeIdentity{})
+					subnetEnv = otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
 					environmentManager.RegisterEnvironment(curSchemaID, subnetEnv)
 					curExtensions := []*schema.Extension{}
 					for event, javascript := range subnetEvents {
@@ -1270,7 +1272,7 @@ var _ = Describe("Otto extension manager", func() {
 		channel := make(chan string)
 		Context("Given environment", func() {
 			BeforeEach(func() {
-				env = otto.NewEnvironment(testDB, &middleware.FakeIdentity{})
+				env = otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
 				env.SetUp()
 				vm := env.VM
 				builtins := map[string]interface{}{
@@ -1337,6 +1339,29 @@ var _ = Describe("Otto extension manager", func() {
 				case <-time.After(1 * time.Second):
 					Fail("Timeout when waiting for producer")
 				}
+			})
+		})
+	})
+	var _ = Describe("Timeout", func() {
+		Context("stops if execution time exceeds timelimit", func() {
+			It("Should work", func() {
+				extension, err := schema.NewExtension(map[string]interface{}{
+					"id": "infinite_loop",
+					"code": `
+						gohan_register_handler("test_event", function(context){
+							while(true){}
+						});`,
+					"path": ".*",
+				})
+				Expect(err).ToNot(HaveOccurred())
+				extensions := []*schema.Extension{extension}
+				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, time.Duration(100))
+				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+
+				context := map[string]interface{}{
+					"id": "test",
+				}
+				Expect(env.HandleEvent("test_event", context)).ToNot(Succeed())
 			})
 		})
 	})

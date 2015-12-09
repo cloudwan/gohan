@@ -36,8 +36,9 @@ import (
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/extension/otto"
 	"github.com/cloudwan/gohan/server/middleware"
+	"time"
 )
 
-func newEnvironment(dataStore db.DB, identity middleware.IdentityService) extension.Environment {
-	return otto.NewEnvironment(dataStore, identity)
+func newEnvironment(dataStore db.DB, identity middleware.IdentityService, timelimit int) extension.Environment {
+	return otto.NewEnvironment(dataStore, identity, time.Duration(timelimit)*time.Second)
 }

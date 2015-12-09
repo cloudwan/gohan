@@ -95,6 +95,16 @@ func (config *Config) GetString(key, defaultValue string) string {
 	return dataString
 }
 
+//GetInt returns int parameter from config
+func (config *Config) GetInt(key string, defaultValue int) int {
+	data := config.GetParam(key, defaultValue)
+	dataInt, ok := data.(int)
+	if !ok {
+		return defaultValue
+	}
+	return dataInt
+}
+
 //GetBool returns string parameter from config
 func (config *Config) GetBool(key string, defaultValue bool) bool {
 	data := config.GetParam(key, defaultValue)

@@ -385,6 +385,16 @@ WARNING: The value of watched etcd keys must be a JSON dictionary.
 
   snmp:
     address: "localhost:8888"
+    
+- extention timelimit
+ 
+  You can make timelimit for extention execution. default is 30 sec
+  
+.. code-block:: yaml
+
+  extention:
+    timelimit: 30
+
 
 - cron
 

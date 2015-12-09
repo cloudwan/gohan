@@ -182,7 +182,7 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 	//load extension environments
 	environmentManager := extension.GetManager()
 	if _, ok := environmentManager.GetEnvironment(s.ID); !ok {
-		env := newEnvironment(server.db, server.keystoneIdentity)
+		env := newEnvironment(server.db, server.keystoneIdentity, server.timelimit)
 		err := env.LoadExtensionsForPath(manager.Extensions, pluralURL)
 		if err != nil {
 			log.Fatal(fmt.Sprintf("Extensions parsing error: %v", err))
