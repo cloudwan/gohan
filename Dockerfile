@@ -8,8 +8,7 @@ ENV GOHAN_PATH $GOPATH/src/github.com/cloudwan/gohan
 
 # Install go
 ADD https://storage.googleapis.com/golang/go$GO_VERSION.linux-amd64.tar.gz /
-RUN tar xzvf go$GO_VERSION.linux-amd64.tar.gz
-RUN mv /go /usr/local/go
+RUN tar xzvf go$GO_VERSION.linux-amd64.tar.gz && mv /go /usr/local/go
 
 # Update apt
 RUN apt-get update
