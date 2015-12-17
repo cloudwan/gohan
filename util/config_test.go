@@ -42,6 +42,7 @@ var _ = Describe("Config utility", func() {
 			Expect(config.GetString("address", "fail")).To(Equal(":19090"))
 			Expect(config.GetBool("keystone/use_keystone", false)).ToNot(BeFalse())
 			Expect(config.GetString("database/type", "fail")).To(Equal("sqlite3"))
+			Expect(config.GetInt("timelimit", 10)).To(Equal(100))
 			etcdServers := config.GetStringList("etcd", nil)
 			Expect(etcdServers).ToNot(BeNil())
 			etcdServerList := config.GetList("etcd", nil)

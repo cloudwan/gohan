@@ -18,6 +18,7 @@ package otto
 import (
 	"os"
 	"testing"
+	"time"
 
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/schema"
@@ -27,6 +28,7 @@ import (
 
 var (
 	dataStore db.DB
+	timelimit time.Duration
 )
 
 const (
@@ -35,6 +37,7 @@ const (
 )
 
 func beforeEach() {
+	timelimit = time.Duration(1) * time.Second
 	os.Remove(conn)
 	dataStore, _ = db.ConnectDB(dbtype, conn)
 }
@@ -106,7 +109,7 @@ func TestDonburiFlows(t *testing.T) {
 	context := map[string]interface{}{}
 
 	extensions := []*schema.Extension{donburi, extension}
-	env := NewEnvironment(dataStore, &middleware.FakeIdentity{})
+	env := NewEnvironment(dataStore, &middleware.FakeIdentity{}, timelimit)
 	err = env.LoadExtensionsForPath(extensions, "test_path")
 	if err != nil {
 		t.Error(err)
@@ -159,7 +162,7 @@ func TestDefine(t *testing.T) {
 	context := map[string]interface{}{}
 
 	extensions := []*schema.Extension{donburi, extension}
-	env := NewEnvironment(dataStore, &middleware.FakeIdentity{})
+	env := NewEnvironment(dataStore, &middleware.FakeIdentity{}, timelimit)
 	err = env.LoadExtensionsForPath(extensions, "test_path")
 	if err != nil {
 		t.Error(err)
@@ -207,7 +210,7 @@ func TestDonburiExec(t *testing.T) {
 	context := map[string]interface{}{}
 
 	extensions := []*schema.Extension{donburi, extension}
-	env := NewEnvironment(dataStore, &middleware.FakeIdentity{})
+	env := NewEnvironment(dataStore, &middleware.FakeIdentity{}, timelimit)
 	err = env.LoadExtensionsForPath(extensions, "test_path")
 	if err != nil {
 		t.Error(err)
@@ -264,7 +267,7 @@ func TestDonburiInjectionAttack(t *testing.T) {
 	}
 
 	extensions := []*schema.Extension{donburi, extension}
-	env := NewEnvironment(dataStore, &middleware.FakeIdentity{})
+	env := NewEnvironment(dataStore, &middleware.FakeIdentity{}, timelimit)
 	err = env.LoadExtensionsForPath(extensions, "test_path")
 	if err != nil {
 		t.Error(err)
@@ -314,7 +317,7 @@ func TestDonburiResources(t *testing.T) {
 	context := map[string]interface{}{}
 
 	extensions := []*schema.Extension{donburi, extension}
-	env := NewEnvironment(dataStore, &middleware.FakeIdentity{})
+	env := NewEnvironment(dataStore, &middleware.FakeIdentity{}, timelimit)
 	err = env.LoadExtensionsForPath(extensions, "test_path")
 	if err != nil {
 		t.Error(err)
@@ -354,7 +357,7 @@ func BenchmarkDonburi(b *testing.B) {
 	context := map[string]interface{}{}
 
 	extensions := []*schema.Extension{donburi, extension}
-	env := NewEnvironment(dataStore, &middleware.FakeIdentity{})
+	env := NewEnvironment(dataStore, &middleware.FakeIdentity{}, timelimit)
 	err := env.LoadExtensionsForPath(extensions, "test_path")
 	if err != nil {
 		b.Error(err)

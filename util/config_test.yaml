@@ -3,3 +3,4 @@ schema: "./tests/test_schema.yaml"
 address: ":19090"
 document_root: "./etc/"
 cors: "*"
+timelimit: 100

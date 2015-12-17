@@ -17,6 +17,7 @@ package otto_test
 
 import (
 	"errors"
+	"time"
 
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/db/transaction/mocks"
@@ -29,6 +30,13 @@ import (
 )
 
 var _ = Describe("GohanDb", func() {
+	var (
+		timelimit time.Duration
+	)
+
+	BeforeEach(func() {
+		timelimit = time.Second
+	})
 
 	Describe("gohan_db_state_fetch", func() {
 		Context("When valid parameters are given", func() {
@@ -49,7 +57,7 @@ var _ = Describe("GohanDb", func() {
 				})
 				Expect(err).ToNot(HaveOccurred())
 				extensions := []*schema.Extension{extension}
-				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{})
+				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
 				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
 
 				manager := schema.GetManager()
@@ -103,7 +111,7 @@ var _ = Describe("GohanDb", func() {
 				})
 				Expect(err).ToNot(HaveOccurred())
 				extensions := []*schema.Extension{extension}
-				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{})
+				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
 				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
 
 				context := map[string]interface{}{}
@@ -126,7 +134,7 @@ var _ = Describe("GohanDb", func() {
 				})
 				Expect(err).ToNot(HaveOccurred())
 				extensions := []*schema.Extension{extension}
-				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{})
+				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
 				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
 
 				context := map[string]interface{}{}
@@ -157,7 +165,7 @@ var _ = Describe("GohanDb", func() {
 				})
 				Expect(err).ToNot(HaveOccurred())
 				extensions := []*schema.Extension{extension}
-				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{})
+				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
 				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
 
 				manager := schema.GetManager()
@@ -207,7 +215,7 @@ var _ = Describe("GohanDb", func() {
 				})
 				Expect(err).ToNot(HaveOccurred())
 				extensions := []*schema.Extension{extension}
-				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{})
+				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
 				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
 
 				context := map[string]interface{}{
@@ -237,7 +245,7 @@ var _ = Describe("GohanDb", func() {
 				})
 				Expect(err).ToNot(HaveOccurred())
 				extensions := []*schema.Extension{extension}
-				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{})
+				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
 				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
 
 				context := map[string]interface{}{
@@ -267,7 +275,7 @@ var _ = Describe("GohanDb", func() {
 				})
 				Expect(err).ToNot(HaveOccurred())
 				extensions := []*schema.Extension{extension}
-				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{})
+				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
 				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
 
 				manager := schema.GetManager()

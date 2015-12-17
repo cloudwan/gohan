@@ -21,6 +21,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"time"
 
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/transaction"
@@ -73,7 +74,7 @@ func (env *Environment) InitializeEnvironment() error {
 	if err != nil {
 		return fmt.Errorf("Failed to connect to database: %s", err.Error())
 	}
-	env.Environment = gohan_otto.NewEnvironment(env.dbConnection, &middleware.FakeIdentity{})
+	env.Environment = gohan_otto.NewEnvironment(env.dbConnection, &middleware.FakeIdentity{}, 30*time.Second)
 	env.SetUp()
 	env.addTestingAPI()
 

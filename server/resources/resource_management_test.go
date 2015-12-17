@@ -17,6 +17,7 @@ package resources_test
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/extension/otto"
@@ -47,6 +48,7 @@ var _ = Describe("Resource manager", func() {
 		extensions    []*schema.Extension
 		env           extension.Environment
 		events        map[string]string
+		timelimit     time.Duration
 
 		defaultState map[string]interface{}
 	)
@@ -56,6 +58,7 @@ var _ = Describe("Resource manager", func() {
 
 		adminAuth = schema.NewAuthorization(adminTenantID, "admin", adminTokenID, []string{"admin"}, nil)
 		memberAuth = schema.NewAuthorization(memberTenantID, "demo", memberTokenID, []string{"_member_"}, nil)
+		timelimit = time.Duration(1) * time.Second
 		auth = adminAuth
 
 		context = middleware.Context{}
@@ -90,7 +93,7 @@ var _ = Describe("Resource manager", func() {
 		context["catalog"] = auth.Catalog()
 		context["auth"] = auth
 
-		env = otto.NewEnvironment(testDB, &middleware.FakeIdentity{})
+		env = otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
 		extensions = []*schema.Extension{}
 		for event, javascript := range events {
 			extension, err := schema.NewExtension(map[string]interface{}{
