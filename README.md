@@ -329,5 +329,17 @@ In Gohan, each layer can understand service definition file, so that you can uni
 # License
 Apache2
 
+# How to contribute
+
+(1) Sign our CLA and send scan for info@cloudwan.io
+
+(Individual version) https://github.com/cloudwan/gohan/blob/master/docs/cla.txt
+(Company version) https://github.com/cloudwan/gohan/blob/master/docs/ccla.txt
+
+(2) Create an issue in github
+(3) Send PR for github
+
+We recommend to rebase mulitple commit for 1. 
+
 # Additional resources
 See more documentation at http://gohan.cloudwan.io/gohan/
