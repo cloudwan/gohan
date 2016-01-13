@@ -22,10 +22,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/go-martini/martini"
-
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
+	"github.com/go-martini/martini"
+	"github.com/rackspace/gophercloud"
 )
 
 type tenant struct {
@@ -226,4 +226,9 @@ func FakeKeystone(martini *martini.ClassicMartini) {
 			w.Write(serializedToken)
 		})
 	}
+}
+
+// GetClient returns openstack client
+func (identity *FakeIdentity) GetClient() *gophercloud.ServiceClient {
+	return nil
 }

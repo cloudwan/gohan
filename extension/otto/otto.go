@@ -19,6 +19,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/cloudwan/donburi"
+	//Import donburi lib
+	_ "github.com/cloudwan/donburi/lib"
 	"github.com/cloudwan/gohan/db"
 	ext "github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/schema"
@@ -41,6 +44,7 @@ type Environment struct {
 	DataStore   db.DB
 	timelimit   time.Duration
 	Identity    middleware.IdentityService
+	donburiVM   *donburi.VM
 }
 
 //NewEnvironment create new gohan extension environment based on context
@@ -52,6 +56,7 @@ func NewEnvironment(dataStore db.DB, identity middleware.IdentityService, timeli
 		DataStore: dataStore,
 		Identity:  identity,
 		timelimit: timelimit,
+		donburiVM: donburi.NewVM(),
 	}
 	env.SetUp()
 	return env
@@ -96,9 +101,16 @@ func (env *Environment) LoadExtensionsForPath(extensions []*schema.Extension, pa
 		if extension.Match(path) {
 			code := extension.Code
 			if extension.CodeType == "donburi" {
-				err = env.runDonburi(code)
-				if err != nil {
-					return err
+				if extension.URL != "" {
+					err = env.donburiVM.LoadFile(extension.URL)
+					if err != nil {
+						return err
+					}
+				} else {
+					err = env.donburiVM.LoadString(extension.File, extension.Code)
+					if err != nil {
+						return err
+					}
 				}
 			} else if extension.CodeType == "go" {
 				callback := ext.GetGoCallback(code)
@@ -151,6 +163,7 @@ func convertNilsToNulls(object interface{}) {
 //HandleEvent handles event
 func (env *Environment) HandleEvent(event string, context map[string]interface{}) (err error) {
 	vm := env.VM
+	context["event_type"] = event
 	var halt = fmt.Errorf("exceed timeout for extention execution")
 
 	defer func() {
@@ -199,15 +212,20 @@ func (env *Environment) HandleEvent(event string, context map[string]interface{}
 			err = fmt.Errorf("%s: %s", event, err.Error())
 		}
 	}
+
+	timer.Stop()
+	successCh <- true
+	if err != nil {
+		return err
+	}
+
 	for _, callback := range env.goCallbacks {
 		err = callback(event, context)
 		if err != nil {
 			return err
 		}
 	}
-
-	timer.Stop()
-	successCh <- true
+	err = env.donburiVM.Run(context)
 	return err
 }
 
@@ -216,6 +234,7 @@ func (env *Environment) Clone() ext.Environment {
 	newEnv := NewEnvironment(env.DataStore, env.Identity, env.timelimit)
 	newEnv.VM = env.VM.Copy()
 	newEnv.goCallbacks = env.goCallbacks
+	newEnv.donburiVM = env.donburiVM
 	return newEnv
 }
 

@@ -27,9 +27,9 @@ import (
 
 //Extension is a small plugin for gohan
 type Extension struct {
-	ID, CodeType, URL string
-	Code              string
-	Path              *regexp.Regexp
+	ID, CodeType, URL, File string
+	Code                    string
+	Path                    *regexp.Regexp
 }
 
 //NewExtension returns new extension from object

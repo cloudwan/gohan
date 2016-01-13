@@ -5,6 +5,28 @@ policies:
   principal: admin
   resource:
     path: .*
+extensions:
+- id: donburi_test
+  code_type: donburi
+  path: /v2.0/networks
+  code: |
+    tasks:
+    - when: event_type == "post_create_in_transaction"
+      blocks:
+      - debug: msg="resource {{item.key}} {{item.value}}"
+        with_dict: resource
+      - uuid:
+        register: subnet_id
+      - db_create:
+          tx: transaction
+          schema_id: subnet
+          data:
+            id: "{{ subnet_id }}"
+            network_id: "{{ resource.id }}"
+            name: test
+            description: hoge
+            cidr: 10.0.0.0/24
+            tenant_id: "{{ tenant_id }}"
 schemas:
 - description: Network
   id: network

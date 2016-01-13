@@ -167,7 +167,7 @@ func (s *Sync) Watch(path string, responseChan chan *sync.Event, stopChan chan b
 	for {
 		select {
 		case response, ok := <-etcdResponseChan:
-		    if !ok {
+			if !ok {
 				return nil
 			}
 			if response != nil {
