@@ -1,0 +1,21 @@
+tasks:
+- blocks:
+    - get_openstack_client:
+        auth_url: "{{ item }}"
+        user_name: gohan
+        password: gohan
+        version: v3
+        domain_name: default
+      register: client
+    - openstack_get:
+        client: client
+        url: "{{ item }}/users"
+      register: output
+    - debug:
+        msg: |
+         {{ network_url }}
+         endpoint: {{ item }}{% for user in output.users %}
+           name: {{ user.name }}{% endfor %}
+  with_items:
+  - http://192.168.100.11:5000/v3
+  - http://192.168.100.12:5000/v3

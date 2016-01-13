@@ -17,6 +17,5 @@ if [[ $ENABLE_V8 == "true" ]]; then
 fi
 
 gocov test $TAGS ./...  > coverage.json
-
 kill $ETCD_PID
 exit $result

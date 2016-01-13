@@ -54,7 +54,7 @@ func listenAMQP(server *Server) {
 	extensions := map[string]extension.Environment{}
 	for _, event := range events {
 		path := "amqp://" + event
-		env := newEnvironment(server.db, server.keystoneIdentity, server.timelimit)
+		env := server.newEnvironment()
 		err := env.LoadExtensionsForPath(manager.Extensions, path)
 		if err != nil {
 			log.Fatal(fmt.Sprintf("Extensions parsing error: %v", err))

@@ -1,0 +1,64 @@
+package {{ export_package }}
+
+// AUTO GENERATED CODE DO NOT MODIFY MANUALLY
+
+import (
+    "github.com/cloudwan/gohan/extension/gohanscript"
+    "{{full_package}}"
+{% for import in imports %}
+    "{{ import }}"
+{% endfor %}
+)
+
+func init(){
+{% for decl in funcs %}
+{%     if decl.Body != nil %}
+           gohanscript.RegisterStmtParser("{{ decl.Name.Name | to_under_score_case }}",
+           func (stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
+               return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+{%         for param in decl.Type.Params.List %}
+{%             for name in param.Names %}
+                        {{ name.Name }}, _ := stmt.Arg("{{ name.Name | to_under_score_case }}", context).({{ param.Type | astType }})
+{%             endfor %}
+{%        endfor %}
+{%        if decl.Type.Results.List | length == 0 %}
+            {{package}}.{{ decl.Name.Name }}({% for param in decl.Type.Params.List %}{% for name in param.Names %}{{ name.Name }},{% endfor %}{% endfor %})
+            return nil, nil
+{%        else %}
+{%        if decl.Type.Results.List | length > 1 %}
+            var err error
+{%        endif %}
+         {% for param in decl.Type.Results.List %}{% if param.Type.Name == "error" %}err{% else %}result{{ forloop.Counter }}{% endif %}{% if !forloop.Last %},{% endif %}{% endfor %} := {{package}}.{{ decl.Name.Name }}({% for param in decl.Type.Params.List %}{% for name in param.Names %}{{ name.Name }},{% endfor %}{% endfor %})
+
+{%        if decl.Type.Results.List | length == 1 %}
+{%            if decl.Type.Results.List.0.Type.Name == "error" %}
+	              return nil , err
+{%            else %}
+	              return result1 , nil
+{%            endif %}
+{%        elif decl.Type.Results.List | length == 2 &&  decl.Type.Results.List.1.Type.Name == "error" %}
+              return result1, err
+{%        else %}
+              return []interface{}{ {% for param in decl.Type.Results.List %}{% if param.Type.Name != "error" %}result{{forloop.Counter}}{% if !forloop.Last %},{% endif %}{% endif %}{% endfor %} }, err
+{%        endif %}
+{%     endif %}
+          }, nil})
+
+           gohanscript.RegisterMiniGoFunc("{{ decl.Name.Name }}",
+           func (vm *gohanscript.VM, args []interface{}) []interface{} {
+{%        if decl.Type.Params.List | length > 0 %}
+           i := 0
+{%         for param in decl.Type.Params.List %}
+{%             for name in param.Names %}
+                        {{ name.Name }}, _ := args[i].({{ param.Type | astType }})
+                        i++
+{%             endfor %}
+{%        endfor %}
+{%     endif %}
+         {% for param in decl.Type.Results.List %}result{{ forloop.Counter }}{% if !forloop.Last %},{% endif %}{% endfor %} := {{package}}.{{ decl.Name.Name }}({% for param in decl.Type.Params.List %}{% for name in param.Names %}{{ name.Name }},{% endfor %}{% endfor %})
+         return []interface{}{ {% for param in decl.Type.Results.List %}result{{forloop.Counter}}{% if !forloop.Last %},{% endif %}{% endfor %} }
+          })
+
+{%     endif %}
+{% endfor %}
+}

@@ -1,0 +1,3 @@
+  tasks:
+  - debug: msg="Hello World"
+  - debug: msg="This is gohan script"

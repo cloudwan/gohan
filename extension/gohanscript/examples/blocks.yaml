@@ -1,0 +1,4 @@
+tasks:
+- blocks:
+  - debug: msg="hello"
+  - debug: msg="from in block"

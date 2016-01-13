@@ -1,0 +1,10 @@
+vars:
+  name
+tasks:
+- debug: msg="{{ item }}"
+  with_items:
+  - apple
+  - orange
+  - banana
+- debug: msg="{{ item }}"
+  with_items: $foods

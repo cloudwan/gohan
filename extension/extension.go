@@ -30,8 +30,6 @@ var goCallbacks = map[string]GoCallback{}
 
 //Environment is a interface for extension environment
 type Environment interface {
-	Load(source, code string) error
-	RegisterObject(objectID string, object interface{})
 	LoadExtensionsForPath(extensions []*schema.Extension, path string) error
 	HandleEvent(event string, context map[string]interface{}) error
 	Clone() Environment

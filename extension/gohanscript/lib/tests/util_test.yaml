@@ -1,0 +1,16 @@
+test_suite:
+  tests:
+  - name: You can do http request
+    test:
+    - http_get: url=https://status.github.com/api/status.json
+      register: result
+    - assert: expect="good" actual="{{result.contents.status}}"
+  - name: Generate UUID
+    test:
+    - uuid:
+      register: uuid
+    - debug: msg="{{ uuid }}"
+  - name: Env
+    test:
+    - env:
+      register: env

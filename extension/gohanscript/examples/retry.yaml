@@ -1,0 +1,4 @@
+tasks:
+- fail: msg="Failed"
+  retry: 3
+  delay: 3

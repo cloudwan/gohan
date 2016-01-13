@@ -7,7 +7,7 @@ Extensions has properties:
 
 - id identity of the code
 - code contents of code
-- code_type javascript, go and donburi (DSL) are supported
+- code_type javascript, go and gohan script (DSL) are supported
 - url placement of code. currenty, file://, http:// and https:// schemes are supported
 - path resource path to execute code
 
@@ -668,398 +668,458 @@ You can also, import github.com/cloudwan/server module and
 have your own RunServer method to have whole custom route written in go.
 
 
-Donburi
+Gohan script
 -------------------------
 
 Note: This function is experimental. Any APIs are subject to change.
 
-Gohan support Donburi which is a yaml based DSL to support extension.
-Donburi is heavyly inspired by Ansible yaml script.
-The goal of Donburi is pain-less extension using YAML.
-This is donburi example.
+Gohan script is an Ansible-like MACRO language
+for extending your Go code with MACRO functionality.
+
+Enable gohan script
+~~~~~~~~~~~~~~~~~~~~~
+
+You need specify extension type in config file.
 
 .. code-block:: yaml
 
-  db_tasks:
-    - list:
-        schema_id: "test"
-        tenant_id: "xxx"
-      register: gohan_db
-    - fetch:
-        schema_id: "test"
-        id: "xxx"
-    - resource:
-        id: "xxx"
-        schema: "test"
-        properties:
-          name: "test"
-      register: "xxx"
-  tasks:
-    - vars:
-        message: world
-    - debug: "hello {{ .message }} "
-    - eval: "console.log(id);"
-    - contrail:
-        schema: "virtual_networks"
-        properties:
-          name: "test"
-      register: vm1_out
+  extension:
+     type: gohanscript
 
-
-This is the other sample.
-
-.. code-block:: yaml
-
-  tasks:
-    - eval: "1 + 1"
-      register: result
-    - eval: "true"
-      register: when_is_working
-      when: "result == 2"
-    - block:
-      - vars:
-          list2 : [4, 5, 6]
-      - eval: "result += item"
-        with_items:
-         - 1
-         - 2
-         - 3
-      when: when_is_working
-    - eval: "result += item"
-      with_items: "list2"
-
-
-you can find an example application at etc/appts/donburi.yaml, and
-example server configuraion in etc/donburi.yaml.
-
-Example Application
-^^^^^^^^^^^^^^^^^^^
-
-- Setup contrail + openstack using vagrant
-
-See https://github.com/mwiget/opencontrail
-
-- Setup CORS (Cross-Origin Resource Sharing)  on keystone
-
-See https://ianunruh.com/2014/11/openstack-cors.html
-
-- Setup notification configuration on heat
-
-/etc/heat/heat.conf
-
-notification_driver=heat.openstack.common.notifier.rpc_notifier
-
-restart heat-api and heat-engine
-
-- Allow rabbitmq connection from your gohan host
 
 Example
+~~~~~~~
+
+.. code-block:: yaml
+
+    vars:
+      world: "USA"
+      foods:
+      - apple
+      - orange
+      - banana
+    tasks:
+    - debug: var=$foods[2]
+    - debug: msg="Hello \" {{ world }}"
+    - blocks:
+        - debug: msg="I like {{ item }}"
+          with_items:
+        - apple
+        - orange
+        - banana
+        - debug: msg="I like {{ item }}"
+          with_items: $foods
+        # Unlike Ansible, We treat a value as identifier if a string value starts with "$"
+        # otherwise it is a value
+        - debug: msg="{{ item.key }} likes {{ item.value }}"
+          with_dict:
+            Alice: apple
+            Bob: orange
+        - debug: msg="This shouldn't be called"
+          when: 1 == 0
+          else:
+          - debug: msg="This should be called"
+        - fail: "failed"
+          when: 1 == 1
+          rescue:
+          - debug: msg="rescued {{ error }}"
+          always:
+          - debug: msg="Drink beer!"
+    - debug: msg="test {{ 1 == 1 }}"
+    - include: lib.yaml
+        vars:
+        local_vars: hello from imported code
+
+
+see more detail on extension/gohanscript/test/core_test.yaml
+
+CLI
+~~~~~~~
+
+You can run Gohan script code using this
 
 .. code-block:: shell
 
-  root@ubuntu-14:/etc/rabbitmq# cat rabbitmq.config
-  [
-     {rabbit, [ {tcp_listeners, [{"0.0.0.0", 5672}]},
-     {loopback_users, []},
-     {log_levels,[{connection, info},{mirroring, info}]} ]
+    gohan run ../examples/sample1.yaml
 
+Tasks
+~~~~~~~~~
 
-  root@ubuntu-14:/etc/rabbitmq# cat rabbitmq-env.conf
+You can run list of tasks.
 
-  NODE_IP_ADDRESS=0.0.0.0
-  NODENAME=rabbit@ubuntu-14-ctrl
+.. code-block:: yaml
 
-restart rabbitmq
+  tasks:
+  - debug: msg="Hello World"
+  - debug: msg="This is gohan script"
 
-- Update keystone configuraion on etc/donburi.yaml
+save this file to hello_world.yaml.
 
-keystone:
-    use_keystone: true
-    fake: false
-    auth_url: "http://172.16.25.130:5000/v3"
-    user_name: "admin"
-    tenant_name: "admin"
-    password: "secret123"
-    version: v3
+.. code-block:: shell
 
-- Start gohan
-
-gohan server --config-file etc/donburi.yaml
-
+    $ gohan run hello_world.yaml
+    15:17:07.029 ▶ DEBUG  [hello_world.yaml line:1 column:4] Hello World
+    15:17:07.029 ▶ DEBUG  [hello_world.yaml line:2 column:4] This is gohan script
 
 Variables
-^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~
 
-You can register variables using vars task
-
-.. code-block:: yaml
-
-    - vars:
-      list2 : [4, 5, 6]
-
-you can use values in context in each value using golang
-template format.
-(see more details on http://golang.org/pkg/text/template/ )
-
-For example, you can use context.tenant value using
-"{{ .tenant }}""
-
-Note that template isn't allowed in eval and when.
-
-Block
-^^^^^^^^^^^^^^^^^^^
-
-You can have a logical grouping of tasks.
-We have "block" and "resources".
-
+You can define variables using "vars".
 
 .. code-block:: yaml
 
-  - block:
-    - vars:
-        list2 : [4, 5, 6]
-    - eval: "result += item"
-      with_items:
-       - 1
-       - 2
-       - 3
-    when: when_is_working
-
-If you use reousrces block, each sub task will be executed
-on reverse order on resource deletion.
-
-.. code-block:: yaml
-
-  - resources:
-    - resource A
-    - resource B # depends on resource A
-
-Define
-^^^^^^^^^^^^^^^^^^^
-
-You can define a function using "define" block.
-last task execution result will be returned.
-
-.. code-block:: yaml
-
-  - define:
-    name: add
+    vars:
+        place: "Earth"
+        person:
+            name: "John"
+            age: "30"
     tasks:
-    - eval: "a + b"
-  - add:
-      a: 1
-      b: 2
-    register: c
+    - debug: msg="Hello {{place}}"
+    - debug: var=$place
+    - debug: msg="Hello {{person.name}} "
+    - debug: var=$person.name
+    - debug: # show everything
 
+Any string including "{{" get considered as django template. so
+you can use variables in their. if string start with "$", it get considered as
+a variable identifier.
+(We are using pongo2 which supports subset of django tempalte.)
 
-Event handling
-^^^^^^^^^^^^^^^^^^^
+.. code-block:: shell
 
-db_tasks  will be executed in main transaction
-tasks will be executed outside of transaction
-
-Conditionals
-^^^^^^^^^^^^^^^^^^^
-
-when: the statement specifed in "when" will be evaluated, and when it is true
-the task will be executed
-else: if evaluation result of "when" get false, else will be executed
-
-.. code-block:: yaml
-
-  tasks:
-    - debug: "result is 2"
-      when: "result == 2"
-      else:
-        - debug: "result is not 2"
-
-Error handling
-^^^^^^^^^^^^^^^^^^^
-
-You can use rescue and always block task for error handling.
-rescue will be executed only if we got execption.
-always will be executed always.
-retry (int) block, rescue, always will be executed "retry" count
-times.
-
-.. code-block:: yaml
-
-  tasks:
-    - block:
-      - eval: throw 'error'
-      rescue:
-      - eval: "rescue_executed = true"
-      always:
-      - eval: "always_executed = true"
-      retry: 3
-
-
-Note that last error will be stored in context.error
+    $ gohan run variable.yaml
+    15:21:43.090 ▶ DEBUG  [variable.yaml line:6 column:2] Hello Earth
+    15:21:43.091 ▶ DEBUG  [variable.yaml line:7 column:2] Earth
+    15:21:43.091 ▶ DEBUG  [variable.yaml line:8 column:2] Hello John
+    15:21:43.091 ▶ DEBUG  [variable.yaml line:9 column:2] John
+    15:21:43.091 ▶ DEBUG  [variable.yaml line:10 column:2] Dump vars
+    15:21:43.091 ▶ DEBUG      person: map[name:John age:30]
+    15:21:43.091 ▶ DEBUG      __file__: variable.yaml
+    15:21:43.091 ▶ DEBUG      __dir__: .
+    15:21:43.091 ▶ DEBUG      place: Earth
 
 Loops
-^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~
 
-with_items: task will be executed for each specifed items.
-if you specify string, it will be evaluated and result will be used as item.
+You can loop over the list item.
 
 .. code-block:: yaml
 
-    - eval: "[4, 5, 6]"
-      register: "list2"
-    - eval: "result += item"
+    vars:
+        foods:
+        - apple
+        - orange
+        - banana
+    tasks:
+    - debug: msg="{{ item }}"
       with_items:
-       - 1
-       - 2
-       - 3
-    - eval: "result += item"
-      with_items: "list2"
+      - apple
+      - orange
+      - banana
+    - debug: msg="{{ item }}"
+      with_items: $foods
 
-with_dict: loop over object. item will have key and value.
+.. code-block:: shell
 
-.. code-block:: yaml
+    $ gohan run with_items.yaml
+    15:28:47.736 ▶ DEBUG  [with_items.yaml line:6 column:2] apple
+    15:28:47.736 ▶ DEBUG  [with_items.yaml line:6 column:2] orange
+    15:28:47.736 ▶ DEBUG  [with_items.yaml line:6 column:2] banana
+    15:28:47.736 ▶ DEBUG  [with_items.yaml line:11 column:2] apple
+    15:28:47.736 ▶ DEBUG  [with_items.yaml line:11 column:2] orange
+    15:28:47.736 ▶ DEBUG  [with_items.yaml line:11 column:2] banana
 
-  - eval: "context[item.key] = item.value"
-    with_dict:
-      alice: 18
-      bob: 21
-
-
-Supported tasks
-^^^^^^^^^^^^^^^^^^^
-
-- debug  -- show debug message
-- eval -- eval javasciprt
-- sleep: miliseconds  sleep certin time
-- command: execute shell command
+You can also loop over a dict.
 
 .. code-block:: yaml
 
-  - command:
-     name: echo
-     args:
-      - test
+    vars:
+    person:
+        name: "John"
+        age: "30"
+    tasks:
+    - debug: msg="{{ item.key }} {{ item.value }}"
+      with_dict:
+        name: "John"
+        age: "30"
+    - debug: msg="{{ item.key }} {{ item.value }}"
+      with_dict: $person
 
+.. code-block:: shell
 
-- fetch -- get data from db
+    $ gohan run with_items.yaml
+    15:32:42.513 ▶ DEBUG  [with_items.yaml line:5 column:2] name John
+    15:32:42.513 ▶ DEBUG  [with_items.yaml line:5 column:2] age 30
+    15:32:42.513 ▶ DEBUG  [with_items.yaml line:9 column:2] name John
+    15:32:42.513 ▶ DEBUG  [with_items.yaml line:9 column:2] age 30
 
-  schema: schema id
-  tenant_id: target tenant id
-  id: id of the resource
+Conditional
+~~~~~~~~~~~~~~
 
-
-.. code-block:: yaml
-
-  - fetch:
-     schema: "network"
-     id: "{{ response.network_id }}"
-     tenant_id: ""
-   register: network
-
-- list -- get data from db
-
-  schema: schema id
-  tenant_id: target tenant id
-  id: id of the resource
-
-.. code-block:: yaml
-
-  - list:
-     schema: "network"
-     tenant_id: ""
-   register: network
-
-- contrail
-
-  Create contrail resources
-  In order to use this, you need to set correct api URL on etc/contrail/extensions/contrail_extension_config.js, and proper keystone configuraion
-
-  id: remote resource uuid will be saved on this specificed property in
-  main resource
-  schema: contrail resource id
-  allow_update: list of properties allowed to be updated
-  properties: remote resource properties
+You can use "when" for conditional.
+You can use "else" blocks with "when".
 
 .. code-block:: yaml
+    vars:
+      number: 1
+    tasks:
+    - debug: msg="Should be called"
+      when: number == 1
+    - debug: msg="Should not be called"
+      when: number == 0
+      else:
+      - debug: msg="Should be called"
 
-  - contrail:
-      id: "contrail_virtual_network"
-      schema: "virtual-network"
-      allow_update: []
-      properties:
-        parent_type: "project"
-        fq_name:
-          - default-domain
-          - "{{ tenant_name }}"
-          - "{{ response.id }}"
+.. code-block:: shell
 
+    $ gohan run when.yaml
+    15:35:55.358 ▶ DEBUG  [when.yaml line:3 column:2] Should be called
 
-- heat
+Retry
+~~~~~~~~~~~~~
 
-  You can crud heat stack from donburi.
-  This is a example
+You can retry task.
 
-.. code-block:: yaml
-
-   - heat:
-       id: "heat_stack_id"
-       stack_name: "{{ response.name }}"
-       template:
-         heat_template_version: 2013-05-23
-         parameters: {}
-         resources:
-             server:
-               type: OS::Nova::Server
-               properties:
-                 image: "tinycore-in-network-nat"
-                 flavor: "m1.tiny"
-         outputs:
-           server_networks:
-             description: The networks of the deployed server
-             value: { get_attr: [server, networks] }
-
-- netconf
-
-  You can use netconf to configure remote network devices.
-  Note that it is possible you get code injection attack if you
-  directly use user's input.
+- retry: how many times you will retry a task
+- delay: how many seconds you will wait on next retry
 
 .. code-block:: yaml
 
     tasks:
-      - block:
-          - netconf_open:
-              host: "{{.response.management_ip}}"
-              username: "admin"
-            register: session
-          - netconf_exec:
-              connection: session
-              command: "<get-config><source><running/></get-config>"
-            register: output
-          - debug: "{{.output.output.Data}}"
-        always:
-          - netconf_close: session
+    - fail: msg="Failed"
+      retry: 3
+      delay: 3
 
-- ssh
+.. code-block:: shell
 
-  You can use ssh to configure remote hosts.
-  Note that it is possible you get code injection attack if you
-  directly use user's input.
+    $ gohan run retry.yaml
+    15:43:35.720 ▶ WARNING  error: tasks[0]: Failed
+    15:43:35.720 ▶ WARNING  error: tasks[0]: Failed
+    Failed
+
+Blocks
+~~~~~~~~~~~~~
+
+You can group a set of tasks using blocks.
+blocks also supports loops, conditional and retries.
 
 .. code-block:: yaml
 
-   - block:
-       - ssh_open:
-           host: "{{.response.management_ip}}:22"
-           username: "admin"
-         register: session
-         rescue:
-           - debug: "{{.error}}"
-       - ssh_exec:
-           connection: session
-           command: "show interfaces"
-         register: output
-         rescue:
-           - debug: "{{.error}}"
-       - debug: "{{.output.output}}"
-     always:
-       - ssh_close: session
+    tasks:
+    - blocks:
+      - debug: msg="hello"
+      - debug: msg="from in block"
+
+.. code-block:: shell
+
+    $ gohan run blocks.yaml
+    15:48:30.231 ▶ DEBUG  [blocks.yaml line:2 column:4] hello
+    15:48:30.231 ▶ DEBUG  [blocks.yaml line:3 column:4] from in block
+
+Register
+~~~~~~~~~~~~~
+
+You can change variable value using "register".
+
+.. code-block:: yaml
+
+    tasks:
+    - http_get: url=https://status.github.com/api/status.json
+      register: result
+    - debug: msg="{{result.contents.status}}"
+
+.. code-block:: shell
+
+    $ gohan run register.yaml
+    15:51:11.005 ▶ DEBUG  [register.yaml line:3 column:2] good
+
+Concurrency
+~~~~~~~~~~~~~
+
+We support concurrent execution over a loop.
+
+- worker: specify number of max workers
+
+.. code-block:: yaml
+
+    tasks:
+    - blocks:
+      - http_get: url="https://status.github.com/{{ item }}"
+        register: result
+      - debug: var=$result.raw_body
+    worker: 3
+    with_items:
+    - /api/status.json
+    - /api.json
+    - /api/last-message.json
+
+.. code-block:: shell
+
+    $ gohan run worker.yaml
+    15:58:49.151 ▶ DEBUG  [worker.yaml line:4 column:5] {"status_url":"https://status.github.com/api/status.json","messages_url":"https://status.github.com/api/messages.json","last_message_url":"https://status.github.com/api/last-message.json","daily_summary":"https://status.github.com/api/daily-summary.json"}
+    15:58:49.156 ▶ DEBUG  [worker.yaml line:4 column:5] {"status":"good","body":"Everything operating normally.","created_on":"2016-03-03T22:03:59Z"}
+    15:58:49.156 ▶ DEBUG  [worker.yaml line:4 column:5] {"status":"good","last_updated":"2016-03-08T23:58:27Z"}
+
+You can also execute tasks in background.
+
+.. code-block:: yaml
+
+    tasks:
+    - background:
+      - sleep: 1000
+      - debug: msg="called 2"
+    - debug: msg="called 1"
+    - sleep: 2000
+    - debug: msg="called 3"
+
+.. code-block:: shell
+
+    $ gohan run background.yaml
+    16:02:55.034 ▶ DEBUG  [background.yaml line:6 column:2] called 1
+    16:02:56.038 ▶ DEBUG  [background.yaml line:4 column:4] called 2
+    16:02:57.038 ▶ DEBUG  [background.yaml line:8 column:2] called 3
+
+
+Define function
+~~~~~~~~~~~~~~~
+
+You can define function using "define" task.
+
+- name: name of function
+- args: arguments
+- body: body of code
+
+.. code-block:: yaml
+
+    tasks:
+    - define:
+        name: fib
+        args:
+          x: int
+        body:
+        - when: x < 2
+          return: x
+        - sub_int: a=$x b=1
+          register: x
+        - fib:
+            x: $x
+          register: a
+        - sub_int: a=$x b=1
+          register: x
+        - fib:
+            x: $x
+          register: b
+        - add_int: a=$a b=$b
+          register: result
+        - return: result
+    - fib: x=10
+      register: result2
+    - debug: msg="result = {{result2}}"
+
+you can use return task in function block.
+
+.. code-block:: shell
+
+    $ gohan run fib.yaml
+    16:07:39.964 ▶ DEBUG  [fib.yaml line:23 column:2] result = 55
+
+Include
+~~~~~~~
+
+You can include gohan script
+
+.. code-block:: yaml
+
+    tasks:
+    - include: lib.yaml
+
+.. code-block:: shell
+
+    $ gohan run include.yaml
+    16:11:20.569 ▶ DEBUG  [lib.yaml line:0 column:2] imported
+
+Debugger mode
+~~~~~~~~~~~~~~
+
+You can set breakpoint using "debugger"
+
+.. code-block:: yaml
+
+    vars:
+    world: "USA"
+    foods:
+    - apple
+    - orange
+    - banana
+    tasks:
+    - debugger:
+    - debug: msg="Hello {{ world }}"
+
+Supported command in debugger mode:
+
+- s: step task
+- n: next task
+- r: return
+- c: continue
+- p: print current context
+- l: show current task
+
+Note that we won't do concurrent execution in debug mode.
+
+Command line argument
+~~~~~~~~~~~~~~~~~~~~~~
+
+additional arguments will be stored in variable.
+If the value doesn't contain "=", it will be pushed to args.
+If the value contains "=", it get splitted for key and value and stored in flags.
+
+.. code-block:: yaml
+
+    tasks:
+    - debug: msg="{{ flags.greeting }} {{ args.0 }}"
+
+.. code-block:: shell
+
+$ gohan run args.yaml world greeting=hello
+hello world
+
+
+Run test
+~~~~~~~~~~~~~~
+
+You can run gohan build-in test. gohan test code find test gohan code
+in the specified directory.
+
+.. code-block:: yaml
+
+    gohan test
+
+
+Run Gohan script from Go
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: go
+
+	vm := gohan.NewVM()
+	_, err := vm.RunFile("test/spec.yaml")
+	if err != nil {
+		t.Error(err)
+	}
+
+Add new task using Go
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+You can auto generate adapter functions using ./extension/gohanscript/tools/gen.go.
+
+.. code-block:: shell
+
+  go run ./extension/gohanscript/tools/gen.go genlib -t extension/gohanscript/templates/lib.tmpl -p github.com/cloudwan/gohan/extension/gohanscript/lib -e autogen -ep extension/gohanscript/autogen
+
+
+More examples and supported functions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+please take a look
+
+- extension/gohanscript/lib/tests
+- extension/gohanscript/tests

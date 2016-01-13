@@ -295,6 +295,21 @@ func MaybeMap(data interface{}) map[string]interface{} {
 	return mapValue
 }
 
+//MaybeList tries cast to list otherwise returns empty object
+func MaybeList(value interface{}) []interface{} {
+	res, ok := value.([]interface{})
+	if !ok {
+		return []interface{}{}
+	}
+	return res
+}
+
+//MaybeInt tries cast to int otherwise returns 0
+func MaybeInt(value interface{}) int {
+	res, _ := value.(int)
+	return res
+}
+
 //LogPanic logs panic and prevent crash
 func LogPanic(log *logging.Logger) {
 	err := recover()

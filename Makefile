@@ -33,11 +33,12 @@ test:
 
 lint:
 	@echo "$(OK_COLOR)==> Linting$(NO_COLOR)"
-	golint ./... | grep -V
+	golint ./... | grep -v util/go-bindata.go | grep -v extension/gohanscript/op.go | test `wc -l` -eq 0
 	go vet ./...
 
 build: deps
 	@echo "$(OK_COLOR)==> Building$(NO_COLOR)"
+	go run ./extension/gohanscript/tools/gen.go genlib -t extension/gohanscript/templates/lib.tmpl -p github.com/cloudwan/gohan/extension/gohanscript/lib -e autogen -ep extension/gohanscript/autogen
 	$(GO_BUILD)
 
 install:

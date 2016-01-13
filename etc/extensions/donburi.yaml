@@ -1,3 +1,0 @@
-- id: donburi
-  path: .*
-  url: embed://etc/extensions/donburi.js

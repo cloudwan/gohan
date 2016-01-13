@@ -91,16 +91,10 @@ func (env *Environment) RegisterObject(objectID string, object interface{}) {
 
 //LoadExtensionsForPath for returns extensions for specific path
 func (env *Environment) LoadExtensionsForPath(extensions []*schema.Extension, path string) error {
-	var err error
 	for _, extension := range extensions {
 		if extension.Match(path) {
 			code := extension.Code
-			if extension.CodeType == "donburi" {
-				err = env.runDonburi(code)
-				if err != nil {
-					return err
-				}
-			} else if extension.CodeType == "go" {
+			if extension.CodeType == "go" {
 				callback := ext.GetGoCallback(code)
 				if callback != nil {
 					env.goCallbacks = append(env.goCallbacks, callback)
@@ -151,6 +145,7 @@ func convertNilsToNulls(object interface{}) {
 //HandleEvent handles event
 func (env *Environment) HandleEvent(event string, context map[string]interface{}) (err error) {
 	vm := env.VM
+	context["event_type"] = event
 	var halt = fmt.Errorf("exceed timeout for extention execution")
 
 	defer func() {
@@ -199,15 +194,19 @@ func (env *Environment) HandleEvent(event string, context map[string]interface{}
 			err = fmt.Errorf("%s: %s", event, err.Error())
 		}
 	}
+
+	timer.Stop()
+	successCh <- true
+	if err != nil {
+		return err
+	}
+
 	for _, callback := range env.goCallbacks {
 		err = callback(event, context)
 		if err != nil {
 			return err
 		}
 	}
-
-	timer.Stop()
-	successCh <- true
 	return err
 }
 
