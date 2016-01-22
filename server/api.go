@@ -166,6 +166,7 @@ func fillInContext(context middleware.Context, r *http.Request, w http.ResponseW
 	context["sync"] = sync
 	context["identity_service"] = identityService
 	context["service_auth"], _ = identityService.GetServiceAuthorization()
+	context["openstack_client"] = identityService.GetClient()
 }
 
 //MapRouteBySchema setup api route by schema

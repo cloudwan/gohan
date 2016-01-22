@@ -338,6 +338,7 @@ func (manager *Manager) LoadSchemaFromFile(filePath string) error {
 			if err != nil {
 				return err
 			}
+			extension.File = filePath
 			manager.Extensions = append(manager.Extensions, extension)
 		}
 	}

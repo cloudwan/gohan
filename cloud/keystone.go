@@ -56,12 +56,18 @@ func (identity *KeystoneIdentity) GetServiceAuthorization() (schema.Authorizatio
 	return identity.Client.GetServiceAuthorization()
 }
 
+// GetClient returns openstack client
+func (identity *KeystoneIdentity) GetClient() *gophercloud.ServiceClient {
+	return identity.Client.GetClient()
+}
+
 //KeystoneClient represents keystone client
 type KeystoneClient interface {
 	GetTenantID(string) (string, error)
 	GetTenantName(string) (string, error)
 	VerifyToken(string) (schema.Authorization, error)
 	GetServiceAuthorization() (schema.Authorization, error)
+	GetClient() *gophercloud.ServiceClient
 }
 
 type keystoneV2Client struct {
@@ -249,6 +255,11 @@ func (client *keystoneV3Client) GetServiceAuthorization() (schema.Authorization,
 	return client.VerifyToken(client.client.TokenID)
 }
 
+// GetClient returns openstack client
+func (client *keystoneV3Client) GetClient() *gophercloud.ServiceClient {
+	return client.client
+}
+
 //VerifyToken verifies keystone v2.0 token
 func (client *keystoneV2Client) VerifyToken(token string) (schema.Authorization, error) {
 	tokenResult, err := verifyV2Token(client.client, token)
@@ -395,4 +406,9 @@ func verifyV2Token(c *gophercloud.ServiceClient, token string) (interface{}, err
 
 func tokenURL(c *gophercloud.ServiceClient, token string) string {
 	return c.ServiceURL("tokens", token)
+}
+
+// GetClient returns openstack client
+func (client *keystoneV2Client) GetClient() *gophercloud.ServiceClient {
+	return client.client
 }

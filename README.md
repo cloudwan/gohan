@@ -172,41 +172,7 @@ extensions:
 ```
 
 ### [Experimental] Donburi (Ansible inspired Gohan DSL)
-
-```yaml
-extensions:
-- id: network
-  code_type: donburi
-  code: |
-    tasks:
-      - contrail:
-          schema: "virtual-network"
-          allow_update: []
-          id: "{{ .resource.contrail_virtual_network }}"
-          properties:
-            parent_type: "project"
-            fq_name:
-              - default-domain
-              - "{{ .tenant_name }}"
-              - "{{ .resource.id }}"
-        register: network_response
-      - vars:
-          status: "ACTIVE"
-        when: network_response.status_code == 200
-        else:
-          - vars:
-              status: "ERROR"
-          - vars:
-              response_code: 409
-            when: network_response.status_code != 404 && event_type == "pre_delete"
-      - update:
-          schema: "network"
-          properties:
-            id: "{{ .resource.id }}"
-            contrail_virtual_network: '{{ index .network_response "data" "virtual-network" "uuid" }}'
-            status: "{{ .status }}"
-  path: "/v2.0/network.*"
-```
+see https://github.com/cloudwan/donburi
 
 You can also find an example for Go based extensions in here
 https://github.com/cloudwan/gohan/tree/master/exampleapp

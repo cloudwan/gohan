@@ -25,6 +25,7 @@ import (
 
 	"github.com/cloudwan/gohan/schema"
 	"github.com/go-martini/martini"
+	"github.com/rackspace/gophercloud"
 )
 
 type responseHijacker struct {
@@ -95,6 +96,7 @@ type IdentityService interface {
 	GetTenantName(string) (string, error)
 	VerifyToken(string) (schema.Authorization, error)
 	GetServiceAuthorization() (schema.Authorization, error)
+	GetClient() *gophercloud.ServiceClient
 }
 
 //HTTPJSONError helper for returning JSON errors

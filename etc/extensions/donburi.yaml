@@ -1,3 +1,0 @@
-- id: donburi
-  path: .*
-  url: file://./donburi.js
