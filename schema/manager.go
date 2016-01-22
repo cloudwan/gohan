@@ -297,10 +297,10 @@ func (manager *Manager) LoadSchemaFromFile(filePath string) error {
 	list, _ := schemas["schemas"].([]interface{})
 	for _, schemaData := range list {
 		schemaObj, err := NewSchemaFromObj(schemaData)
-		schemaMap[schemaObj.ID] = schemaObj
 		if err != nil {
 			return err
 		}
+		schemaMap[schemaObj.ID] = schemaObj
 		schemaObjList = append(schemaObjList, schemaObj)
 	}
 
