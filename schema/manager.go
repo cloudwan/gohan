@@ -269,7 +269,7 @@ func (manager *Manager) LoadSchemaFromFile(filePath string) error {
 		return err
 	}
 
-	if !(strings.HasPrefix(filePath, "http://") || strings.HasPrefix(filePath, "https://")) {
+	if !(strings.HasPrefix(filePath, "http://") || strings.HasPrefix(filePath, "https://") || strings.HasPrefix(filePath, "embed://")) {
 		workingDirectory, err := os.Getwd()
 		if err != nil {
 			return err

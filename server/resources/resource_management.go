@@ -67,7 +67,7 @@ type ExtensionError struct {
 }
 
 //InTransaction executes function in the db transaction and set it to the context
-func InTransaction(context middleware.Context, dataStore db.DB, f func() error) error {
+func InTransaction(context middleware.Context, dataStore db.DB, level transaction.Type, f func() error) error {
 	if context["transaction"] != nil {
 		return fmt.Errorf("cannot create nested transaction")
 	}
@@ -76,6 +76,7 @@ func InTransaction(context middleware.Context, dataStore db.DB, f func() error) 
 		return fmt.Errorf("cannot create transaction: %v", err)
 	}
 	defer aTransaction.Close()
+	aTransaction.SetIsolationLevel(level)
 	context["transaction"] = aTransaction
 
 	err = f()
@@ -137,6 +138,7 @@ func ApplyPolicyForResource(context middleware.Context, resourceSchema *schema.S
 func GetResources(context middleware.Context, dataStore db.DB, resourceSchema *schema.Schema, filter map[string]interface{}, paginator *pagination.Paginator) error {
 	return InTransaction(
 		context, dataStore,
+		transaction.GetIsolationLevel(resourceSchema, schema.ActionRead),
 		func() error {
 			return GetResourcesInTransaction(context, resourceSchema, filter, paginator)
 		},
@@ -273,6 +275,7 @@ func GetSingleResource(context middleware.Context, dataStore db.DB, resourceSche
 
 	if err := InTransaction(
 		context, dataStore,
+		transaction.GetIsolationLevel(resourceSchema, schema.ActionRead),
 		func() error {
 			return GetSingleResourceInTransaction(context, resourceSchema, resourceID, policy.GetTenantIDFilter(schema.ActionRead, auth.TenantID()))
 		},
@@ -400,6 +403,7 @@ func CreateResource(
 
 	if err := InTransaction(
 		context, dataStore,
+		transaction.GetIsolationLevel(resourceSchema, schema.ActionCreate),
 		func() error {
 			return CreateResourceInTransaction(context, resource)
 		},
@@ -499,6 +503,7 @@ func UpdateResource(
 
 	if err := InTransaction(
 		context, dataStore,
+		transaction.GetIsolationLevel(resourceSchema, schema.ActionUpdate),
 		func() error {
 			return UpdateResourceInTransaction(context, resourceSchema, resourceID, dataMap, policy.GetTenantIDFilter(schema.ActionUpdate, auth.TenantID()))
 		},
@@ -606,6 +611,7 @@ func DeleteResource(context middleware.Context,
 	}
 	if err := InTransaction(
 		context, dataStore,
+		transaction.GetIsolationLevel(resourceSchema, schema.ActionDelete),
 		func() error {
 			return DeleteResourceInTransaction(context, resourceSchema, resourceID)
 		},
@@ -664,7 +670,7 @@ func ActionResource(context middleware.Context, dataStore db.DB, identityService
 		return err
 	}
 
-	if err := InTransaction(context, dataStore, func() error {
+	if err := InTransaction(context, dataStore, transaction.GetIsolationLevel(resourceSchema, action.ID), func() error {
 		return extension.HandleEvent(context, environment, fmt.Sprintf("post_%s_in_transaction", action.ID))
 	}); err != nil {
 		return err

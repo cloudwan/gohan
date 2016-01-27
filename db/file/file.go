@@ -285,6 +285,11 @@ func (tx *Transaction) StateFetch(s *schema.Schema, ID interface{}, tenantFilter
 	return
 }
 
+//SetIsolationLevel specify transaction isolation level
+func (tx *Transaction) SetIsolationLevel(level transaction.Type) error {
+	return nil
+}
+
 //RawTransaction returns raw transaction
 func (tx *Transaction) RawTransaction() *sqlx.Tx {
 	panic("Not implemented")

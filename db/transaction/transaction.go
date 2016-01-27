@@ -21,6 +21,23 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+//Type represents transaction types
+type Type string
+
+const (
+	//ReadUncommited is transaction type for READ UNCOMMITTED
+	//You don't need to use this for most case
+	ReadUncommited Type = "READ UNCOMMITTED"
+	//ReadCommited is transaction type for READ COMMITTED
+	//You don't need to use this for most case
+	ReadCommited Type = "READ COMMITTED"
+	//RepeatableRead is transaction type for REPEATABLE READ
+	//This is default value for read request
+	RepeatableRead Type = "REPEATABLE READ"
+	//Serializable is transaction type for Serializable
+	Serializable Type = "Serializable"
+)
+
 //ResourceState represents the state of a resource
 type ResourceState struct {
 	ConfigVersion int64
@@ -34,6 +51,7 @@ type ResourceState struct {
 type Transaction interface {
 	Create(*schema.Resource) error
 	Update(*schema.Resource) error
+	SetIsolationLevel(Type) error
 	StateUpdate(*schema.Resource, *ResourceState) error
 	Delete(*schema.Schema, interface{}) error
 	Fetch(*schema.Schema, interface{}, []string) (*schema.Resource, error)
@@ -44,4 +62,18 @@ type Transaction interface {
 	Commit() error
 	Close() error
 	Closed() bool
+}
+
+// GetIsolationLevel returns isolation level for an action
+func GetIsolationLevel(s *schema.Schema, action string) Type {
+	level, ok := s.IsolationLevel[action]
+	if !ok {
+		switch action {
+		case "read":
+			return RepeatableRead
+		default:
+			return Serializable
+		}
+	}
+	return level.(Type)
 }

@@ -42,6 +42,7 @@ type Schema struct {
 	URL                            string
 	URLWithParents                 string
 	RawData                        interface{}
+	IsolationLevel                 map[string]interface{}
 }
 
 //Schemas is a list of schema
@@ -149,7 +150,7 @@ func NewSchemaFromObj(rawTypeData interface{}) (*Schema, error) {
 	if !ok {
 		return nil, &typeAssertionError{"singular"}
 	}
-
+	isolationLevel, _ := typeData["isolation_level"].(map[string]interface{})
 	schema := &Schema{
 		ID:                 id,
 		Title:              title,
@@ -168,6 +169,7 @@ func NewSchemaFromObj(rawTypeData interface{}) (*Schema, error) {
 		Singular:           singular,
 		URL:                url,
 		Required:           requiredStrings,
+		IsolationLevel:     isolationLevel,
 	}
 	//TODO(nati) load tags
 	schema.Tags = make(Tags)

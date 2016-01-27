@@ -531,3 +531,20 @@ Available events
       "delay": "1h"
     }
   }
+
+Custom Isolation Level
+-------------------------
+
+You can specify the transaction isolation level for api requests.
+Currently, this is only supported for mysql.
+The default setting is "read repeatable" for read operations and "serializable" for
+operations that modify the database (create, update, delete).
+The default for unspecified action is repeatble read.
+
+.. code-block:: yaml
+
+    isolation_level:
+      read:  REPEATABLE READ
+      create:  SERIALIZABLE
+      update: SERIALIZABLE
+      delete: SERIALIZABLE
