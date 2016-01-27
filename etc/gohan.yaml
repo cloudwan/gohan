@@ -13,8 +13,8 @@ database:
 # schema path
     drop_on_create: true
 schemas:
-    - "./schema/gohan.json"
-    - "./extensions/gohan_extension.yaml"
+    - "embed://etc/schema/gohan.json"
+    - "embed://etc/extensions/gohan_extension.yaml"
     - "./example_schema.yaml"
 
 editable_schema: ./example_schema.yaml

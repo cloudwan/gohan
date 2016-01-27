@@ -30,8 +30,8 @@ database:
 # schema path
     drop_on_create: true
 schemas:
-    - "../etc/schema/gohan.json"
-    - "../etc/extensions/gohan_extension.yaml"
+    - "embed://etc/schema/gohan.json"
+    - "embed://etc/extensions/gohan_extension.yaml"
     - "./test_worker_extension.yaml"
     - "../etc/example_schema.yaml"
 
