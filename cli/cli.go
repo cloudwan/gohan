@@ -113,11 +113,17 @@ CONFIGURATION:
         * Should Client cache schemas (default - true) - GOHAN_CACHE_SCHEMAS
         * Cache expiration time (in format 1h20m10s - default 5m) - GOHAN_CACHE_TIMEOUT
         * Cache path (default - /tmp/.cached-gohan-schemas) - GOHAN_CACHE_PATH
+        * In which format results should be shown, see --output-format - GOHAN_OUTPUT_FORMAT
+        * How much debug info Gohan Client should show, see --verbosity - GOHAN_VERBOSITY
     Additional options for Keystone v3 only:
         * Keystone domain name or domain id - OS_DOMAIN_NAME or OS_DOMAIN_ID
 `,
 		Action: func(c *cli.Context) {
 			opts, err := client.NewOptsFromEnv()
+			if err != nil {
+				util.ExitFatal(err)
+			}
+
 			gohanCLI, err := client.NewGohanClientCLI(opts)
 			if err != nil {
 				util.ExitFatalf("Error initializing Gohan Client CLI: %v\n", err)
@@ -130,7 +136,7 @@ CONFIGURATION:
 			}
 			result, err := gohanCLI.ExecuteCommand(command, arguments)
 			if err != nil {
-				util.ExitFatalf("%v\n", err)
+				util.ExitFatal(err)
 			}
 			if result == "null" {
 				result = ""

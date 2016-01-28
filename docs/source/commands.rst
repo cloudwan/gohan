@@ -141,7 +141,7 @@ Passing JSON not null value: :code:`--name '{"name": [{"name": "value"}, {"name"
 
 In addition to resource related commands, some formatting commands are available:
 
-* :code:`--output-format [json/table]` - specifies in which format resoults should be shown
+* :code:`--output-format [json/table]` - specifies in which format results should be shown. Can also be specified with :code:`GOHAN_OUTPUT_FORMAT` environment variable.
 
   - :code:`json`, e.g:
 
@@ -169,7 +169,7 @@ In addition to resource related commands, some formatting commands are available
       | some_list   | ["list_element_1", "list_element_2"] |
       +-------------+--------------------------------------+
 
-* :code:`--verbosity [0-3]` - specifies how much information Gohan Client should show - handy for dubugging
+* :code:`--verbosity [0-3]` - specifies how much information Gohan Client should show - handy for dubugging. Can also be specified with :code:`GOHAN_VERBOSITY` environment variable.
 
   - :code:`0` - no additional debug information is shown
   - :code:`1` - Sent request url and method is shown

@@ -25,14 +25,6 @@ import (
 	"github.com/cloudwan/gohan/schema"
 )
 
-var (
-	incorrectOutputFormat = "Incorrect output format. Available formats: %v"
-	outputFormatKey       = "output-format"
-	outputFormatTable     = "table"
-	outputFormatJSON      = "json"
-	outputFormats         = []string{outputFormatTable, outputFormatJSON}
-)
-
 func (gohanClientCLI *GohanClientCLI) handleArguments(args []string, s *schema.Schema) (map[string]interface{}, error) {
 	argsMap, err := getArgsAsMap(args, s)
 	if err != nil {
@@ -82,26 +74,25 @@ func getArgsAsMap(args []string, s *schema.Schema) (map[string]interface{}, erro
 }
 
 func (gohanClientCLI *GohanClientCLI) handleCommonArguments(args map[string]interface{}) error {
-	if outputFormat, ok := args[outputFormatKey]; ok {
-		for _, format := range outputFormats {
-			if format == outputFormat {
-				delete(args, outputFormatKey)
-				gohanClientCLI.opts.outputFormat = format
-				return nil
-			}
+	if outputFormatOpt, ok := args[outputFormatKey]; ok {
+		outputFormat, err := findOutputFormat(outputFormatOpt)
+		if err != nil {
+			return err
 		}
-		return fmt.Errorf(incorrectOutputFormat, outputFormats)
+		delete(args, outputFormatKey)
+		gohanClientCLI.opts.outputFormat = outputFormat
+		return nil
 	}
+
 	if verbosity, ok := args[logLevelKey]; ok {
-		for i, logLevel := range logLevels {
-			if fmt.Sprintf("%d", i) == verbosity {
-				delete(args, logLevelKey)
-				gohanClientCLI.opts.logLevel = logLevel
-				setUpLogging(logLevel)
-				return nil
-			}
+		logLevel, err := parseLogLevel(verbosity)
+		if err != nil {
+			return err
 		}
-		return fmt.Errorf(incorrectVerbosityLevel, 0, len(logLevels)-1)
+		delete(args, logLevelKey)
+		gohanClientCLI.opts.logLevel = logLevel
+		setUpLogging(logLevel)
+		return nil
 	}
 	return nil
 }
