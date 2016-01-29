@@ -37,13 +37,21 @@ var (
 	cachePathKey              = "GOHAN_CACHE_PATH"
 	envVariableNotSetError    = "Environment variable %v needs to be set"
 	envVariablesNotSetError   = "Environment variable %v or %v needs to be set"
+	incorrectOutputFormat     = "Incorrect output format. Available formats: %v"
 	incorrectVerbosityLevel   = "Incorrect verbosity level. Available level range %d %d"
 	incorrectValueForArgument = "Incorrect value for '%s' enviroment variable, should be %s"
 
 	defaultCachedSchemasPath = "/tmp/.cached-gohan-schemas"
 
-	logLevelKey = "verbosity"
-	logLevels   = []logging.Level{
+	outputFormatKey    = "output-format"
+	outputFormatEnvKey = "GOHAN_OUTPUT_FORMAT"
+	outputFormatTable  = "table"
+	outputFormatJSON   = "json"
+	outputFormats      = []string{outputFormatTable, outputFormatJSON}
+
+	logLevelKey    = "verbosity"
+	logLevelEnvKey = "GOHAN_VERBOSITY"
+	logLevels      = []logging.Level{
 		logging.WARNING,
 		logging.NOTICE,
 		logging.INFO,
@@ -129,5 +137,41 @@ func NewOptsFromEnv() (*GohanClientCLIOpts, error) {
 	}
 	opts.gohanSchemaURL = gohanSchemaURL
 
+	outputFormatOpt := os.Getenv(outputFormatEnvKey)
+	if outputFormatOpt != "" {
+		outputFormat, err := findOutputFormat(outputFormatOpt)
+		if err != nil {
+			return nil, err
+		}
+		opts.outputFormat = outputFormat
+	}
+
+	verbosity := os.Getenv(logLevelEnvKey)
+	if verbosity != "" {
+		logLevel, err := parseLogLevel(verbosity)
+		if err != nil {
+			return nil, err
+		}
+		opts.logLevel = logLevel
+	}
+
 	return &opts, nil
+}
+
+func findOutputFormat(formatOpt interface{}) (string, error) {
+	for _, format := range outputFormats {
+		if format == formatOpt {
+			return format, nil
+		}
+	}
+	return "", fmt.Errorf(incorrectOutputFormat, outputFormats)
+}
+
+func parseLogLevel(verbosityOpt interface{}) (logging.Level, error) {
+	for i, logLevel := range logLevels {
+		if fmt.Sprint(i) == verbosityOpt {
+			return logLevel, nil
+		}
+	}
+	return logging.WARNING, fmt.Errorf(incorrectVerbosityLevel, 0, len(logLevels)-1)
 }
