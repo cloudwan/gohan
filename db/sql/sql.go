@@ -677,6 +677,15 @@ func (tx *Transaction) RawTransaction() *sqlx.Tx {
 	return tx.transaction
 }
 
+//SetIsolationLevel specify transaction isolation level
+func (tx *Transaction) SetIsolationLevel(level transaction.Type) error {
+	if tx.db.sqlType == "mysql" {
+		_, err := tx.transaction.Exec("set session transaction isolation level %s", level)
+		return err
+	}
+	return nil
+}
+
 //Commit commits transaction
 func (tx *Transaction) Commit() error {
 	err := tx.transaction.Commit()

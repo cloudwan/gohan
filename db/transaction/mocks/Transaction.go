@@ -238,3 +238,8 @@ func (_m *Transaction) Closed() bool {
 
 	return r0
 }
+
+//SetIsolationLevel specify transaction isolation level
+func (_m *Transaction) SetIsolationLevel(level transaction.Type) error {
+	return nil
+}

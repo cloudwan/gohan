@@ -197,10 +197,6 @@
                                                 "title": "Pattern Properties",
                                                 "type": "object"
                                             },
-                                            "additionalProperties": {
-                                                "title": "Additional properties",
-                                                "type": "boolean"
-                                            },
                                             "relation": {
                                                 "title": "Relation",
                                                 "type": "string"
@@ -307,9 +303,6 @@
                                 },
                                 "title": "Properties Order",
                                 "type": "array",
-                                "items": {
-                                    "type": "string"
-                                },
                                 "uniqueItems": true
                             },
                             "required": {
@@ -318,9 +311,6 @@
                                 },
                                 "title": "Required properties",
                                 "type": "array",
-                                "items": {
-                                    "type": "string"
-                                },
                                 "uniqueItems": true
                             },
                             "type": {
@@ -370,7 +360,28 @@
                             }
                         },
                         "title": "Actions",
-                        "type": ["object", "null"]
+                        "type": [
+                            "object",
+                            "null"
+                        ]
+                    },
+                    "isolation_level": {
+                        "default": {},
+                        "description": "Isolation Level",
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "patternProperties": {
+                            ".*": {
+                                "type": "string"
+                            }
+                        },
+                        "title": "IsolationLevel",
+                        "type": [
+                            "object",
+                            "null"
+                        ]
                     }
                 },
                 "propertiesOrder": [
@@ -384,7 +395,8 @@
                     "parent",
                     "namespace",
                     "metadata",
-                    "actions"
+                    "actions",
+                    "isolation_level"
                 ],
                 "required": [
                     "id",
