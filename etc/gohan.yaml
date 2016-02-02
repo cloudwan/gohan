@@ -20,11 +20,11 @@ schemas:
 editable_schema: ./example_schema.yaml
 
 # listen address for gohan
-address: "0.0.0.0:9443"
+address: ":9091"
 tls:
     # browsers need to add exception as long as we use self-signed certificates
     # so lets leave it disabled for now
-    enabled: true
+    enabled: false
     key_file: ./keys/key.pem
     cert_file: ./keys/cert.pem
 # document root of gohan API server
