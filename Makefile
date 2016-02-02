@@ -37,7 +37,6 @@ lint:
 
 build: deps
 	@echo "$(OK_COLOR)==> Building$(NO_COLOR)"
-	go-bindata -pkg util -o util/go-bindata.go etc/schema/... etc/extensions/...
 	$(GO_BUILD)
 
 install:
