@@ -40,7 +40,7 @@ You can also access schema editing webui by adding "?type=metaschema" on URL.
 
 https://localhost:9443/webui/?type=metaschema
 
-Install from source
+Install from source / Dev env
 ------------------------------------
 
 You need go (>1.4) to build gohan.
@@ -59,3 +59,10 @@ You need go (>1.4) to build gohan.
   cd gohan
   make
   make install
+
+Development tips
+-----------------
+
+Make sure running go-bindata when you update etc files.
+
+go-bindata -pkg util -o util/go-bindata.go etc/schema/... etc/extensions/...
