@@ -212,3 +212,18 @@ func PublicKeyFile(file string) ssh.AuthMethod {
 	}
 	return ssh.PublicKeys(key)
 }
+
+//Match if a contrains b or a == b
+func Match(a interface{}, b interface{}) bool {
+	switch a.(type) {
+	case string:
+		return a == b
+	case []interface{}:
+		for _, item := range a.([]interface{}) {
+			if item == b {
+				return true
+			}
+		}
+	}
+	return false
+}

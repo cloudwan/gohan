@@ -109,7 +109,11 @@ func ApplyPolicyForResources(context middleware.Context, resourceSchema *schema.
 	}
 	data := []interface{}{}
 	for _, resource := range resources {
-		data = append(data, policy.Filter(resource.(map[string]interface{})))
+		resourceMap := resource.(map[string]interface{})
+		if err := policy.ApplyPropertyConditionFilter(schema.ActionRead, resourceMap, nil); err != nil {
+			continue
+		}
+		data = append(data, policy.RemoveHiddenProperty(resourceMap))
 	}
 	response[resourceSchema.Plural] = data
 	return nil
@@ -130,7 +134,12 @@ func ApplyPolicyForResource(context middleware.Context, resourceSchema *schema.S
 	if !ok {
 		return nil
 	}
-	response[resourceSchema.Singular] = policy.Filter(resource.(map[string]interface{}))
+	resourceMap := resource.(map[string]interface{})
+	if err := policy.ApplyPropertyConditionFilter(schema.ActionRead, resourceMap, nil); err != nil {
+		return err
+	}
+	response[resourceSchema.Singular] = policy.RemoveHiddenProperty(resourceMap)
+
 	return nil
 }
 
@@ -210,7 +219,7 @@ func GetMultipleResources(context middleware.Context, dataStore db.DB, resourceS
 	if policy.RequireOwner() {
 		filter["tenant_id"] = policy.GetTenantIDFilter(schema.ActionRead, auth.TenantID())
 	}
-	filter = policy.Filter(filter)
+	filter = policy.RemoveHiddenProperty(filter)
 
 	paginator, err := pagination.FromURLQuery(resourceSchema, queryParameters)
 	if err != nil {
@@ -287,7 +296,7 @@ func GetSingleResource(context middleware.Context, dataStore db.DB, resourceSche
 		return err
 	}
 	if err := ApplyPolicyForResource(context, resourceSchema); err != nil {
-		return err
+		return ResourceError{err, "", NotFound}
 	}
 	return nil
 }
@@ -338,6 +347,7 @@ func CreateResource(
 	// Load environment
 	environmentManager := extension.GetManager()
 	environment, ok := environmentManager.GetEnvironment(resourceSchema.ID)
+
 	if !ok {
 		return fmt.Errorf("No environment for schema")
 	}
@@ -368,6 +378,11 @@ func CreateResource(
 	}
 	delete(dataMap, "tenant_name")
 
+	// apply property filter
+	err = policy.ApplyPropertyConditionFilter(schema.ActionCreate, dataMap, nil)
+	if err != nil {
+		return ResourceError{err, err.Error(), Unauthorized}
+	}
 	context["resource"] = dataMap
 	if _, ok := dataMap["id"]; !ok {
 		dataMap["id"] = uuid.NewV4().String()
@@ -416,7 +431,7 @@ func CreateResource(
 	}
 
 	if err := ApplyPolicyForResource(context, resourceSchema); err != nil {
-		return err
+		return ResourceError{err, "", Unauthorized}
 	}
 	return nil
 }
@@ -476,6 +491,7 @@ func UpdateResource(
 	if err != nil {
 		return err
 	}
+	context["policy"] = policy
 
 	//fillup default values
 	if tenantID, ok := dataMap["tenant_id"]; ok {
@@ -516,7 +532,7 @@ func UpdateResource(
 	}
 
 	if err := ApplyPolicyForResource(context, resourceSchema); err != nil {
-		return err
+		return ResourceError{err, "", NotFound}
 	}
 	return nil
 }
@@ -539,6 +555,14 @@ func UpdateResourceInTransaction(
 	if err != nil {
 		return ResourceError{err, err.Error(), WrongQuery}
 	}
+
+	policy := context["policy"].(*schema.Policy)
+	// apply property filter
+	err = policy.ApplyPropertyConditionFilter(schema.ActionUpdate, resource.Data(), dataMap)
+	if err != nil {
+		return ResourceError{err, "", Unauthorized}
+	}
+
 	err = resource.Update(dataMap)
 	if err != nil {
 		return ResourceError{err, err.Error(), WrongData}
@@ -591,7 +615,7 @@ func DeleteResource(context middleware.Context,
 	if err != nil {
 		return err
 	}
-
+	context["policy"] = policy
 	preTransaction, err := dataStore.Begin()
 	if err != nil {
 		return fmt.Errorf("cannot create transaction: %v", err)
@@ -632,11 +656,26 @@ func DeleteResourceInTransaction(context middleware.Context, resourceSchema *sch
 	if !ok {
 		return fmt.Errorf("No environment for schema")
 	}
+
+	auth := context["auth"].(schema.Authorization)
+	policy := context["policy"].(*schema.Policy)
+	resource, err := mainTransaction.Fetch(resourceSchema, resourceID, policy.GetTenantIDFilter(schema.ActionDelete, auth.TenantID()))
+	if err != nil {
+		return err
+	}
+	if resource != nil {
+		context["resource"] = resource.Data()
+	}
+	// apply property filter
+	err = policy.ApplyPropertyConditionFilter(schema.ActionUpdate, resource.Data(), nil)
+	if err != nil {
+		return ResourceError{err, "", Unauthorized}
+	}
 	if err := extension.HandleEvent(context, environment, "pre_delete_in_transaction"); err != nil {
 		return err
 	}
 
-	err := mainTransaction.Delete(resourceSchema, resourceID)
+	err = mainTransaction.Delete(resourceSchema, resourceID)
 	if err != nil {
 		return ResourceError{err, "", DeleteFailed}
 	}

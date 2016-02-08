@@ -18,11 +18,14 @@ package schema
 import (
 	"fmt"
 	"regexp"
+
+	"github.com/cloudwan/gohan/util"
 )
 
 const (
 	conditionIsOwner       = "is_owner"
 	conditionTypeBelongsTo = "belongs_to"
+	conditionProperty      = "property"
 	// ActionGlob allows to perform all actions
 	ActionGlob = "*"
 	// ActionCreate allows to create a resource
@@ -77,6 +80,7 @@ type Policy struct {
 	TenantName                                 *regexp.Regexp
 	requireOwner                               bool
 	actionTenantFilter                         map[string][]Tenant
+	actionPropertyConditionFilter              map[string][]map[string]interface{}
 }
 
 //ResourcePolicy describes targe resources
@@ -229,6 +233,7 @@ func NewPolicy(raw interface{}) (*Policy, error) {
 
 func (p *Policy) precomputeConditions() error {
 	p.actionTenantFilter = map[string][]Tenant{}
+	p.actionPropertyConditionFilter = map[string][]map[string]interface{}{}
 	for _, condition := range p.Condition {
 		switch condition.(type) {
 		case string:
@@ -264,6 +269,18 @@ func (p *Policy) precomputeConditions() error {
 
 				for _, action := range actions {
 					p.AddTenantToFilter(action, Tenant{ID: tenantID, Name: tenantName})
+				}
+			case conditionProperty:
+				actions := allActions
+				if action, ok := conditionObject["action"]; ok && action != ActionGlob {
+					actions = []string{action.(string)}
+				}
+				match, ok := conditionObject["match"].(map[string]interface{})
+				if !ok {
+					return fmt.Errorf("match should be dict")
+				}
+				for _, action := range actions {
+					p.AddPropertyConditionFilter(action, match)
 				}
 			default:
 				return fmt.Errorf("Unknown condition type '%s' for policy '%s'", conditionObject["type"], p.ID)
@@ -315,8 +332,9 @@ func (p *Policy) RequireOwner() bool {
 	return p.requireOwner
 }
 
-//Filter ...
-func (p *Policy) Filter(data map[string]interface{}) map[string]interface{} {
+//RemoveHiddenProperty removes hidden data from data by Policy
+// This method returns nil if all data get filtered out
+func (p *Policy) RemoveHiddenProperty(data map[string]interface{}) map[string]interface{} {
 	properties := p.Resource.Properties
 	if properties == nil {
 		return data
@@ -405,12 +423,75 @@ func (p *Policy) Check(action string, authorization Authorization, data map[stri
 			return fmt.Errorf("%s is prohibited for this user", key)
 		}
 	}
+
 	return nil
 }
 
 // AddTenantToFilter adds tenant to filter for given action
 func (p *Policy) AddTenantToFilter(action string, tenant Tenant) {
 	p.actionTenantFilter[action] = append(p.actionTenantFilter[action], tenant)
+}
+
+// AddPropertyConditionFilter adds property based filter for action
+func (p *Policy) AddPropertyConditionFilter(action string, match map[string]interface{}) {
+	p.actionPropertyConditionFilter[action] = append(p.actionPropertyConditionFilter[action], match)
+}
+
+// ApplyPropertyConditionFilter applies filter based on Property
+// You need to pass candidate update value in updateCandidateData on update API, so
+// that we can limit allowed update value.
+// Let's say we would like to only allow to update from ACTIVE to ERROR on an API.
+// We can define this policy like this.
+//
+//   - action: 'update'
+//     condition:
+//     - property:
+//         status:
+//            ACTIVE: ERROR
+//     effect: allow
+//     id: member
+//     principal: Member
+//
+// This policy check error in case of followings
+// - Original value isn't ACTIVE
+// - Update candidate value isn't ERROR
+func (p *Policy) ApplyPropertyConditionFilter(action string, data map[string]interface{}, updateCandidateData map[string]interface{}) error {
+	filters, ok := p.actionPropertyConditionFilter[action]
+	if !ok {
+		return nil
+	}
+FilterLoop:
+	for _, filter := range filters {
+		for key, rawAllowedValue := range filter {
+			value, _ := data[key]
+			switch rawAllowedValue.(type) {
+			// A policy should be map in case you need to use previous value & update candidate value
+			case map[string]interface{}:
+				stringValue, ok := value.(string)
+				if !ok {
+					return fmt.Errorf("Rejected by property filter")
+				}
+				allowedValueMap, _ := rawAllowedValue.(map[string]interface{})
+				allowedNextValue, ok := allowedValueMap[stringValue]
+				if !ok {
+					return fmt.Errorf("Rejected by property filter %s %s", allowedValueMap, value)
+				}
+				if updateCandidateData == nil {
+					continue FilterLoop
+				} else {
+					if !util.Match(allowedNextValue, updateCandidateData[key]) {
+						return fmt.Errorf("Rejected by property filter %s %s", allowedNextValue, updateCandidateData[stringValue])
+					}
+				}
+			default:
+				if !util.Match(rawAllowedValue, value) {
+					return fmt.Errorf("Rejected by property filter %s %s", rawAllowedValue, value)
+				}
+				continue
+			}
+		}
+	}
+	return nil
 }
 
 // GetTenantIDFilter returns tenants filter for the action performed by the tenant

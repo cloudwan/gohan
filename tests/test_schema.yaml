@@ -102,6 +102,34 @@ policies:
   condition:
   - is_owner
   effect: allow
+  id: member_statement_test
+  principal: _member_
+  condition:
+  - type: property
+    action: read
+    match:
+      status:
+      - ACTIVE
+      - ERROR
+  - type: property
+    action: create
+    match:
+      status: ACTIVE
+  - type: property
+    action: update
+    match:
+      status: 
+      - ACTIVE
+  - type: property
+    action: delete
+    match:
+      status: ACTIVE
+  resource:
+    path: /v2.0/server.*    
+- action: '*'
+  condition:
+  - is_owner
+  effect: allow
   id: member_statement3
   principal: Member
   resource:
@@ -114,8 +142,6 @@ policies:
   principal: _member_
   resource:
     path: /_all.*
-
-
 schemas:
 - description: Network
   id: network
@@ -281,7 +307,6 @@ schemas:
         title: ID
         type: string
         unique: true
-        format: uuid
         description: ID
       name:
         permission:
@@ -301,7 +326,7 @@ schemas:
         unique: false
         description: Network ID
       status:
-        permission: []
+        permission: ["create", "update"]
         title: Status
         type: string
         unique: false
