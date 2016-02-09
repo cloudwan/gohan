@@ -15,6 +15,8 @@ Gohan is an REST API framework which has
 
 [![wercker status](https://app.wercker.com/status/cab137b4bfdd05c97cfface7ac12c039/m "wercker status")](https://app.wercker.com/project/bykey/cab137b4bfdd05c97cfface7ac12c039)
 
+[![Coverage Status](https://coveralls.io/repos/github/cloudwan/gohan/badge.svg?branch=update_cov)](https://coveralls.io/github/cloudwan/gohan?branch=update_cov)
+
 # Getting started
 
 You can satisfy the first two steps of **Setup** on Heroku using this button:
@@ -339,7 +341,7 @@ Apache2
 (2) Create an issue in github
 (3) Send PR for github
 
-We recommend to rebase mulitple commit for 1. 
+We recommend to rebase mulitple commit for 1.
 
 # Additional resources
 See more documentation at http://gohan.cloudwan.io/gohan/
