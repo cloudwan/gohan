@@ -16,30 +16,7 @@ if [[ $ENABLE_V8 == "true" ]]; then
 	TAGS="-tags v8"
 fi
 
-# Run test coverage on each subdirectories and merge the coverage profile.
-echo "mode: count" > profile.cov
-
-# Standard go tooling behavior is to ignore dirs with leading underscors
-for dir in $(find . -maxdepth 10 -not -path './.git*' -not -path '*/_*' -type d);
-do
-result=0
-if ls $dir/*.go &> /dev/null; then
-    go test $TAGS -covermode=count -coverprofile=$dir/profile.tmp $dir --ginkgo.randomizeAllSpecs --ginkgo.failOnPending --ginkgo.trace --ginkgo.progress
-    result=$?
-    if [ -f $dir/profile.tmp ]
-    then
-        cat $dir/profile.tmp | tail -n +2 >> profile.cov
-        rm $dir/profile.tmp
-    fi
-    if [ $result -ne 0 ]; then
-        break
-    fi
-fi
-done
-
-if [ $result -eq 0 ]; then
-    go tool cover -func profile.cov
-fi
+gocov test $TAGS ./...  > coverage.json
 
 kill $ETCD_PID
 exit $result
