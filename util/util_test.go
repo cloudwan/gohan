@@ -22,54 +22,6 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Util functions", func() {
-
-	Describe("SaveFile and LoadFile", func() {
-		It("should handle json file properly", func() {
-			testFileUtil("./util_test.json")
-		})
-
-		It("should handle yaml file properly", func() {
-			testFileUtil("./util_test.yaml")
-		})
-	})
-
-	Describe("TempFile", func() {
-		It("should create temporary file properly", func() {
-			file, err := TempFile("./", "util_", "_test")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(file).ToNot(BeNil())
-			_, err = os.Stat(file.Name())
-			Expect(err).ToNot(HaveOccurred())
-			Expect(os.Remove(file.Name())).To(Succeed())
-		})
-	})
-
-	Describe("GetContents", func() {
-		It("should get contents form http", func() {
-			_, err := GetContent("http://www.google.com")
-			Expect(err).ToNot(HaveOccurred())
-		})
-
-		It("should get contents form file", func() {
-			_, err := GetContent("file://../tests/test_schema.yaml")
-			Expect(err).ToNot(HaveOccurred())
-		})
-	})
-
-	Describe("GetSortedKeys", func() {
-		It("should return sorted map[string]interface{} keys", func() {
-			input := map[string]interface{}{
-				"Lorem": "v1",
-				"ipsum": "v2",
-				"dolor": "v3",
-				"sit":   "v4",
-			}
-			result := GetSortedKeys(input)
-			Expect(result).To(Equal([]string{"dolor", "ipsum", "Lorem", "sit"}))
-		})
-	})
-})
 
 func testFileUtil(file string) {
 	os.Remove(file)
