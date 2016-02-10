@@ -18,10 +18,15 @@ build:
     - script:
         name: make
         code: |
+          set -xe
+          sudo apt-get update
+          sudo apt-get install curl gawk -y
+          export CIRCLE_PR_NUMBER=`curl https://app.wercker.com/api/v3/builds/$WERCKER_BUILD_ID | gawk 'match($0, /Pull request \#([0-9]+)/, a){print a[1]}'`
+          echo $CIRCLE_PR_NUMBER
           echo $REPO_PATH
           cd $REPO_PATH/gohan
           make
-          goveralls  -gocovdata=coverage.json -service=wercker -repotoken=${COVERALLS_TOKEN}
+          GIT_BRANCH=$WERCKER_GIT_BRANCH goveralls  -gocovdata=coverage.json -service=wercker.com -repotoken=${COVERALLS_TOKEN}
 
 deploy:
   steps:
