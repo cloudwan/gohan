@@ -21,7 +21,7 @@ build:
           echo $REPO_PATH
           cd $REPO_PATH/gohan
           make
-          goveralls  -gocovdata=coverage.json -service=wercker -repotoken=${COVERALLS_TOKEN}
+          GIT_BRANCH=$WERCKER_GIT_BRANCH goveralls  -gocovdata=coverage.json -service=wercker.com -repotoken=${COVERALLS_TOKEN}
 
 deploy:
   steps:
