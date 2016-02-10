@@ -295,12 +295,18 @@ func (db *DB) GenTableDef(s *schema.Schema, cascade bool) string {
 
 //RegisterTable creates table in the db
 func (db *DB) RegisterTable(s *schema.Schema, cascade bool) error {
+	if s.IsAbstract() {
+		return nil
+	}
 	_, err := db.DB.Exec(db.GenTableDef(s, cascade))
 	return err
 }
 
 //DropTable drop table definition
 func (db *DB) DropTable(s *schema.Schema) error {
+	if s.IsAbstract() {
+		return nil
+	}
 	sql := fmt.Sprintf("drop table if exists %s\n", quote(s.GetDbTableName()))
 	_, err := db.DB.Exec(sql)
 	return err

@@ -227,3 +227,73 @@ func Match(a interface{}, b interface{}) bool {
 	}
 	return false
 }
+
+//ContainsString checks if we have a string in a string list
+func ContainsString(list []string, value string) bool {
+	if list == nil {
+		return false
+	}
+	for _, item := range list {
+		if value == item {
+			return true
+		}
+	}
+	return false
+}
+
+//ExtendStringList appends a value if it isn't in base list
+func ExtendStringList(original []string, extension []string) []string {
+	extended := make([]string, len(original))
+	copy(extended, original)
+	for _, item := range extension {
+		if !ContainsString(extended, item) {
+			extended = append(extended, item)
+		}
+	}
+	return extended
+}
+
+//ExtendMap extends a map from existing one
+func ExtendMap(original map[string]interface{}, extension map[string]interface{}) map[string]interface{} {
+	extended := map[string]interface{}{}
+	for key, value := range original {
+		extended[key] = value
+	}
+	for key, value := range extension {
+		if _, ok := extended[key]; !ok {
+			extended[key] = value
+		}
+	}
+	return extended
+}
+
+//MaybeString returns "" if data is nil
+func MaybeString(data interface{}) string {
+	stringData, _ := data.(string)
+	return stringData
+}
+
+//MaybeStringList returns empty list if data is nil
+func MaybeStringList(data interface{}) []string {
+	stringList, ok := data.([]string)
+	if !ok {
+		stringList = []string{}
+		if interfaceList, ok := data.([]interface{}); ok {
+			for _, value := range interfaceList {
+				if stringValue, ok := value.(string); ok {
+					stringList = append(stringList, stringValue)
+				}
+			}
+		}
+	}
+	return stringList
+}
+
+//MaybeMap returns empty map if data is nil
+func MaybeMap(data interface{}) map[string]interface{} {
+	mapValue, ok := data.(map[string]interface{})
+	if !ok {
+		return map[string]interface{}{}
+	}
+	return mapValue
+}

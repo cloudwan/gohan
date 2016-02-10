@@ -350,16 +350,16 @@ func (p *Policy) RemoveHiddenProperty(data map[string]interface{}) map[string]in
 	return result
 }
 
-//MetaFilter filters properties in the schema itself
-func (p *Policy) MetaFilter(properties map[string]interface{},
-	propertiesOrder, required []interface{}) (map[string]interface{}, []interface{}, []interface{}) {
+//FilterSchema filters properties in the schema itself
+func (p *Policy) FilterSchema(properties map[string]interface{},
+	propertiesOrder, required []string) (map[string]interface{}, []string, []string) {
 	allowedProperties := p.Resource.Properties
 	if allowedProperties == nil {
 		return properties, propertiesOrder, required
 	}
 	filteredProperties := map[string]interface{}{}
-	filteredPropertiesOrder := []interface{}{}
-	filteredRequired := []interface{}{}
+	filteredPropertiesOrder := []string{}
+	filteredRequired := []string{}
 	if propertiesOrder == nil {
 		filteredPropertiesOrder = nil
 	}
@@ -373,14 +373,12 @@ func (p *Policy) MetaFilter(properties map[string]interface{},
 		}
 		filteredProperties[property] = properties[property]
 	}
-	for _, propertyRaw := range propertiesOrder {
-		property := propertyRaw.(string)
+	for _, property := range propertiesOrder {
 		if _, ok := filteredProperties[property]; ok {
 			filteredPropertiesOrder = append(filteredPropertiesOrder, property)
 		}
 	}
-	for _, propertyRaw := range required {
-		property := propertyRaw.(string)
+	for _, property := range required {
 		if _, ok := filteredProperties[property]; ok {
 			filteredRequired = append(filteredRequired, property)
 		}

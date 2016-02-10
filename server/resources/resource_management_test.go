@@ -22,6 +22,7 @@ import (
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/extension/otto"
 	"github.com/cloudwan/gohan/schema"
+	"github.com/cloudwan/gohan/server"
 	"github.com/cloudwan/gohan/server/middleware"
 	"github.com/cloudwan/gohan/server/resources"
 	"github.com/cloudwan/gohan/util"
@@ -133,10 +134,12 @@ var _ = Describe("Resource manager", func() {
 		Context("As an admin", func() {
 			It("Should always return the full schema", func() {
 				for _, currentSchema := range manager.OrderedSchemas() {
-					trimmedSchema, err := schema.GetSchema(currentSchema, auth)
+					if currentSchema.IsAbstract() {
+						continue
+					}
+					trimmedSchema, err := server.GetSchema(currentSchema, auth)
 					Expect(err).NotTo(HaveOccurred())
-					rawSchema, ok := currentSchema.RawData.(map[string]interface{})
-					Expect(ok).To(BeTrue())
+					rawSchema := currentSchema.JSON()
 					fullSchema, err := schema.NewResource(currentSchema, rawSchema)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(trimmedSchema).To(util.MatchAsJSON(fullSchema))
@@ -154,11 +157,10 @@ var _ = Describe("Resource manager", func() {
 				schemaSchema, ok := manager.Schema("schema")
 				Expect(ok).To(BeTrue())
 				By("The schema being equal to the full schema")
-				trimmedSchema, err := schema.GetSchema(currentSchema, auth)
+				trimmedSchema, err := server.GetSchema(currentSchema, auth)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(trimmedSchema).NotTo(BeNil())
-				rawSchema, ok := schemaSchema.RawData.(map[string]interface{})
-				Expect(ok).To(BeTrue())
+				rawSchema := schemaSchema.JSON()
 				fullSchema, err := schema.NewResource(currentSchema, rawSchema)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(trimmedSchema).To(util.MatchAsJSON(fullSchema))
@@ -168,7 +170,7 @@ var _ = Describe("Resource manager", func() {
 				By("Fetching the schema")
 				networkSchema, ok := manager.Schema("network")
 				Expect(ok).To(BeTrue())
-				trimmedSchema, err := schema.GetSchema(networkSchema, auth)
+				trimmedSchema, err := server.GetSchema(networkSchema, auth)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(trimmedSchema).NotTo(BeNil())
 				theSchema, ok := trimmedSchema.Get("schema").(map[string]interface{})
@@ -199,7 +201,7 @@ var _ = Describe("Resource manager", func() {
 				By("Not fetching the schema")
 				testSchema, ok := manager.Schema("admin_only")
 				Expect(ok).To(BeTrue())
-				trimmedSchema, err := schema.GetSchema(testSchema, auth)
+				trimmedSchema, err := server.GetSchema(testSchema, auth)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(trimmedSchema).To(BeNil())
 			})

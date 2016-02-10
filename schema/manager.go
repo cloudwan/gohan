@@ -303,7 +303,6 @@ func (manager *Manager) LoadSchemaFromFile(filePath string) error {
 		schemaMap[schemaObj.ID] = schemaObj
 		schemaObjList = append(schemaObjList, schemaObj)
 	}
-
 	schemaOrder, err := reorderSchemas(schemaObjList)
 	if err == nil {
 		schemaObjList = []*Schema{}
@@ -315,6 +314,18 @@ func (manager *Manager) LoadSchemaFromFile(filePath string) error {
 	}
 
 	for _, schemaObj := range schemaObjList {
+		if !schemaObj.IsAbstract() {
+			for _, baseSchemaID := range schemaObj.Extends {
+				baseSchema, ok := manager.Schema(baseSchemaID)
+				if !ok {
+					return fmt.Errorf("Base Schema %s not found", baseSchemaID)
+				}
+				if !baseSchema.IsAbstract() {
+					return fmt.Errorf("Base Schema %s isn't abstract type", baseSchemaID)
+				}
+				schemaObj.Extend(baseSchema)
+			}
+		}
 		err = manager.RegisterSchema(schemaObj)
 		if err != nil {
 			return err
@@ -409,54 +420,4 @@ func ClearManager() {
 //PolicyValidate API request using policy statements
 func (manager *Manager) PolicyValidate(action, path string, auth Authorization) (*Policy, *Role) {
 	return PolicyValidate(action, path, auth, manager.policies)
-}
-
-//GetSchema returns the schema filtered and trimmed for a specific user or nil when the user shouldn't see it at all
-func GetSchema(s *Schema, authorization Authorization) (result *Resource, err error) {
-	manager := GetManager()
-	metaschema, _ := manager.Schema("schema")
-	policy, _ := manager.PolicyValidate("read", s.GetPluralURL(), authorization)
-	if policy == nil {
-		return
-	}
-	originalRawSchema := s.RawData.(map[string]interface{})
-	rawSchema := map[string]interface{}{}
-	for key, value := range originalRawSchema {
-		rawSchema[key] = value
-	}
-	originalSchema := originalRawSchema["schema"].(map[string]interface{})
-	schemaSchema := map[string]interface{}{}
-	for key, value := range originalSchema {
-		schemaSchema[key] = value
-	}
-	rawSchema["schema"] = schemaSchema
-	originalProperties := originalSchema["properties"].(map[string]interface{})
-	schemaProperties := map[string]interface{}{}
-	for key, value := range originalProperties {
-		schemaProperties[key] = value
-	}
-	var schemaPropertiesOrder []interface{}
-	if _, ok := originalSchema["propertiesOrder"]; ok {
-		originalPropertiesOrder := originalSchema["propertiesOrder"].([]interface{})
-		for _, value := range originalPropertiesOrder {
-			schemaPropertiesOrder = append(schemaPropertiesOrder, value)
-		}
-	}
-	var schemaRequired []interface{}
-	if _, ok := originalSchema["required"]; ok {
-		originalRequired := originalSchema["required"].([]interface{})
-		for _, value := range originalRequired {
-			schemaRequired = append(schemaRequired, value)
-		}
-	}
-	schemaProperties, schemaPropertiesOrder, schemaRequired = policy.MetaFilter(schemaProperties, schemaPropertiesOrder, schemaRequired)
-	schemaSchema["properties"] = schemaProperties
-	schemaSchema["propertiesOrder"] = schemaPropertiesOrder
-	schemaSchema["required"] = schemaRequired
-	result, err = NewResource(metaschema, rawSchema)
-	if err != nil {
-		log.Warning("%s %s", result, err)
-		return
-	}
-	return
 }

@@ -41,6 +41,25 @@
                         "type": "string",
                         "unique": true
                     },
+                    "type": {
+                        "description": "Schema Type",
+                        "permission": [
+                            "create"
+                        ],
+                        "title": "Type",
+                        "type": "string"
+                    },
+                    "extends": {
+                        "description": "Extends",
+                        "permission": [
+                            "create"
+                        ],
+                        "title": "Extends",
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
                     "metadata": {
                         "default": {},
                         "description": "metadata for application developer",
@@ -279,7 +298,9 @@
                                             "relation",
                                             "detail_view",
                                             "sql",
-                                            "required"
+                                            "required",
+                                            "type",
+                                            "extends"
                                         ],
                                         "required": [
                                             "description",

@@ -158,6 +158,8 @@ Schemas might also have any of the following optional properties.
 - namespace -- resource namespace
 - prefix    -- resource path prefix
 - metadata  -- application specific schema metadata (object)
+- type      -- can be abstract or empty string (see more in schema inheritance)
+- extends   -- list of base schemas
 
 You need these information to define REST API.
 Please see json schema specification http://json-schema.org/
@@ -177,6 +179,120 @@ a namespace has been specified, full namespace prefix will be prepended to the
 schema prefix- see :ref:`namespace section <section-namespace>` for details.
 
 You can use following properties in json schema.
+
+Schema Inheritance
+-------------------------------
+
+You can define an abstract schema by setting type="abstract".
+Schemas can be derived from an abstract schema by using the keyword "extends".
+JSON schema, metadata and action will be merged when a schema is extended.
+prefix value and parent value will be set if not specified.
+
+.. code-block:: yaml
+
+  schemas:
+  - description: base
+    type: abstract
+    id: base
+    metadata:
+      state_versioning: true
+    plural: bases
+    prefix: /v2.0
+    schema:
+      properties:
+        description:
+          description: Description
+          default: ""
+          permission:
+          - create
+          - update
+          title: Description
+          type: string
+          unique: false
+        id:
+          description: ID
+          permission:
+          - create
+          title: ID
+          type: string
+          unique: false
+        name:
+          description: Name
+          permission:
+          - create
+          - update
+          title: Name
+          type: string
+          unique: false
+        tenant_id:
+          description: Tenant ID
+          permission:
+          - create
+          title: Tenant
+          type: string
+          unique: false
+      propertiesOrder:
+      - id
+      - name
+      - description
+      - tenant_id
+      type: object
+    singular: base
+    title: base
+  - description: Network
+    id: network
+    extends:
+    - base
+    plural: networks
+    schema:
+      properties:
+        providor_networks:
+          description: Providor networks
+          default: {}
+          permission:
+          - create
+          - update
+          properties:
+            segmentaion_type:
+              enum:
+              - vlan
+              - vxlan
+              - gre
+              type: string
+            segmentation_id:
+              minimum: 0
+              type: integer
+          title: Provider Networks
+          type: object
+          unique: false
+        route_targets:
+          description: Route targets
+          default: []
+          items:
+            type: string
+          permission:
+          - create
+          - update
+          title: RouteTargets
+          type: array
+          unique: false
+        shared:
+          description: Shared
+          permission:
+          - create
+          - update
+          title: Shared
+          type: boolean
+          unique: false
+          default: false
+      propertiesOrder:
+      - providor_networks
+      - route_targets
+      - shared
+      type: object
+    singular: network
+    title: Network
+
 
 
 Metadata

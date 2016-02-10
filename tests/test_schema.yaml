@@ -118,14 +118,14 @@ policies:
   - type: property
     action: update
     match:
-      status: 
+      status:
       - ACTIVE
   - type: property
     action: delete
     match:
       status: ACTIVE
   resource:
-    path: /v2.0/server.*    
+    path: /v2.0/server.*
 - action: '*'
   condition:
   - is_owner
@@ -143,11 +143,12 @@ policies:
   resource:
     path: /_all.*
 schemas:
-- description: Network
-  id: network
+- description: base
+  type: abstract
+  id: base
   metadata:
     state_versioning: true
-  plural: networks
+  plural: bases
   prefix: /v2.0
   schema:
     properties:
@@ -175,6 +176,28 @@ schemas:
         title: Name
         type: string
         unique: false
+      tenant_id:
+        description: Tenant ID
+        permission:
+        - create
+        title: Tenant
+        type: string
+        unique: false
+    propertiesOrder:
+    - id
+    - name
+    - description
+    - tenant_id
+    type: object
+  singular: base
+  title: base
+- description: Network
+  id: network
+  extends:
+  - base
+  plural: networks
+  schema:
+    properties:
       providor_networks:
         description: Providor networks
         default: {}
@@ -205,13 +228,6 @@ schemas:
         title: RouteTargets
         type: array
         unique: false
-      tenant_id:
-        description: Tenant ID
-        permission:
-        - create
-        title: Tenant
-        type: string
-        unique: false
       shared:
         description: Shared
         permission:
@@ -222,48 +238,20 @@ schemas:
         unique: false
         default: false
     propertiesOrder:
-    - id
-    - name
-    - description
     - providor_networks
     - route_targets
-    - tenant_id
     - shared
     type: object
   singular: network
   title: Network
 - description: Subnet
   id: subnet
-  metadata:
-    state_versioning: true
   parent: network
   plural: subnets
-  prefix: /v2.0
+  extends:
+  - base
   schema:
     properties:
-      cidr:
-        description: CIDR
-        permission:
-        - create
-        title: Cidr
-        type: string
-        unique: false
-      description:
-        description: Description
-        default: ""
-        permission:
-        - create
-        - update
-        title: Description
-        type: string
-        unique: false
-      id:
-        description: ID
-        permission:
-        - create
-        title: ID
-        type: string
-        unique: false
       name:
         description: Name
         default: ""
@@ -275,47 +263,27 @@ schemas:
         - string
         - "null"
         unique: false
-      tenant_id:
-        description: Tenant ID
+      cidr:
+        description: CIDR
         permission:
         - create
-        title: TenantID
+        title: Cidr
         type: string
         unique: false
     propertiesOrder:
-    - id
-    - name
-    - tenant_id
     - cidr
-    - description
     type: object
     required:
     - cidr
   singular: subnet
   title: subnet
 - id: server
-  metadata:
-    state_versioning: true
+  extends:
+  - base
   plural: servers
-  prefix: /v2.0
   description: server
   schema:
     properties:
-      id:
-        permission:
-        - create
-        title: ID
-        type: string
-        unique: true
-        description: ID
-      name:
-        permission:
-        - create
-        - update
-        title: Name
-        type: string
-        unique: false
-        description: Name
       network_id:
         permission:
         - create
@@ -331,19 +299,9 @@ schemas:
         type: string
         unique: false
         description: status
-      tenant_id:
-        title: TenantID
-        permission:
-        - create
-        type: string
-        unique: false
-        description: TenantID
     propertiesOrder:
-    - id
-    - name
     - network_id
     - status
-    - tenant_id
     type: object
   singular: server
   title: Server

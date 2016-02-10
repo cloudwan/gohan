@@ -170,7 +170,9 @@ func fillInContext(context middleware.Context, r *http.Request, w http.ResponseW
 
 //MapRouteBySchema setup api route by schema
 func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
-
+	if s.IsAbstract() {
+		return
+	}
 	route := server.martini
 	manager := schema.GetManager()
 
