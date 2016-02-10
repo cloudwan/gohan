@@ -94,11 +94,12 @@ var _ = Describe("Database operation test", func() {
 			Expect(subnetResource.Path()).To(Equal("/v2.0/subnets/subnetRed"))
 
 			server := map[string]interface{}{
-				"id":         "serverRed",
-				"name":       "serverRed",
-				"tenant_id":  "red",
-				"network_id": "networkRed",
-				"cidr":       "10.0.0.0/24"}
+				"id":          "serverRed",
+				"name":        "serverRed",
+				"tenant_id":   "red",
+				"network_id":  "networkRed",
+				"description": "red server",
+				"cidr":        "10.0.0.0/24"}
 			serverResource, err = manager.LoadResource("server", server)
 			Expect(err).ToNot(HaveOccurred())
 		})

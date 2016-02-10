@@ -23,6 +23,37 @@ import (
 	"github.com/cloudwan/gohan/util"
 )
 
+//GetSchema returns the schema filtered and trimmed for a specific user or nil when the user shouldn't see it at all
+func GetSchema(s *schema.Schema, authorization schema.Authorization) (result *schema.Resource, err error) {
+	manager := schema.GetManager()
+	metaschema, _ := manager.Schema("schema")
+	policy, _ := manager.PolicyValidate("read", s.GetPluralURL(), authorization)
+	if policy == nil {
+		return
+	}
+	if s.IsAbstract() {
+		return
+	}
+	rawSchema := s.JSON()
+	filteredSchema := util.ExtendMap(nil, s.JSONSchema)
+	rawSchema["schema"] = filteredSchema
+	schemaProperties, schemaPropertiesOrder, schemaRequired := policy.FilterSchema(
+		util.MaybeMap(s.JSONSchema["properties"]),
+		util.MaybeStringList(s.JSONSchema["propertiesOrder"]),
+		util.MaybeStringList(s.JSONSchema["required"]))
+
+	filteredSchema["properties"] = schemaProperties
+	filteredSchema["propertiesOrder"] = schemaPropertiesOrder
+	filteredSchema["required"] = schemaRequired
+
+	result, err = schema.NewResource(metaschema, rawSchema)
+	if err != nil {
+		log.Warning("%s %s", result, err)
+		return
+	}
+	return
+}
+
 func setupEditor(server *Server) {
 	manager := schema.GetManager()
 	config := util.GetConfig()
@@ -34,7 +65,7 @@ func setupEditor(server *Server) {
 				list := []interface{}{}
 				total := 0
 				for _, currentSchema := range manager.OrderedSchemas() {
-					trimmedSchema, err := schema.GetSchema(currentSchema, auth)
+					trimmedSchema, err := GetSchema(currentSchema, auth)
 					if err != nil {
 						return err
 					}
@@ -53,7 +84,7 @@ func setupEditor(server *Server) {
 			} else if event == "pre_show" {
 				ID := context["id"].(string)
 				currentSchema, _ := manager.Schema(ID)
-				object, _ := schema.GetSchema(currentSchema, auth)
+				object, _ := GetSchema(currentSchema, auth)
 				s := object.Data()
 				s["url"] = currentSchema.URL
 				context["response"] = map[string]interface{}{

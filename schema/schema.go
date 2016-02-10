@@ -18,22 +18,22 @@ package schema
 import (
 	"fmt"
 
+	"github.com/cloudwan/gohan/util"
 	"github.com/xeipuuv/gojsonschema"
 )
 
 //Schema type for defining data type
 type Schema struct {
 	ID, Plural, Title, Description string
+	Type                           string
+	Extends                        []string
 	ParentSchema                   *Schema
 	Parent                         string
 	NamespaceID                    string
 	Namespace                      *Namespace
-	Tags                           Tags
 	Metadata                       map[string]interface{}
-	Policy                         []interface{}
 	Prefix                         string
 	Properties                     []Property
-	Required                       []string
 	JSONSchema                     map[string]interface{}
 	JSONSchemaOnCreate             map[string]interface{}
 	JSONSchemaOnUpdate             map[string]interface{}
@@ -44,6 +44,10 @@ type Schema struct {
 	RawData                        interface{}
 	IsolationLevel                 map[string]interface{}
 }
+
+const (
+	abstract string = "abstract"
+)
 
 //Schemas is a list of schema
 //This struct is needed for json decode
@@ -70,11 +74,8 @@ func NewSchema(id, plural, title, description, singular string) *Schema {
 		Plural:      plural,
 		Description: description,
 		Singular:    singular,
+		Extends:     []string{},
 	}
-	schema.Tags = make(Tags)
-	schema.Policy = make([]interface{}, 0)
-	schema.Properties = make([]Property, 0)
-	schema.Required = make([]string, 0)
 	return schema
 }
 
@@ -90,105 +91,97 @@ func NewSchemaFromObj(rawTypeData interface{}) (*Schema, error) {
 		}
 	}
 
-	id, ok := typeData["id"].(string)
-	if !ok {
+	id := util.MaybeString(typeData["id"])
+	if id == "" {
 		return nil, &typeAssertionError{"id"}
 	}
-	plural, ok := typeData["plural"].(string)
-	if !ok {
+	plural := util.MaybeString(typeData["plural"])
+	if plural == "" {
 		return nil, &typeAssertionError{"plural"}
 	}
-	title, ok := typeData["title"].(string)
-	if !ok {
+	title := util.MaybeString(typeData["title"])
+	if title == "" {
 		return nil, &typeAssertionError{"title"}
 	}
-	prefix, _ := typeData["prefix"].(string)
-	url, _ := typeData["url"].(string)
-	description, ok := typeData["description"].(string)
-	if !ok {
+	description := util.MaybeString(typeData["description"])
+	if description == "" {
 		return nil, &typeAssertionError{"description"}
 	}
-	parent, _ := typeData["parent"].(string)
-	namespaceID, _ := typeData["namespace"].(string)
+	singular := util.MaybeString(typeData["singular"])
+	if singular == "" {
+		return nil, &typeAssertionError{"singular"}
+	}
+
+	schema := NewSchema(id, plural, title, description, singular)
+
+	schema.Prefix = util.MaybeString(typeData["prefix"])
+	schema.URL = util.MaybeString(typeData["url"])
+	schema.Type = util.MaybeString(typeData["type"])
+	schema.Parent = util.MaybeString(typeData["parent"])
+	schema.NamespaceID = util.MaybeString(typeData["namespace"])
+	schema.IsolationLevel = util.MaybeMap(typeData["isolation_level"])
 	jsonSchema, ok := typeData["schema"].(map[string]interface{})
 	if !ok {
 		return nil, &typeAssertionError{"schema"}
 	}
+	schema.JSONSchema = jsonSchema
 
-	actions, ok := typeData["actions"].(map[string]interface{})
-	actionList := []Action{}
+	schema.Metadata = util.MaybeMap(typeData["metadata"])
+	schema.Extends = util.MaybeStringList(typeData["extends"])
+
+	actions := util.MaybeMap(typeData["actions"])
+	schema.Actions = []Action{}
 	for actionID, actionBody := range actions {
 		action, err := NewActionFromObject(actionID, actionBody)
 		if err != nil {
 			return nil, err
 		}
-		actionList = append(actionList, action)
+		schema.Actions = append(schema.Actions, action)
 	}
 
-	required, _ := jsonSchema["required"]
-	if required == nil {
-		required = []interface{}{}
+	if err := schema.Init(); err != nil {
+		return nil, err
 	}
-	if parent != "" && jsonSchema["properties"].(map[string]interface{})[FormatParentID(parent)] == nil {
-		jsonSchema["properties"].(map[string]interface{})[FormatParentID(parent)] = getParentPropertyObj(parent, parent)
-		jsonSchema["propertiesOrder"] = append(jsonSchema["propertiesOrder"].([]interface{}), FormatParentID(parent))
-		required = append(required.([]interface{}), FormatParentID(parent))
+	return schema, nil
+}
+
+// Init initializes schema
+func (schema *Schema) Init() error {
+	if schema.IsAbstract() {
+		return nil
+	}
+	jsonSchema := schema.JSONSchema
+	parent := schema.Parent
+
+	required := util.MaybeStringList(jsonSchema["required"])
+	properties := util.MaybeMap(jsonSchema["properties"])
+	if parent != "" && properties[FormatParentID(parent)] == nil {
+		properties[FormatParentID(parent)] = getParentPropertyObj(parent, parent)
+		jsonSchema["propertiesOrder"] = append(util.MaybeStringList(jsonSchema["propertiesOrder"]), FormatParentID(parent))
+		required = append(required, FormatParentID(parent))
 	}
 
 	jsonSchema["required"] = required
 
-	requiredStrings := []string{}
-	for _, req := range required.([]interface{}) {
-		requiredStrings = append(requiredStrings, req.(string))
-	}
+	schema.JSONSchemaOnCreate = filterSchemaByPermission(jsonSchema, "create")
+	schema.JSONSchemaOnUpdate = filterSchemaByPermission(jsonSchema, "update")
 
-	metadata, _ := typeData["metadata"].(map[string]interface{})
-	properties, _ := jsonSchema["properties"].(map[string]interface{})
+	schema.Properties = []Property{}
 
-	policy, _ := typeData["policy"].([]interface{})
-	singular, ok := typeData["singular"].(string)
-	if !ok {
-		return nil, &typeAssertionError{"singular"}
-	}
-	isolationLevel, _ := typeData["isolation_level"].(map[string]interface{})
-	schema := &Schema{
-		ID:                 id,
-		Title:              title,
-		Parent:             parent,
-		NamespaceID:        namespaceID,
-		Prefix:             prefix,
-		Plural:             plural,
-		Policy:             policy,
-		Description:        description,
-		JSONSchema:         jsonSchema,
-		JSONSchemaOnCreate: filterSchemaByPermission(jsonSchema, "create"),
-		JSONSchemaOnUpdate: filterSchemaByPermission(jsonSchema, "update"),
-		Actions:            actionList,
-		Metadata:           metadata,
-		RawData:            rawTypeData,
-		Singular:           singular,
-		URL:                url,
-		Required:           requiredStrings,
-		IsolationLevel:     isolationLevel,
-	}
-	//TODO(nati) load tags
-	schema.Tags = make(Tags)
-	schema.Properties = make([]Property, 0)
 	for id, property := range properties {
-		required := false
-		for _, req := range schema.Required {
-			if req == id {
-				required = true
-				break
-			}
-		}
-		propertyObj, err := NewPropertyFromObj(id, property, required)
+		propertyRequired := util.ContainsString(required, id)
+		propertyObj, err := NewPropertyFromObj(id, property, propertyRequired)
 		if err != nil {
-			return nil, fmt.Errorf("Invalid schema: Properties is missing %v", err)
+			return fmt.Errorf("Invalid schema: Properties is missing %v", err)
 		}
 		schema.Properties = append(schema.Properties, *propertyObj)
 	}
-	return schema, nil
+	return nil
+}
+
+// IsAbstract checks if this schema is abstract or not
+func (schema *Schema) IsAbstract() bool {
+	return schema.Type == abstract
 }
 
 // ParentID returns parent property ID
@@ -241,33 +234,19 @@ func (schema *Schema) GetParentURL() string {
 func filterSchemaByPermission(schema map[string]interface{}, permission string) map[string]interface{} {
 	filteredSchema := map[string]interface{}{"type": "object"}
 	filteredProperties := map[string]map[string]interface{}{}
-	for id, property := range schema["properties"].(map[string]interface{}) {
-		propertyMap, ok := property.(map[string]interface{})
-		if ok == false {
-			continue
-		}
-		allowedList, ok := propertyMap["permission"]
-		if ok == false {
-			continue
-		}
-		allowedStringList, ok := allowedList.([]interface{})
-		if ok == false {
-			continue
-		}
-		for _, allowed := range allowedStringList {
+	for id, property := range util.MaybeMap(schema["properties"]) {
+		propertyMap := util.MaybeMap(property)
+		allowedList := util.MaybeStringList(propertyMap["permission"])
+		for _, allowed := range allowedList {
 			if allowed == permission {
 				filteredProperties[id] = propertyMap
 			}
 		}
 	}
 	filteredSchema["properties"] = filteredProperties
-	if required, ok := schema["required"]; ok {
-		filteredSchema["required"] = required
-	} else {
-		filteredSchema["required"] = []string{}
-	}
+	filteredSchema["required"] = util.MaybeStringList(schema["required"])
 	if permission != "create" {
-		// in case of updates or deletes, we don't expect all required attributes
+		// required property is used on only create event
 		filteredSchema["required"] = []string{}
 	}
 	filteredSchema["additionalProperties"] = false
@@ -366,5 +345,58 @@ func (schema *Schema) relatedSchemas() []string {
 			schemas = append(schemas, p.Relation)
 		}
 	}
+	schemas = util.ExtendStringList(schemas, schema.Extends)
 	return schemas
+}
+
+// Extend extends target schema
+func (schema *Schema) Extend(fromSchema *Schema) error {
+	if schema.Parent == "" {
+		schema.Parent = fromSchema.Parent
+	}
+	if schema.Prefix == "" {
+		schema.Prefix = fromSchema.Prefix
+	}
+	if schema.URL == "" {
+		schema.URL = fromSchema.URL
+	}
+	if schema.NamespaceID == "" {
+		schema.NamespaceID = fromSchema.NamespaceID
+	}
+	schema.JSONSchema["properties"] = util.ExtendMap(
+		util.MaybeMap(schema.JSONSchema["properties"]),
+		util.MaybeMap(fromSchema.JSONSchema["properties"]))
+
+	schema.JSONSchema["propertiesOrder"] = util.ExtendStringList(
+		util.MaybeStringList(fromSchema.JSONSchema["propertiesOrder"]),
+		util.MaybeStringList(schema.JSONSchema["propertiesOrder"]))
+
+MergeAction:
+	for _, action := range fromSchema.Actions {
+		for _, existingAction := range schema.Actions {
+			if action.ID == existingAction.ID {
+				continue MergeAction
+			}
+		}
+		schema.Actions = append(schema.Actions, action)
+	}
+	schema.Metadata = util.ExtendMap(schema.Metadata, fromSchema.Metadata)
+	return schema.Init()
+}
+
+//JSON returns json format of schema
+func (schema *Schema) JSON() map[string]interface{} {
+	return map[string]interface{}{
+		"id":          schema.ID,
+		"plural":      schema.Plural,
+		"title":       schema.Title,
+		"description": schema.Description,
+		"parent":      schema.Parent,
+		"singular":    schema.Singular,
+		"prefix":      schema.Prefix,
+		"url":         schema.URL,
+		"namespace":   schema.NamespaceID,
+		"schema":      schema.JSONSchema,
+		"metadata":    schema.Metadata,
+	}
 }

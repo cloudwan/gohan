@@ -1089,6 +1089,9 @@ func httpRequest(method, url, token string, postData interface{}) (interface{}, 
 }
 
 func clearTable(tx transaction.Transaction, s *schema.Schema) error {
+	if s.IsAbstract() {
+		return nil
+	}
 	for _, schema := range schema.GetManager().Schemas() {
 		if schema.ParentSchema == s {
 			err := clearTable(tx, schema)

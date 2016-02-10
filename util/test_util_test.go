@@ -52,4 +52,55 @@ var _ = Describe("Custom matchers", func() {
 			})
 		})
 	})
+	Describe("Utility functions", func() {
+		var (
+			list      []string
+			baseMap   map[string]interface{}
+			extendMap map[string]interface{}
+		)
+
+		BeforeEach(func() {
+			list = []string{"apple", "orange", "banana"}
+			baseMap = map[string]interface{}{"red": "#ff0000"}
+			extendMap = map[string]interface{}{"blue": "#00ff00"}
+		})
+
+		Context("ContainsString", func() {
+			It("should return true if list contains value", func() {
+				Expect(ContainsString(list, "apple")).To(BeTrue())
+			})
+			It("should return false if list doesn't contain value", func() {
+				Expect(ContainsString(list, "grape")).To(BeFalse())
+			})
+			It("should return false if list is nil", func() {
+				Expect(ContainsString(nil, "apple")).To(BeFalse())
+			})
+		})
+
+		Context("ExtendMap", func() {
+			It("should extends map", func() {
+				baseMap := map[string]interface{}{"red": "#ff0000"}
+				extendMap := map[string]interface{}{"blue": "#00ff00"}
+				baseMap = ExtendMap(baseMap, extendMap)
+				Expect(baseMap).To(MatchAsJSON(map[string]interface{}{"blue": "#00ff00", "red": "#ff0000"}))
+			})
+			It("don't panic for nil", func() {
+				baseMap := map[string]interface{}{"red": "#ff0000"}
+				ExtendMap(baseMap, nil)
+				ExtendMap(nil, baseMap)
+				ExtendMap(nil, nil)
+			})
+		})
+
+		Context("ExtendStringList", func() {
+			It("should extends list", func() {
+				Expect(ExtendStringList([]string{"base"}, []string{"extended"})).To(MatchAsJSON([]string{"base", "extended"}))
+			})
+			It("don't panic for nil", func() {
+				ExtendStringList(list, nil)
+				ExtendStringList(nil, list)
+				ExtendStringList(nil, nil)
+			})
+		})
+	})
 })

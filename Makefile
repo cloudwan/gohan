@@ -24,6 +24,7 @@ savedeps:
 
 format:
 	@echo "$(OK_COLOR)==> Formatting$(NO_COLOR)"
+	go-bindata -pkg util -o util/go-bindata.go etc/schema/... etc/extensions/...
 	go fmt ./...
 
 test:
@@ -32,7 +33,7 @@ test:
 
 lint:
 	@echo "$(OK_COLOR)==> Linting$(NO_COLOR)"
-	golint ./...
+	golint ./... | grep -V
 	go vet ./...
 
 build: deps

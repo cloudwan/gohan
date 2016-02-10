@@ -76,7 +76,7 @@ func init() {
 				manager := schema.GetManager()
 				response := []interface{}{}
 				for _, schema := range manager.OrderedSchemas() {
-					response = append(response, schema.RawData)
+					response = append(response, schema)
 				}
 				value, _ := vm.ToValue(response)
 				return value
