@@ -727,15 +727,15 @@ func addFilterToQuery(s *schema.Schema, q sq.SelectBuilder, filter map[string]in
 	}
 	for key, value := range filter {
 		property, err := s.GetPropertyByID(key)
+		if err != nil {
+			log.Notice(err.Error())
+			continue
+		}
 		var column string
 		if join {
 			column = makeColumn(s, *property)
 		} else {
 			column = quote(key)
-		}
-		if err != nil {
-			log.Notice(err.Error())
-			continue
 		}
 
 		if property.Type == "boolean" {
