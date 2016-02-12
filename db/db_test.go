@@ -34,13 +34,14 @@ var _ = Describe("Database operation test", func() {
 		conn   string
 		dbType string
 
-		manager         *schema.Manager
-		networkSchema   *schema.Schema
-		subnetSchema    *schema.Schema
-		serverSchema    *schema.Schema
-		networkResource *schema.Resource
-		subnetResource  *schema.Resource
-		serverResource  *schema.Resource
+		manager          *schema.Manager
+		networkSchema    *schema.Schema
+		subnetSchema     *schema.Schema
+		serverSchema     *schema.Schema
+		networkResource1 *schema.Resource
+		networkResource2 *schema.Resource
+		subnetResource   *schema.Resource
+		serverResource   *schema.Resource
 
 		dataStore db.DB
 	)
@@ -71,7 +72,7 @@ var _ = Describe("Database operation test", func() {
 			serverSchema, ok = manager.Schema("server")
 			Expect(ok).To(BeTrue())
 
-			network := map[string]interface{}{
+			network1 := map[string]interface{}{
 				"id":                "networkRed",
 				"name":              "NetworkRed",
 				"description":       "A crimson network",
@@ -79,7 +80,18 @@ var _ = Describe("Database operation test", func() {
 				"shared":            false,
 				"route_targets":     []string{"1000:10000", "2000:20000"},
 				"providor_networks": map[string]interface{}{"segmentation_id": 10, "segmentation_type": "vlan"}}
-			networkResource, err = manager.LoadResource("network", network)
+			networkResource1, err = manager.LoadResource("network", network1)
+			Expect(err).ToNot(HaveOccurred())
+
+			network2 := map[string]interface{}{
+				"id":                "networkBlue",
+				"name":              "NetworkBlue",
+				"description":       "A crimson network",
+				"tenant_id":         "blue",
+				"shared":            false,
+				"route_targets":     []string{"1000:10000", "2000:20000"},
+				"providor_networks": map[string]interface{}{"segmentation_id": 10, "segmentation_type": "vlan"}}
+			networkResource2, err = manager.LoadResource("network", network2)
 			Expect(err).ToNot(HaveOccurred())
 
 			subnet := map[string]interface{}{
@@ -142,14 +154,16 @@ var _ = Describe("Database operation test", func() {
 				})
 
 				It("Creates a resource", func() {
-					Expect(tx.Create(networkResource)).To(Succeed())
+					Expect(tx.Create(networkResource1)).To(Succeed())
+
 					Expect(tx.Commit()).To(Succeed())
 				})
 			})
 
 			Describe("When the database is not empty", func() {
 				JustBeforeEach(func() {
-					Expect(tx.Create(networkResource)).To(Succeed())
+					Expect(tx.Create(networkResource1)).To(Succeed())
+					Expect(tx.Create(networkResource2)).To(Succeed())
 					Expect(tx.Create(serverResource)).To(Succeed())
 					Expect(tx.Commit()).To(Succeed())
 					tx.Close()
@@ -160,10 +174,31 @@ var _ = Describe("Database operation test", func() {
 				It("Returns the expected list", func() {
 					list, num, err := tx.List(networkSchema, nil, nil)
 					Expect(err).ToNot(HaveOccurred())
+					Expect(num).To(Equal(uint64(2)))
+					Expect(list).To(HaveLen(2))
+					Expect(list[0]).To(util.MatchAsJSON(networkResource1))
+					Expect(list[1]).To(util.MatchAsJSON(networkResource2))
+					Expect(tx.Commit()).To(Succeed())
+				})
+
+				It("Returns the expected list with filter", func() {
+					filter := map[string]interface{}{
+						"tenant_id": []string{"red"},
+					}
+					list, num, err := tx.List(networkSchema, filter, nil)
+					Expect(err).ToNot(HaveOccurred())
 					Expect(num).To(Equal(uint64(1)))
 					Expect(list).To(HaveLen(1))
-					Expect(list[0]).To(util.MatchAsJSON(networkResource))
+					Expect(list[0]).To(util.MatchAsJSON(networkResource1))
 					Expect(tx.Commit()).To(Succeed())
+				})
+
+				It("Returns the error with invalid filter", func() {
+					filter := map[string]interface{}{
+						"bad_filter": []string{"red"},
+					}
+					_, _, err := tx.List(networkSchema, filter, nil)
+					Expect(err).To(HaveOccurred())
 				})
 
 				It("Shows related resources", func() {
@@ -171,24 +206,24 @@ var _ = Describe("Database operation test", func() {
 					Expect(err).ToNot(HaveOccurred())
 					Expect(num).To(Equal(uint64(1)))
 					Expect(list).To(HaveLen(1))
-					Expect(list[0].Data()).To(HaveKeyWithValue("network", HaveKeyWithValue("name", networkResource.Data()["name"])))
+					Expect(list[0].Data()).To(HaveKeyWithValue("network", HaveKeyWithValue("name", networkResource1.Data()["name"])))
 					Expect(tx.Commit()).To(Succeed())
 				})
 
 				It("Fetches an existing resource", func() {
-					networkResourceFetched, err := tx.Fetch(networkSchema, networkResource.ID(), nil)
+					networkResourceFetched, err := tx.Fetch(networkSchema, networkResource1.ID(), nil)
 					Expect(err).ToNot(HaveOccurred())
-					Expect(networkResourceFetched).To(util.MatchAsJSON(networkResource))
+					Expect(networkResourceFetched).To(util.MatchAsJSON(networkResource1))
 					Expect(tx.Commit()).To(Succeed())
 				})
 
 				It("Updates the resource properly", func() {
 					By("Not allowing to update some fields")
-					Expect(networkResource.Update(map[string]interface{}{"id": "new_id"})).ToNot(Succeed())
+					Expect(networkResource1.Update(map[string]interface{}{"id": "new_id"})).ToNot(Succeed())
 
 					By("Updating other fields")
-					Expect(networkResource.Update(map[string]interface{}{"name": "new_name"})).To(Succeed())
-					Expect(tx.Update(networkResource)).To(Succeed())
+					Expect(networkResource1.Update(map[string]interface{}{"name": "new_name"})).To(Succeed())
+					Expect(tx.Update(networkResource1)).To(Succeed())
 					Expect(tx.Commit()).To(Succeed())
 				})
 
@@ -199,13 +234,13 @@ var _ = Describe("Database operation test", func() {
 
 				It("Deletes the resource", func() {
 					Expect(tx.Delete(serverSchema, serverResource.ID())).To(Succeed())
-					Expect(tx.Delete(networkSchema, networkResource.ID())).To(Succeed())
+					Expect(tx.Delete(networkSchema, networkResource1.ID())).To(Succeed())
 					Expect(tx.Commit()).To(Succeed())
 				})
 
 				Context("Using StateFetch", func() {
 					It("Returns the defaults", func() {
-						beforeState, err := tx.StateFetch(networkSchema, networkResource.ID(), nil)
+						beforeState, err := tx.StateFetch(networkSchema, networkResource1.ID(), nil)
 						Expect(err).ToNot(HaveOccurred())
 						Expect(tx.Commit()).To(Succeed())
 						Expect(beforeState.ConfigVersion).To(Equal(int64(1)))

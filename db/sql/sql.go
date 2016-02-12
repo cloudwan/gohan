@@ -534,8 +534,10 @@ func decodeState(data map[string]interface{}, state *transaction.ResourceState) 
 func (tx *Transaction) List(s *schema.Schema, filter map[string]interface{}, pg *pagination.Paginator) (list []*schema.Resource, total uint64, err error) {
 	cols := MakeColumns(s, true)
 	q := sq.Select(cols...).From(quote(s.GetDbTableName()))
-	q = addFilterToQuery(s, q, filter, true)
-
+	q, err = addFilterToQuery(s, q, filter, true)
+	if err != nil {
+		return nil, 0, err
+	}
 	if pg != nil {
 		property, err := s.GetPropertyByID(pg.Key)
 		if err == nil {
@@ -605,8 +607,8 @@ func (tx *Transaction) decodeRows(s *schema.Schema, rows *sqlx.Rows, list []*sch
 //count count all matching resources in the db
 func (tx *Transaction) count(s *schema.Schema, filter map[string]interface{}) (res uint64, err error) {
 	q := sq.Select("Count(id) as count").From(quote(s.GetDbTableName()))
-	q = addFilterToQuery(s, q, filter, false)
-
+	//Filter get already tested
+	q, _ = addFilterToQuery(s, q, filter, false)
 	sql, args, err := q.ToSql()
 	if err != nil {
 		return
@@ -656,8 +658,7 @@ func (tx *Transaction) StateFetch(s *schema.Schema, ID interface{}, tenantFilter
 	}
 	cols := makeStateColumns(s)
 	q := sq.Select(cols...).From(quote(s.GetDbTableName()))
-	q = addFilterToQuery(s, q, filter, true)
-
+	q, _ = addFilterToQuery(s, q, filter, true)
 	sql, args, err := q.ToSql()
 	if err != nil {
 		return
@@ -721,21 +722,22 @@ func (tx *Transaction) Closed() bool {
 	return tx.closed
 }
 
-func addFilterToQuery(s *schema.Schema, q sq.SelectBuilder, filter map[string]interface{}, join bool) sq.SelectBuilder {
+func addFilterToQuery(s *schema.Schema, q sq.SelectBuilder, filter map[string]interface{}, join bool) (sq.SelectBuilder, error) {
 	if filter == nil {
-		return q
+		return q, nil
 	}
 	for key, value := range filter {
 		property, err := s.GetPropertyByID(key)
+
+		if err != nil {
+			return q, err
+		}
+
 		var column string
 		if join {
 			column = makeColumn(s, *property)
 		} else {
 			column = quote(key)
-		}
-		if err != nil {
-			log.Notice(err.Error())
-			continue
 		}
 
 		if property.Type == "boolean" {
@@ -748,5 +750,5 @@ func addFilterToQuery(s *schema.Schema, q sq.SelectBuilder, filter map[string]in
 			q = q.Where(sq.Eq{column: value})
 		}
 	}
-	return q
+	return q, nil
 }
