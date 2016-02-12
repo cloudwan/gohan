@@ -107,7 +107,7 @@ func etcSchemaGohanJson() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "etc/schema/gohan.json", size: 32251, mode: os.FileMode(420), modTime: time.Unix(1455062176, 0)}
+	info := bindataFileInfo{name: "etc/schema/gohan.json", size: 32251, mode: os.FileMode(420), modTime: time.Unix(1455299113, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -127,7 +127,7 @@ func etcExtensionsDonburiJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "etc/extensions/donburi.js", size: 18593, mode: os.FileMode(420), modTime: time.Unix(1454954020, 0)}
+	info := bindataFileInfo{name: "etc/extensions/donburi.js", size: 18593, mode: os.FileMode(420), modTime: time.Unix(1455301293, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -147,7 +147,7 @@ func etcExtensionsDonburiYaml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "etc/extensions/donburi.yaml", size: 65, mode: os.FileMode(420), modTime: time.Unix(1455053671, 0)}
+	info := bindataFileInfo{name: "etc/extensions/donburi.yaml", size: 65, mode: os.FileMode(420), modTime: time.Unix(1455301293, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -167,7 +167,7 @@ func etcExtensionsGohan_extensionYaml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "etc/extensions/gohan_extension.yaml", size: 106, mode: os.FileMode(420), modTime: time.Unix(1455053671, 0)}
+	info := bindataFileInfo{name: "etc/extensions/gohan_extension.yaml", size: 106, mode: os.FileMode(420), modTime: time.Unix(1455298055, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
