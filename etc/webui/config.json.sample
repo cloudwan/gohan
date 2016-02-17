@@ -1,8 +1,8 @@
 {
-    "authUrl": "http://__HOST__:9091/v2.0",
+    "authUrl": "https://__HOST__/v2.0",
     "gohan": {
         "schema": "/gohan/v0.1/schemas",
-        "url": "http://__HOST__:9091"
+        "url": "https://__HOST__"
     },
     "routes": [
         {
