@@ -82,9 +82,51 @@ Build in javascript functions
 
 Gohan extension supports some build-in functions.
 
-- console.log(string)
+- ``gohan_log_critical(message)``
+- ``gohan_log_error(message)``
+- ``gohan_log_warning(message)``
+- ``gohan_log_notice(message)``
+- ``gohan_log_info(message)``
+- ``gohan_log_debug(message)``
 
-Logging output
+  log ``message`` in Gohan log.
+
+  ``gohan_log_<lowercase level>(message)`` is equivalent to
+  ``gohan_log(MODULE, LOG_LEVEL.<uppercase level>, message)``.
+
+- ``gohan_log(module, log_level, message)``
+
+  log ``message`` in Gohan log (general version).
+
+  - ``module``
+    The module to be used for logging. You can use ``LOG_MODULE`` for
+    the current log module. See ``gohan_log_module_push``.
+
+  - ``log_level``
+    One of ``LOG_LEVEL.CRITICAL``, ``LOG_LEVEL.ERROR``,
+    ``LOG_LEVEL.WARNING``, ``LOG_LEVEL.NOTICE``, ``LOG_LEVEL.INFO``,
+    ``LOG_LEVEL.DEBUG``.
+
+  Example usage::
+
+    gohan_log(LOG_MODULE, DEBUG, "It works");
+
+  This will print something like the following::
+
+    17:52:40.921 gohan.extension.network.post_list_in_transaction DEBUG  It works
+
+- ``gohan_log_module_push(new_module) : <old log module>``
+  Appends ``new_module`` to the current ``LOG_MODULE``.
+
+- ``gohan_log_module_restore(old_module)``
+  Restores ``LOG_MODULE`` to ``old_module``. Example usage::
+
+    old_module = gohan_log_module_push("low_level");
+    try {
+        ...
+    } finally {
+        gohan_restore_log_module(old_module)
+    }
 
 - gohan_http(method, url, headers, data, options)
 
