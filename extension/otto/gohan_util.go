@@ -181,18 +181,43 @@ func init() {
 func gohanHTTP(method, rawURL string, headers interface{}, postData interface{}, options interface{}) (int, http.Header, string, error) {
 	client := &http.Client{}
 	var reader io.Reader
+	var headerMap map[string]interface{} = nil
+	if headers != nil {
+		headerMap = headers.(map[string]interface{})
+	}
+
+
+	fmt.Printf("postData: %v\n", postData)
 	if postData != nil {
 		log.Debug("post data %v", postData)
-		jsonByte, err := json.Marshal(postData)
-		if err != nil {
-			return 0, http.Header{}, "", err
+		var requestData []byte = nil
+		var err error
+
+		contentType := ""
+		if headerMap != nil {
+			if c, ok := headerMap["content-type"]; ok {
+				contentType = c.(string)
+			}
 		}
-		log.Debug("request data: %s", string(jsonByte))
-		reader = bytes.NewBuffer(jsonByte)
+
+		if contentType == "text/plain" {
+			fmt.Printf("text plain postData: %v\n", postData)
+			if d, ok := postData.(string); ok {
+				requestData = []byte(d)
+			}
+		} else {
+			requestData, err = json.Marshal(postData)
+			if err != nil {
+				return 0, http.Header{}, "", err
+			}
+		}
+		log.Debug("request data: %s", string(requestData))
+		reader = bytes.NewBuffer(requestData)
+
 	}
+
 	request, err := http.NewRequest(method, rawURL, reader)
-	if headers != nil {
-		headerMap := headers.(map[string]interface{})
+	if headerMap != nil {
 		for key, value := range headerMap {
 			request.Header.Add(key, value.(string))
 		}
