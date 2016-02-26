@@ -38,8 +38,9 @@ RUN rm -rf keys
 RUN go get github.com/tools/godep
 RUN go get github.com/golang/lint/golint
 RUN go get github.com/coreos/etcd
-RUN go get golang.org/x/tools/cmd/cover
+RUN go get github.com/axw/gocov/gocov
 RUN go get golang.org/x/tools/cmd/vet
+RUN go get github.com/jteeuwen/go-bindata/go-bindata
 
 # Build gohan
 RUN cd $GOHAN_PATH; make all install
