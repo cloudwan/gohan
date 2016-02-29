@@ -281,8 +281,9 @@ See more at https://github.com/cloudwan/gohan_apps
 go get github.com/tools/godep
 go get github.com/golang/lint/golint
 go get github.com/coreos/etcd
-go get golang.org/x/tools/cmd/cover
+go get github.com/axw/gocov/gocov
 go get golang.org/x/tools/cmd/vet
+go get github.com/jteeuwen/go-bindata/go-bindata
 ```
 
 - make & make install
