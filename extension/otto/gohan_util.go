@@ -186,8 +186,6 @@ func gohanHTTP(method, rawURL string, headers interface{}, postData interface{},
 		headerMap = headers.(map[string]interface{})
 	}
 
-
-	fmt.Printf("postData: %v\n", postData)
 	if postData != nil {
 		log.Debug("post data %v", postData)
 		var requestData []byte = nil
@@ -201,7 +199,6 @@ func gohanHTTP(method, rawURL string, headers interface{}, postData interface{},
 		}
 
 		if contentType == "text/plain" {
-			fmt.Printf("text plain postData: %v\n", postData)
 			if d, ok := postData.(string); ok {
 				requestData = []byte(d)
 			}
