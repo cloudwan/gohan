@@ -20,14 +20,12 @@ import (
 	"net"
 
 	"github.com/cdevr/WapSNMP"
-	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
 )
 
 //SNMP Process
 //Experimental
 func startSNMPProcess(server *Server) {
-	manager := schema.GetManager()
 	config := util.GetConfig()
 	enabled := config.GetParam("snmp", nil)
 	if enabled == nil {
@@ -36,10 +34,9 @@ func startSNMPProcess(server *Server) {
 	host := config.GetString("snmp/address", "localhost:162")
 
 	path := "snmp://"
-	env := server.newEnvironment()
-	err := env.LoadExtensionsForPath(manager.Extensions, path)
+	env, err := server.NewEnvironmentForPath("snmp", path)
 	if err != nil {
-		log.Fatal(fmt.Sprintf("Extensions parsing error: %v", err))
+		log.Fatal(err.Error())
 	}
 
 	addr, err := net.ResolveUDPAddr("udp", host)

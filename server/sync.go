@@ -545,7 +545,6 @@ func runExtensionOnSync(server *Server, response *gohan_sync.Event, env extensio
 
 //Sync Watch Process
 func startSyncWatchProcess(server *Server) {
-	manager := schema.GetManager()
 	config := util.GetConfig()
 	watch := config.GetStringList("watch/keys", nil)
 	events := config.GetStringList("watch/events", nil)
@@ -556,10 +555,9 @@ func startSyncWatchProcess(server *Server) {
 	extensions := map[string]extension.Environment{}
 	for _, event := range events {
 		path := "sync://" + event
-		env := server.newEnvironment()
-		err := env.LoadExtensionsForPath(manager.Extensions, path)
+		env, err := server.NewEnvironmentForPath("sync."+event, path)
 		if err != nil {
-			log.Fatal(fmt.Sprintf("Extensions parsing error: %v", err))
+			log.Fatal(err.Error())
 		}
 		extensions[event] = env
 	}

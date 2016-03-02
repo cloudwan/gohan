@@ -22,6 +22,7 @@ import (
 	"github.com/cloudwan/gohan/db/pagination"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/db/transaction/mocks"
+	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/extension/otto"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/server/middleware"
@@ -30,9 +31,17 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+func newEnvironmentWithExtension(extension *schema.Extension) (env extension.Environment) {
+	timelimit := time.Duration(1) * time.Second
+	extensions := []*schema.Extension{extension}
+	env = otto.NewEnvironment("db_test",
+		testDB, &middleware.FakeIdentity{}, timelimit)
+	Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+	return
+}
+
 var _ = Describe("GohanDb", func() {
 	var (
-		timelimit     time.Duration
 		manager       *schema.Manager
 		s             *schema.Schema
 		ok            bool
@@ -44,8 +53,6 @@ var _ = Describe("GohanDb", func() {
 	var ()
 
 	BeforeEach(func() {
-		timelimit = time.Second
-
 		manager = schema.GetManager()
 		s, ok = manager.Schema("test")
 		Expect(ok).To(BeTrue())
@@ -79,9 +86,7 @@ var _ = Describe("GohanDb", func() {
 					"path": ".*",
 				})
 				Expect(err).ToNot(HaveOccurred())
-				extensions := []*schema.Extension{extension}
-				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
-				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+				env := newEnvironmentWithExtension(extension)
 
 				var pagenator *pagination.Paginator
 				var fakeTx = new(mocks.Transaction)
@@ -123,9 +128,7 @@ var _ = Describe("GohanDb", func() {
 					"path": ".*",
 				})
 				Expect(err).ToNot(HaveOccurred())
-				extensions := []*schema.Extension{extension}
-				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
-				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+				env := newEnvironmentWithExtension(extension)
 
 				pagenator := &pagination.Paginator{
 					Key:   "test_string",
@@ -171,9 +174,7 @@ var _ = Describe("GohanDb", func() {
 					"path": ".*",
 				})
 				Expect(err).ToNot(HaveOccurred())
-				extensions := []*schema.Extension{extension}
-				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
-				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+				env := newEnvironmentWithExtension(extension)
 
 				pagenator := &pagination.Paginator{
 					Key:   "test_string",
@@ -221,9 +222,7 @@ var _ = Describe("GohanDb", func() {
 					"path": ".*",
 				})
 				Expect(err).ToNot(HaveOccurred())
-				extensions := []*schema.Extension{extension}
-				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
-				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+				env := newEnvironmentWithExtension(extension)
 
 				pagenator := &pagination.Paginator{
 					Key:    "test_string",
@@ -273,9 +272,7 @@ var _ = Describe("GohanDb", func() {
 					"path": ".*",
 				})
 				Expect(err).ToNot(HaveOccurred())
-				extensions := []*schema.Extension{extension}
-				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
-				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+				env := newEnvironmentWithExtension(extension)
 
 				var fakeTx = new(mocks.Transaction)
 				fakeTx.On(
@@ -323,9 +320,7 @@ var _ = Describe("GohanDb", func() {
 					"path": ".*",
 				})
 				Expect(err).ToNot(HaveOccurred())
-				extensions := []*schema.Extension{extension}
-				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
-				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+				env := newEnvironmentWithExtension(extension)
 
 				context := map[string]interface{}{}
 				Expect(env.HandleEvent("test_event", context)).To(Succeed())
@@ -346,9 +341,7 @@ var _ = Describe("GohanDb", func() {
 					"path": ".*",
 				})
 				Expect(err).ToNot(HaveOccurred())
-				extensions := []*schema.Extension{extension}
-				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
-				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+				env := newEnvironmentWithExtension(extension)
 
 				context := map[string]interface{}{}
 				err = env.HandleEvent("test_event", context)
@@ -377,9 +370,7 @@ var _ = Describe("GohanDb", func() {
 					"path": ".*",
 				})
 				Expect(err).ToNot(HaveOccurred())
-				extensions := []*schema.Extension{extension}
-				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
-				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+				env := newEnvironmentWithExtension(extension)
 
 				var fakeTx = new(mocks.Transaction)
 				fakeTx.On(
@@ -413,9 +404,7 @@ var _ = Describe("GohanDb", func() {
 					"path": ".*",
 				})
 				Expect(err).ToNot(HaveOccurred())
-				extensions := []*schema.Extension{extension}
-				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
-				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+				env := newEnvironmentWithExtension(extension)
 
 				context := map[string]interface{}{
 					"transaction": "not_a_transaction",
@@ -444,9 +433,7 @@ var _ = Describe("GohanDb", func() {
 					"path": ".*",
 				})
 				Expect(err).ToNot(HaveOccurred())
-				extensions := []*schema.Extension{extension}
-				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
-				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+				env := newEnvironmentWithExtension(extension)
 
 				context := map[string]interface{}{
 					"transaction": new(mocks.Transaction),
@@ -474,9 +461,7 @@ var _ = Describe("GohanDb", func() {
 					"path": ".*",
 				})
 				Expect(err).ToNot(HaveOccurred())
-				extensions := []*schema.Extension{extension}
-				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
-				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+				env := newEnvironmentWithExtension(extension)
 
 				context := map[string]interface{}{
 					"transaction": new(mocks.Transaction),
@@ -504,9 +489,7 @@ var _ = Describe("GohanDb", func() {
 					"path": ".*",
 				})
 				Expect(err).ToNot(HaveOccurred())
-				extensions := []*schema.Extension{extension}
-				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
-				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+				env := newEnvironmentWithExtension(extension)
 
 				var fakeTx = new(mocks.Transaction)
 				fakeTx.On(

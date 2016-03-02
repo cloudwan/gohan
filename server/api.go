@@ -183,7 +183,6 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 		return
 	}
 	route := server.martini
-	manager := schema.GetManager()
 
 	singleURL := s.GetSingleURL()
 	pluralURL := s.GetPluralURL()
@@ -193,10 +192,9 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 	//load extension environments
 	environmentManager := extension.GetManager()
 	if _, ok := environmentManager.GetEnvironment(s.ID); !ok {
-		env := server.newEnvironment()
-		err := env.LoadExtensionsForPath(manager.Extensions, pluralURL)
+		env, err := server.NewEnvironmentForPath(s.ID, pluralURL)
 		if err != nil {
-			log.Fatal(fmt.Sprintf("Extensions parsing error:[%s] %v", pluralURL, err))
+			log.Fatal(fmt.Sprintf("[%s] %v", pluralURL, err))
 		}
 		environmentManager.RegisterEnvironment(s.ID, env)
 	}

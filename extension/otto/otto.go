@@ -50,6 +50,7 @@ func RequireModule(name string) interface{} {
 
 //Environment javascript based environment for gohan extension
 type Environment struct {
+	Name      string
 	VM        *otto.Otto
 	DataStore db.DB
 	timelimit time.Duration
@@ -57,10 +58,11 @@ type Environment struct {
 }
 
 //NewEnvironment create new gohan extension environment based on context
-func NewEnvironment(dataStore db.DB, identity middleware.IdentityService, timelimit time.Duration) *Environment {
+func NewEnvironment(name string, dataStore db.DB, identity middleware.IdentityService, timelimit time.Duration) *Environment {
 	vm := otto.New()
 	vm.Interrupt = make(chan func(), 1)
 	env := &Environment{
+		Name:      name,
 		VM:        vm,
 		DataStore: dataStore,
 		Identity:  identity,
@@ -101,7 +103,7 @@ func (env *Environment) RegisterObject(objectID string, object interface{}) {
 	env.VM.Set(objectID, object)
 }
 
-//LoadExtensionsForPath for returns extensions for specific path
+//LoadExtensionsForPath loads extensions for specific path
 func (env *Environment) LoadExtensionsForPath(extensions []*schema.Extension, path string) error {
 	for _, extension := range extensions {
 		if extension.Match(path) {
@@ -215,7 +217,7 @@ func (env *Environment) HandleEvent(event string, context map[string]interface{}
 
 //Clone makes clone of the environment
 func (env *Environment) Clone() ext.Environment {
-	newEnv := NewEnvironment(env.DataStore, env.Identity, env.timelimit)
+	newEnv := NewEnvironment(env.Name, env.DataStore, env.Identity, env.timelimit)
 	newEnv.VM = env.VM.Copy()
 	return newEnv
 }
