@@ -17,7 +17,10 @@ package otto_test
 
 import (
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"regexp"
+	"strings"
 	"time"
 
 	ottopkg "github.com/dop251/otto"
@@ -280,6 +283,82 @@ var _ = Describe("Otto extension manager", func() {
 				Expect(env.HandleEvent("test_event", context)).To(Succeed())
 				Expect(context).To(HaveKeyWithValue("resp", HaveKeyWithValue("status", "err")))
 				Expect(context).To(HaveKeyWithValue("resp", HaveKey("error")))
+			})
+		})
+
+		Context("When the content type is not specified", func() {
+			It("Should post the data as a JSON document", func() {
+				server := ghttp.NewServer()
+				server.AppendHandlers(ghttp.CombineHandlers(
+					ghttp.VerifyRequest("POST", "/contents"),
+					ghttp.RespondWith(200, "HELLO"),
+					ghttp.VerifyJSON("{\"data\": \"posted_data\"}"),
+				))
+
+				extension, err := schema.NewExtension(map[string]interface{}{
+					"id": "test_extension",
+					"code": `
+						gohan_register_handler("test_event", function(context){
+							var d = { data: 'posted_data' }
+							context.resp = gohan_http('POST', '` + server.URL() + `/contents', {}, d);
+						});`,
+					"path": ".*",
+				})
+
+				Expect(err).ToNot(HaveOccurred())
+				extensions := []*schema.Extension{extension}
+				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
+				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+
+				context := map[string]interface{}{
+					"id": "test",
+				}
+				Expect(env.HandleEvent("test_event", context)).To(Succeed())
+				Expect(context).To(HaveKeyWithValue("resp", HaveKeyWithValue("status_code", "200")))
+				server.Close()
+			})
+		})
+
+		Context("When the content type is text/plain", func() {
+			It("Should post the data as plain text", func() {
+
+				verifyPosted := func(expected string) http.HandlerFunc {
+					return func(w http.ResponseWriter, req *http.Request) {
+						body, _ := ioutil.ReadAll(req.Body)
+						req.Body.Close()
+						actual := strings.Trim(string(body), "\"")
+						Ω(actual).Should(Equal(expected), "Post data Mismatch")
+					}
+				}
+
+				postedString := "posted_string"
+				server := ghttp.NewServer()
+				server.AppendHandlers(ghttp.CombineHandlers(
+					ghttp.VerifyRequest("POST", "/contents"),
+					ghttp.RespondWith(200, "HELLO"),
+					verifyPosted(postedString),
+				))
+
+				extension, err := schema.NewExtension(map[string]interface{}{
+					"id": "test_extension",
+					"code": `
+						gohan_register_handler("test_event", function(context){
+								var d = "` + postedString + `"
+								context.resp = gohan_http('POST', '` + server.URL() + `/contents', {'Content-Type': 'text/plain' }, d);
+						});`,
+					"path": ".*",
+				})
+				Expect(err).ToNot(HaveOccurred())
+				extensions := []*schema.Extension{extension}
+				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
+				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+
+				context := map[string]interface{}{
+					"id": "test",
+				}
+				Expect(env.HandleEvent("test_event", context)).To(Succeed())
+				Expect(context).To(HaveKeyWithValue("resp", HaveKeyWithValue("status_code", "200")))
+				server.Close()
 			})
 		})
 	})
