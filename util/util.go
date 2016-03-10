@@ -153,10 +153,6 @@ func GetContent(url string) ([]byte, error) {
 	if strings.HasPrefix(url, "file://") {
 		url = strings.TrimPrefix(url, "file://")
 	}
-	data, err := Asset(url)
-	if err == nil {
-		return data, nil
-	}
 	content, err := ioutil.ReadFile(url)
 	return content, err
 }
