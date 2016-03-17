@@ -52,6 +52,7 @@ func Run(name, usage, version string) {
 		getServerCommand(),
 		getTestExtesionsCommand(),
 		getMigrateCommand(),
+		getTemplateCommand(),
 	}
 	app.Run(os.Args)
 }

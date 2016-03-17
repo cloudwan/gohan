@@ -664,3 +664,30 @@ The default for unspecified action is repeatble read.
       create:  SERIALIZABLE
       update: SERIALIZABLE
       delete: SERIALIZABLE
+
+OpenAPI / Swagger
+------------------
+
+Gohan schema is supposed to define "Data Model", whereus OpenAPI/Swagger
+is supposed to define "API".
+
+You can generate OpenAPI / Swagger file from gohan schema, so that you can
+afford swagger utility tools.
+
+.. code-block:: shell
+
+    gohan template --config-file etc/gohan.yaml
+
+    # or you can customize template file using
+
+    gohan template --config-file etc/gohan.yaml --template etc/templates/swagger.tmpl
+
+then you will get swagger.json.
+You can use this file for using swagger utility tools.
+
+For example, you can use go-swagger to generate go related code. (see http://goswagger.io/)
+
+.. code-block:: shell
+
+    $ swagger validate swagger.json
+    The swagger spec at "swagger.json" is valid against swagger specification 2.0

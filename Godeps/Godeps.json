@@ -1,9 +1,6 @@
 {
 	"ImportPath": "github.com/cloudwan/gohan",
 	"GoVersion": "go1.5.1",
-	"Packages": [
-		"./..."
-	],
 	"Deps": [
 		{
 			"ImportPath": "github.com/Juniper/go-netconf/netconf",
@@ -39,6 +36,11 @@
 		{
 			"ImportPath": "github.com/drone/routes",
 			"Rev": "853bef2b231162bb7b09355720416d3af1510d88"
+		},
+		{
+			"ImportPath": "github.com/flosch/pongo2",
+			"Comment": "v1.0-rc1-182-ga269242",
+			"Rev": "a269242022ae534b052672d6a9326a40560a63e7"
 		},
 		{
 			"ImportPath": "github.com/go-martini/martini",
@@ -78,11 +80,6 @@
 		{
 			"ImportPath": "github.com/olekukonko/tablewriter",
 			"Rev": "bc39950e081b457853031334b3c8b95cdfe428ba"
-		},
-		{
-			"ImportPath": "github.com/onsi/ginkgo",
-			"Comment": "v1.2.0-8-g25380c6",
-			"Rev": "25380c62e61d3f90436be125b8127dbae578fdef"
 		},
 		{
 			"ImportPath": "github.com/onsi/gomega",
@@ -130,20 +127,6 @@
 		{
 			"ImportPath": "github.com/streamrail/concurrent-map",
 			"Rev": "d9fcb63c5922e9219f204bbe9b141f238074805e"
-		},
-		{
-			"ImportPath": "github.com/stretchr/objx",
-			"Rev": "1a9d0bb9f541897e62256577b352fdbc1fb4fd94"
-		},
-		{
-			"ImportPath": "github.com/stretchr/testify/assert",
-			"Comment": "v1.0-49-g2b15294",
-			"Rev": "2b15294402a895a4224659d181866f545991021e"
-		},
-		{
-			"ImportPath": "github.com/stretchr/testify/mock",
-			"Comment": "v1.0-49-g2b15294",
-			"Rev": "2b15294402a895a4224659d181866f545991021e"
 		},
 		{
 			"ImportPath": "github.com/twinj/uuid",

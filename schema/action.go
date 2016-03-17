@@ -17,19 +17,21 @@ package schema
 
 // Action struct
 type Action struct {
-	ID          string
-	Method      string
-	Path        string
-	InputSchema map[string]interface{}
+	ID           string
+	Method       string
+	Path         string
+	InputSchema  map[string]interface{}
+	OutputSchema map[string]interface{}
 }
 
 // NewAction create Action
-func NewAction(id, method, path string, inputSchema map[string]interface{}) Action {
+func NewAction(id, method, path string, inputSchema, outputSchema map[string]interface{}) Action {
 	return Action{
-		ID:          id,
-		Method:      method,
-		Path:        path,
-		InputSchema: inputSchema,
+		ID:           id,
+		Method:       method,
+		Path:         path,
+		InputSchema:  inputSchema,
+		OutputSchema: outputSchema,
 	}
 }
 
@@ -39,5 +41,6 @@ func NewActionFromObject(id string, rawData interface{}) (Action, error) {
 	method, _ := actionData["method"].(string)
 	path, _ := actionData["path"].(string)
 	inputSchema, _ := actionData["input"]
-	return NewAction(id, method, path, inputSchema.(map[string]interface{})), nil
+	outputSchema, _ := actionData["output"]
+	return NewAction(id, method, path, inputSchema.(map[string]interface{}), outputSchema.(map[string]interface{})), nil
 }

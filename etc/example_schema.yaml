@@ -110,56 +110,59 @@ schemas:
     type: object
   singular: subnet
   title: subnet
-- description: server
+- description: Server
   id: server
-  plural: servers
-  prefix: /v2.0
+  parent: ""
+  singular: server
+  plural: server
+  prefix: /v1.0
+  title: server
   schema:
     properties:
-      id:
-        description: ID
-        format: uuid
-        permission:
-        - create
-        title: ID
-        type: string
-        unique: true
       name:
-        description: Name
+        default: ""
         permission:
         - create
         - update
         title: Name
         type: string
+        description: ""
         unique: false
-      network_id:
-        description: Network ID
+      management_ip:
+        default: ""
         permission:
         - create
-        relation: network
-        relation_property: network
-        title: network id
+        - update
+        title: Management IP
         type: string
         unique: false
-      status:
-        description: status
-        permission: []
-        title: Status
-        type: string
-        unique: false
-      tenant_id:
-        description: TenantID
+        description: ""
+      id:
         permission:
         - create
-        title: TenantID
+        title: ID
         type: string
-        unique: false
-    propertiesOrder:
-    - id
-    - name
-    - network_id
-    - status
-    - tenant_id
-    type: object
-  singular: server
-  title: Server
+        format: uuid
+        description: ""
+  actions:
+    reboot:
+        path: /:id/reboot
+        method: POST
+        input:
+            type: object
+            properties:
+                message:
+                    title: message
+                    type: string
+                delay:
+                    title: delay
+                    type: string
+        output:
+            type: object
+            properties:
+                message:
+                    title: message
+                    type: string
+                delay:
+                    title: delay
+                    type: string
