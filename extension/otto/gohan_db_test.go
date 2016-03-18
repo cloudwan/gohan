@@ -452,7 +452,7 @@ var _ = Describe("GohanDb", func() {
 				}
 				err = env.HandleEvent("test_event", context)
 				Expect(err).NotTo(BeNil())
-				Expect(err.Error()).To(MatchRegexp("test_event: Gievn arguments is not \\[\\]interface\\{\\}"))
+				Expect(err.Error()).To(MatchRegexp("test_event: Argument 'THIS IS NOT AN ARRAY' should be of type 'array'"))
 			})
 		})
 

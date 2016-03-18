@@ -1001,7 +1001,7 @@ var _ = Describe("Otto extension manager", func() {
 
 						It("Returns the proper error", func() {
 							err := env.HandleEvent("test", context)
-							Expect(err).To(MatchError(ContainSubstring("Not a dictionary")))
+							Expect(err).To(MatchError(ContainSubstring("be of type 'Object'")))
 						})
 					})
 				})
@@ -1125,7 +1125,7 @@ var _ = Describe("Otto extension manager", func() {
 							context["transaction"] = tx
 
 							err = env.HandleEvent("test", context)
-							Expect(err).To(MatchError(ContainSubstring("Not a dictionary")))
+							Expect(err).To(MatchError(ContainSubstring("be of type 'Object'")))
 						})
 					})
 				})

@@ -32,7 +32,10 @@ func init() {
 		builtins := map[string]interface{}{
 			"require": func(call otto.FunctionCall) otto.Value {
 				VerifyCallArguments(&call, "require", 1)
-				moduleName := call.Argument(0).String()
+				moduleName, err := GetString(call.Argument(0))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
 				value, _ := vm.ToValue(RequireModule(moduleName))
 				return value
 			},
@@ -48,7 +51,10 @@ func init() {
 			},
 			"gohan_schema_url": func(call otto.FunctionCall) otto.Value {
 				VerifyCallArguments(&call, "gohan_schema_url", 1)
-				schemaID := call.Argument(0).String()
+				schemaID, err := GetString(call.Argument(0))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
 				manager := schema.GetManager()
 				schema, ok := manager.Schema(schemaID)
 				if !ok {

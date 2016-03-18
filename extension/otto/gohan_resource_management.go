@@ -16,6 +16,8 @@
 package otto
 
 import (
+	"fmt"
+
 	"github.com/dop251/otto"
 
 	"github.com/cloudwan/gohan/extension"
@@ -47,184 +49,128 @@ func init() {
 		builtins := map[string]interface{}{
 			"gohan_model_list": func(call otto.FunctionCall) otto.Value {
 				VerifyCallArguments(&call, "gohan_model_list", 3)
-				rawContext, _ := call.Argument(0).Export()
-				context, ok := rawContext.(map[string]interface{})
-				if !ok {
-					ThrowOttoException(&call, noContextMessage)
+				context, err := GetMap(call.Argument(0))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
 				}
-				schemaID := call.Argument(1).String()
-				manager := schema.GetManager()
-				currentSchema, ok := manager.Schema(schemaID)
-				if !ok {
-					ThrowOttoException(&call, unknownSchemaErrorMesssageFormat, schemaID)
+				schemaID, err := GetString(call.Argument(1))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
 				}
-				context["schema"] = currentSchema
-				context["path"] = currentSchema.GetPluralURL()
-				filterObj, _ := call.Argument(2).Export()
-				filter := map[string]interface{}{}
-				if filterObj != nil {
-					filterMap := filterObj.(map[string]interface{})
-					for key, value := range filterMap {
-						switch value := value.(type) {
-						default:
-							ThrowOttoException(&call, "Filter not a string nor array of strings")
-						case string:
-							filter[key] = value
-						case []interface{}:
-							for _, val := range value {
-								v, ok := val.(string)
-								if !ok {
-									ThrowOttoException(&call, "Filter not a string nor array of strings")
-								}
-								filter[key] = v
-							}
-						}
-					}
+				filterMap, err := GetMap(call.Argument(2))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
 				}
-				if err := resources.GetResourcesInTransaction(
-					context, currentSchema, filter, nil); err != nil {
+
+				resources, err := GohanModelList(context, schemaID, filterMap)
+				if err != nil {
 					handleChainError(env, &call, err)
 				}
-				response, ok := context["response"].(map[string]interface{})
-				if !ok {
-					ThrowOttoException(&call, "No response")
-				}
-				resources, ok := response[currentSchema.Plural]
-				if !ok {
-					ThrowOttoException(&call, wrongResponseErrorMessageFormat, "GetMultipleResources.")
-				}
+
 				value, _ := vm.ToValue(resources)
 				return value
 			},
 			"gohan_model_fetch": func(call otto.FunctionCall) otto.Value {
 				VerifyCallArguments(&call, "gohan_model_fetch", 4)
-				rawContext, _ := call.Argument(0).Export()
-				context, ok := rawContext.(map[string]interface{})
-				if !ok {
-					ThrowOttoException(&call, noContextMessage)
+				context, err := GetMap(call.Argument(0))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
 				}
-				schemaID := call.Argument(1).String()
-				manager := schema.GetManager()
-				currentSchema, ok := manager.Schema(schemaID)
-				if !ok {
-					ThrowOttoException(&call, unknownSchemaErrorMesssageFormat, schemaID)
+				schemaID, err := GetString(call.Argument(1))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
 				}
-				context["schema"] = currentSchema
-				context["path"] = currentSchema.GetPluralURL()
-				resourceID := call.Argument(2).String()
-				rawTenantIDs, _ := call.Argument(3).Export()
-				tenantIDs, ok := rawTenantIDs.([]string)
-				if !ok {
+				resourceID, err := GetString(call.Argument(2))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+				tenantIDs, err := GetStringList(call.Argument(3))
+				if err != nil {
 					tenantIDs = nil
 				}
-				if err := resources.GetSingleResourceInTransaction(
-					context, currentSchema, resourceID, tenantIDs); err != nil {
+
+				resource, err := GohanModelFetch(context, schemaID, resourceID, tenantIDs)
+				if err != nil {
 					handleChainError(env, &call, err)
 				}
-				response, ok := context["response"].(map[string]interface{})
-				if !ok {
-					ThrowOttoException(&call, "No response")
-				}
-				resource := response[currentSchema.Singular]
+
 				value, _ := vm.ToValue(resource)
 				return value
 			},
 			"gohan_model_create": func(call otto.FunctionCall) otto.Value {
 				VerifyCallArguments(&call, "gohan_model_create", 3)
-				rawContext, _ := call.Argument(0).Export()
-				context, ok := rawContext.(map[string]interface{})
-				if !ok {
-					ThrowOttoException(&call, noContextMessage)
+				context, err := GetMap(call.Argument(0))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
 				}
-				schemaID := call.Argument(1).String()
-				manager := schema.GetManager()
-				currentSchema, ok := manager.Schema(schemaID)
-				if !ok {
-					ThrowOttoException(&call, unknownSchemaErrorMesssageFormat, schemaID)
+				schemaID, err := GetString(call.Argument(1))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
 				}
-				context["schema"] = currentSchema
-				context["path"] = currentSchema.GetPluralURL()
-				data, _ := call.Argument(2).Export()
-				dataMap, ok := data.(map[string]interface{})
-				if !ok {
-					ThrowOttoException(&call, notADictionaryErrorMessageFormat, dataMap)
+				dataMap, err := GetMap(call.Argument(2))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
 				}
-				resourceObj, err := manager.LoadResource(currentSchema.ID, dataMap)
+
+				resource, err := GohanModelCreate(context, schemaID, dataMap)
 				if err != nil {
 					handleChainError(env, &call, err)
 				}
-				if err := resources.CreateResourceInTransaction(
-					context, resourceObj); err != nil {
-					handleChainError(env, &call, err)
-				}
-				response, ok := context["response"].(map[string]interface{})
-				if !ok {
-					ThrowOttoException(&call, "No response")
-				}
-				resource := response[currentSchema.Singular]
+
 				value, _ := vm.ToValue(resource)
 				return value
 			},
 			"gohan_model_update": func(call otto.FunctionCall) otto.Value {
 				VerifyCallArguments(&call, "gohan_model_update", 5)
-				rawContext, _ := call.Argument(0).Export()
-				context, ok := rawContext.(map[string]interface{})
-				if !ok {
-					ThrowOttoException(&call, noContextMessage)
+				context, err := GetMap(call.Argument(0))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
 				}
-				schemaID := call.Argument(1).String()
-				manager := schema.GetManager()
-				currentSchema, ok := manager.Schema(schemaID)
-				if !ok {
-					ThrowOttoException(&call, unknownSchemaErrorMesssageFormat, schemaID)
+				schemaID, err := GetString(call.Argument(1))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
 				}
-				context["schema"] = currentSchema
-				context["path"] = currentSchema.GetPluralURL()
-				resourceID := call.Argument(2).String()
-				data, _ := call.Argument(3).Export()
-
-				rawTenantIDs, _ := call.Argument(4).Export()
-				tenantIDs, ok := rawTenantIDs.([]string)
-				if !ok {
+				resourceID, err := GetString(call.Argument(2))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+				dataMap, err := GetMap(call.Argument(3))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+				tenantIDs, err := GetStringList(call.Argument(4))
+				if err != nil {
 					tenantIDs = nil
 				}
 
-				dataMap, ok := data.(map[string]interface{})
-				if !ok {
-					ThrowOttoException(&call, notADictionaryErrorMessageFormat, dataMap)
-				}
-				err := resources.UpdateResourceInTransaction(context, currentSchema, resourceID, dataMap, tenantIDs)
+				resource, err := GohanModelUpdate(context, schemaID, resourceID, dataMap, tenantIDs)
 				if err != nil {
 					handleChainError(env, &call, err)
 				}
-				response, ok := context["response"].(map[string]interface{})
-				if !ok {
-					ThrowOttoException(&call, "No response")
-				}
-				resource := response[currentSchema.Singular]
+
 				value, _ := vm.ToValue(resource)
 				return value
 			},
 			"gohan_model_delete": func(call otto.FunctionCall) otto.Value {
 				VerifyCallArguments(&call, "gohan_model_delete", 3)
-				rawContext, _ := call.Argument(0).Export()
-				context, ok := rawContext.(map[string]interface{})
-				if !ok {
-					ThrowOttoException(&call, noContextMessage)
+				context, err := GetMap(call.Argument(0))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
 				}
-				schemaID := call.Argument(1).String()
-				manager := schema.GetManager()
-				currentSchema, ok := manager.Schema(schemaID)
-				if !ok {
-					ThrowOttoException(&call, unknownSchemaErrorMesssageFormat, schemaID)
+				schemaID, err := GetString(call.Argument(1))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
 				}
-				context["schema"] = currentSchema
-				context["path"] = currentSchema.GetPluralURL()
-				resourceID := call.Argument(2).String()
-				err := resources.DeleteResourceInTransaction(context, currentSchema, resourceID)
+				resourceID, err := GetString(call.Argument(2))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+
+				err = GohanModelDelete(context, schemaID, resourceID)
 				if err != nil {
 					handleChainError(env, &call, err)
 				}
+
 				return otto.Value{}
 			},
 		}
@@ -234,4 +180,132 @@ func init() {
 		}
 	}
 	RegisterInit(gohanChainingInit)
+}
+
+//GohanModelList lists gohan resources and running extensions
+func GohanModelList(context map[string]interface{}, schemaID string,
+	filterMap map[string]interface{}) (interface{}, error) {
+
+	currentSchema, err := getSchema(schemaID)
+	if err != nil {
+		return nil, err
+	}
+	context["schema"] = currentSchema
+	context["path"] = currentSchema.GetPluralURL()
+
+	filter := map[string]interface{}{}
+	for key, value := range filterMap {
+		switch value := value.(type) {
+		default:
+			return nil, fmt.Errorf("Filter not a string nor array of strings")
+		case string:
+			filter[key] = value
+		case []interface{}:
+			for _, val := range value {
+				v, ok := val.(string)
+				if !ok {
+					return nil, fmt.Errorf("Filter not a string nor array of strings")
+				}
+				filter[key] = v
+			}
+		}
+	}
+
+	if err := resources.GetResourcesInTransaction(
+		context, currentSchema, filter, nil); err != nil {
+		return nil, err
+	}
+	response, ok := context["response"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("No response")
+	}
+	resources, ok := response[currentSchema.Plural]
+	if !ok {
+		return nil, fmt.Errorf(wrongResponseErrorMessageFormat, "GetMultipleResources.")
+	}
+	return resources, nil
+}
+
+//GohanModelFetch fetch gohan resource and running extensions
+func GohanModelFetch(context map[string]interface{}, schemaID string, resourceID string,
+	tenantIDs []string) (interface{}, error) {
+
+	currentSchema, err := getSchema(schemaID)
+	if err != nil {
+		return nil, err
+	}
+	context["schema"] = currentSchema
+	context["path"] = currentSchema.GetPluralURL()
+
+	if err := resources.GetSingleResourceInTransaction(
+		context, currentSchema, resourceID, tenantIDs); err != nil {
+		return nil, err
+	}
+	response, ok := context["response"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("No response")
+	}
+	return response[currentSchema.Singular], nil
+}
+
+//GohanModelCreate creates gohan resource and running extensions
+func GohanModelCreate(context map[string]interface{}, schemaID string,
+	dataMap map[string]interface{}) (interface{}, error) {
+
+	currentSchema, err := getSchema(schemaID)
+	if err != nil {
+		return nil, err
+	}
+	context["schema"] = currentSchema
+	context["path"] = currentSchema.GetPluralURL()
+
+	manager := schema.GetManager()
+	resourceObj, err := manager.LoadResource(currentSchema.ID, dataMap)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := resources.CreateResourceInTransaction(
+		context, resourceObj); err != nil {
+		return nil, err
+	}
+	response, ok := context["response"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("No response")
+	}
+	return response[currentSchema.Singular], nil
+}
+
+//GohanModelUpdate updates gohan resource and running extensions
+func GohanModelUpdate(context map[string]interface{}, schemaID string, resourceID string, dataMap map[string]interface{}, tenantIDs []string) (interface{}, error) {
+
+	currentSchema, err := getSchema(schemaID)
+	if err != nil {
+		return nil, err
+	}
+	context["schema"] = currentSchema
+	context["path"] = currentSchema.GetPluralURL()
+
+	err = resources.UpdateResourceInTransaction(context, currentSchema, resourceID, dataMap, tenantIDs)
+	if err != nil {
+		return nil, err
+	}
+	response, ok := context["response"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("No response")
+	}
+	return response[currentSchema.Singular], nil
+}
+
+//GohanModelDelete deletes gohan resources and running extensions
+func GohanModelDelete(context map[string]interface{}, schemaID string, resourceID string) error {
+
+	currentSchema, err := getSchema(schemaID)
+	if err != nil {
+		return err
+	}
+	context["schema"] = currentSchema
+	context["path"] = currentSchema.GetPluralURL()
+
+	return resources.DeleteResourceInTransaction(context, currentSchema, resourceID)
 }
