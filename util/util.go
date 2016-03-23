@@ -28,6 +28,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/op/go-logging"
 	"golang.org/x/crypto/ssh"
 
 	"github.com/xeipuuv/gojsonpointer"
@@ -292,4 +293,12 @@ func MaybeMap(data interface{}) map[string]interface{} {
 		return map[string]interface{}{}
 	}
 	return mapValue
+}
+
+//LogPanic logs panic and prevent crash
+func LogPanic(log *logging.Logger) {
+	err := recover()
+	if err != nil {
+		log.Error(fmt.Sprintf("Panic %s", err))
+	}
 }

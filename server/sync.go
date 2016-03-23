@@ -236,6 +236,7 @@ func startSyncProcess(server *Server) {
 	pollingTicker := time.Tick(eventPollingTime)
 	committed := transactionCommitInformer()
 	go func() {
+		defer util.LogPanic(log)
 		recentlySynced := false
 		for server.running {
 			select {
@@ -439,6 +440,7 @@ func startStateUpdatingProcess(server *Server) {
 	}
 
 	go func() {
+		defer util.LogPanic(log)
 		for server.running {
 			lockKey := lockPath + "state"
 			err := server.sync.Lock(lockKey, true)
@@ -458,6 +460,7 @@ func startStateUpdatingProcess(server *Server) {
 		}
 	}()
 	go func() {
+		defer util.LogPanic(log)
 		for server.running {
 			response := <-stateResponseChan
 			err := StateUpdate(response, server)
@@ -470,6 +473,7 @@ func startStateUpdatingProcess(server *Server) {
 	monitoringResponseChan := make(chan *gohan_sync.Event)
 	monitoringStopChan := make(chan bool)
 	go func() {
+		defer util.LogPanic(log)
 		for server.running {
 			lockKey := lockPath + "monitoring"
 			err := server.sync.Lock(lockKey, true)
@@ -488,6 +492,7 @@ func startStateUpdatingProcess(server *Server) {
 		}
 	}()
 	go func() {
+		defer util.LogPanic(log)
 		for server.running {
 			response := <-monitoringResponseChan
 			err := MonitoringUpdate(response, server)
@@ -541,6 +546,7 @@ func startSyncWatchProcess(server *Server) {
 	stopChan := make(chan bool)
 	for _, path := range watch {
 		go func(path string) {
+			defer util.LogPanic(log)
 			for server.running {
 				lockKey := lockPath + "watch"
 				err := server.sync.Lock(lockKey, true)
@@ -569,6 +575,7 @@ func startSyncWatchProcess(server *Server) {
 			workerCount++
 			//spawn workers up to max worker count
 			go func() {
+				defer util.LogPanic(log)
 				defer func() {
 					workerCount--
 					wg.Done()
