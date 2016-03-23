@@ -54,6 +54,7 @@ func startSNMPProcess(server *Server) {
 
 	buf := make([]byte, 1024)
 	go func() {
+		defer util.LogPanic(log)
 		defer conn.Close()
 		for server.running {
 			rlen, remote, err := conn.ReadFromUDP(buf)

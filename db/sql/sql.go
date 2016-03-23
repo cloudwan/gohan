@@ -176,7 +176,7 @@ func (handler *jsonHandler) encode(property *schema.Property, data interface{}) 
 	if err != nil {
 		return nil, err
 	}
-	return bytes, nil
+	return string(bytes), nil
 }
 
 func (handler *jsonHandler) decode(property *schema.Property, data interface{}) (interface{}, error) {
