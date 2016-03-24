@@ -83,12 +83,7 @@ func (env *Environment) LoadExtensionsForPath(extensions []*schema.Extension, pa
 	for _, extension := range extensions {
 		if extension.Match(path) {
 			code := extension.Code
-			if extension.CodeType == "donburi" {
-				err = env.runDonburi(code)
-				if err != nil {
-					return err
-				}
-			} else if extension.CodeType == "go" {
+			if extension.CodeType == "go" {
 				callback := ext.GetGoCallback(code)
 				if callback != nil {
 					env.goCallbacks = append(env.goCallbacks, callback)
@@ -119,10 +114,5 @@ func (env *Environment) HandleEvent(event string, context map[string]interface{}
 	for key, value := range updatedContextMap {
 		context[key] = value
 	}
-	return nil
-}
-
-//RunDonburi runs Donburi code
-func (env *Environment) runDonburi(yamlCode string) error {
 	return nil
 }

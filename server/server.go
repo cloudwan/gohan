@@ -51,6 +51,7 @@ type Server struct {
 	running          bool
 	martini          *martini.ClassicMartini
 	timelimit        int
+	extensionType    string
 	keystoneIdentity middleware.IdentityService
 }
 
@@ -178,7 +179,7 @@ func NewServer(configFile string) (*Server, error) {
 	}
 
 	setupEditor(server)
-
+	server.extensionType = config.GetString("extension/type", "otto")
 	server.address = config.GetString("address", ":"+port)
 	if config.GetBool("tls/enabled", false) {
 		log.Info("TLS enabled")

@@ -1,0 +1,11 @@
+vars:
+  person:
+    name: "John"
+    age: "30"
+tasks:
+- debug: msg="{{ item.key }} {{ item.value }}"
+  with_dict:
+    name: "John"
+    age: "30"
+- debug: msg="{{ item.key }} {{ item.value }}"
+  with_dict: $person

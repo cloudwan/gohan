@@ -13,6 +13,7 @@ build:
           export REPO_PATH=$GOSRC/github.com/cloudwan
           ln -s /pipeline/source $REPO_PATH/gohan
           go get github.com/axw/gocov/gocov
+          go get golang.org/x/tools/cmd/goimports
           go get github.com/nati/goveralls
           go get -u github.com/jteeuwen/go-bindata/...
     - script:
@@ -26,7 +27,7 @@ build:
           echo $REPO_PATH
           cd $REPO_PATH/gohan
           make
-          GIT_BRANCH=$WERCKER_GIT_BRANCH goveralls  -gocovdata=coverage.json -service=wercker.com -repotoken=${COVERALLS_TOKEN}
+          GIT_BRANCH=$WERCKER_GIT_BRANCH goveralls -gocovdata=coverage.json -service=wercker.com -repotoken=${COVERALLS_TOKEN}
 
 deploy:
   steps:

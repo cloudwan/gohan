@@ -18,13 +18,13 @@ package cli
 import (
 	"bytes"
 	"fmt"
+	"github.com/cloudwan/gohan/schema"
+	"github.com/cloudwan/gohan/util"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
-
-	"github.com/cloudwan/gohan/schema"
-	"github.com/cloudwan/gohan/util"
 
 	"github.com/cloudwan/gohan/cli/client"
 	"github.com/cloudwan/gohan/db"
@@ -32,7 +32,16 @@ import (
 	"github.com/cloudwan/gohan/extension/framework"
 	"github.com/cloudwan/gohan/server"
 	"github.com/codegangsta/cli"
+
+	"github.com/cloudwan/gohan/extension/gohanscript"
+	//Import gohan script lib
+	_ "github.com/cloudwan/gohan/extension/gohanscript/autogen"
+	l "github.com/cloudwan/gohan/log"
+
+	"github.com/op/go-logging"
 )
+
+var log = logging.MustGetLogger(l.GetModuleName())
 
 //Run execute main command
 func Run(name, usage, version string) {
@@ -53,6 +62,8 @@ func Run(name, usage, version string) {
 		getTestExtesionsCommand(),
 		getMigrateCommand(),
 		getTemplateCommand(),
+		getRunCommand(),
+		getTestCommand(),
 	}
 	app.Run(os.Args)
 }
@@ -347,6 +358,74 @@ func getMigrateCommand() cli.Command {
 			if err != nil {
 				fmt.Println(err)
 			}
+		},
+	}
+}
+
+func getRunCommand() cli.Command {
+	return cli.Command{
+		Name:      "run",
+		ShortName: "run",
+		Usage:     "Run Gohan script Code",
+		Description: `
+Run gohan script code.`,
+		Flags: []cli.Flag{
+			cli.StringFlag{Name: "config-file,c", Value: "", Usage: "config file path"},
+			cli.StringFlag{Name: "args,a", Value: "", Usage: "arguments"},
+		},
+		Action: func(c *cli.Context) {
+			src := c.Args()[0]
+			vm := gohanscript.NewVM()
+
+			args := []interface{}{}
+			flags := map[string]interface{}{}
+			for _, arg := range c.Args()[1:] {
+				if strings.Contains(arg, "=") {
+					kv := strings.Split(arg, "=")
+					flags[kv[0]] = kv[1]
+				} else {
+					args = append(args, arg)
+				}
+			}
+			vm.Context.Set("args", args)
+			vm.Context.Set("flags", flags)
+			configFile := c.String("config-file")
+			if configFile != "" {
+				config := util.GetConfig()
+				err := config.ReadConfig(configFile)
+				if err != nil {
+					fmt.Println(err)
+					os.Exit(1)
+					return
+				}
+				err = l.SetUpLogging(config)
+				if err != nil {
+					fmt.Printf("Logging setup error: %s\n", err)
+					os.Exit(1)
+					return
+				}
+				log.Info("logging initialized")
+			}
+			_, err := vm.RunFile(src)
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+				return
+			}
+		},
+	}
+}
+
+func getTestCommand() cli.Command {
+	return cli.Command{
+		Name:      "test",
+		ShortName: "test",
+		Usage:     "Run Gohan script Test",
+		Description: `
+Run gohan script yaml code.`,
+		Action: func(c *cli.Context) {
+			dir := c.Args()[0]
+			gohanscript.RunTests(dir)
 		},
 	}
 }

@@ -1,0 +1,75 @@
+test_suite:
+  tests:
+  - name: Config test
+    test:
+    - read_config: path="{{ __dir__ }}/config.yaml"
+    - get_config: key=database/connection
+      register: connection
+    - assert: expect="./test.db" actual="{{ connection }}"
+  - name: CRUD DB test
+    test:
+    - command: rm ./test.db
+      rescue: []
+    - gohan_load_schema: src="{{ __dir__ }}/schema.yaml"
+    - connect_db: db_type=sqlite3 connection=./test.db
+      register: db
+    - init_db: db_type=sqlite3 connection=./test.db
+    - transaction:
+      - db_create:
+          tx: $transaction
+          schema_id: network
+          data:
+            id: test_network
+            name: test
+      - db_create:
+          tx: $transaction
+          schema_id: subnet
+          data:
+            id: test_subnet
+            name: test
+            network_id: test_network
+      - db_list:
+          schema_id: network
+          tx: $transaction
+        register: list
+      - assert: expect=1 actual="{{ list | length }}"
+      - db_update:
+          tx: $transaction
+          schema_id: network
+          id: test_network
+          data:
+            id: test_network
+            name: test2
+      - db_list:
+          schema_id: network
+          tx: $transaction
+        register: list
+      - db_column:
+          schema_id: network
+        register: network_columns
+      - db_query:
+          schema_id: network
+          tx: $transaction
+          sql: |
+            select {{ network_columns }} from networks where
+              exists(select id from subnets where network_id == networks.id)
+              and networks.name == ?
+          arguments:
+          - test2
+        register: query_result
+      - assert: expect=test2 actual="{{ query_result.0.name }}"
+      - assert: expect=test2 actual="{{ list.0.name }}"
+      - db_delete:
+          tx: $transaction
+          schema_id: subnet
+          id: test_subnet
+      - db_delete:
+          tx: $transaction
+          schema_id: network
+          id: test_network
+      - db_list:
+          tx: $transaction
+          schema_id: network
+        register: list
+      - assert: expect=0 actual="{{ list | length }}"
+      connection: $db

@@ -1,0 +1,52 @@
+vars:
+  world: "USA"
+  foods:
+  - apple
+  - orange
+  - banana
+  pref:
+    Alice: apple
+    Bob: orange
+tasks:
+- debugger:
+- debug: test
+  name: debug_test
+- http_get: url=https://status.github.com/api/status.json
+  register: result
+- debug: msg="result {{result.status_code}}"
+- debug: msg="test"
+- debug: var="foods[2]"
+- debug: msg="Hello \" {{ world }}"
+- define:
+    name: test_func
+    args:
+      arg1: string
+    body:
+    - debug: msg="arg1={{ arg1 }}"
+- blocks:
+  - debug: msg="I like {{ item }}"
+    with_items:
+    - apple
+    - orange
+    - banana
+  - debug: msg="I like {{ item }}"
+    with_items: $foods
+  - debug: msg="{{ item.key }} likes {{ item.value }}"
+    with_dict:
+      Alice: apple
+      Bob: orange
+  - debug: msg="{{ item.key }} likes {{ item.value }}"
+    with_dict: $pref
+  - test_func: arg1="called defined func"
+  - debug: msg="This shouldn't be called"
+    when: 1 == 0
+    else:
+    - debug: msg="This should be called"
+  - fail: msg="failed"
+    when: 1 == 1
+  rescue:
+  - debug: msg="rescued {{ error }}"
+  always:
+  - debug: msg="Drink beer!"
+- debug: msg="test {{ 1 == 1 }}"
+- include: lib.yaml

@@ -158,7 +158,7 @@ func (handler *numberHandler) decode(property *schema.Property, data interface{}
 	case []uint8: // mysql
 		res, err = strconv.ParseUint(string(data.([]uint8)), 10, 64)
 	case int64: // sqlite3
-		res = uint64(data.(int64))
+		res = int(t)
 	}
 	return
 }
@@ -625,7 +625,7 @@ func (tx *Transaction) count(s *schema.Schema, filter map[string]interface{}) (r
 		err = fmt.Errorf("SQL List decoding error: %s", decodeErr)
 		return
 	}
-	res = decoded.(uint64)
+	res = uint64(decoded.(int))
 	return
 }
 

@@ -38,7 +38,7 @@ func startCRONProcess(server *Server) {
 		job := rawJob.(map[string]interface{})
 		path := job["path"].(string)
 		timing := job["timing"].(string)
-		env := newEnvironment(server.db, server.keystoneIdentity, server.timelimit)
+		env := server.newEnvironment()
 		err := env.LoadExtensionsForPath(manager.Extensions, path)
 		if err != nil {
 			log.Fatal(fmt.Sprintf("Extensions parsing error: %v", err))

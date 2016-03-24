@@ -32,13 +32,15 @@
 package server
 
 import (
-	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/extension"
+	"github.com/cloudwan/gohan/extension/gohanscript"
 	"github.com/cloudwan/gohan/extension/otto"
-	"github.com/cloudwan/gohan/server/middleware"
 	"time"
 )
 
-func newEnvironment(dataStore db.DB, identity middleware.IdentityService, timelimit int) extension.Environment {
-	return otto.NewEnvironment(dataStore, identity, time.Duration(timelimit)*time.Second)
+func (server *Server) newEnvironment() extension.Environment {
+	if server.extensionType == "gohanscript" {
+		return gohanscript.NewEnvironment(server.db, server.keystoneIdentity, time.Duration(server.timelimit)*time.Second)
+	}
+	return otto.NewEnvironment(server.db, server.keystoneIdentity, time.Duration(server.timelimit)*time.Second)
 }

@@ -181,14 +181,14 @@ func init() {
 func gohanHTTP(method, rawURL string, headers interface{}, postData interface{}, options interface{}) (int, http.Header, string, error) {
 	client := &http.Client{}
 	var reader io.Reader
-	var headerMap map[string]interface{} = nil
+	var headerMap map[string]interface{}
 	if headers != nil {
 		headerMap = headers.(map[string]interface{})
 	}
 
 	if postData != nil {
 		log.Debug("post data %v", postData)
-		var requestData []byte = nil
+		var requestData []byte
 		var err error
 
 		contentType := ""

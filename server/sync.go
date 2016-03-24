@@ -189,7 +189,7 @@ func (server *Server) syncEvent(resource *schema.Resource) error {
 	path := resource.Get("path").(string)
 	path = configPrefix + path
 	body := resource.Get("body").(string)
-	version, _ := resource.Get("version").(uint64)
+	version, _ := resource.Get("version").(int64)
 	log.Debug("event %s", eventType)
 
 	if eventType == "create" || eventType == "update" {
@@ -535,7 +535,7 @@ func startSyncWatchProcess(server *Server) {
 	extensions := map[string]extension.Environment{}
 	for _, event := range events {
 		path := "sync://" + event
-		env := newEnvironment(server.db, server.keystoneIdentity, server.timelimit)
+		env := server.newEnvironment()
 		err := env.LoadExtensionsForPath(manager.Extensions, path)
 		if err != nil {
 			log.Fatal(fmt.Sprintf("Extensions parsing error: %v", err))

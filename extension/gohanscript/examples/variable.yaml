@@ -1,0 +1,11 @@
+vars:
+  place: "Earth"
+  person:
+    name: "John"
+    age: "30"
+tasks:
+- debug: msg="Hello {{place}}"
+- debug: var=$place
+- debug: msg="Hello {{person.name}} "
+- debug: var=$person.name
+- debug: # show everything

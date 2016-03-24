@@ -1,0 +1,4 @@
+tasks:
+- http_get: url=https://status.github.com/api/status.json
+  register: result
+- debug: msg="{{result.contents.status}}"

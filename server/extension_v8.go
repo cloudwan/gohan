@@ -38,6 +38,6 @@ import (
 	"github.com/cloudwan/gohan/server/middleware"
 )
 
-func newEnvironment(dataStore db.DB, identity middleware.IdentityService) extension.Environment {
+func (server *Server) newEnvironment() extension.Environment {
 	return v8.NewEnvironment()
 }

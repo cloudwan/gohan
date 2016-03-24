@@ -349,6 +349,7 @@ func (manager *Manager) LoadSchemaFromFile(filePath string) error {
 			if err != nil {
 				return err
 			}
+			extension.File = filePath
 			manager.Extensions = append(manager.Extensions, extension)
 		}
 	}
@@ -407,8 +408,8 @@ func GetManager() *Manager {
 			policies:    []*Policy{},
 			Extensions:  []*Extension{},
 		}
+		registerGohanFormats(gojsonschema.FormatCheckers)
 	}
-	registerGohanFormats(gojsonschema.FormatCheckers)
 	return manager
 }
 

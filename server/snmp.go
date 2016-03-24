@@ -36,7 +36,7 @@ func startSNMPProcess(server *Server) {
 	host := config.GetString("snmp/address", "localhost:162")
 
 	path := "snmp://"
-	env := newEnvironment(server.db, server.keystoneIdentity, server.timelimit)
+	env := server.newEnvironment()
 	err := env.LoadExtensionsForPath(manager.Extensions, path)
 	if err != nil {
 		log.Fatal(fmt.Sprintf("Extensions parsing error: %v", err))

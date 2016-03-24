@@ -173,7 +173,7 @@ extensions:
   path: /v2.0/network.*
 ```
 
-### [Experimental] Donburi (Ansible inspired Gohan DSL)
+### [Experimental] Gohan script (Ansible inspired DSL)
 
 ```yaml
 extensions:
@@ -222,52 +222,6 @@ Every CRUD event will be pushed to a sync layer (currently *etcd* is supported),
 You can also use Gohan as a worker. Gohan supports AMQP (OpenStack
   notification), SNMP (experimental), and CRON, to execute extensions.
 
-```yaml
-# Watch etcd and execute extension
-- id: sync_notification
-  code_type: donburi
-  path: "sync://v2.0/servers/"
-  code: |
-    tasks:
-      - debug: "synced {{ .action }} "
-# Watch RabbitMQ
-- id: amqp_notification
-  code_type: donburi
-  path: "amqp://orchestration.stack"
-  code: |
-    tasks:
-      - vars:
-         stack_id: "{{ .event.payload.stack_name }}"
-         state: "{{ .event.payload.state }}"
-      - eval: "stack_id = stack_id.slice(7)"
-      - vars:
-          state: "ACTIVE"
-        when: state == "CREATE_COMPLETE"
-      - update:
-          schema: "server"
-          properties:
-            id: "{{ .stack_id }}"
-            status: "{{ .state }}"
-        rescue:
-          - debug: "{{ .error }}"
-# Watch SNMP
-- id: snmp
-  code_type: donburi
-  path: "snmp://"
-  code: |
-    tasks:
-      - debug: "remote host: {{ .remote }} {{ .trap }} "
-      - debug: "traps: {{ .item.key }} {{ .item.value }} "
-        with_dict: "trap"
-# CRON Job
-- id: cron_job
-  code_type: donburi
-  path: "cron://cron_job_sample"
-  code: |
-    tasks:
-      - debug: "cron job"
-```
-
 # More examples
 
 See more at https://github.com/cloudwan/gohan_apps
@@ -278,6 +232,7 @@ See more at https://github.com/cloudwan/gohan_apps
 - Install development tools
 
 ```
+go get golang.org/x/tools/cmd/goimports
 go get github.com/tools/godep
 go get github.com/golang/lint/golint
 go get github.com/coreos/etcd

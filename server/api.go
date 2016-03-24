@@ -158,14 +158,16 @@ func handleError(writer http.ResponseWriter, err error) {
 	}
 }
 
-func fillInContext(context middleware.Context, r *http.Request, w http.ResponseWriter, s *schema.Schema, sync sync.Sync, identityService middleware.IdentityService) {
+func fillInContext(context middleware.Context, db db.DB, r *http.Request, w http.ResponseWriter, s *schema.Schema, sync sync.Sync, identityService middleware.IdentityService) {
 	context["path"] = r.URL.Path
 	context["http_request"] = r
 	context["http_response"] = w
 	context["schema"] = s
 	context["sync"] = sync
+	context["db"] = db
 	context["identity_service"] = identityService
 	context["service_auth"], _ = identityService.GetServiceAuthorization()
+	context["openstack_client"] = identityService.GetClient()
 }
 
 //MapRouteBySchema setup api route by schema
@@ -184,10 +186,10 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 	//load extension environments
 	environmentManager := extension.GetManager()
 	if _, ok := environmentManager.GetEnvironment(s.ID); !ok {
-		env := newEnvironment(server.db, server.keystoneIdentity, server.timelimit)
+		env := server.newEnvironment()
 		err := env.LoadExtensionsForPath(manager.Extensions, pluralURL)
 		if err != nil {
-			log.Fatal(fmt.Sprintf("Extensions parsing error: %v", err))
+			log.Fatal(fmt.Sprintf("Extensions parsing error:[%s] %v", pluralURL, err))
 		}
 		environmentManager.RegisterEnvironment(s.ID, env)
 	}
@@ -200,7 +202,7 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 	//setup list route
 	getPluralFunc := func(w http.ResponseWriter, r *http.Request, p martini.Params, identityService middleware.IdentityService, context middleware.Context) {
 		addJSONContentTypeHeader(w)
-		fillInContext(context, r, w, s, server.sync, identityService)
+		fillInContext(context, dataStore, r, w, s, server.sync, identityService)
 		if err := resources.GetMultipleResources(context, dataStore, s, r.URL.Query()); err != nil {
 			handleError(w, err)
 			return
@@ -217,7 +219,7 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 	//setup show route
 	getSingleFunc := func(w http.ResponseWriter, r *http.Request, p martini.Params, identityService middleware.IdentityService, context middleware.Context) {
 		addJSONContentTypeHeader(w)
-		fillInContext(context, r, w, s, server.sync, identityService)
+		fillInContext(context, dataStore, r, w, s, server.sync, identityService)
 		id := p["id"]
 		if err := resources.GetSingleResource(context, dataStore, s, id); err != nil {
 			handleError(w, err)
@@ -234,7 +236,7 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 	//setup delete route
 	deleteSingleFunc := func(w http.ResponseWriter, r *http.Request, p martini.Params, identityService middleware.IdentityService, context middleware.Context) {
 		addJSONContentTypeHeader(w)
-		fillInContext(context, r, w, s, server.sync, identityService)
+		fillInContext(context, dataStore, r, w, s, server.sync, identityService)
 		id := p["id"]
 		if err := resources.DeleteResource(context, dataStore, s, id); err != nil {
 			handleError(w, err)
@@ -251,7 +253,7 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 	//setup create route
 	postPluralFunc := func(w http.ResponseWriter, r *http.Request, p martini.Params, identityService middleware.IdentityService, context middleware.Context) {
 		addJSONContentTypeHeader(w)
-		fillInContext(context, r, w, s, server.sync, identityService)
+		fillInContext(context, dataStore, r, w, s, server.sync, identityService)
 		dataMap, err := middleware.ReadJSON(r)
 		if err != nil {
 			handleError(w, resources.NewResourceError(err, fmt.Sprintf("Failed to parse data: %s", err), resources.WrongData))
@@ -284,7 +286,7 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 	//setup update route
 	putSingleFunc := func(w http.ResponseWriter, r *http.Request, p martini.Params, identityService middleware.IdentityService, context middleware.Context) {
 		addJSONContentTypeHeader(w)
-		fillInContext(context, r, w, s, server.sync, identityService)
+		fillInContext(context, dataStore, r, w, s, server.sync, identityService)
 		id := p["id"]
 		dataMap, err := middleware.ReadJSON(r)
 		if err != nil {
@@ -319,7 +321,7 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 		ActionFunc := func(w http.ResponseWriter, r *http.Request, p martini.Params,
 			identityService middleware.IdentityService, auth schema.Authorization, context middleware.Context) {
 			addJSONContentTypeHeader(w)
-			fillInContext(context, r, w, s, server.sync, identityService)
+			fillInContext(context, dataStore, r, w, s, server.sync, identityService)
 			id := p["id"]
 			input, err := middleware.ReadJSON(r)
 

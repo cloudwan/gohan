@@ -1,4 +1,4 @@
-// Copyright (C) 2015 NTT Innovation Institute, Inc.
+// Copyright (C) 2016  Juniper Networks, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,25 +13,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otto
+package lib
 
-import (
-	"github.com/cloudwan/gohan/util"
-	"gopkg.in/yaml.v2"
-)
+//AddInt adds int
+func AddInt(a, b int) int {
+	return a + b
+}
 
-//runDonburi converts Donburi script to javascript
-func (env *Environment) runDonburi(yamlCode string) error {
-	vm := env.VM
-	var donburi map[interface{}]interface{}
-	err := yaml.Unmarshal([]byte(yamlCode), &donburi)
-	if err != nil {
-		return err
-	}
-	donburiInVM, err := vm.ToValue(util.DecodeYAMLLibObject(donburi))
-	if err != nil {
-		return err
-	}
-	_, err = vm.Call("donburi.run", nil, donburiInVM)
-	return err
+//SubInt substructs int
+func SubInt(a, b int) int {
+	return a - b
+}
+
+//MulInt multiplis int
+func MulInt(a, b int) int {
+	return a * b
+}
+
+//DivInt divieds int
+func DivInt(a, b int) int {
+	return a / b
 }
