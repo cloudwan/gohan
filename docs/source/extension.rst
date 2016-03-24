@@ -1000,7 +1000,7 @@ You can define function using "define" task.
         - when: x < 2
           return: x
         - sub_int: a=$x b=1
-          register: x
+          register: $x
         - fib:
             x: $x
           register: a

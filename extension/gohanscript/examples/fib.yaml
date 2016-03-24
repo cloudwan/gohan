@@ -5,7 +5,7 @@ tasks:
       x: int
     body:
     - when: x < 2
-      return: x
+      return: $x
     - sub_int: a=$x b=1
       register: x
     - fib:
@@ -21,4 +21,4 @@ tasks:
     - return: $result
 - fib: x=30
   register: result2
-- debug:
+- debug: msg="fib(30)={{result2}}"
