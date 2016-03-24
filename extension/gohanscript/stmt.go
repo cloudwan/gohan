@@ -45,6 +45,7 @@ type Stmt struct {
 	Worker    int
 	Args      map[string]Value
 	WithItems Value
+	LoopVar   string
 	WithDict  Value
 	Register  string
 	RawData   map[string]interface{}
@@ -104,6 +105,10 @@ func NewStmt(FileName string, node *yaml.Node) (stmt *Stmt, err error) {
 	}
 	stmt.Retry = util.MaybeInt(stmt.RawData["retries"])
 	stmt.Worker = util.MaybeInt(stmt.RawData["worker"])
+	stmt.LoopVar = util.MaybeString(stmt.RawData["loop_var"])
+	if stmt.LoopVar == "" {
+		stmt.LoopVar = "item"
+	}
 	if stmt.Retry == 0 {
 		stmt.Retry = 1
 	}

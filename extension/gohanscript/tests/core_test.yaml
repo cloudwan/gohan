@@ -12,6 +12,26 @@ test_suite:
       - orange
       - banana
     - assert: expect=appleorangebanana actual="{{result}}"
+  - name: You can do nested loop.
+    test:
+    - vars:
+        result: ""
+        persons:
+        - name: Alice
+          hobbies:
+          - mailing
+          - reading
+        - name: Bob
+          hobbies:
+          - mailing
+          - running
+    - blocks:
+        - vars:
+            result: "{{result}}{{item}}"
+          with_items: $person.hobbies
+      with_items: $persons
+      loop_var: person
+    - assert: expect=mailingreadingmailingrunning actual="{{result}}"
   - name: You can set value using vars.
     test:
     - vars:
