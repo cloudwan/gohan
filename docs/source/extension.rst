@@ -998,7 +998,7 @@ You can define function using "define" task.
           x: int
         body:
         - when: x < 2
-          return: x
+          return: $x
         - sub_int: a=$x b=1
           register: x
         - fib:
@@ -1011,8 +1011,8 @@ You can define function using "define" task.
           register: b
         - add_int: a=$a b=$b
           register: result
-        - return: result
-    - fib: x=10
+        - return: $result
+    - fib: x=30
       register: result2
     - debug: msg="result = {{result2}}"
 
@@ -1021,7 +1021,7 @@ you can use return task in function block.
 .. code-block:: shell
 
     $ gohan run fib.yaml
-    16:07:39.964 ▶ DEBUG  [fib.yaml line:23 column:2] result = 55
+    16:07:39.964 ▶ DEBUG  [fib.yaml line:23 column:2] result = 832040
 
 Include
 ~~~~~~~
