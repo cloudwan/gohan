@@ -27,6 +27,8 @@ You can satisfy the first two steps of **Setup** on Heroku using this button:
 * Download Gohan binary and sample configuration: https://github.com/cloudwan/ansible-gohan/releases
 * Start server: `./gohan server --config-file etc/gohan.yaml`
 
+see more [document](./docs/source/installation.rst)
+
 ## WebUI client
 ```
 https://localhost:9443/webui/ (or https://$APPNAME.herokuapp.com/webui/ )
@@ -77,8 +79,15 @@ export GOHAN_ENDPOINT_URL=https://$APPNAME.herokuapp.com
 ./gohan client
 ```
 
-# Examples
-## Define your resource model
+gohan cli provides various functions
+
+see more [commands document](./docs/source/commands.rst)
+
+# Configuration guide
+
+see [config document](./docs/source/config.rst)
+
+# Schema
 
 You can define your resource model using a JSON schema.
 Alternatively you can use YAML format as described in this example.
@@ -129,7 +138,19 @@ Alternatively you can use YAML format as described in this example.
     title: Network
 ```
 
-## Define your application policy
+see more
+
+- [schema document](./docs/source/schema.rst)
+
+# API
+
+- [api document](./docs/source/api.rst)
+
+# DB
+
+- [db document](./docs/source/database.rst)
+
+# Appliation policy
 
 Gohan can use OpenStack Keystone as an identity management system. You can
 configure API access policy based on role information in Keystone.
@@ -156,73 +177,25 @@ resource or any custom actions defined by schema performed on a
       path: .*
 ```
 
-## Implement custom logic
+see more [policy document](./docs/source/policy.rst)
 
-You can add your custom logic for each CRUD event.
+# Extension
 
-### Javascript
+You can add your custom logic for each CRUD event using Javascript or
+Gohanscript (YAML based DSL).
 
-```yaml
-extensions:
-- code: |
-    gohan_register_handler("pre_create", function (context){
-       console.log("Hello world")
-    });
-  event: list
-  id: test
-  path: /v2.0/network.*
-```
+see more [extension document](./docs/source/extension.rst)
 
-### [Experimental] Gohan script (Ansible inspired DSL)
-
-```yaml
-extensions:
-- id: network
-  code_type: donburi
-  code: |
-    tasks:
-      - contrail:
-          schema: "virtual-network"
-          allow_update: []
-          id: "{{ .resource.contrail_virtual_network }}"
-          properties:
-            parent_type: "project"
-            fq_name:
-              - default-domain
-              - "{{ .tenant_name }}"
-              - "{{ .resource.id }}"
-        register: network_response
-      - vars:
-          status: "ACTIVE"
-        when: network_response.status_code == 200
-        else:
-          - vars:
-              status: "ERROR"
-          - vars:
-              response_code: 409
-            when: network_response.status_code != 404 && event_type == "pre_delete"
-      - update:
-          schema: "network"
-          properties:
-            id: "{{ .resource.id }}"
-            contrail_virtual_network: '{{ index .network_response "data" "virtual-network" "uuid" }}'
-            status: "{{ .status }}"
-  path: "/v2.0/network.*"
-```
-
-You can also find an example for Go based extensions in here
-https://github.com/cloudwan/gohan/tree/master/exampleapp
-
-See more information in the documentation.
-
-## Integrate Gohan with your system
+# Integrate Gohan with your system
 
 Every CRUD event will be pushed to a sync layer (currently *etcd* is supported), so your worker can be synchronized.
 
 You can also use Gohan as a worker. Gohan supports AMQP (OpenStack
   notification), SNMP (experimental), and CRON, to execute extensions.
 
-# More examples
+see more [sync document](./docs/source/sync.rst)
+
+# Examples
 
 See more at https://github.com/cloudwan/gohan_apps
 
@@ -232,13 +205,7 @@ See more at https://github.com/cloudwan/gohan_apps
 - Install development tools
 
 ```
-go get golang.org/x/tools/cmd/goimports
-go get github.com/tools/godep
-go get github.com/golang/lint/golint
-go get github.com/coreos/etcd
-go get github.com/axw/gocov/gocov
-go get golang.org/x/tools/cmd/vet
-go get github.com/jteeuwen/go-bindata/go-bindata
+make deps
 ```
 
 - make & make install
@@ -289,15 +256,16 @@ Apache2
 
 # How to contribute
 
-(1) Sign our CLA and send scan for info@cloudwan.io
+* Sign our CLA and send scan for info@cloudwan.io
 
 (Individual version) https://github.com/cloudwan/gohan/blob/master/docs/cla.txt
 (Company version) https://github.com/cloudwan/gohan/blob/master/docs/ccla.txt
 
-(2) Create an issue in github
-(3) Send PR for github
+* Create an issue in github
+* Send PR for github
 
 We recommend to rebase mulitple commit for 1.
 
 # Additional resources
-See more documentation at http://gohan.cloudwan.io/gohan/
+See more documentation at http://gohan.cloudwan.io/gohan/ or
+ [document](./docs/source/)
