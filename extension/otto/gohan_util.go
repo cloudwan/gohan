@@ -31,6 +31,7 @@ import (
 	"github.com/twinj/uuid"
 
 	"github.com/cloudwan/gohan/schema"
+	"github.com/cloudwan/gohan/util"
 )
 
 const (
@@ -166,6 +167,21 @@ func init() {
 					resp["output"] = string(out)
 				}
 				value, _ := vm.ToValue(resp)
+				return value
+			},
+			"gohan_config": func(call otto.FunctionCall) otto.Value {
+				VerifyCallArguments(&call, "gohan_exec", 2)
+				configKey, err := GetString(call.Argument(0))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+				defaultValue, err := call.Argument(1).Export()
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+				config := util.GetConfig()
+				result := config.GetParam(configKey, defaultValue)
+				value, _ := vm.ToValue(result)
 				return value
 			},
 		}

@@ -96,6 +96,12 @@ data : post or put data
 options : dictionary of options for http client
 opaque : boolean - whether to parse URL or to treat it as raw
 
+- gohan_config(key, default_value)
+
+get value from Gohan config. If key is not found, default value is returned.
+Key should be specified as
+`JSON Pointer <http://tools.ietf.org/html/draft-ietf-appsawg-json-pointer-07>`_.
+
 - gohan_db_list(transaction, schema_id, filter_object[, order_key[, limit[, offset]]])
 
 retrive all data from database
