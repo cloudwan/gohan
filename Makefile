@@ -16,6 +16,13 @@ all: format lint build test
 
 deps:
 	@echo "$(OK_COLOR)==> Installing dependencies$(NO_COLOR)"
+	go get golang.org/x/tools/cmd/goimports
+	go get github.com/tools/godep
+	go get github.com/golang/lint/golint
+	go get github.com/coreos/etcd
+	go get github.com/axw/gocov/gocov
+	go get golang.org/x/tools/cmd/vet
+	go get github.com/jteeuwen/go-bindata/go-bindata
 	godep restore
 
 savedeps:

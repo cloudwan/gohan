@@ -47,15 +47,9 @@ You need go (>1.4) to build gohan.
 
 .. code-block:: shell
 
-  # setup development tools
-  go get github.com/tools/godep
-  go get github.com/golang/lint/golint
-  go get github.com/coreos/etcd
-  go get golang.org/x/tools/cmd/cover
-  go get golang.org/x/tools/cmd/vet
-
   # clone gohan
   git clone https://github.com/cloudwan/gohan.git
   cd gohan
+  make deps # only the first time
   make
   make install

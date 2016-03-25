@@ -12,10 +12,7 @@ build:
           export GOSRC=$GOPATH/src
           export REPO_PATH=$GOSRC/github.com/cloudwan
           ln -s /pipeline/source $REPO_PATH/gohan
-          go get github.com/axw/gocov/gocov
-          go get golang.org/x/tools/cmd/goimports
-          go get github.com/nati/goveralls
-          go get -u github.com/jteeuwen/go-bindata/...
+          make deps
     - script:
         name: make
         code: |
