@@ -13,7 +13,7 @@ build:
           export REPO_PATH=$GOSRC/github.com/cloudwan
           mkdir -p $REPO_PATH
           ln -s /pipeline/source $REPO_PATH/gohan
-          go get github.com/nati/goveralls
+          go get github.com/mattn/goveralls
           make deps
     - script:
         name: make
@@ -26,7 +26,7 @@ build:
           echo $REPO_PATH
           cd $REPO_PATH/gohan
           make
-          GIT_BRANCH=$WERCKER_GIT_BRANCH goveralls -gocovdata=coverage.json -service=wercker.com -repotoken=${COVERALLS_TOKEN}
+          GIT_BRANCH=$WERCKER_GIT_BRANCH goveralls -coverprofile=profile.cov -service=wercker.com -repotoken=${COVERALLS_TOKEN}
 
 deploy:
   steps:

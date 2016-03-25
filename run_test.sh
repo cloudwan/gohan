@@ -12,10 +12,29 @@ DATA_DIR=`mktemp -d 2>/dev/null || mktemp -d -t 'mytmpdir'`
 etcd -data-dir $DATA_DIR &
 ETCD_PID=$!
 
-if [[ $ENABLE_V8 == "true" ]]; then
-	TAGS="-tags v8"
+echo "mode: count" > profile.cov
+
+# Standard go tooling behavior is to ignore dirs with leading underscors
+for dir in $(find . -maxdepth 10 -not -path './.git*' -not -path '*/_*' -not -path './vendor/*' -type d);
+do
+result=0
+if ls $dir/*.go &> /dev/null; then
+    go test -covermode=count -coverprofile=$dir/profile.tmp $dir
+    result=$?
+    if [ -f $dir/profile.tmp ]
+    then
+        cat $dir/profile.tmp | tail -n +2 >> profile.cov
+        rm $dir/profile.tmp
+    fi
+    if [ $result -ne 0 ]; then
+        break
+    fi
+fi
+done
+
+if [ $result -eq 0 ]; then
+    go tool cover -func profile.cov
 fi
 
-gocov test $TAGS ./...  > coverage.json
 kill $ETCD_PID
 exit $result

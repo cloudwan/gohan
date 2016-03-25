@@ -17,11 +17,6 @@ all: format lint build test
 deps:
 	@echo "$(OK_COLOR)==> Installing dependencies$(NO_COLOR)"
 	./tools/dev_setup.sh
-	godep restore
-
-savedeps:
-	@echo "$(OK_COLOR)==> Updating all dependencies$(NO_COLOR)"
-	godep save ./...
 
 format:
 	@echo "$(OK_COLOR)==> Formatting$(NO_COLOR)"
@@ -34,8 +29,7 @@ test:
 
 lint:
 	@echo "$(OK_COLOR)==> Linting$(NO_COLOR)"
-	golint ./... | grep -v util/go-bindata.go | grep -v extension/gohanscript/op.go | test `wc -l` -eq 0
-	go vet ./...
+	./tools/lint.sh
 
 build: deps
 	@echo "$(OK_COLOR)==> Building$(NO_COLOR)"
