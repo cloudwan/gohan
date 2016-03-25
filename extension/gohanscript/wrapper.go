@@ -213,7 +213,7 @@ func loopWrapper(stmt *Stmt, f func(*VM, *Context) (interface{}, error)) (func(*
 				if stmt.Worker > 0 {
 					loopContext = context.Extend(nil)
 				}
-				loopContext.Set("item", item)
+				loopContext.Set(stmt.LoopVar, item)
 				value, err = f(vm, loopContext)
 				if err != nil {
 					context.Set("error", err.Error())

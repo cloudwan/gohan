@@ -853,6 +853,30 @@ You can also loop over a dict.
     15:32:42.513 ▶ DEBUG  [with_items.yaml line:9 column:2] name John
     15:32:42.513 ▶ DEBUG  [with_items.yaml line:9 column:2] age 30
 
+you can specify loop variable name by specifying loop_var:
+
+.. code-block:: yaml
+
+    tasks:
+    - vars:
+        result: ""
+        persons:
+        - name: Alice
+          hobbies:
+          - mailing
+          - reading
+        - name: Bob
+          hobbies:
+          - mailing
+          - running
+    - blocks:
+        - vars:
+            result: "{{result}}{{item}}"
+          with_items: $person.hobbies
+      with_items: $persons
+      loop_var: person
+
+
 Conditional
 ~~~~~~~~~~~~~~
 
