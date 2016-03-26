@@ -116,7 +116,7 @@ schemas:
   singular: server
   plural: server
   prefix: /v1.0
-  title: server
+  title: Server
   schema:
     properties:
       name:
@@ -144,6 +144,10 @@ schemas:
         type: string
         format: uuid
         description: ""
+    propertiesOrder:
+    - id
+    - name
+    - management_ip
   actions:
     reboot:
         path: /:id/reboot
