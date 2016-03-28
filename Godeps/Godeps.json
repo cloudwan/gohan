@@ -4,6 +4,10 @@
 	"GodepVersion": "v60",
 	"Deps": [
 		{
+			"ImportPath": "github.com/martini-contrib/staticbin",
+			"Rev": "b9631fb8c188bec7aefed202f05fb3b76abadced"
+		},
+		{
 			"ImportPath": "github.com/Juniper/go-netconf/netconf",
 			"Rev": "65f62e43149e0c904c8184d9570c15ba695ebe84"
 		},

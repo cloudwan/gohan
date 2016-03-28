@@ -86,8 +86,8 @@ var _ = Describe("Server package test", func() {
 		})
 
 		Context("getting from baseURL", func() {
-			It("should return 404(Not Found)", func() {
-				testURL("GET", baseURL, adminTokenID, nil, http.StatusNotFound)
+			It("should return 200", func() {
+				testURL("GET", baseURL, adminTokenID, nil, http.StatusOK)
 			})
 		})
 
@@ -314,7 +314,7 @@ var _ = Describe("Server package test", func() {
 		It("should work", func() {
 			network := getNetwork("red", "red")
 
-			testURL("GET", baseURL, memberTokenID, nil, http.StatusNotFound)
+			testURL("GET", baseURL, memberTokenID, nil, http.StatusOK)
 			testURL("GET", networkPluralURL, memberTokenID, nil, http.StatusOK)
 			testURL("GET", networkPluralURL, "", nil, http.StatusUnauthorized)
 			testURL("GET", schemaURL, memberTokenID, nil, http.StatusOK)

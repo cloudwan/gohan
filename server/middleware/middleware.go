@@ -121,10 +121,16 @@ func Authentication() martini.Handler {
 			return
 		}
 		//TODO(nati) make this configureable
-		if strings.HasPrefix(req.URL.Path, "/webui/") {
+		if strings.HasPrefix(req.URL.Path, "/webui") {
 			c.Next()
 			return
 		}
+
+		if req.URL.Path == "/" || req.URL.Path == "/webui" {
+			http.Redirect(res, req, "/webui/", http.StatusTemporaryRedirect)
+			return
+		}
+
 		if req.URL.Path == "/v2.0/tokens" {
 			c.Next()
 			return

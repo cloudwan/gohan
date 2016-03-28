@@ -31,7 +31,7 @@ see more [document](./docs/source/installation.rst)
 
 ## WebUI client
 ```
-https://localhost:9443/webui/ (or https://$APPNAME.herokuapp.com/webui/ )
+https://localhost:9443/ (or https://$APPNAME.herokuapp.com/ )
 ```
 
 Login with this ID/password

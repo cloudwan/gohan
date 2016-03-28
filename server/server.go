@@ -33,7 +33,7 @@ import (
 	"github.com/cloudwan/gohan/sync/etcd"
 	"github.com/cloudwan/gohan/util"
 	"github.com/go-martini/martini"
-	//Import gohan extension buildins
+	"github.com/martini-contrib/staticbin"
 )
 
 type tls struct {
@@ -266,12 +266,18 @@ func NewServer(configFile string) (*Server, error) {
 			rw.Header().Add("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE")
 		})
 	}
-	server.timelimit = config.GetInt("extention/timelimit", 30)
-	documentRoot := config.GetString("document_root", "./")
-	log.Info("Static file serving from %s", documentRoot)
-	documentRootABS, err := filepath.Abs(documentRoot)
-	server.martini.Use(martini.Static(documentRootABS))
-
+	server.timelimit = config.GetInt("extension/timelimit", 30)
+	documentRoot := config.GetString("document_root", "embed")
+	if documentRoot == "embed" {
+		m.Use(staticbin.Static("public", util.Asset))
+	} else {
+		log.Info("Static file serving from %s", documentRoot)
+		documentRootABS, err := filepath.Abs(documentRoot)
+		if err != nil {
+			return nil, err
+		}
+		server.martini.Use(martini.Static(documentRootABS))
+	}
 	server.mapRoutes()
 	return server, nil
 }
