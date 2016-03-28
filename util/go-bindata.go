@@ -7,7 +7,6 @@
 // public/webui/46661d6d65debc63884004fed6e37e5c.svg
 // public/webui/b7449d6115c7b39d6d92f8b310a062b0.png
 // public/webui/bundle.js
-// public/webui/config.json
 // public/webui/config.json.sample
 // public/webui/fontawesome-webfont.eot
 // public/webui/fontawesome-webfont.svg
@@ -183,7 +182,7 @@ func publicWebui46661d6d65debc63884004fed6e37e5cSvg() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/46661d6d65debc63884004fed6e37e5c.svg", size: 41, mode: os.FileMode(420), modTime: time.Unix(1458707531, 0)}
+	info := bindataFileInfo{name: "public/webui/46661d6d65debc63884004fed6e37e5c.svg", size: 41, mode: os.FileMode(420), modTime: time.Unix(1459206121, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -203,7 +202,7 @@ func publicWebuiB7449d6115c7b39d6d92f8b310a062b0Png() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/b7449d6115c7b39d6d92f8b310a062b0.png", size: 12292, mode: os.FileMode(420), modTime: time.Unix(1458707531, 0)}
+	info := bindataFileInfo{name: "public/webui/b7449d6115c7b39d6d92f8b310a062b0.png", size: 12292, mode: os.FileMode(420), modTime: time.Unix(1459206121, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -223,27 +222,7 @@ func publicWebuiBundleJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/bundle.js", size: 816362, mode: os.FileMode(420), modTime: time.Unix(1458772745, 0)}
-	a := &asset{bytes: bytes, info: info}
-	return a, nil
-}
-
-var _publicWebuiConfigJson = []byte("\x1f\x8b\x08\x00\x00\x09\x6e\x88\x00\xff\x6c\x8d\x3f\xcb\xc2\x30\x10\xc6\xf7\x7e\x8a\x72\xef\xfa\xd2\xab\x8e\x5d\x5d\xdc\x1c\xd4\x49\x24\x1c\x12\x8c\xd0\x7f\xf4\x92\x38\x48\xbe\xbb\xc9\xa5\xb4\x22\x66\x0a\xcf\xf3\xfb\x3d\xf7\x2a\xca\xf8\x80\x9c\x35\xe7\xa9\x85\xa6\x04\x63\xed\xc8\x0d\xa2\x52\xfb\xc3\xf1\xa4\x14\xfa\x6d\x55\xc3\x7f\xe6\xee\x83\xa1\x3e\x52\x59\x93\x88\x6f\x46\x77\x94\x4c\x94\x16\x7d\x5d\x6d\x30\xa7\x3c\x7b\x02\xba\xdf\xfb\x20\x44\x98\x0f\x4c\x83\xb3\x9a\x23\x77\x59\xc4\xf5\x96\x10\x23\x59\x93\x76\xfe\xf0\x63\x5c\x1a\xff\xd0\xcf\x5d\x4b\x9c\x74\x60\xea\xc6\x56\xa7\xe8\x1b\xeb\xa9\xd3\x2b\x01\x4b\x19\xe4\x77\x2d\x42\xf1\x0e\x00\x00\xff\xff\x72\xcf\xf0\x35\x15\x01\x00\x00")
-
-func publicWebuiConfigJsonBytes() ([]byte, error) {
-	return bindataRead(
-		_publicWebuiConfigJson,
-		"public/webui/config.json",
-	)
-}
-
-func publicWebuiConfigJson() (*asset, error) {
-	bytes, err := publicWebuiConfigJsonBytes()
-	if err != nil {
-		return nil, err
-	}
-
-	info := bindataFileInfo{name: "public/webui/config.json", size: 277, mode: os.FileMode(420), modTime: time.Unix(1459191650, 0)}
+	info := bindataFileInfo{name: "public/webui/bundle.js", size: 816362, mode: os.FileMode(420), modTime: time.Unix(1459206121, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -263,7 +242,7 @@ func publicWebuiConfigJsonSample() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/config.json.sample", size: 277, mode: os.FileMode(420), modTime: time.Unix(1456945742, 0)}
+	info := bindataFileInfo{name: "public/webui/config.json.sample", size: 277, mode: os.FileMode(420), modTime: time.Unix(1459206121, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -283,7 +262,7 @@ func publicWebuiFontawesomeWebfontEot() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/fontawesome-webfont.eot", size: 70807, mode: os.FileMode(420), modTime: time.Unix(1458707531, 0)}
+	info := bindataFileInfo{name: "public/webui/fontawesome-webfont.eot", size: 70807, mode: os.FileMode(420), modTime: time.Unix(1459206121, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -303,7 +282,7 @@ func publicWebuiFontawesomeWebfontSvg() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/fontawesome-webfont.svg", size: 365616, mode: os.FileMode(420), modTime: time.Unix(1458707531, 0)}
+	info := bindataFileInfo{name: "public/webui/fontawesome-webfont.svg", size: 365616, mode: os.FileMode(420), modTime: time.Unix(1459206121, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -323,7 +302,7 @@ func publicWebuiFontawesomeWebfontTtf() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/fontawesome-webfont.ttf", size: 142072, mode: os.FileMode(420), modTime: time.Unix(1458707531, 0)}
+	info := bindataFileInfo{name: "public/webui/fontawesome-webfont.ttf", size: 142072, mode: os.FileMode(420), modTime: time.Unix(1459206121, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -343,7 +322,7 @@ func publicWebuiFontawesomeWebfontWoff() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/fontawesome-webfont.woff", size: 83588, mode: os.FileMode(420), modTime: time.Unix(1458707531, 0)}
+	info := bindataFileInfo{name: "public/webui/fontawesome-webfont.woff", size: 83588, mode: os.FileMode(420), modTime: time.Unix(1459206121, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -363,7 +342,7 @@ func publicWebuiFontawesomeWebfontWoff2() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/fontawesome-webfont.woff2", size: 66624, mode: os.FileMode(420), modTime: time.Unix(1458707531, 0)}
+	info := bindataFileInfo{name: "public/webui/fontawesome-webfont.woff2", size: 66624, mode: os.FileMode(420), modTime: time.Unix(1459206121, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -383,7 +362,7 @@ func publicWebuiGlyphiconsHalflingsRegularEot() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/glyphicons-halflings-regular.eot", size: 20127, mode: os.FileMode(420), modTime: time.Unix(1458707531, 0)}
+	info := bindataFileInfo{name: "public/webui/glyphicons-halflings-regular.eot", size: 20127, mode: os.FileMode(420), modTime: time.Unix(1459206121, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -403,7 +382,7 @@ func publicWebuiGlyphiconsHalflingsRegularSvg() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/glyphicons-halflings-regular.svg", size: 82, mode: os.FileMode(420), modTime: time.Unix(1458707531, 0)}
+	info := bindataFileInfo{name: "public/webui/glyphicons-halflings-regular.svg", size: 82, mode: os.FileMode(420), modTime: time.Unix(1459206121, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -423,7 +402,7 @@ func publicWebuiGlyphiconsHalflingsRegularTtf() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/glyphicons-halflings-regular.ttf", size: 45404, mode: os.FileMode(420), modTime: time.Unix(1458707531, 0)}
+	info := bindataFileInfo{name: "public/webui/glyphicons-halflings-regular.ttf", size: 45404, mode: os.FileMode(420), modTime: time.Unix(1459206121, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -443,7 +422,7 @@ func publicWebuiGlyphiconsHalflingsRegularWoff() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/glyphicons-halflings-regular.woff", size: 23424, mode: os.FileMode(420), modTime: time.Unix(1458707531, 0)}
+	info := bindataFileInfo{name: "public/webui/glyphicons-halflings-regular.woff", size: 23424, mode: os.FileMode(420), modTime: time.Unix(1459206121, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -463,7 +442,7 @@ func publicWebuiGlyphiconsHalflingsRegularWoff2() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/glyphicons-halflings-regular.woff2", size: 18028, mode: os.FileMode(420), modTime: time.Unix(1458707531, 0)}
+	info := bindataFileInfo{name: "public/webui/glyphicons-halflings-regular.woff2", size: 18028, mode: os.FileMode(420), modTime: time.Unix(1459206121, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -483,7 +462,7 @@ func publicWebuiIndexHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/index.html", size: 343, mode: os.FileMode(420), modTime: time.Unix(1458707531, 0)}
+	info := bindataFileInfo{name: "public/webui/index.html", size: 343, mode: os.FileMode(420), modTime: time.Unix(1459206121, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -503,7 +482,7 @@ func publicWebuiStylesCss() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/styles.css", size: 271063, mode: os.FileMode(420), modTime: time.Unix(1458772745, 0)}
+	info := bindataFileInfo{name: "public/webui/styles.css", size: 271063, mode: os.FileMode(420), modTime: time.Unix(1459206121, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -567,7 +546,6 @@ var _bindata = map[string]func() (*asset, error){
 	"public/webui/46661d6d65debc63884004fed6e37e5c.svg": publicWebui46661d6d65debc63884004fed6e37e5cSvg,
 	"public/webui/b7449d6115c7b39d6d92f8b310a062b0.png": publicWebuiB7449d6115c7b39d6d92f8b310a062b0Png,
 	"public/webui/bundle.js":                            publicWebuiBundleJs,
-	"public/webui/config.json":                          publicWebuiConfigJson,
 	"public/webui/config.json.sample":                   publicWebuiConfigJsonSample,
 	"public/webui/fontawesome-webfont.eot":              publicWebuiFontawesomeWebfontEot,
 	"public/webui/fontawesome-webfont.svg":              publicWebuiFontawesomeWebfontSvg,
@@ -641,7 +619,6 @@ var _bintree = &bintree{nil, map[string]*bintree{
 			"46661d6d65debc63884004fed6e37e5c.svg": &bintree{publicWebui46661d6d65debc63884004fed6e37e5cSvg, map[string]*bintree{}},
 			"b7449d6115c7b39d6d92f8b310a062b0.png": &bintree{publicWebuiB7449d6115c7b39d6d92f8b310a062b0Png, map[string]*bintree{}},
 			"bundle.js":                            &bintree{publicWebuiBundleJs, map[string]*bintree{}},
-			"config.json":                          &bintree{publicWebuiConfigJson, map[string]*bintree{}},
 			"config.json.sample":                   &bintree{publicWebuiConfigJsonSample, map[string]*bintree{}},
 			"fontawesome-webfont.eot":              &bintree{publicWebuiFontawesomeWebfontEot, map[string]*bintree{}},
 			"fontawesome-webfont.svg":              &bintree{publicWebuiFontawesomeWebfontSvg, map[string]*bintree{}},
