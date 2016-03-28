@@ -6,7 +6,7 @@ schemas:
     - "../etc/schema/gohan.json"
     - "../tests/test_schema.yaml"
 address: ":19090"
-document_root: "../etc/"
+document_root: "embed"
 etcd:
     - "http://127.0.0.1:4001"
 keystone:

@@ -28,8 +28,7 @@ tls:
     key_file: ./key.pem
     cert_file: ./cert.pem
 # document root of gohan API server
-# Note: only static and schema directoriy will be served
-document_root: "."
+document_root: "embed"
 # list of etcd backend servers
 #etcd:
 #    - "http://127.0.0.1:4001"
