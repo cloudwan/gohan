@@ -122,7 +122,7 @@ func etcSchemaGohanJson() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "etc/schema/gohan.json", size: 33085, mode: os.FileMode(420), modTime: time.Unix(1459372481, 0)}
+	info := bindataFileInfo{name: "etc/schema/gohan.json", size: 33085, mode: os.FileMode(420), modTime: time.Unix(1459379991, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
