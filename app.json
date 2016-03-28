@@ -7,11 +7,11 @@
     "cloud",
     "json schema"
   ],
-  "image": "heroku/go:1.5",
+  "image": "heroku/go:1.6",
   "mount_dir": "src/github.com/cloudwan/gohan",
   "website": "http://cloudwan.github.com/gohan/",
   "repository": "http://github.com/cloudwan/gohan",
   "env": {
-    "BUILDPACK_URL": "https://github.com/cloudwan/heroku-buildpack-go.git"
+    "BUILDPACK_URL": "https://github.com/heroku/heroku-buildpack-go.git"
   }
 }
