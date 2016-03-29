@@ -156,7 +156,8 @@ func (handler *numberHandler) decode(property *schema.Property, data interface{}
 		err = fmt.Errorf("unknown type %T", t)
 		return
 	case []uint8: // mysql
-		res, err = strconv.ParseUint(string(data.([]uint8)), 10, 64)
+		uintValue, _ := strconv.ParseUint(string(t), 10, 64)
+		res = int(uintValue)
 	case int64: // sqlite3
 		res = int(t)
 	}

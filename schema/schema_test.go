@@ -29,7 +29,10 @@ var _ = Describe("Schema", func() {
 			schemaPath := "../tests/test_schema_dag_dependency.yaml"
 			Expect(manager.LoadSchemaFromFile(schemaPath)).To(Succeed())
 			Expect(manager.schemaOrder).To(Equal(
-				[]string{"red_resource",
+				[]string{
+					"base_resource",
+					"common_resource",
+					"red_resource",
 					"blue_resource",
 					"green_resource",
 					"orange_resource"}))

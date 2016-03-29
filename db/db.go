@@ -115,6 +115,9 @@ func InitDBWithSchemas(dbType, dbConnection string, dropOnCreate, cascade bool) 
 	if dropOnCreate {
 		for i := len(schemas) - 1; i >= 0; i-- {
 			s := schemas[i]
+			if s.IsAbstract() {
+				continue
+			}
 			log.Debug("Dropping table '%s'", s.Plural)
 			err = aDb.DropTable(s)
 			if err != nil {
@@ -123,6 +126,9 @@ func InitDBWithSchemas(dbType, dbConnection string, dropOnCreate, cascade bool) 
 		}
 	}
 	for _, s := range schemas {
+		if s.IsAbstract() {
+			continue
+		}
 		log.Debug("Registering schema %s", s.ID)
 		err = aDb.RegisterTable(s, cascade)
 		if err != nil {
