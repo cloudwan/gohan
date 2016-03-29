@@ -318,3 +318,8 @@ func boolInSlice(a bool, list []string) bool {
 	}
 	return false
 }
+
+//SetMaxOpenConns isn't supported
+func (db *DB) SetMaxOpenConns(int) {
+
+}

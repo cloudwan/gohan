@@ -753,3 +753,8 @@ func addFilterToQuery(s *schema.Schema, q sq.SelectBuilder, filter map[string]in
 	}
 	return q, nil
 }
+
+//SetMaxOpenConns limit maximum connections
+func (db *DB) SetMaxOpenConns(maxIdleConns int) {
+	db.DB.SetMaxOpenConns(maxIdleConns)
+}
