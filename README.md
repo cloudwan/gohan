@@ -31,7 +31,7 @@ see more [document](./docs/source/installation.rst)
 
 ## WebUI client
 ```
-https://localhost:9443/ (or https://$APPNAME.herokuapp.com/ )
+http://localhost:9091/ (or https://$APPNAME.herokuapp.com/ )
 ```
 
 Login with this ID/password
@@ -44,7 +44,7 @@ Password: gohan
 You can also access schema editing webUI by adding `?type=metaschema` on URL.
 
 ```
-https://localhost:9443/webui/?type=metaschema
+http://localhost:9091/webui/?type=metaschema
 ```
 
 ## Try CLI client
@@ -58,7 +58,7 @@ export OS_USERNAME=admin
 export GOHAN_CACHE_SCHEMAS=true
 export GOHAN_CACHE_TIMEOUT=5m
 export GOHAN_CACHE_PATH=~/.cached-gohan-schemas
-export OS_AUTH_URL=https://localhost:9443/v2.0
+export OS_AUTH_URL=http://localhost:9091/v2.0
 
 ./gohan client
 ```
