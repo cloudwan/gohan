@@ -275,13 +275,13 @@ func NewServer(configFile string) (*Server, error) {
 				c.Next()
 				return
 			}
-			address := server.address
+			address := config.GetString("webui_config/address", server.address)
 			if address[0] == ':' {
 				address = "__HOST__" + address
 			}
 			baseURL := "http://" + address
 			authURL := "http://" + address + "/v2.0"
-			if config.GetBool("tls/enabled", false) {
+			if config.GetBool("webui_config/tls", config.GetBool("tls/enabled", false)) {
 				baseURL = "https://" + address
 				authURL = "https://" + address + "/v2.0"
 			}

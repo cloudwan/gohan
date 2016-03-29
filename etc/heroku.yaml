@@ -46,6 +46,7 @@ cors: "*"
 webui_config:
     # if true, gohan generates webui config.json
     enabled: true
+    address: https://__HOST__
 
 # allowed levels  "CRITICAL", "ERROR", "WARNING", "NOTICE", "INFO", "DEBUG",
 logging:
