@@ -32,6 +32,7 @@ import (
 	"github.com/cloudwan/gohan/sync"
 	"github.com/cloudwan/gohan/sync/etcd"
 	"github.com/cloudwan/gohan/util"
+	"github.com/drone/routes"
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/staticbin"
 )
@@ -268,6 +269,33 @@ func NewServer(configFile string) (*Server, error) {
 	}
 	server.timelimit = config.GetInt("extension/timelimit", 30)
 	documentRoot := config.GetString("document_root", "embed")
+	if config.GetBool("webui_config/enabled", false) {
+		m.Use(func(res http.ResponseWriter, req *http.Request, c martini.Context) {
+			if req.URL.Path != "/webui/config.json" {
+				c.Next()
+				return
+			}
+			address := server.address
+			if address[0] == ':' {
+				address = "__HOST__" + address
+			}
+			baseURL := "http://" + address
+			authURL := "http://" + address + "/v2.0"
+			if config.GetBool("tls/enabled", false) {
+				baseURL = "https://" + address
+				authURL = "https://" + address + "/v2.0"
+			}
+			authURL = config.GetString("webui_config/auth_url", authURL)
+			webUIConfig := map[string]interface{}{
+				"authUrl": authURL,
+				"gohan": map[string]interface{}{
+					"schema": "/gohan/v0.1/schemas",
+					"url":    baseURL,
+				},
+			}
+			routes.ServeJson(res, webUIConfig)
+		})
+	}
 	if documentRoot == "embed" {
 		m.Use(staticbin.Static("public", util.Asset))
 	} else {

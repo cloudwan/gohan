@@ -20,11 +20,11 @@ schemas:
 editable_schema: ./example_schema.yaml
 
 # listen address for gohan
-address: ":443"
+address: ":9091"
 tls:
     # browsers need to add exception as long as we use self-signed certificates
     # so lets leave it disabled for now
-    enabled: true
+    enabled: false
     key_file: ./keys/key.pem
     cert_file: ./keys/cert.pem
 # document root of gohan API server
@@ -37,12 +37,20 @@ document_root: "embed"
 keystone:
     use_keystone: true
     fake: true
-    auth_url: "https://localhost:9091/v2.0"
+    # Keystone admin URL
+    auth_url: "http://localhost:9091/v2.0"
     user_name: "admin"
     tenant_name: "admin"
     password: "gohan"
 # CORS (Cross-origin resource sharing (CORS)) configuraion for javascript based client
 cors: "*"
+
+# Generate webui config
+webui_config:
+    # if true, gohan generates webui config.json
+    enabled: true
+    # you need to set keystone auth url for users
+    # auth_url: "http://localhost:9091/v2.0"
 
 # allowed levels  "CRITICAL", "ERROR", "WARNING", "NOTICE", "INFO", "DEBUG",
 logging:
