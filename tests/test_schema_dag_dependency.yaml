@@ -1,8 +1,8 @@
 schemas:
-- description: orange_resource
-  id: orange_resource
-  plural: orange_resources
-  parent: green_resource
+- description: base_resource
+  type: abstract
+  id: base_resource
+  plural: base_resources
   prefix: /
   schema:
     properties:
@@ -13,6 +13,47 @@ schemas:
         title: ID
         type: string
         unique: false
+      common_resource_id:
+        description: common_resource
+        permission:
+        - create
+        title: common_resource
+        type: string
+        relation: common_resource
+        unique: false
+    propertiesOrder:
+    - id
+    - common_resource
+    type: object
+  singular: base_resources
+  title: base_resources
+- description: common_resource
+  id: common_resource
+  plural: common_resource
+  prefix: /
+  schema:
+    properties:
+      id:
+        description: ID
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: false
+    propertiesOrder:
+    - id
+    type: object
+  singular: common_resource
+  title: common_resource
+- description: orange_resource
+  id: orange_resource
+  extends:
+  - base_resource
+  plural: orange_resources
+  parent: green_resource
+  prefix: /
+  schema:
+    properties:
       blue_resource_id:
         description: blue_resource
         permission:
@@ -22,7 +63,7 @@ schemas:
         relation: blue_resource
         unique: false
     propertiesOrder:
-    - id
+    - blue_resource_id
     type: object
   singular: orange_resource
   title: orange_resource
@@ -30,16 +71,11 @@ schemas:
   id: green_resource
   plural: green_resources
   parent: red_resource
+  extends:
+  - base_resource
   prefix: /
   schema:
     properties:
-      id:
-        description: ID
-        permission:
-        - create
-        title: ID
-        type: string
-        unique: false
       blue_resource_id:
         description: blue_resource
         permission:
@@ -49,7 +85,7 @@ schemas:
         relation: blue_resource
         unique: false
     propertiesOrder:
-    - id
+    - blue_resource_id
     type: object
   singular: green_resource
   title: green_resource
@@ -57,6 +93,8 @@ schemas:
   id: blue_resource
   plural: blue_resources
   parent: red_resource
+  extends:
+  - base_resource
   prefix: /
   schema:
     properties:
@@ -74,6 +112,8 @@ schemas:
   title: blue_resource
 - description: red_resource
   id: red_resource
+  extends:
+  - base_resource
   plural: red_resources
   prefix: /
   schema:

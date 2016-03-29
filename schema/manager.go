@@ -304,19 +304,13 @@ func (manager *Manager) LoadSchemaFromFile(filePath string) error {
 		schemaObjList = append(schemaObjList, schemaObj)
 	}
 	schemaOrder, err := reorderSchemas(schemaObjList)
-	if err == nil {
-		schemaObjList = []*Schema{}
-		for _, id := range schemaOrder {
-			schemaObjList = append(schemaObjList, schemaMap[id])
-		}
-	} else {
-		log.Warning("Error in reordering schema %s", err)
-	}
-
 	for _, schemaObj := range schemaObjList {
-		if !schemaObj.IsAbstract() {
+		if schemaObj.IsAbstract() {
+			// Register abstract schema
+			manager.RegisterSchema(schemaObj)
+		} else {
 			for _, baseSchemaID := range schemaObj.Extends {
-				baseSchema, ok := manager.Schema(baseSchemaID)
+				baseSchema, ok := schemaMap[baseSchemaID]
 				if !ok {
 					return fmt.Errorf("Base Schema %s not found", baseSchemaID)
 				}
@@ -326,9 +320,21 @@ func (manager *Manager) LoadSchemaFromFile(filePath string) error {
 				schemaObj.Extend(baseSchema)
 			}
 		}
-		err = manager.RegisterSchema(schemaObj)
-		if err != nil {
-			return err
+	}
+	// Reorder schema by relation topology
+	schemaOrder, err = reorderSchemas(schemaObjList)
+	if err != nil {
+		log.Warning("Error in reordering schema %s", err)
+	}
+
+	schemaObjList = []*Schema{}
+	for _, id := range schemaOrder {
+		schemaObj := schemaMap[id]
+		if !schemaObj.IsAbstract() {
+			err = manager.RegisterSchema(schemaObj)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
