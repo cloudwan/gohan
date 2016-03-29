@@ -82,7 +82,7 @@ func (db *DB) DropTable(s *schema.Schema) error {
 }
 
 func (db *DB) load() error {
-	data, err := util.LoadFile(db.filePath)
+	data, err := util.LoadMap(db.filePath)
 	if err != nil {
 		db.data = map[string]interface{}{}
 		return err

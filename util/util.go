@@ -56,7 +56,7 @@ func SaveFile(file string, data interface{}) error {
 	var err error
 	if strings.HasSuffix(file, ".json") {
 		bytes, err = json.MarshalIndent(data, "", "    ")
-	} else if strings.HasSuffix(file, ".yaml") {
+	} else if strings.HasSuffix(file, ".yaml") || strings.HasSuffix(file, ".yml") {
 		bytes, err = yaml.Marshal(data)
 	}
 	if err != nil {
@@ -66,25 +66,39 @@ func SaveFile(file string, data interface{}) error {
 	return nil
 }
 
+//LoadMap loads map object from file. suffix of filepath will be
+// used as file type. currently, json and yaml is supported
+func LoadMap(filePath string) (map[string]interface{}, error) {
+	data, err := LoadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+	d, ok := data.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("data isn't map")
+	}
+	return d, nil
+}
+
 //LoadFile loads object from file. suffix of filepath will be
 // used as file type. currently, json and yaml is supported
-func LoadFile(filePath string) (map[string]interface{}, error) {
+func LoadFile(filePath string) (interface{}, error) {
 	bodyBuff, err := GetContent(filePath)
 	if err != nil {
 		return nil, err
 	}
 	if strings.HasSuffix(filePath, ".json") {
-		var document map[string]interface{}
+		var document interface{}
 		err = json.Unmarshal(bodyBuff, &document)
 		return document, err
-	} else if strings.HasSuffix(filePath, ".yaml") {
-		var documentYAML map[interface{}]interface{}
+	} else if strings.HasSuffix(filePath, ".yaml") || strings.HasSuffix(filePath, ".yml") {
+		var documentYAML interface{}
 		err = yaml.Unmarshal(bodyBuff, &documentYAML)
 		if err != nil {
 			return map[string]interface{}{}, err
 		}
 		document := DecodeYAMLLibObject(documentYAML)
-		return document.(map[string]interface{}), nil
+		return document, nil
 	}
 	return nil, err
 }
