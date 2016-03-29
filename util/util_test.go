@@ -78,7 +78,7 @@ func testFileUtil(file string) {
 	}
 	Expect(SaveFile(file, data)).To(Succeed())
 	defer os.Remove(file)
-	loadedData, err := LoadFile(file)
+	loadedData, err := LoadMap(file)
 	Expect(err).ToNot(HaveOccurred())
 	Expect(loadedData["test"]).To(Equal(data["test"]))
 }

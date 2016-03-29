@@ -264,7 +264,7 @@ func (manager *Manager) LoadSchemasFromFiles(filePaths ...string) error {
 //LoadSchemaFromFile loads schema from json file
 func (manager *Manager) LoadSchemaFromFile(filePath string) error {
 	log.Info("Loading schema %s ...", filePath)
-	schemas, err := util.LoadFile(filePath)
+	schemas, err := util.LoadMap(filePath)
 	if err != nil {
 		return err
 	}

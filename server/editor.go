@@ -102,7 +102,7 @@ func setupEditor(server *Server) {
 
 			ID := context["id"].(string)
 
-			schemasInFile, err := util.LoadFile(editableSchemaFile)
+			schemasInFile, err := util.LoadMap(editableSchemaFile)
 			if err != nil {
 				return nil
 			}
