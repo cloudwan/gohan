@@ -31,6 +31,7 @@ const noSchemasInManagerError = "No schemas in Manager. Did you remember to load
 //DB is a common interface for handing db
 type DB interface {
 	Connect(string, string) error
+	SetMaxOpenConns(int)
 	Begin() (transaction.Transaction, error)
 	RegisterTable(*schema.Schema, bool) error
 	DropTable(*schema.Schema) error
