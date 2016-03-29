@@ -51,7 +51,8 @@ webui_config:
     enabled: true
     # you need to set keystone auth url for users
     # auth_url: "http://localhost:9091/v2.0"
-
+    tls: false
+    # address: "http://__HOST__:9091"
 # allowed levels  "CRITICAL", "ERROR", "WARNING", "NOTICE", "INFO", "DEBUG",
 logging:
     stderr:
