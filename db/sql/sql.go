@@ -240,10 +240,7 @@ func (db *DB) GenTableDef(s *schema.Schema, cascade bool) string {
 	schemaManager := schema.GetManager()
 	var cols []string
 	var relations []string
-	cascadeString := ""
-	if cascade {
-		cascadeString = "on delete cascade"
-	}
+
 	for _, property := range s.Properties {
 		handler := db.handlers[property.Type]
 		dataType := property.SQLType
@@ -271,6 +268,10 @@ func (db *DB) GenTableDef(s *schema.Schema, cascade bool) string {
 		if property.Relation != "" {
 			foreignSchema, _ := schemaManager.Schema(property.Relation)
 			if foreignSchema != nil {
+				cascadeString := ""
+				if cascade || property.OnDeleteCascade {
+					cascadeString = "on delete cascade"
+				}
 				relations = append(relations, fmt.Sprintf("foreign key(`%s`) REFERENCES `%s`(id) %s",
 					property.ID, foreignSchema.GetDbTableName(), cascadeString))
 			}
@@ -278,6 +279,10 @@ func (db *DB) GenTableDef(s *schema.Schema, cascade bool) string {
 	}
 	if s.Parent != "" {
 		foreignSchema, _ := schemaManager.Schema(s.Parent)
+		cascadeString := ""
+		if cascade || s.OnParentDeleteCascade {
+			cascadeString = "on delete cascade"
+		}
 		relations = append(relations, fmt.Sprintf("foreign key(`%s_id`) REFERENCES `%s`(id) %s",
 			s.Parent, foreignSchema.GetDbTableName(), cascadeString))
 	}

@@ -43,6 +43,7 @@ type Schema struct {
 	URLWithParents                 string
 	RawData                        interface{}
 	IsolationLevel                 map[string]interface{}
+	OnParentDeleteCascade          bool
 }
 
 const (
@@ -118,6 +119,7 @@ func NewSchemaFromObj(rawTypeData interface{}) (*Schema, error) {
 	schema.URL = util.MaybeString(typeData["url"])
 	schema.Type = util.MaybeString(typeData["type"])
 	schema.Parent = util.MaybeString(typeData["parent"])
+	schema.OnParentDeleteCascade, _ = typeData["on_parent_delete_cascade"].(bool)
 	schema.NamespaceID = util.MaybeString(typeData["namespace"])
 	schema.IsolationLevel = util.MaybeMap(typeData["isolation_level"])
 	jsonSchema, ok := typeData["schema"].(map[string]interface{})

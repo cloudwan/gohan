@@ -248,6 +248,7 @@ schemas:
   id: subnet
   parent: network
   plural: subnets
+  on_parent_delete_cascade: false
   extends:
   - base
   schema:
@@ -289,6 +290,7 @@ schemas:
         - create
         relation: network
         relation_property: network
+        on_delete_cascade: true
         title: network id
         type: string
         unique: false

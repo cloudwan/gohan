@@ -155,6 +155,7 @@ Each schema will have following properties.
 Schemas might also have any of the following optional properties.
 
 - parent    -- the id of the parent schema
+- on_parent_delete_cascade -- cascading delete when parent resource deleted
 - namespace -- resource namespace
 - prefix    -- resource path prefix
 - metadata  -- application specific schema metadata (object)
@@ -372,6 +373,7 @@ You can use following parameters for string.
 - pattern    regexp pattern for this string
 - relation  (gohan extened property)  define resource relation
 - relation_property  (gohan extened property) relation resource will be joined in list api requiest for this property name
+- on_delete_cascade  (gohan extened property) cascading delete when related resource get deleted
 
 eg.
 

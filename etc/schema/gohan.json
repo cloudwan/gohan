@@ -90,6 +90,19 @@
                         "title": "Parent",
                         "type": "string"
                     },
+                    "on_parent_delete_cascade": {
+                        "default": false,
+                        "description": "Cascade delete on pararent resource deletion",
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "title": "On Parent Delete Cascade",
+                        "type": [
+                            "boolean",
+                            "null"
+                        ]
+                    },
                     "plural": {
                         "description": "Plural of this schema",
                         "permission": [
@@ -272,6 +285,10 @@
                                                 "title": "Unique",
                                                 "type": "boolean"
                                             },
+                                            "on_delete_cascade": {
+                                                "title": "Unique",
+                                                "type": "boolean"
+                                            },
                                             "uniqueItems": {
                                                 "title": "Unique items",
                                                 "type": "boolean"
@@ -412,7 +429,8 @@
                     "namespace",
                     "metadata",
                     "actions",
-                    "isolation_level"
+                    "isolation_level",
+                    "on_parent_delete_cascade"
                 ],
                 "required": [
                     "id",
