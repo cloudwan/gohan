@@ -30,7 +30,7 @@ import (
 	"github.com/k0kubun/pp"
 )
 
-var log = logging.MustGetLogger("donburi")
+var log = logging.MustGetLogger("gohanscript")
 
 func init() {
 	backend := logging.NewLogBackend(os.Stderr, "", 0)

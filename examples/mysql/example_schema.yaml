@@ -1,0 +1,40 @@
+extensions: []
+schemas:
+- description: Network
+  id: network
+  parent: ""
+  plural: networks
+  prefix: /v2.0
+  schema:
+    properties:
+      id:
+        description: ""
+        format: uuid
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: true
+      name:
+        default: ""
+        description: ""
+        permission:
+        - create
+        - update
+        title: Name
+        type: string
+        unique: false
+      tenant_id:
+        description: ""
+        format: uuid
+        permission:
+        - create
+        title: Tenant id
+        type: string
+        unique: false
+    propertiesOrder:
+    - id
+    - name
+    - tenant_id
+  singular: network
+  title: Network
