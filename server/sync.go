@@ -335,6 +335,7 @@ func StateUpdate(response *gohan_sync.Event, server *Server) error {
 		context["catalog"] = serviceAuthorization.Catalog()
 		context["auth_token"] = serviceAuthorization.AuthToken()
 		context["resource"] = curResource.Data()
+		context["schema"] = curSchema
 		context["state"] = response.Data
 		context["config_version"] = resourceState.ConfigVersion
 		context["transaction"] = tx
@@ -402,6 +403,7 @@ func MonitoringUpdate(response *gohan_sync.Event, server *Server) error {
 	environment, haveEnvironment := environmentManager.GetEnvironment(curSchema.ID)
 	context := map[string]interface{}{}
 	context["resource"] = curResource.Data()
+	context["schema"] = curSchema
 	context["monitoring"] = resourceState.Monitoring
 	context["transaction"] = tx
 
