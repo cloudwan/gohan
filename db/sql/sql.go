@@ -440,23 +440,23 @@ func (db *DB) handler(property *schema.Property) propertyHandler {
 	return &defaultHandler{}
 }
 
-func makeColumnID(s *schema.Schema, property schema.Property) string {
-	return fmt.Sprintf("%s__%s", s.GetDbTableName(), property.ID)
+func makeColumnID(tableName string, property schema.Property) string {
+	return fmt.Sprintf("%s__%s", tableName, property.ID)
 }
 
-func makeColumn(s *schema.Schema, property schema.Property) string {
-	return fmt.Sprintf("%s.%s", s.GetDbTableName(), quote(property.ID))
+func makeColumn(tableName string, property schema.Property) string {
+	return fmt.Sprintf("%s.%s", tableName, quote(property.ID))
 }
 
 // MakeColumns generates an array that has Gohan style colmun names
-func MakeColumns(s *schema.Schema, join bool) []string {
+func MakeColumns(s *schema.Schema, tableName string, join bool) []string {
 	var cols []string
 	manager := schema.GetManager()
 	for _, property := range s.Properties {
-		cols = append(cols, makeColumn(s, property)+" as "+quote(makeColumnID(s, property)))
+		cols = append(cols, makeColumn(tableName, property)+" as "+quote(makeColumnID(tableName, property)))
 		if property.RelationProperty != "" && join {
 			relatedSchema, _ := manager.Schema(property.Relation)
-			cols = append(cols, MakeColumns(relatedSchema, true)...)
+			cols = append(cols, MakeColumns(relatedSchema, property.RelationProperty, true)...)
 		}
 	}
 	return cols
@@ -472,7 +472,7 @@ func makeStateColumns(s *schema.Schema) (cols []string) {
 	return cols
 }
 
-func makeJoin(s *schema.Schema, q sq.SelectBuilder) sq.SelectBuilder {
+func makeJoin(s *schema.Schema, tableName string, q sq.SelectBuilder) sq.SelectBuilder {
 	manager := schema.GetManager()
 	for _, property := range s.Properties {
 		if property.RelationProperty == "" {
@@ -480,18 +480,19 @@ func makeJoin(s *schema.Schema, q sq.SelectBuilder) sq.SelectBuilder {
 		}
 		relatedSchema, _ := manager.Schema(property.Relation)
 		q = q.LeftJoin(
-			quote(relatedSchema.GetDbTableName()) + fmt.Sprintf(" on %s.%s = %s.id", s.GetDbTableName(), property.ID, relatedSchema.GetDbTableName()))
-		q = makeJoin(relatedSchema, q)
+			fmt.Sprintf("%s as %s on %s.%s = %s.id", quote(relatedSchema.GetDbTableName()), quote(property.RelationProperty),
+				quote(tableName), quote(property.ID), quote(property.RelationProperty)))
+		q = makeJoin(relatedSchema, property.RelationProperty, q)
 	}
 	return q
 }
 
-func (tx *Transaction) decode(s *schema.Schema, data map[string]interface{}, resource map[string]interface{}) {
+func (tx *Transaction) decode(s *schema.Schema, tableName string, data map[string]interface{}, resource map[string]interface{}) {
 	manager := schema.GetManager()
 	db := tx.db
 	for _, property := range s.Properties {
 		handler := db.handler(&property)
-		value := data[makeColumnID(s, property)]
+		value := data[makeColumnID(tableName, property)]
 		if value != nil || property.Nullable {
 			decoded, err := handler.decode(&property, value)
 			if err != nil {
@@ -502,7 +503,7 @@ func (tx *Transaction) decode(s *schema.Schema, data map[string]interface{}, res
 		if property.RelationProperty != "" {
 			relatedSchema, _ := manager.Schema(property.Relation)
 			resourceData := map[string]interface{}{}
-			tx.decode(relatedSchema, data, resourceData)
+			tx.decode(relatedSchema, property.RelationProperty, data, resourceData)
 			resource[property.RelationProperty] = resourceData
 		}
 	}
@@ -538,7 +539,7 @@ func decodeState(data map[string]interface{}, state *transaction.ResourceState) 
 
 //List resources in the db
 func (tx *Transaction) List(s *schema.Schema, filter map[string]interface{}, pg *pagination.Paginator) (list []*schema.Resource, total uint64, err error) {
-	cols := MakeColumns(s, true)
+	cols := MakeColumns(s, s.GetDbTableName(), true)
 	q := sq.Select(cols...).From(quote(s.GetDbTableName()))
 	q, err = addFilterToQuery(s, q, filter, true)
 	if err != nil {
@@ -547,7 +548,7 @@ func (tx *Transaction) List(s *schema.Schema, filter map[string]interface{}, pg 
 	if pg != nil {
 		property, err := s.GetPropertyByID(pg.Key)
 		if err == nil {
-			q = q.OrderBy(makeColumn(s, *property) + " " + pg.Order)
+			q = q.OrderBy(makeColumn(s.GetDbTableName(), *property) + " " + pg.Order)
 			if pg.Limit > 0 {
 				q = q.Limit(pg.Limit)
 			}
@@ -556,7 +557,7 @@ func (tx *Transaction) List(s *schema.Schema, filter map[string]interface{}, pg 
 			}
 		}
 	}
-	q = makeJoin(s, q)
+	q = makeJoin(s, s.GetDbTableName(), q)
 
 	sql, args, err := q.ToSql()
 	if err != nil {
@@ -600,7 +601,7 @@ func (tx *Transaction) decodeRows(s *schema.Schema, rows *sqlx.Rows, list []*sch
 		rows.MapScan(data)
 
 		var resource *schema.Resource
-		tx.decode(s, data, resourceData)
+		tx.decode(s, s.GetDbTableName(), data, resourceData)
 		resource, err := schema.NewResource(s, resourceData)
 		if err != nil {
 			return nil, fmt.Errorf("Failed to decode rows")
@@ -741,7 +742,7 @@ func addFilterToQuery(s *schema.Schema, q sq.SelectBuilder, filter map[string]in
 
 		var column string
 		if join {
-			column = makeColumn(s, *property)
+			column = makeColumn(s.GetDbTableName(), *property)
 		} else {
 			column = quote(key)
 		}

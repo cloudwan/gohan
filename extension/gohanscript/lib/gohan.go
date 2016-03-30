@@ -238,5 +238,5 @@ func DBColumn(schemaID string, join bool) (string, error) {
 	if !ok {
 		return "", fmt.Errorf("Schema %s not found", schemaID)
 	}
-	return strings.Join(sql.MakeColumns(schemaObj, join), ", "), nil
+	return strings.Join(sql.MakeColumns(schemaObj, schemaObj.GetDbTableName(), join), ", "), nil
 }
