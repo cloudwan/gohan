@@ -203,7 +203,6 @@ func loopWrapper(stmt *Stmt, f func(*VM, *Context) (interface{}, error)) (func(*
 		}
 
 		if len(items) > 0 {
-			results := []interface{}{}
 			worker := stmt.Worker
 			if vm.debug {
 				worker = 0
@@ -214,17 +213,15 @@ func loopWrapper(stmt *Stmt, f func(*VM, *Context) (interface{}, error)) (func(*
 					loopContext = context.Extend(nil)
 				}
 				loopContext.Set(stmt.LoopVar, item)
-				value, err = f(vm, loopContext)
+				_, err := f(vm, loopContext)
 				if err != nil {
 					context.Set("error", err.Error())
 					return
 				}
-				results = append(results, value)
 			})
 			if err != nil {
 				return
 			}
-			value = results
 		}
 		return
 	}, nil
