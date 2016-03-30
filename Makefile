@@ -33,6 +33,7 @@ lint:
 
 build: deps
 	@echo "$(OK_COLOR)==> Building$(NO_COLOR)"
+	./tools/version.sh
 	go run ./extension/gohanscript/tools/gen.go genlib -t extension/gohanscript/templates/lib.tmpl -p github.com/cloudwan/gohan/extension/gohanscript/lib -e autogen -ep extension/gohanscript/autogen
 	$(GO_BUILD)
 
