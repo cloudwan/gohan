@@ -1,0 +1,255 @@
+extensions: []
+schemas:
+- description: Network
+  id: network
+  parent: ""
+  plural: networks
+  prefix: /v2.0
+  schema:
+    properties:
+      firewall_id:
+        description: ""
+        permission:
+        - create
+        relation: firewall
+        title: Firewall
+        type: string
+        unique: false
+      id:
+        description: ""
+        format: uuid
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: true
+      name:
+        default: ""
+        description: ""
+        permission:
+        - create
+        - update
+        title: Name
+        type: string
+        unique: false
+      tenant_id:
+        description: ""
+        format: uuid
+        permission:
+        - create
+        title: Tenant id
+        type: string
+        unique: false
+    propertiesOrder:
+    - id
+    - name
+    - tenant_id
+    - firewall_id
+  singular: network
+  title: Network
+- description: Firewall
+  id: firewall
+  parent: ""
+  plural: firewalls
+  prefix: /v2.0
+  schema:
+    properties:
+      id:
+        description: ""
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: true
+        view:
+        - detail
+      name:
+        default: ""
+        description: ""
+        permission:
+        - create
+        title: Name
+        type: string
+        unique: false
+      tenant_id:
+        description: ""
+        permission:
+        - create
+        title: Tenant ID
+        type: string
+        unique: false
+        view:
+        - detail
+    propertiesOrder:
+    - id
+    - name
+    - tenant_id
+  singular: firewall
+  title: Firewall
+- description: Firewall Rule
+  id: firewall_rule
+  parent: firewall
+  plural: firewall_rules
+  prefix: /v2.0
+  schema:
+    properties:
+      action:
+        default: ""
+        description: ""
+        enum:
+        - accept
+        - reject
+        permission:
+        - create
+        title: Action
+        type: string
+        unique: false
+      destination_port:
+        default: ""
+        description: ""
+        permission:
+        - create
+        title: Destination port
+        type: string
+        unique: false
+      id:
+        description: ""
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: true
+        view:
+        - detail
+      protocol:
+        default: ""
+        description: ""
+        enum:
+        - icmp
+        - udp
+        - tcp
+        permission:
+        - create
+        title: Protocol
+        type: string
+        unique: false
+      tenant_id:
+        description: ""
+        permission:
+        - create
+        title: Tenant ID
+        type: string
+        unique: false
+        view:
+        - detail
+    propertiesOrder:
+    - id
+    - protocol
+    - destination_port
+    - tenant_id
+    - action
+  singular: firewall_rule
+  title: Firewall Rule
+- description: device
+  id: device
+  plural: devices
+  prefix: /v2.0
+  schema:
+    properties:
+      id:
+        description: ID
+        format: uuid
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: true
+      management_ip:
+        description: Management IP
+        permission:
+        - create
+        title: management ip address
+        type: string
+        unique: false
+      name:
+        description: Name
+        permission:
+        - create
+        - update
+        title: Name
+        type: string
+        unique: false
+      status:
+        description: status
+        permission: []
+        title: Status
+        type: string
+        unique: false
+      tenant_id:
+        description: TenantID
+        permission:
+        - create
+        title: TenantID
+        type: string
+        unique: false
+    propertiesOrder:
+    - id
+    - name
+    - management_ip
+    - status
+    - tenant_id
+    type: object
+  singular: device
+  title: Device
+- description: test
+  id: test
+  plural: tests
+  schema:
+    properties:
+      description:
+        description: Description
+        permission:
+        - create
+        - update
+        title: Description
+        type: string
+      id:
+        description: ID
+        permission:
+        - create
+        title: ID
+        type: string
+        view:
+        - detail
+      name:
+        description: Name
+        permission:
+        - create
+        - update
+        title: Name
+        type: string
+      tenant_id:
+        description: Tenant ID
+        permission:
+        - create
+        title: Tenant ID
+        type: string
+        view:
+        - detail
+      test5:
+        description: test5
+        permission:
+        - create
+        - update
+        title: test5
+        type: string
+    propertiesOrder:
+    - id
+    - name
+    - description
+    - tenant_id
+    - test5
+    required: []
+    type: object
+  singular: test
+  title: test

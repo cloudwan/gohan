@@ -1,0 +1,125 @@
+extensions: []
+policies:
+- action: read
+  effect: allow
+  id: member_schema
+  principal: _member_
+  resource:
+    path: /gohan/v0.1/schemas*
+- action: '*'
+  condition:
+  - is_owner
+  effect: allow
+  id: member_policy
+  principal: _member_
+  resource:
+    path: /v0.1/member_resources*
+    properties:
+    - id
+    - name
+    - description
+    - tenant_id
+schemas:
+- description: Resource for member
+  id: member_resource
+  plural: member_resources
+  prefix: /v0.1
+  schema:
+    properties:
+      description:
+        description: Description
+        permission:
+        - create
+        - update
+        title: Description
+        type: string
+      id:
+        description: ID
+        permission:
+        - create
+        title: ID
+        type: string
+        view:
+        - detail
+      name:
+        description: Name
+        permission:
+        - create
+        - update
+        title: Name
+        type: string
+      tenant_id:
+        description: Tenant ID
+        permission:
+        - create
+        title: Tenant ID
+        type: string
+        view:
+        - detail
+      admin_property:
+        description: Admin Only property
+        permission:
+        - create
+        - update
+        title: Admin Only Property
+        type: string
+        view:
+        - list
+        - create
+        - update
+        - detail
+    propertiesOrder:
+    - id
+    - name
+    - description
+    - tenant_id
+    - admin_property
+    required: []
+    type: object
+  singular: member_resource
+  title: Member Resource
+- description: Users who has admin only can take a look this
+  id: admin_only_resource
+  plural: admin_only_resources
+  prefix: /v0.1
+  schema:
+    properties:
+      description:
+        description: Description
+        permission:
+        - create
+        - update
+        title: Description
+        type: string
+      id:
+        description: ID
+        permission:
+        - create
+        title: ID
+        type: string
+        view:
+        - detail
+      name:
+        description: Name
+        permission:
+        - create
+        - update
+        title: Name
+        type: string
+      tenant_id:
+        description: Tenant ID
+        permission:
+        - create
+        title: Tenant ID
+        type: string
+        view:
+        - detail
+    propertiesOrder:
+    - id
+    - name
+    - description
+    - tenant_id
+    required: []
+    type: object
+  singular: admin_only_resource
+  title: Admin Only Resource

@@ -197,7 +197,7 @@ see more [sync document](./docs/source/sync.rst)
 
 # Examples
 
-See more at https://github.com/cloudwan/gohan_apps
+See more at [ example configuraions ](./examples)
 
 # Development
 
