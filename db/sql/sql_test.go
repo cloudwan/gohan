@@ -33,6 +33,7 @@ var _ = Describe("Sql", func() {
 
 	var conn string
 	var tx transaction.Transaction
+	var sqlConn *DB
 
 	BeforeEach(func() {
 		var dbType string
@@ -46,6 +47,7 @@ var _ = Describe("Sql", func() {
 
 		manager := schema.GetManager()
 		dbc, err := db.ConnectDB(dbType, conn)
+		sqlConn = dbc.(*DB)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manager.LoadSchemasFromFiles(
 			"../../etc/schema/gohan.json", "../../tests/test_schema.yaml")).To(Succeed())
@@ -124,6 +126,38 @@ var _ = Describe("Sql", func() {
 				Expect(results[0].Get("tenant_id")).To(Equal("tenant0"))
 				Expect(results[0].Get("test_string")).To(Equal("obj1"))
 				Expect(len(results)).To(Equal(1))
+			})
+		})
+	})
+
+	Describe("Generate Table", func() {
+		var server *schema.Schema
+		var subnet *schema.Schema
+
+		BeforeEach(func() {
+			manager := schema.GetManager()
+			var ok bool
+			server, ok = manager.Schema("server")
+			Expect(ok).To(BeTrue())
+			subnet, ok = manager.Schema("subnet")
+			Expect(ok).To(BeTrue())
+		})
+
+		Context("With default cascade option", func() {
+			It("Generate proper table with cascade delete", func() {
+				table := sqlConn.GenTableDef(server, true)
+				Expect(table).To(ContainSubstring("REFERENCES `networks`(id) on delete cascade);"))
+				table = sqlConn.GenTableDef(subnet, true)
+				Expect(table).To(ContainSubstring("REFERENCES `networks`(id) on delete cascade);"))
+			})
+		})
+
+		Context("Without default cascade option", func() {
+			It("Generate proper table with cascade delete", func() {
+				table := sqlConn.GenTableDef(server, false)
+				Expect(table).To(ContainSubstring("REFERENCES `networks`(id) on delete cascade);"))
+				table = sqlConn.GenTableDef(subnet, false)
+				Expect(table).ToNot(ContainSubstring("REFERENCES `networks`(id) on delete cascade);"))
 			})
 		})
 	})

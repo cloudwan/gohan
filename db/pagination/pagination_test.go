@@ -66,7 +66,7 @@ func TestFromURLQuery(t *testing.T) {
 func TestFromURLQueryErrors(t *testing.T) {
 	RegisterTestingT(t)
 	s := schema.NewSchema("foo", "foos", "Foo", "", "foo")
-	s.Properties = append(s.Properties, schema.NewProperty("prop", "", "", "string", "", "", "", "", false, true, map[string]interface{}{}, "default"))
+	s.Properties = append(s.Properties, schema.NewProperty("prop", "", "", "string", "", "", "", "", false, true, false, map[string]interface{}{}, "default"))
 
 	values := url.Values{
 		"limit":      []string{"a123"},
