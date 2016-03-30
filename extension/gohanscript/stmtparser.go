@@ -18,7 +18,6 @@ package gohanscript
 import (
 	"fmt"
 	"path/filepath"
-	"sync"
 	"time"
 
 	"github.com/cloudwan/gohan/util"
@@ -295,43 +294,37 @@ func testSuite(stmt *Stmt) (func(*VM, *Context) (interface{}, error), error) {
 	}
 	return func(vm *VM, context *Context) (interface{}, error) {
 		var successCount, failedCount int
-		var wg sync.WaitGroup
 		for _, test := range tests.Children {
-			wg.Add(1)
-			go func(test *yaml.Node) {
-				defer wg.Done()
-				testMap := MappingNodeToMap(test)
-				name := testMap["name"].Value
-				testContext := context.Extend(nil)
-				if beforeEach != nil {
-					_, err := beforeEach(vm, testContext)
-					if err != nil {
-						log.Error(fmt.Sprintf("%s ... failed", name))
-						log.Error(err.Error())
-						failedCount++
-						return
-					}
-				}
-				testsStmt, err := MakeStmts(stmt.File, testMap["test"])
+			testMap := MappingNodeToMap(test)
+			name := testMap["name"].Value
+			testContext := context.Extend(nil)
+			if beforeEach != nil {
+				_, err := beforeEach(vm, testContext)
 				if err != nil {
 					log.Error(fmt.Sprintf("%s ... failed", name))
 					log.Error(err.Error())
 					failedCount++
-					return
+					continue
 				}
-				testRunner, err := StmtsToFunc("test", testsStmt)
-				_, err = testRunner(vm, testContext)
-				if err != nil {
-					log.Error(fmt.Sprintf("%s ... failed", name))
-					log.Error(err.Error())
-					failedCount++
-				} else {
-					log.Debug("%s ... ok", name)
-					successCount++
-				}
-			}(test)
+			}
+			testsStmt, err := MakeStmts(stmt.File, testMap["test"])
+			if err != nil {
+				log.Error(fmt.Sprintf("%s ... failed", name))
+				log.Error(err.Error())
+				failedCount++
+				continue
+			}
+			testRunner, err := StmtsToFunc("test", testsStmt)
+			_, err = testRunner(vm, testContext)
+			if err != nil {
+				log.Error(fmt.Sprintf("%s ... failed", name))
+				log.Error(err.Error())
+				failedCount++
+			} else {
+				log.Debug("%s ... ok", name)
+				successCount++
+			}
 		}
-		wg.Wait()
 		return map[string]interface{}{
 			"count":   len(tests.Children),
 			"success": successCount,
