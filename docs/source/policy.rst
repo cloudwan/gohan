@@ -96,7 +96,7 @@ Example policy
     policy:
       - action: 'read'
         condition:
-        - type: property:
+        - type: property
           match:
             status:
               - ACTIVE
@@ -109,7 +109,8 @@ Example policy
         principal: Member
       - action: 'update'
         condition:
-        - property:
+        - type: property
+          match:
             status:
               ACTIVE:
               - UPDATE_IN_PROGRESS
@@ -119,14 +120,16 @@ Example policy
         principal: Member
       - action: 'reboot'
         condition:
-        - property:
+        - type: property
+          match:
             status: ACTIVE
         effect: allow
         id: member
         principal: Member
       - action: 'delete'
         condition:
-        - property:
+        - type: property
+          match:
             status:
             - ACTIVE
             - ERROR
