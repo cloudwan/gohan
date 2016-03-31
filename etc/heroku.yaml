@@ -58,3 +58,6 @@ logging:
         enabled: true
         level: INFO
         filename: ./gohan.log
+
+extension:
+  type: gohanscript
