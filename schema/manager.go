@@ -310,7 +310,7 @@ func (manager *Manager) LoadSchemaFromFile(filePath string) error {
 			manager.RegisterSchema(schemaObj)
 		} else {
 			for _, baseSchemaID := range schemaObj.Extends {
-				baseSchema, ok := schemaMap[baseSchemaID]
+				baseSchema, ok := manager.Schema(baseSchemaID)
 				if !ok {
 					return fmt.Errorf("Base Schema %s not found", baseSchemaID)
 				}
