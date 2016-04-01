@@ -161,13 +161,19 @@ extensions:
           id: $resource.pet_id
         register: pet
       - when: pet.status != "available"
-        fail: "Pet isn't available"
-      - db_update:
-          tx: $transaction
-          schema_id: pet
-          data:
-            id: $resource.pet_id
-            status: "pending"
+        blocks:
+        - vars:
+            exception:
+              name: CustomException
+              code: 400
+              message: "Selected pet isn't available"
+        else:
+        - db_update:
+            tx: $transaction
+            schema_id: pet
+            data:
+                id: $resource.pet_id
+                status: "pending"
     - when: event_type == "post_update_in_transaction"
       blocks:
       - when: resource.status == "approved"
