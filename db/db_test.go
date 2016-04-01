@@ -64,6 +64,7 @@ var _ = Describe("Database operation test", func() {
 		)
 
 		BeforeEach(func() {
+			Expect(manager.LoadSchemaFromFile("../tests/test_abstract_schema.yaml")).To(Succeed())
 			Expect(manager.LoadSchemaFromFile("../tests/test_schema.yaml")).To(Succeed())
 			networkSchema, ok = manager.Schema("network")
 			Expect(ok).To(BeTrue())
@@ -258,6 +259,7 @@ var _ = Describe("Database operation test", func() {
 		BeforeEach(func() {
 			conn = "test.db"
 			dbType = "sqlite3"
+			Expect(manager.LoadSchemaFromFile("../tests/test_abstract_schema.yaml")).To(Succeed())
 			Expect(manager.LoadSchemaFromFile("../tests/test_schema.yaml")).To(Succeed())
 		})
 
