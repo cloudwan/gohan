@@ -83,7 +83,7 @@ func NewStmt(FileName string, node *yaml.Node) (stmt *Stmt, err error) {
 	}
 	stmt = &Stmt{}
 	stmt.RawNode = MappingNodeToMap(node)
-	stmt.Line = node.Line
+	stmt.Line = node.Line + 1
 	stmt.Column = node.Column
 	var rawData interface{}
 	yaml.UnmarshalNode(node, &rawData)
@@ -154,7 +154,7 @@ func (stmt *Stmt) Arg(key string, context *Context) interface{} {
 }
 
 //Func generates function from stmt
-func (stmt *Stmt) Func() (func(vm *VM, context *Context) (interface{}, error), error) {
+func (stmt *Stmt) Func() (func(context *Context) (interface{}, error), error) {
 	stmtParser := stmt.parser()
 	if stmtParser == nil {
 		stmtParser = vars
@@ -167,8 +167,8 @@ func (stmt *Stmt) Func() (func(vm *VM, context *Context) (interface{}, error), e
 }
 
 //StmtsToFunc creates list of func from stmts
-func StmtsToFunc(funcName string, stmts []*Stmt) (func(*VM, *Context) (interface{}, error), error) {
-	runners := []func(*VM, *Context) (interface{}, error){}
+func StmtsToFunc(funcName string, stmts []*Stmt) (func(*Context) (interface{}, error), error) {
+	runners := []func(*Context) (interface{}, error){}
 	if stmts == nil {
 		return nil, nil
 	}
@@ -182,13 +182,14 @@ func StmtsToFunc(funcName string, stmts []*Stmt) (func(*VM, *Context) (interface
 		}
 		runners = append(runners, runner)
 	}
-	return func(vm *VM, context *Context) (value interface{}, err error) {
+	return func(context *Context) (value interface{}, err error) {
+		vm := context.VM
 		for _, f := range runners {
 			select {
 			case f := <-vm.StopChan:
 				f()
 			default:
-				if value, err = f(vm, context); err != nil {
+				if value, err = f(context); err != nil {
 					if _, ok := err.(breakCode); ok {
 						return value, nil
 					}

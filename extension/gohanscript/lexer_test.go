@@ -34,6 +34,18 @@ func TestParseDict(t *testing.T) {
 			t.Errorf("error key:%s expected:%v actual:%v", key, expected, actual[key])
 		}
 	}
+
+	l = newLexer("msg='debug' var = score.math")
+	actual = l.parseDict()
+	if l.err != nil {
+		t.Error(l.err)
+	}
+	for key, expected := range expected {
+		if actual[key] != expected {
+			t.Errorf("error key:%s expected:%v actual:%v", key, expected, actual[key])
+		}
+	}
+
 	errorKeys := []string{
 		"name",
 		"\"name",

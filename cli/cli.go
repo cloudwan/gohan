@@ -18,13 +18,14 @@ package cli
 import (
 	"bytes"
 	"fmt"
-	"github.com/cloudwan/gohan/schema"
-	"github.com/cloudwan/gohan/util"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/cloudwan/gohan/schema"
+	"github.com/cloudwan/gohan/util"
 
 	"github.com/cloudwan/gohan/cli/client"
 	"github.com/cloudwan/gohan/db"
@@ -390,22 +391,7 @@ Run gohan script code.`,
 			vm.Context.Set("args", args)
 			vm.Context.Set("flags", flags)
 			configFile := c.String("config-file")
-			if configFile != "" {
-				config := util.GetConfig()
-				err := config.ReadConfig(configFile)
-				if err != nil {
-					fmt.Println(err)
-					os.Exit(1)
-					return
-				}
-				err = l.SetUpLogging(config)
-				if err != nil {
-					fmt.Printf("Logging setup error: %s\n", err)
-					os.Exit(1)
-					return
-				}
-				log.Info("logging initialized")
-			}
+			loadConfig(configFile)
 			_, err := vm.RunFile(src)
 			if err != nil {
 				fmt.Println(err)
@@ -423,9 +409,34 @@ func getTestCommand() cli.Command {
 		Usage:     "Run Gohan script Test",
 		Description: `
 Run gohan script yaml code.`,
+		Flags: []cli.Flag{
+			cli.StringFlag{Name: "config-file,c", Value: "", Usage: "config file path"},
+		},
 		Action: func(c *cli.Context) {
 			dir := c.Args()[0]
+			configFile := c.String("config-file")
+			loadConfig(configFile)
 			gohanscript.RunTests(dir)
 		},
 	}
+}
+
+func loadConfig(configFile string) {
+	if configFile == "" {
+		return
+	}
+	config := util.GetConfig()
+	err := config.ReadConfig(configFile)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+		return
+	}
+	err = l.SetUpLogging(config)
+	if err != nil {
+		fmt.Printf("Logging setup error: %s\n", err)
+		os.Exit(1)
+		return
+	}
+	log.Info("logging initialized")
 }

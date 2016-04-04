@@ -8,8 +8,8 @@ import (
 
 func init() {
 	gohanscript.RegisterStmtParser("fetch_content",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				path, _ := stmt.Arg("path", context).(string)
 				var err error
 				result1, err := lib.FetchContent(path)
@@ -25,8 +25,8 @@ func init() {
 			return []interface{}{result1, result2}
 		})
 	gohanscript.RegisterStmtParser("save_content",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				path, _ := stmt.Arg("path", context).(string)
 				data, _ := stmt.Arg("data", context).(interface{})
 				err := lib.SaveContent(path, data)

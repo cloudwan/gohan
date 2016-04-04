@@ -11,14 +11,13 @@ import (
 )
 
 func testExpr(context *gohanscript.Context, expr string, expected interface{}) {
-	vm := gohanscript.NewVM()
 	minigo, err := gohanscript.CompileExpr(expr)
 	if err != nil {
 		Fail(fmt.Sprintf("Parse failed expr: %s failed with %s", expr, err))
 		return
 	}
 
-	actual, err := minigo.Run(vm, context)
+	actual, err := minigo.Run(context)
 	if err != nil {
 		Fail(fmt.Sprintf("Eval failed expr: %s failed with %s", expr, err))
 		return
@@ -37,13 +36,12 @@ func testExpr(context *gohanscript.Context, expr string, expected interface{}) {
 }
 
 func testGoStmt(context *gohanscript.Context, stmt string, expected interface{}) {
-	vm := gohanscript.NewVM()
 	minigo, err := gohanscript.CompileGoStmt(stmt)
 	if err != nil {
 		Fail(fmt.Sprintf("Parse failed stmt: %s failed with %s", stmt, err))
 		return
 	}
-	actual, err := minigo.Run(vm, context)
+	actual, err := minigo.Run(context)
 	if err != nil {
 		Fail(fmt.Sprintf("Eval failed stmt: %s failed with %s", stmt, err))
 		return
@@ -57,7 +55,8 @@ func testGoStmt(context *gohanscript.Context, stmt string, expected interface{})
 var _ = Describe("Run minigo test", func() {
 	Context("When given expresstion", func() {
 		It("All test should be passed", func() {
-			context := gohanscript.NewContext()
+			vm := gohanscript.NewVM()
+			context := gohanscript.NewContext(vm)
 			context.Set("a", 1)
 			context.Set("b", 3.14)
 			testExpr(context, "a+1", 2)
@@ -107,7 +106,8 @@ var _ = Describe("Run minigo test", func() {
 	})
 	Context("When given statement", func() {
 		It("All test should be passed", func() {
-			context := gohanscript.NewContext()
+			vm := gohanscript.NewVM()
+			context := gohanscript.NewContext(vm)
 			context.Set("list", []interface{}{10, 20, 30})
 			context.Set("m", map[string]interface{}{"a": 1, "b": 2})
 			testGoStmt(context, `

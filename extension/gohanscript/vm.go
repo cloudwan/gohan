@@ -24,7 +24,7 @@ type VM struct {
 	debugReturn  bool
 	timeoutError error
 	StopChan     chan func()
-	funcs        []func(*VM, *Context) (interface{}, error)
+	funcs        []func(*Context) (interface{}, error)
 }
 
 func (vm *VM) String() string {
@@ -33,20 +33,20 @@ func (vm *VM) String() string {
 
 //NewVM creates a VM
 func NewVM() *VM {
-	return &VM{
-		Context:      NewContext(),
+	vm := &VM{
 		timeoutError: fmt.Errorf("exceed timeout for extention execution"),
 		StopChan:     make(chan func(), 1),
-		funcs:        []func(*VM, *Context) (interface{}, error){},
+		funcs:        []func(*Context) (interface{}, error){},
 	}
+	vm.Context = NewContext(vm)
+	return vm
 }
 
 //Clone clones a VM
 func (vm *VM) Clone() *VM {
-	return &VM{
-		Context: NewContext(),
-		funcs:   vm.funcs,
-	}
+	newVM := NewVM()
+	newVM.funcs = vm.funcs
+	return newVM
 }
 
 //RunFile load data from file and execute it
@@ -63,7 +63,7 @@ func (vm *VM) RunFile(file string) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return runner(vm, vm.Context)
+	return runner(vm.Context)
 }
 
 //LoadFile loads gohan script code from file and make func
@@ -102,9 +102,9 @@ func (vm *VM) LoadString(fileName, yamlString string) error {
 //Run executes loaded funcs
 func (vm *VM) Run(data map[string]interface{}) error {
 	for _, fun := range vm.funcs {
-		context := NewContext()
+		context := NewContext(vm)
 		context.SetMap(data)
-		_, err := fun(vm, context)
+		_, err := fun(context)
 		if err != nil {
 			return err
 		}

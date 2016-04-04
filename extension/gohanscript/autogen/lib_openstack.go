@@ -9,8 +9,8 @@ import (
 
 func init() {
 	gohanscript.RegisterStmtParser("get_openstack_client",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				authURL, _ := stmt.Arg("auth_url", context).(string)
 				userName, _ := stmt.Arg("user_name", context).(string)
 				password, _ := stmt.Arg("password", context).(string)
@@ -41,8 +41,8 @@ func init() {
 			return []interface{}{result1, result2}
 		})
 	gohanscript.RegisterStmtParser("openstack_token",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				client, _ := stmt.Arg("client", context).(*gophercloud.ServiceClient)
 				result1 := lib.OpenstackToken(client)
 				return result1, nil
@@ -57,8 +57,8 @@ func init() {
 			return []interface{}{result1}
 		})
 	gohanscript.RegisterStmtParser("openstack_get",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				client, _ := stmt.Arg("client", context).(*gophercloud.ServiceClient)
 				url, _ := stmt.Arg("url", context).(string)
 				var err error
@@ -77,8 +77,8 @@ func init() {
 			return []interface{}{result1, result2}
 		})
 	gohanscript.RegisterStmtParser("openstack_put",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				client, _ := stmt.Arg("client", context).(*gophercloud.ServiceClient)
 				url, _ := stmt.Arg("url", context).(string)
 				data, _ := stmt.Arg("data", context).(interface{})
@@ -100,8 +100,8 @@ func init() {
 			return []interface{}{result1, result2}
 		})
 	gohanscript.RegisterStmtParser("openstack_post",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				client, _ := stmt.Arg("client", context).(*gophercloud.ServiceClient)
 				url, _ := stmt.Arg("url", context).(string)
 				data, _ := stmt.Arg("data", context).(interface{})
@@ -123,8 +123,8 @@ func init() {
 			return []interface{}{result1, result2}
 		})
 	gohanscript.RegisterStmtParser("openstack_delete",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				client, _ := stmt.Arg("client", context).(*gophercloud.ServiceClient)
 				url, _ := stmt.Arg("url", context).(string)
 				var err error
@@ -143,8 +143,8 @@ func init() {
 			return []interface{}{result1, result2}
 		})
 	gohanscript.RegisterStmtParser("openstack_endpoint",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				client, _ := stmt.Arg("client", context).(*gophercloud.ServiceClient)
 				endpointType, _ := stmt.Arg("endpoint_type", context).(string)
 				name, _ := stmt.Arg("name", context).(string)

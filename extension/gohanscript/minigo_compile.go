@@ -68,8 +68,8 @@ func compileFunc(funcDecl *ast.FuncDecl) {
 	RegisterMiniGoFunc(funcDecl.Name.Name, func(vm *VM, args []interface{}) []interface{} {
 		stack := NewStack()
 		stack.stack = args
-		context := NewContext()
-		code.Eval(vm, 0, stack, context)
+		context := NewContext(vm)
+		code.Eval(context, 0, stack)
 		return stack.stack
 	})
 }

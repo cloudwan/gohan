@@ -10,8 +10,8 @@ import (
 
 func init() {
 	gohanscript.RegisterStmtParser("gohan_schema",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				schemaID, _ := stmt.Arg("schema_id", context).(string)
 				var err error
 				result1, err := lib.GohanSchema(schemaID)
@@ -27,8 +27,8 @@ func init() {
 			return []interface{}{result1, result2}
 		})
 	gohanscript.RegisterStmtParser("gohan_schemas",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				result1 := lib.GohanSchemas()
 				return result1, nil
 			}, nil
@@ -39,8 +39,8 @@ func init() {
 			return []interface{}{result1}
 		})
 	gohanscript.RegisterStmtParser("gohan_policies",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				result1 := lib.GohanPolicies()
 				return result1, nil
 			}, nil
@@ -51,8 +51,8 @@ func init() {
 			return []interface{}{result1}
 		})
 	gohanscript.RegisterStmtParser("read_config",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				path, _ := stmt.Arg("path", context).(string)
 				err := lib.ReadConfig(path)
 				return nil, err
@@ -67,8 +67,8 @@ func init() {
 			return []interface{}{result1}
 		})
 	gohanscript.RegisterStmtParser("get_config",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				key, _ := stmt.Arg("key", context).(string)
 				defaultValue, _ := stmt.Arg("default_value", context).(interface{})
 				result1 := lib.GetConfig(key, defaultValue)
@@ -86,8 +86,8 @@ func init() {
 			return []interface{}{result1}
 		})
 	gohanscript.RegisterStmtParser("gohan_load_schema",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				src, _ := stmt.Arg("src", context).(string)
 				var err error
 				result1, err := lib.GohanLoadSchema(src)
@@ -103,8 +103,8 @@ func init() {
 			return []interface{}{result1, result2}
 		})
 	gohanscript.RegisterStmtParser("connect_db",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				dbType, _ := stmt.Arg("db_type", context).(string)
 				connection, _ := stmt.Arg("connection", context).(string)
 				var err error
@@ -123,8 +123,8 @@ func init() {
 			return []interface{}{result1, result2}
 		})
 	gohanscript.RegisterStmtParser("init_db",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				dbType, _ := stmt.Arg("db_type", context).(string)
 				connection, _ := stmt.Arg("connection", context).(string)
 				dropOnCreate, _ := stmt.Arg("drop_on_create", context).(bool)
@@ -148,8 +148,8 @@ func init() {
 			return []interface{}{result1}
 		})
 	gohanscript.RegisterStmtParser("db_begin",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				connection, _ := stmt.Arg("connection", context).(db.DB)
 				var err error
 				result1, err := lib.DBBegin(connection)
@@ -165,8 +165,8 @@ func init() {
 			return []interface{}{result1, result2}
 		})
 	gohanscript.RegisterStmtParser("db_commit",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				tx, _ := stmt.Arg("tx", context).(transaction.Transaction)
 				err := lib.DBCommit(tx)
 				return nil, err
@@ -181,8 +181,8 @@ func init() {
 			return []interface{}{result1}
 		})
 	gohanscript.RegisterStmtParser("db_close",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				tx, _ := stmt.Arg("tx", context).(transaction.Transaction)
 				err := lib.DBClose(tx)
 				return nil, err
@@ -197,8 +197,8 @@ func init() {
 			return []interface{}{result1}
 		})
 	gohanscript.RegisterStmtParser("db_get",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				tx, _ := stmt.Arg("tx", context).(transaction.Transaction)
 				schemaID, _ := stmt.Arg("schema_id", context).(string)
 				id, _ := stmt.Arg("id", context).(string)
@@ -223,8 +223,8 @@ func init() {
 			return []interface{}{result1, result2}
 		})
 	gohanscript.RegisterStmtParser("db_create",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				tx, _ := stmt.Arg("tx", context).(transaction.Transaction)
 				schemaID, _ := stmt.Arg("schema_id", context).(string)
 				data, _ := stmt.Arg("data", context).(map[string]interface{})
@@ -245,8 +245,8 @@ func init() {
 			return []interface{}{result1}
 		})
 	gohanscript.RegisterStmtParser("db_list",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				tx, _ := stmt.Arg("tx", context).(transaction.Transaction)
 				schemaID, _ := stmt.Arg("schema_id", context).(string)
 				filter, _ := stmt.Arg("filter", context).(map[string]interface{})
@@ -268,8 +268,8 @@ func init() {
 			return []interface{}{result1, result2}
 		})
 	gohanscript.RegisterStmtParser("db_update",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				tx, _ := stmt.Arg("tx", context).(transaction.Transaction)
 				schemaID, _ := stmt.Arg("schema_id", context).(string)
 				data, _ := stmt.Arg("data", context).(map[string]interface{})
@@ -290,8 +290,8 @@ func init() {
 			return []interface{}{result1}
 		})
 	gohanscript.RegisterStmtParser("db_delete",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				tx, _ := stmt.Arg("tx", context).(transaction.Transaction)
 				schemaID, _ := stmt.Arg("schema_id", context).(string)
 				id, _ := stmt.Arg("id", context).(string)
@@ -312,8 +312,8 @@ func init() {
 			return []interface{}{result1}
 		})
 	gohanscript.RegisterStmtParser("db_query",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				tx, _ := stmt.Arg("tx", context).(transaction.Transaction)
 				schemaID, _ := stmt.Arg("schema_id", context).(string)
 				sql, _ := stmt.Arg("sql", context).(string)
@@ -338,8 +338,8 @@ func init() {
 			return []interface{}{result1, result2}
 		})
 	gohanscript.RegisterStmtParser("db_column",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				schemaID, _ := stmt.Arg("schema_id", context).(string)
 				join, _ := stmt.Arg("join", context).(bool)
 				var err error

@@ -118,7 +118,7 @@ func (l *lexer) scanNumber() int {
 	return result
 }
 
-func (l *lexer) scanQuotedString() string {
+func (l *lexer) scanDoubleQuotedString() string {
 	var result []rune
 	firstChar := l.peek()
 	if firstChar != '"' {
@@ -133,6 +133,32 @@ func (l *lexer) scanQuotedString() string {
 			l.next()
 			result = append(result, l.next())
 		case '"':
+			l.next()
+			return string(result)
+		case eof:
+			l.error("string isn't terminated")
+			return ""
+		default:
+			result = append(result, l.next())
+		}
+	}
+}
+
+func (l *lexer) scanQuotedString() string {
+	var result []rune
+	firstChar := l.peek()
+	if firstChar != '\'' {
+		l.error("value should be quoted")
+		return ""
+	}
+	l.next()
+	for {
+		c := l.peek()
+		switch c {
+		case '\\':
+			l.next()
+			result = append(result, l.next())
+		case '\'':
 			l.next()
 			return string(result)
 		case eof:
@@ -170,8 +196,13 @@ func (l *lexer) parseDict() map[string]interface{} {
 		l.scanWhiteSpace()
 		c = l.peek()
 		switch c {
-		case '"':
+		case '\'':
 			value = l.scanQuotedString()
+			if l.err != nil {
+				return nil
+			}
+		case '"':
+			value = l.scanDoubleQuotedString()
 			if l.err != nil {
 				return nil
 			}

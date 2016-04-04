@@ -26,12 +26,14 @@ import (
 // Context is execution context in gohan script.
 // Variables are stored in this context object.
 type Context struct {
+	VM   *VM
 	data map[string]interface{}
 }
 
 //NewContext makes data context
-func NewContext() *Context {
+func NewContext(vm *VM) *Context {
 	return &Context{
+		VM: vm,
 		data: map[string]interface{}{
 			"true":  true,
 			"false": false,
@@ -172,7 +174,7 @@ func (context *Context) HasKey(key string) bool {
 
 // Extend clones context and extend it
 func (context *Context) Extend(values map[string]interface{}) *Context {
-	newContext := NewContext()
+	newContext := NewContext(context.VM)
 	for key, value := range context.data {
 		newContext.Set(key, value)
 	}
