@@ -14,7 +14,7 @@
     "produces": [
         "application/json"
     ],
-    "paths": { {% for schema in schemas %}{% if schema.Metadata.type != "metaschema" %}
+    "paths": { {% for schema in schemas %}{% if schema.Metadata.type != "metaschema" && schema.Type != "abstract" %}
         "{{ schema.GetPluralURL() }}": {
             "get": {
                 "description" : "Get list of {{ schema.ID}} resources",

@@ -10,6 +10,402 @@ import (
 )
 
 func init() {
+	gohanscript.RegisterStmtParser("fetch_content",
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
+			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+				path, _ := stmt.Arg("path", context).(string)
+				var err error
+				result1, err := lib.FetchContent(path)
+				return result1, err
+			}, nil
+		})
+	gohanscript.RegisterMiniGoFunc("FetchContent",
+		func(vm *gohanscript.VM, args []interface{}) []interface{} {
+			i := 0
+			path, _ := args[i].(string)
+			i++
+			result1, result2 := lib.FetchContent(path)
+			return []interface{}{result1, result2}
+		})
+	gohanscript.RegisterStmtParser("save_content",
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
+			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+				path, _ := stmt.Arg("path", context).(string)
+				data, _ := stmt.Arg("data", context).(interface{})
+				err := lib.SaveContent(path, data)
+				return nil, err
+			}, nil
+		})
+	gohanscript.RegisterMiniGoFunc("SaveContent",
+		func(vm *gohanscript.VM, args []interface{}) []interface{} {
+			i := 0
+			path, _ := args[i].(string)
+			i++
+			data, _ := args[i].(interface{})
+			i++
+			result1 := lib.SaveContent(path, data)
+			return []interface{}{result1}
+		})
+	gohanscript.RegisterStmtParser("append",
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
+			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+				list, _ := stmt.Arg("list", context).([]interface{})
+				value, _ := stmt.Arg("value", context).(interface{})
+				result1 := lib.Append(list, value)
+				return result1, nil
+			}, nil
+		})
+	gohanscript.RegisterMiniGoFunc("Append",
+		func(vm *gohanscript.VM, args []interface{}) []interface{} {
+			i := 0
+			list, _ := args[i].([]interface{})
+			i++
+			value, _ := args[i].(interface{})
+			i++
+			result1 := lib.Append(list, value)
+			return []interface{}{result1}
+		})
+	gohanscript.RegisterStmtParser("contains",
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
+			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+				list, _ := stmt.Arg("list", context).([]interface{})
+				value, _ := stmt.Arg("value", context).(interface{})
+				result1 := lib.Contains(list, value)
+				return result1, nil
+			}, nil
+		})
+	gohanscript.RegisterMiniGoFunc("Contains",
+		func(vm *gohanscript.VM, args []interface{}) []interface{} {
+			i := 0
+			list, _ := args[i].([]interface{})
+			i++
+			value, _ := args[i].(interface{})
+			i++
+			result1 := lib.Contains(list, value)
+			return []interface{}{result1}
+		})
+	gohanscript.RegisterStmtParser("size",
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
+			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+				list, _ := stmt.Arg("list", context).([]interface{})
+				result1 := lib.Size(list)
+				return result1, nil
+			}, nil
+		})
+	gohanscript.RegisterMiniGoFunc("Size",
+		func(vm *gohanscript.VM, args []interface{}) []interface{} {
+			i := 0
+			list, _ := args[i].([]interface{})
+			i++
+			result1 := lib.Size(list)
+			return []interface{}{result1}
+		})
+	gohanscript.RegisterStmtParser("shift",
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
+			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+				list, _ := stmt.Arg("list", context).([]interface{})
+				var err error
+				result1, result2 := lib.Shift(list)
+				return []interface{}{result1, result2}, err
+			}, nil
+		})
+	gohanscript.RegisterMiniGoFunc("Shift",
+		func(vm *gohanscript.VM, args []interface{}) []interface{} {
+			i := 0
+			list, _ := args[i].([]interface{})
+			i++
+			result1, result2 := lib.Shift(list)
+			return []interface{}{result1, result2}
+		})
+	gohanscript.RegisterStmtParser("unshift",
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
+			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+				list, _ := stmt.Arg("list", context).([]interface{})
+				value, _ := stmt.Arg("value", context).(interface{})
+				result1 := lib.Unshift(list, value)
+				return result1, nil
+			}, nil
+		})
+	gohanscript.RegisterMiniGoFunc("Unshift",
+		func(vm *gohanscript.VM, args []interface{}) []interface{} {
+			i := 0
+			list, _ := args[i].([]interface{})
+			i++
+			value, _ := args[i].(interface{})
+			i++
+			result1 := lib.Unshift(list, value)
+			return []interface{}{result1}
+		})
+	gohanscript.RegisterStmtParser("copy",
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
+			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+				list, _ := stmt.Arg("list", context).([]interface{})
+				result1 := lib.Copy(list)
+				return result1, nil
+			}, nil
+		})
+	gohanscript.RegisterMiniGoFunc("Copy",
+		func(vm *gohanscript.VM, args []interface{}) []interface{} {
+			i := 0
+			list, _ := args[i].([]interface{})
+			i++
+			result1 := lib.Copy(list)
+			return []interface{}{result1}
+		})
+	gohanscript.RegisterStmtParser("delete",
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
+			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+				list, _ := stmt.Arg("list", context).([]interface{})
+				index, _ := stmt.Arg("index", context).(int)
+				result1 := lib.Delete(list, index)
+				return result1, nil
+			}, nil
+		})
+	gohanscript.RegisterMiniGoFunc("Delete",
+		func(vm *gohanscript.VM, args []interface{}) []interface{} {
+			i := 0
+			list, _ := args[i].([]interface{})
+			i++
+			index, _ := args[i].(int)
+			i++
+			result1 := lib.Delete(list, index)
+			return []interface{}{result1}
+		})
+	gohanscript.RegisterStmtParser("first",
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
+			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+				list, _ := stmt.Arg("list", context).([]interface{})
+				result1 := lib.First(list)
+				return result1, nil
+			}, nil
+		})
+	gohanscript.RegisterMiniGoFunc("First",
+		func(vm *gohanscript.VM, args []interface{}) []interface{} {
+			i := 0
+			list, _ := args[i].([]interface{})
+			i++
+			result1 := lib.First(list)
+			return []interface{}{result1}
+		})
+	gohanscript.RegisterStmtParser("last",
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
+			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+				list, _ := stmt.Arg("list", context).([]interface{})
+				result1 := lib.Last(list)
+				return result1, nil
+			}, nil
+		})
+	gohanscript.RegisterMiniGoFunc("Last",
+		func(vm *gohanscript.VM, args []interface{}) []interface{} {
+			i := 0
+			list, _ := args[i].([]interface{})
+			i++
+			result1 := lib.Last(list)
+			return []interface{}{result1}
+		})
+	gohanscript.RegisterStmtParser("get_openstack_client",
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
+			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+				authURL, _ := stmt.Arg("auth_url", context).(string)
+				userName, _ := stmt.Arg("user_name", context).(string)
+				password, _ := stmt.Arg("password", context).(string)
+				domainName, _ := stmt.Arg("domain_name", context).(string)
+				tenantName, _ := stmt.Arg("tenant_name", context).(string)
+				version, _ := stmt.Arg("version", context).(string)
+				var err error
+				result1, err := lib.GetOpenstackClient(authURL, userName, password, domainName, tenantName, version)
+				return result1, err
+			}, nil
+		})
+	gohanscript.RegisterMiniGoFunc("GetOpenstackClient",
+		func(vm *gohanscript.VM, args []interface{}) []interface{} {
+			i := 0
+			authURL, _ := args[i].(string)
+			i++
+			userName, _ := args[i].(string)
+			i++
+			password, _ := args[i].(string)
+			i++
+			domainName, _ := args[i].(string)
+			i++
+			tenantName, _ := args[i].(string)
+			i++
+			version, _ := args[i].(string)
+			i++
+			result1, result2 := lib.GetOpenstackClient(authURL, userName, password, domainName, tenantName, version)
+			return []interface{}{result1, result2}
+		})
+	gohanscript.RegisterStmtParser("openstack_token",
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
+			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+				client, _ := stmt.Arg("client", context).(*gophercloud.ServiceClient)
+				result1 := lib.OpenstackToken(client)
+				return result1, nil
+			}, nil
+		})
+	gohanscript.RegisterMiniGoFunc("OpenstackToken",
+		func(vm *gohanscript.VM, args []interface{}) []interface{} {
+			i := 0
+			client, _ := args[i].(*gophercloud.ServiceClient)
+			i++
+			result1 := lib.OpenstackToken(client)
+			return []interface{}{result1}
+		})
+	gohanscript.RegisterStmtParser("openstack_get",
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
+			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+				client, _ := stmt.Arg("client", context).(*gophercloud.ServiceClient)
+				url, _ := stmt.Arg("url", context).(string)
+				var err error
+				result1, err := lib.OpenstackGet(client, url)
+				return result1, err
+			}, nil
+		})
+	gohanscript.RegisterMiniGoFunc("OpenstackGet",
+		func(vm *gohanscript.VM, args []interface{}) []interface{} {
+			i := 0
+			client, _ := args[i].(*gophercloud.ServiceClient)
+			i++
+			url, _ := args[i].(string)
+			i++
+			result1, result2 := lib.OpenstackGet(client, url)
+			return []interface{}{result1, result2}
+		})
+	gohanscript.RegisterStmtParser("openstack_put",
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
+			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+				client, _ := stmt.Arg("client", context).(*gophercloud.ServiceClient)
+				url, _ := stmt.Arg("url", context).(string)
+				data, _ := stmt.Arg("data", context).(interface{})
+				var err error
+				result1, err := lib.OpenstackPut(client, url, data)
+				return result1, err
+			}, nil
+		})
+	gohanscript.RegisterMiniGoFunc("OpenstackPut",
+		func(vm *gohanscript.VM, args []interface{}) []interface{} {
+			i := 0
+			client, _ := args[i].(*gophercloud.ServiceClient)
+			i++
+			url, _ := args[i].(string)
+			i++
+			data, _ := args[i].(interface{})
+			i++
+			result1, result2 := lib.OpenstackPut(client, url, data)
+			return []interface{}{result1, result2}
+		})
+	gohanscript.RegisterStmtParser("openstack_post",
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
+			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+				client, _ := stmt.Arg("client", context).(*gophercloud.ServiceClient)
+				url, _ := stmt.Arg("url", context).(string)
+				data, _ := stmt.Arg("data", context).(interface{})
+				var err error
+				result1, err := lib.OpenstackPost(client, url, data)
+				return result1, err
+			}, nil
+		})
+	gohanscript.RegisterMiniGoFunc("OpenstackPost",
+		func(vm *gohanscript.VM, args []interface{}) []interface{} {
+			i := 0
+			client, _ := args[i].(*gophercloud.ServiceClient)
+			i++
+			url, _ := args[i].(string)
+			i++
+			data, _ := args[i].(interface{})
+			i++
+			result1, result2 := lib.OpenstackPost(client, url, data)
+			return []interface{}{result1, result2}
+		})
+	gohanscript.RegisterStmtParser("openstack_delete",
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
+			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+				client, _ := stmt.Arg("client", context).(*gophercloud.ServiceClient)
+				url, _ := stmt.Arg("url", context).(string)
+				var err error
+				result1, err := lib.OpenstackDelete(client, url)
+				return result1, err
+			}, nil
+		})
+	gohanscript.RegisterMiniGoFunc("OpenstackDelete",
+		func(vm *gohanscript.VM, args []interface{}) []interface{} {
+			i := 0
+			client, _ := args[i].(*gophercloud.ServiceClient)
+			i++
+			url, _ := args[i].(string)
+			i++
+			result1, result2 := lib.OpenstackDelete(client, url)
+			return []interface{}{result1, result2}
+		})
+	gohanscript.RegisterStmtParser("openstack_endpoint",
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
+			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+				client, _ := stmt.Arg("client", context).(*gophercloud.ServiceClient)
+				endpointType, _ := stmt.Arg("endpoint_type", context).(string)
+				name, _ := stmt.Arg("name", context).(string)
+				region, _ := stmt.Arg("region", context).(string)
+				availability, _ := stmt.Arg("availability", context).(string)
+				var err error
+				result1, err := lib.OpenstackEndpoint(client, endpointType, name, region, availability)
+				return result1, err
+			}, nil
+		})
+	gohanscript.RegisterMiniGoFunc("OpenstackEndpoint",
+		func(vm *gohanscript.VM, args []interface{}) []interface{} {
+			i := 0
+			client, _ := args[i].(*gophercloud.ServiceClient)
+			i++
+			endpointType, _ := args[i].(string)
+			i++
+			name, _ := args[i].(string)
+			i++
+			region, _ := args[i].(string)
+			i++
+			availability, _ := args[i].(string)
+			i++
+			result1, result2 := lib.OpenstackEndpoint(client, endpointType, name, region, availability)
+			return []interface{}{result1, result2}
+		})
+	gohanscript.RegisterStmtParser("uuid",
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
+			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+				result1 := lib.UUID()
+				return result1, nil
+			}, nil
+		})
+	gohanscript.RegisterMiniGoFunc("UUID",
+		func(vm *gohanscript.VM, args []interface{}) []interface{} {
+			result1 := lib.UUID()
+			return []interface{}{result1}
+		})
+	gohanscript.RegisterStmtParser("env",
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
+			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+				result1 := lib.Env()
+				return result1, nil
+			}, nil
+		})
+	gohanscript.RegisterMiniGoFunc("Env",
+		func(vm *gohanscript.VM, args []interface{}) []interface{} {
+			result1 := lib.Env()
+			return []interface{}{result1}
+		})
+	gohanscript.RegisterStmtParser("normalize_map",
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
+			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+				data, _ := stmt.Arg("data", context).(map[string]interface{})
+				result1 := lib.NormalizeMap(data)
+				return result1, nil
+			}, nil
+		})
+	gohanscript.RegisterMiniGoFunc("NormalizeMap",
+		func(vm *gohanscript.VM, args []interface{}) []interface{} {
+			i := 0
+			data, _ := args[i].(map[string]interface{})
+			i++
+			result1 := lib.NormalizeMap(data)
+			return []interface{}{result1}
+		})
 	gohanscript.RegisterStmtParser("gohan_schema",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
 			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
@@ -358,315 +754,6 @@ func init() {
 			result1, result2 := lib.DBColumn(schemaID, join)
 			return []interface{}{result1, result2}
 		})
-	gohanscript.RegisterStmtParser("append",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
-				list, _ := stmt.Arg("list", context).([]interface{})
-				value, _ := stmt.Arg("value", context).(interface{})
-				result1 := lib.Append(list, value)
-				return result1, nil
-			}, nil
-		})
-	gohanscript.RegisterMiniGoFunc("Append",
-		func(vm *gohanscript.VM, args []interface{}) []interface{} {
-			i := 0
-			list, _ := args[i].([]interface{})
-			i++
-			value, _ := args[i].(interface{})
-			i++
-			result1 := lib.Append(list, value)
-			return []interface{}{result1}
-		})
-	gohanscript.RegisterStmtParser("contains",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
-				list, _ := stmt.Arg("list", context).([]interface{})
-				value, _ := stmt.Arg("value", context).(interface{})
-				result1 := lib.Contains(list, value)
-				return result1, nil
-			}, nil
-		})
-	gohanscript.RegisterMiniGoFunc("Contains",
-		func(vm *gohanscript.VM, args []interface{}) []interface{} {
-			i := 0
-			list, _ := args[i].([]interface{})
-			i++
-			value, _ := args[i].(interface{})
-			i++
-			result1 := lib.Contains(list, value)
-			return []interface{}{result1}
-		})
-	gohanscript.RegisterStmtParser("size",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
-				list, _ := stmt.Arg("list", context).([]interface{})
-				result1 := lib.Size(list)
-				return result1, nil
-			}, nil
-		})
-	gohanscript.RegisterMiniGoFunc("Size",
-		func(vm *gohanscript.VM, args []interface{}) []interface{} {
-			i := 0
-			list, _ := args[i].([]interface{})
-			i++
-			result1 := lib.Size(list)
-			return []interface{}{result1}
-		})
-	gohanscript.RegisterStmtParser("shift",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
-				list, _ := stmt.Arg("list", context).([]interface{})
-				var err error
-				result1, result2 := lib.Shift(list)
-				return []interface{}{result1, result2}, err
-			}, nil
-		})
-	gohanscript.RegisterMiniGoFunc("Shift",
-		func(vm *gohanscript.VM, args []interface{}) []interface{} {
-			i := 0
-			list, _ := args[i].([]interface{})
-			i++
-			result1, result2 := lib.Shift(list)
-			return []interface{}{result1, result2}
-		})
-	gohanscript.RegisterStmtParser("unshift",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
-				list, _ := stmt.Arg("list", context).([]interface{})
-				value, _ := stmt.Arg("value", context).(interface{})
-				result1 := lib.Unshift(list, value)
-				return result1, nil
-			}, nil
-		})
-	gohanscript.RegisterMiniGoFunc("Unshift",
-		func(vm *gohanscript.VM, args []interface{}) []interface{} {
-			i := 0
-			list, _ := args[i].([]interface{})
-			i++
-			value, _ := args[i].(interface{})
-			i++
-			result1 := lib.Unshift(list, value)
-			return []interface{}{result1}
-		})
-	gohanscript.RegisterStmtParser("copy",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
-				list, _ := stmt.Arg("list", context).([]interface{})
-				result1 := lib.Copy(list)
-				return result1, nil
-			}, nil
-		})
-	gohanscript.RegisterMiniGoFunc("Copy",
-		func(vm *gohanscript.VM, args []interface{}) []interface{} {
-			i := 0
-			list, _ := args[i].([]interface{})
-			i++
-			result1 := lib.Copy(list)
-			return []interface{}{result1}
-		})
-	gohanscript.RegisterStmtParser("delete",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
-				list, _ := stmt.Arg("list", context).([]interface{})
-				index, _ := stmt.Arg("index", context).(int)
-				result1 := lib.Delete(list, index)
-				return result1, nil
-			}, nil
-		})
-	gohanscript.RegisterMiniGoFunc("Delete",
-		func(vm *gohanscript.VM, args []interface{}) []interface{} {
-			i := 0
-			list, _ := args[i].([]interface{})
-			i++
-			index, _ := args[i].(int)
-			i++
-			result1 := lib.Delete(list, index)
-			return []interface{}{result1}
-		})
-	gohanscript.RegisterStmtParser("first",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
-				list, _ := stmt.Arg("list", context).([]interface{})
-				result1 := lib.First(list)
-				return result1, nil
-			}, nil
-		})
-	gohanscript.RegisterMiniGoFunc("First",
-		func(vm *gohanscript.VM, args []interface{}) []interface{} {
-			i := 0
-			list, _ := args[i].([]interface{})
-			i++
-			result1 := lib.First(list)
-			return []interface{}{result1}
-		})
-	gohanscript.RegisterStmtParser("last",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
-				list, _ := stmt.Arg("list", context).([]interface{})
-				result1 := lib.Last(list)
-				return result1, nil
-			}, nil
-		})
-	gohanscript.RegisterMiniGoFunc("Last",
-		func(vm *gohanscript.VM, args []interface{}) []interface{} {
-			i := 0
-			list, _ := args[i].([]interface{})
-			i++
-			result1 := lib.Last(list)
-			return []interface{}{result1}
-		})
-	gohanscript.RegisterStmtParser("add_int",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
-				a, _ := stmt.Arg("a", context).(int)
-				b, _ := stmt.Arg("b", context).(int)
-				result1 := lib.AddInt(a, b)
-				return result1, nil
-			}, nil
-		})
-	gohanscript.RegisterMiniGoFunc("AddInt",
-		func(vm *gohanscript.VM, args []interface{}) []interface{} {
-			i := 0
-			a, _ := args[i].(int)
-			i++
-			b, _ := args[i].(int)
-			i++
-			result1 := lib.AddInt(a, b)
-			return []interface{}{result1}
-		})
-	gohanscript.RegisterStmtParser("sub_int",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
-				a, _ := stmt.Arg("a", context).(int)
-				b, _ := stmt.Arg("b", context).(int)
-				result1 := lib.SubInt(a, b)
-				return result1, nil
-			}, nil
-		})
-	gohanscript.RegisterMiniGoFunc("SubInt",
-		func(vm *gohanscript.VM, args []interface{}) []interface{} {
-			i := 0
-			a, _ := args[i].(int)
-			i++
-			b, _ := args[i].(int)
-			i++
-			result1 := lib.SubInt(a, b)
-			return []interface{}{result1}
-		})
-	gohanscript.RegisterStmtParser("mul_int",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
-				a, _ := stmt.Arg("a", context).(int)
-				b, _ := stmt.Arg("b", context).(int)
-				result1 := lib.MulInt(a, b)
-				return result1, nil
-			}, nil
-		})
-	gohanscript.RegisterMiniGoFunc("MulInt",
-		func(vm *gohanscript.VM, args []interface{}) []interface{} {
-			i := 0
-			a, _ := args[i].(int)
-			i++
-			b, _ := args[i].(int)
-			i++
-			result1 := lib.MulInt(a, b)
-			return []interface{}{result1}
-		})
-	gohanscript.RegisterStmtParser("div_int",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
-				a, _ := stmt.Arg("a", context).(int)
-				b, _ := stmt.Arg("b", context).(int)
-				result1 := lib.DivInt(a, b)
-				return result1, nil
-			}, nil
-		})
-	gohanscript.RegisterMiniGoFunc("DivInt",
-		func(vm *gohanscript.VM, args []interface{}) []interface{} {
-			i := 0
-			a, _ := args[i].(int)
-			i++
-			b, _ := args[i].(int)
-			i++
-			result1 := lib.DivInt(a, b)
-			return []interface{}{result1}
-		})
-	gohanscript.RegisterStmtParser("uuid",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
-				result1 := lib.UUID()
-				return result1, nil
-			}, nil
-		})
-	gohanscript.RegisterMiniGoFunc("UUID",
-		func(vm *gohanscript.VM, args []interface{}) []interface{} {
-			result1 := lib.UUID()
-			return []interface{}{result1}
-		})
-	gohanscript.RegisterStmtParser("env",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
-				result1 := lib.Env()
-				return result1, nil
-			}, nil
-		})
-	gohanscript.RegisterMiniGoFunc("Env",
-		func(vm *gohanscript.VM, args []interface{}) []interface{} {
-			result1 := lib.Env()
-			return []interface{}{result1}
-		})
-	gohanscript.RegisterStmtParser("normalize_map",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
-				data, _ := stmt.Arg("data", context).(map[string]interface{})
-				result1 := lib.NormalizeMap(data)
-				return result1, nil
-			}, nil
-		})
-	gohanscript.RegisterMiniGoFunc("NormalizeMap",
-		func(vm *gohanscript.VM, args []interface{}) []interface{} {
-			i := 0
-			data, _ := args[i].(map[string]interface{})
-			i++
-			result1 := lib.NormalizeMap(data)
-			return []interface{}{result1}
-		})
-	gohanscript.RegisterStmtParser("fetch_content",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
-				path, _ := stmt.Arg("path", context).(string)
-				var err error
-				result1, err := lib.FetchContent(path)
-				return result1, err
-			}, nil
-		})
-	gohanscript.RegisterMiniGoFunc("FetchContent",
-		func(vm *gohanscript.VM, args []interface{}) []interface{} {
-			i := 0
-			path, _ := args[i].(string)
-			i++
-			result1, result2 := lib.FetchContent(path)
-			return []interface{}{result1, result2}
-		})
-	gohanscript.RegisterStmtParser("save_content",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
-				path, _ := stmt.Arg("path", context).(string)
-				data, _ := stmt.Arg("data", context).(interface{})
-				err := lib.SaveContent(path, data)
-				return nil, err
-			}, nil
-		})
-	gohanscript.RegisterMiniGoFunc("SaveContent",
-		func(vm *gohanscript.VM, args []interface{}) []interface{} {
-			i := 0
-			path, _ := args[i].(string)
-			i++
-			data, _ := args[i].(interface{})
-			i++
-			result1 := lib.SaveContent(path, data)
-			return []interface{}{result1}
-		})
 	gohanscript.RegisterStmtParser("http_get",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
 			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
@@ -802,168 +889,81 @@ func init() {
 			result1, result2 := lib.HTTPRequest(url, method, headers, postData)
 			return []interface{}{result1, result2}
 		})
-	gohanscript.RegisterStmtParser("get_openstack_client",
+	gohanscript.RegisterStmtParser("add_int",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
 			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
-				authURL, _ := stmt.Arg("auth_url", context).(string)
-				userName, _ := stmt.Arg("user_name", context).(string)
-				password, _ := stmt.Arg("password", context).(string)
-				domainName, _ := stmt.Arg("domain_name", context).(string)
-				tenantName, _ := stmt.Arg("tenant_name", context).(string)
-				version, _ := stmt.Arg("version", context).(string)
-				var err error
-				result1, err := lib.GetOpenstackClient(authURL, userName, password, domainName, tenantName, version)
-				return result1, err
-			}, nil
-		})
-	gohanscript.RegisterMiniGoFunc("GetOpenstackClient",
-		func(vm *gohanscript.VM, args []interface{}) []interface{} {
-			i := 0
-			authURL, _ := args[i].(string)
-			i++
-			userName, _ := args[i].(string)
-			i++
-			password, _ := args[i].(string)
-			i++
-			domainName, _ := args[i].(string)
-			i++
-			tenantName, _ := args[i].(string)
-			i++
-			version, _ := args[i].(string)
-			i++
-			result1, result2 := lib.GetOpenstackClient(authURL, userName, password, domainName, tenantName, version)
-			return []interface{}{result1, result2}
-		})
-	gohanscript.RegisterStmtParser("openstack_token",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
-				client, _ := stmt.Arg("client", context).(*gophercloud.ServiceClient)
-				result1 := lib.OpenstackToken(client)
+				a, _ := stmt.Arg("a", context).(int)
+				b, _ := stmt.Arg("b", context).(int)
+				result1 := lib.AddInt(a, b)
 				return result1, nil
 			}, nil
 		})
-	gohanscript.RegisterMiniGoFunc("OpenstackToken",
+	gohanscript.RegisterMiniGoFunc("AddInt",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 			i := 0
-			client, _ := args[i].(*gophercloud.ServiceClient)
+			a, _ := args[i].(int)
 			i++
-			result1 := lib.OpenstackToken(client)
+			b, _ := args[i].(int)
+			i++
+			result1 := lib.AddInt(a, b)
 			return []interface{}{result1}
 		})
-	gohanscript.RegisterStmtParser("openstack_get",
+	gohanscript.RegisterStmtParser("sub_int",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
 			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
-				client, _ := stmt.Arg("client", context).(*gophercloud.ServiceClient)
-				url, _ := stmt.Arg("url", context).(string)
-				var err error
-				result1, err := lib.OpenstackGet(client, url)
-				return result1, err
+				a, _ := stmt.Arg("a", context).(int)
+				b, _ := stmt.Arg("b", context).(int)
+				result1 := lib.SubInt(a, b)
+				return result1, nil
 			}, nil
 		})
-	gohanscript.RegisterMiniGoFunc("OpenstackGet",
+	gohanscript.RegisterMiniGoFunc("SubInt",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 			i := 0
-			client, _ := args[i].(*gophercloud.ServiceClient)
+			a, _ := args[i].(int)
 			i++
-			url, _ := args[i].(string)
+			b, _ := args[i].(int)
 			i++
-			result1, result2 := lib.OpenstackGet(client, url)
-			return []interface{}{result1, result2}
+			result1 := lib.SubInt(a, b)
+			return []interface{}{result1}
 		})
-	gohanscript.RegisterStmtParser("openstack_put",
+	gohanscript.RegisterStmtParser("mul_int",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
 			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
-				client, _ := stmt.Arg("client", context).(*gophercloud.ServiceClient)
-				url, _ := stmt.Arg("url", context).(string)
-				data, _ := stmt.Arg("data", context).(interface{})
-				var err error
-				result1, err := lib.OpenstackPut(client, url, data)
-				return result1, err
+				a, _ := stmt.Arg("a", context).(int)
+				b, _ := stmt.Arg("b", context).(int)
+				result1 := lib.MulInt(a, b)
+				return result1, nil
 			}, nil
 		})
-	gohanscript.RegisterMiniGoFunc("OpenstackPut",
+	gohanscript.RegisterMiniGoFunc("MulInt",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 			i := 0
-			client, _ := args[i].(*gophercloud.ServiceClient)
+			a, _ := args[i].(int)
 			i++
-			url, _ := args[i].(string)
+			b, _ := args[i].(int)
 			i++
-			data, _ := args[i].(interface{})
-			i++
-			result1, result2 := lib.OpenstackPut(client, url, data)
-			return []interface{}{result1, result2}
+			result1 := lib.MulInt(a, b)
+			return []interface{}{result1}
 		})
-	gohanscript.RegisterStmtParser("openstack_post",
+	gohanscript.RegisterStmtParser("div_int",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
 			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
-				client, _ := stmt.Arg("client", context).(*gophercloud.ServiceClient)
-				url, _ := stmt.Arg("url", context).(string)
-				data, _ := stmt.Arg("data", context).(interface{})
-				var err error
-				result1, err := lib.OpenstackPost(client, url, data)
-				return result1, err
+				a, _ := stmt.Arg("a", context).(int)
+				b, _ := stmt.Arg("b", context).(int)
+				result1 := lib.DivInt(a, b)
+				return result1, nil
 			}, nil
 		})
-	gohanscript.RegisterMiniGoFunc("OpenstackPost",
+	gohanscript.RegisterMiniGoFunc("DivInt",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 			i := 0
-			client, _ := args[i].(*gophercloud.ServiceClient)
+			a, _ := args[i].(int)
 			i++
-			url, _ := args[i].(string)
+			b, _ := args[i].(int)
 			i++
-			data, _ := args[i].(interface{})
-			i++
-			result1, result2 := lib.OpenstackPost(client, url, data)
-			return []interface{}{result1, result2}
-		})
-	gohanscript.RegisterStmtParser("openstack_delete",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
-				client, _ := stmt.Arg("client", context).(*gophercloud.ServiceClient)
-				url, _ := stmt.Arg("url", context).(string)
-				var err error
-				result1, err := lib.OpenstackDelete(client, url)
-				return result1, err
-			}, nil
-		})
-	gohanscript.RegisterMiniGoFunc("OpenstackDelete",
-		func(vm *gohanscript.VM, args []interface{}) []interface{} {
-			i := 0
-			client, _ := args[i].(*gophercloud.ServiceClient)
-			i++
-			url, _ := args[i].(string)
-			i++
-			result1, result2 := lib.OpenstackDelete(client, url)
-			return []interface{}{result1, result2}
-		})
-	gohanscript.RegisterStmtParser("openstack_endpoint",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
-				client, _ := stmt.Arg("client", context).(*gophercloud.ServiceClient)
-				endpointType, _ := stmt.Arg("endpoint_type", context).(string)
-				name, _ := stmt.Arg("name", context).(string)
-				region, _ := stmt.Arg("region", context).(string)
-				availability, _ := stmt.Arg("availability", context).(string)
-				var err error
-				result1, err := lib.OpenstackEndpoint(client, endpointType, name, region, availability)
-				return result1, err
-			}, nil
-		})
-	gohanscript.RegisterMiniGoFunc("OpenstackEndpoint",
-		func(vm *gohanscript.VM, args []interface{}) []interface{} {
-			i := 0
-			client, _ := args[i].(*gophercloud.ServiceClient)
-			i++
-			endpointType, _ := args[i].(string)
-			i++
-			name, _ := args[i].(string)
-			i++
-			region, _ := args[i].(string)
-			i++
-			availability, _ := args[i].(string)
-			i++
-			result1, result2 := lib.OpenstackEndpoint(client, endpointType, name, region, availability)
-			return []interface{}{result1, result2}
+			result1 := lib.DivInt(a, b)
+			return []interface{}{result1}
 		})
 	gohanscript.RegisterStmtParser("split",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
