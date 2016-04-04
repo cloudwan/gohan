@@ -149,10 +149,11 @@ func Gen(pkg, template, export, exportPath string) {
 			continue
 		}
 
-		imports := []string{}
-		funcs := []*ast.FuncDecl{}
 		for _, pkgObj := range pkgs {
-			for _, f := range pkgObj.Files {
+
+			for filePath, f := range pkgObj.Files {
+				imports := []string{}
+				funcs := []*ast.FuncDecl{}
 				for _, d := range f.Decls {
 					switch decl := d.(type) {
 					case *ast.GenDecl:
@@ -175,33 +176,37 @@ func Gen(pkg, template, export, exportPath string) {
 						funcs = append(funcs, decl)
 					}
 				}
+				if len(funcs) == 0 {
+					continue
+				}
+				tpl, err := pongo2.FromFile(template)
+				if err != nil {
+					panic(err)
+				}
+				_, pkgName := filepath.Split(pkg)
+				_, fileName := filepath.Split(filePath)
+				outputFile := filepath.Join(exportPath, pkgName+"_"+fileName)
+				output, err := tpl.Execute(
+					pongo2.Context{"full_package": pkg, "package": pkgName,
+						"funcs":          funcs,
+						"imports":        imports,
+						"export_package": export})
+
+				if err != nil {
+					panic(err)
+				}
+				re := regexp.MustCompile("\n+")
+				output = re.ReplaceAllString(output, "\n")
+				os.MkdirAll(exportPath, os.ModePerm)
+				ioutil.WriteFile(outputFile, []byte(output), os.ModePerm)
+				out, err := exec.Command("goimports", "./"+outputFile).CombinedOutput()
+				if err != nil {
+					fmt.Println(string(out))
+					panic(err)
+				}
+				ioutil.WriteFile(outputFile, out, os.ModePerm)
 			}
 		}
-		tpl, err := pongo2.FromFile(template)
-		if err != nil {
-			panic(err)
-		}
-		_, fileName := filepath.Split(pkg)
-		outputFile := filepath.Join(exportPath, fileName+".go")
-		output, err := tpl.Execute(
-			pongo2.Context{"full_package": pkg, "package": fileName,
-				"funcs":          funcs,
-				"imports":        imports,
-				"export_package": export})
-
-		if err != nil {
-			panic(err)
-		}
-		re := regexp.MustCompile("\n+")
-		output = re.ReplaceAllString(output, "\n")
-		os.MkdirAll(exportPath, os.ModePerm)
-		ioutil.WriteFile(outputFile, []byte(output), os.ModePerm)
-		out, err := exec.Command("goimports", "./"+outputFile).CombinedOutput()
-		if err != nil {
-			fmt.Println(string(out))
-			panic(err)
-		}
-		ioutil.WriteFile(outputFile, out, os.ModePerm)
 		return
 	}
 }
