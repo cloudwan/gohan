@@ -243,7 +243,7 @@ Useful for development purposes.`,
 			cli.StringFlag{Name: "out-type, ot", Value: "", Usage: "Output db type (yaml, json, sqlite3, mysql)"},
 			cli.StringFlag{Name: "out, o", Value: "", Usage: "Output db connection spec (or filename)"},
 			cli.StringFlag{Name: "schema, s", Value: "", Usage: "Schema file"},
-			cli.StringFlag{Name: "meta-schema, m", Value: "", Usage: "Meta-schema file (optional)"},
+			cli.StringFlag{Name: "meta-schema, m", Value: "embed://etc/schema/gohan.json", Usage: "Meta-schema file (optional)"},
 		},
 		Action: func(c *cli.Context) {
 			inType, in := c.String("in-type"), c.String("in")

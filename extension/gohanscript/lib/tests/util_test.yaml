@@ -4,7 +4,7 @@ test_suite:
     test:
     - http_get: url=https://status.github.com/api/status.json
       register: result
-    - assert: expect="good" actual="{{result.contents.status}}"
+    - assert: expect=200 actual="{{result.status_code}}"
   - name: Generate UUID
     test:
     - uuid:
