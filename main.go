@@ -19,6 +19,9 @@ import (
 	"github.com/cloudwan/gohan/cli"
 )
 
+//BuildVersion get embbeded on build time
+var BuildVersion string
+
 func main() {
-	cli.Run("gohan", "Gohan", "0.1")
+	cli.Run("gohan", "Gohan", BuildVersion)
 }

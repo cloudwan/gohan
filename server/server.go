@@ -347,7 +347,6 @@ func RunServer(configFile string) {
 	}
 	log.Info("Gohan no jikan desuyo (It's time for dinner!) ")
 	log.Info("Starting Gohan Server...")
-	log.Info("build: %s", schema.BuildVersion)
 	address := server.address
 	if strings.HasPrefix(address, ":") {
 		address = "localhost" + address

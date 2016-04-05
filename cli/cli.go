@@ -49,7 +49,7 @@ func Run(name, usage, version string) {
 	app := cli.NewApp()
 	app.Name = "gohan"
 	app.Usage = "Gohan"
-	app.Version = schema.BuildVersion
+	app.Version = version
 	app.Flags = []cli.Flag{
 		cli.BoolFlag{Name: "debug, d", Usage: "Show debug messages"},
 	}
