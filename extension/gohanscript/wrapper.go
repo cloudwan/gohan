@@ -9,10 +9,10 @@ import (
 )
 
 //Funcwrapper addes extra process on function call
-var funcWrappers []func(stmt *Stmt, callback func(*VM, *Context) (interface{}, error)) (func(*VM, *Context) (interface{}, error), error)
+var funcWrappers []func(stmt *Stmt, callback func(*Context) (interface{}, error)) (func(*Context) (interface{}, error), error)
 
 func init() {
-	funcWrappers = []func(stmt *Stmt, callback func(*VM, *Context) (interface{}, error)) (func(*VM, *Context) (interface{}, error), error){
+	funcWrappers = []func(stmt *Stmt, callback func(*Context) (interface{}, error)) (func(*Context) (interface{}, error), error){
 		contextWrapper,
 		retryWrapper,
 		debugWrapper,
@@ -25,7 +25,7 @@ func init() {
 	}
 }
 
-func applyWrappers(stmt *Stmt, f func(*VM, *Context) (interface{}, error)) (func(*VM, *Context) (interface{}, error), error) {
+func applyWrappers(stmt *Stmt, f func(*Context) (interface{}, error)) (func(*Context) (interface{}, error), error) {
 	var err error
 	for _, wrapper := range funcWrappers {
 		f, err = wrapper(stmt, f)
@@ -37,16 +37,16 @@ func applyWrappers(stmt *Stmt, f func(*VM, *Context) (interface{}, error)) (func
 	return f, nil
 }
 
-func retryWrapper(stmt *Stmt, f func(*VM, *Context) (interface{}, error)) (func(*VM, *Context) (interface{}, error), error) {
+func retryWrapper(stmt *Stmt, f func(*Context) (interface{}, error)) (func(*Context) (interface{}, error), error) {
 	if stmt.Retry == 0 {
 		return f, nil
 	}
-	return func(vm *VM, context *Context) (value interface{}, err error) {
+	return func(context *Context) (value interface{}, err error) {
 		for i := 0; i < stmt.Retry; i++ {
-			value, err = f(vm, context)
+			value, err = f(context)
 			if err == nil {
 				if stmt.Until != nil {
-					r, err := stmt.Until.Run(vm, context)
+					r, err := stmt.Until.Run(context)
 					if err != nil {
 						return nil, err
 					}
@@ -63,9 +63,10 @@ func retryWrapper(stmt *Stmt, f func(*VM, *Context) (interface{}, error)) (func(
 	}, nil
 }
 
-func debugWrapper(stmt *Stmt, f func(*VM, *Context) (interface{}, error)) (func(*VM, *Context) (interface{}, error), error) {
-	return func(vm *VM, context *Context) (value interface{}, err error) {
+func debugWrapper(stmt *Stmt, f func(*Context) (interface{}, error)) (func(*Context) (interface{}, error), error) {
+	return func(context *Context) (value interface{}, err error) {
 		debugNext := false
+		vm := context.VM
 		if vm.debug {
 			var command string
 		DEBUG_LOOP:
@@ -97,7 +98,7 @@ func debugWrapper(stmt *Stmt, f func(*VM, *Context) (interface{}, error)) (func(
 				}
 			}
 		}
-		value, err = f(vm, context)
+		value, err = f(context)
 		if debugNext {
 			vm.debug = true
 		}
@@ -105,7 +106,7 @@ func debugWrapper(stmt *Stmt, f func(*VM, *Context) (interface{}, error)) (func(
 	}, nil
 }
 
-func conditionalWrapper(stmt *Stmt, f func(*VM, *Context) (interface{}, error)) (func(*VM, *Context) (interface{}, error), error) {
+func conditionalWrapper(stmt *Stmt, f func(*Context) (interface{}, error)) (func(*Context) (interface{}, error), error) {
 	if stmt.When == nil {
 		return f, nil
 	}
@@ -113,22 +114,22 @@ func conditionalWrapper(stmt *Stmt, f func(*VM, *Context) (interface{}, error)) 
 	if err != nil {
 		return nil, err
 	}
-	return func(vm *VM, context *Context) (value interface{}, err error) {
-		r, err := stmt.When.Run(vm, context)
+	return func(context *Context) (value interface{}, err error) {
+		r, err := stmt.When.Run(context)
 		if err != nil {
 			return nil, err
 		}
 		if r != true {
 			if elseRunners != nil {
-				value, err = elseRunners(vm, context)
+				value, err = elseRunners(context)
 			}
 			return
 		}
-		return f(vm, context)
+		return f(context)
 	}, nil
 }
 
-func rescueWrapper(stmt *Stmt, f func(*VM, *Context) (interface{}, error)) (func(*VM, *Context) (interface{}, error), error) {
+func rescueWrapper(stmt *Stmt, f func(*Context) (interface{}, error)) (func(*Context) (interface{}, error), error) {
 	if stmt.Rescue == nil {
 		return f, nil
 	}
@@ -136,12 +137,12 @@ func rescueWrapper(stmt *Stmt, f func(*VM, *Context) (interface{}, error)) (func
 	if err != nil {
 		return nil, err
 	}
-	return func(vm *VM, context *Context) (value interface{}, err error) {
-		value, err = f(vm, context)
+	return func(context *Context) (value interface{}, err error) {
+		value, err = f(context)
 		if err != nil {
 			context.Set("error", err.Error())
 			if rescueRunners != nil {
-				value, err = rescueRunners(vm, context)
+				value, err = rescueRunners(context)
 				if err == nil {
 					context.Set("error", nil)
 				} else {
@@ -156,7 +157,7 @@ func rescueWrapper(stmt *Stmt, f func(*VM, *Context) (interface{}, error)) (func
 	}, nil
 }
 
-func alwaysWrapper(stmt *Stmt, f func(*VM, *Context) (interface{}, error)) (func(*VM, *Context) (interface{}, error), error) {
+func alwaysWrapper(stmt *Stmt, f func(*Context) (interface{}, error)) (func(*Context) (interface{}, error), error) {
 	if stmt.Always == nil {
 		return f, nil
 	}
@@ -164,30 +165,31 @@ func alwaysWrapper(stmt *Stmt, f func(*VM, *Context) (interface{}, error)) (func
 	if err != nil {
 		return nil, err
 	}
-	return func(vm *VM, context *Context) (value interface{}, err error) {
-		value, err = f(vm, context)
-		value, err = alwaysRunners(vm, context)
+	return func(context *Context) (value interface{}, err error) {
+		value, err = f(context)
+		value, err = alwaysRunners(context)
 		return
 	}, nil
 }
 
-func registerWrapper(stmt *Stmt, f func(*VM, *Context) (interface{}, error)) (func(*VM, *Context) (interface{}, error), error) {
+func registerWrapper(stmt *Stmt, f func(*Context) (interface{}, error)) (func(*Context) (interface{}, error), error) {
 	if stmt.Register == "" {
 		return f, nil
 	}
-	return func(vm *VM, context *Context) (value interface{}, err error) {
-		value, err = f(vm, context)
+	return func(context *Context) (value interface{}, err error) {
+		value, err = f(context)
 		context.Set(stmt.Register, value)
 		return
 	}, nil
 }
 
-func loopWrapper(stmt *Stmt, f func(*VM, *Context) (interface{}, error)) (func(*VM, *Context) (interface{}, error), error) {
+func loopWrapper(stmt *Stmt, f func(*Context) (interface{}, error)) (func(*Context) (interface{}, error), error) {
 	if stmt.WithDict == nil && stmt.WithItems == nil {
 		return f, nil
 	}
-	return func(vm *VM, context *Context) (value interface{}, err error) {
+	return func(context *Context) (value interface{}, err error) {
 		var items []interface{}
+		vm := context.VM
 		if stmt.WithDict != nil {
 			if mapItems, ok := stmt.WithDict.Value(context).(map[string]interface{}); ok {
 				for key, value := range mapItems {
@@ -213,7 +215,7 @@ func loopWrapper(stmt *Stmt, f func(*VM, *Context) (interface{}, error)) (func(*
 					loopContext = context.Extend(nil)
 				}
 				loopContext.Set(stmt.LoopVar, item)
-				_, err := f(vm, loopContext)
+				_, err := f(loopContext)
 				if err != nil {
 					context.Set("error", err.Error())
 					return
@@ -227,8 +229,8 @@ func loopWrapper(stmt *Stmt, f func(*VM, *Context) (interface{}, error)) (func(*
 	}, nil
 }
 
-func contextWrapper(stmt *Stmt, f func(*VM, *Context) (interface{}, error)) (func(*VM, *Context) (interface{}, error), error) {
-	return func(vm *VM, context *Context) (value interface{}, err error) {
+func contextWrapper(stmt *Stmt, f func(*Context) (interface{}, error)) (func(*Context) (interface{}, error), error) {
+	return func(context *Context) (value interface{}, err error) {
 		context.Set("__file__", stmt.File)
 		context.Set("__dir__", stmt.Dir)
 		for key, value := range stmt.Vars {
@@ -238,20 +240,20 @@ func contextWrapper(stmt *Stmt, f func(*VM, *Context) (interface{}, error)) (fun
 				context.SetByKeys(key, value.Value(context))
 			}
 		}
-		return f(vm, context)
+		return f(context)
 	}, nil
 }
 
-func panicWrapper(stmt *Stmt, f func(*VM, *Context) (interface{}, error)) (func(*VM, *Context) (interface{}, error), error) {
-	return func(vm *VM, context *Context) (value interface{}, err error) {
+func panicWrapper(stmt *Stmt, f func(*Context) (interface{}, error)) (func(*Context) (interface{}, error), error) {
+	return func(context *Context) (value interface{}, err error) {
 		defer func() {
 			if caught := recover(); caught != nil {
-				if caught == vm.timeoutError {
+				if caught == context.VM.timeoutError {
 					panic(caught)
 				}
 				panic(stmt.Errorf("%s", caught))
 			}
 		}()
-		return f(vm, context)
+		return f(context)
 	}, nil
 }

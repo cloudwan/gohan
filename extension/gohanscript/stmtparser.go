@@ -27,7 +27,7 @@ import (
 //StmtParser converts gohan script statment for golang function.
 //You can register your parser using RegisterStmtParser call, so that
 // you can have new gohan script function implemented by go
-type StmtParser func(stmt *Stmt) (func(*VM, *Context) (interface{}, error), error)
+type StmtParser func(stmt *Stmt) (func(*Context) (interface{}, error), error)
 
 //Parsers converts Stmts for functions
 var parsers map[string]StmtParser
@@ -72,7 +72,7 @@ func (b breakCode) Error() string {
 	return "break"
 }
 
-func blocks(stmt *Stmt) (func(*VM, *Context) (interface{}, error), error) {
+func blocks(stmt *Stmt) (func(*Context) (interface{}, error), error) {
 	stmts, err := MakeStmts(stmt.File, stmt.RawNode[stmt.funcName])
 	if err != nil {
 		return nil, err
@@ -80,7 +80,7 @@ func blocks(stmt *Stmt) (func(*VM, *Context) (interface{}, error), error) {
 	return StmtsToFunc(stmt.funcName, stmts)
 }
 
-func include(stmt *Stmt) (func(*VM, *Context) (interface{}, error), error) {
+func include(stmt *Stmt) (func(*Context) (interface{}, error), error) {
 
 	source := util.MaybeString(stmt.RawData["include"])
 	if !filepath.IsAbs(source) {
@@ -104,7 +104,7 @@ func include(stmt *Stmt) (func(*VM, *Context) (interface{}, error), error) {
 	return StmtsToFunc(stmt.funcName, stmts)
 }
 
-func background(stmt *Stmt) (func(*VM, *Context) (interface{}, error), error) {
+func background(stmt *Stmt) (func(*Context) (interface{}, error), error) {
 	stmts, err := MakeStmts(stmt.File, stmt.RawNode["background"])
 	if err != nil {
 		return nil, stmt.Errorf("background code error: %s", err)
@@ -113,12 +113,13 @@ func background(stmt *Stmt) (func(*VM, *Context) (interface{}, error), error) {
 	if err != nil {
 		return nil, err
 	}
-	return func(vm *VM, context *Context) (interface{}, error) {
+	return func(context *Context) (interface{}, error) {
 		newVM := NewVM()
 		newContext := context.Extend(map[string]interface{}{})
+		vm := context.VM
 		if vm.debug {
 			newVM.debug = true
-			f(newVM, newContext)
+			f(newContext)
 		} else {
 			go func() {
 				defer func() {
@@ -126,34 +127,34 @@ func background(stmt *Stmt) (func(*VM, *Context) (interface{}, error), error) {
 						log.Error(fmt.Sprintf("panic: %s", err))
 					}
 				}()
-				f(newVM, newContext)
+				f(newContext)
 			}()
 		}
 		return nil, nil
 	}, nil
 }
 
-func vars(stmt *Stmt) (func(*VM, *Context) (interface{}, error), error) {
-	return func(vm *VM, context *Context) (interface{}, error) {
+func vars(stmt *Stmt) (func(*Context) (interface{}, error), error) {
+	return func(context *Context) (interface{}, error) {
 		return nil, nil
 	}, nil
 }
 
-func returnCode(stmt *Stmt) (func(*VM, *Context) (interface{}, error), error) {
+func returnCode(stmt *Stmt) (func(*Context) (interface{}, error), error) {
 	retValue := NewValue(stmt.RawData["return"])
-	return func(vm *VM, context *Context) (interface{}, error) {
+	return func(context *Context) (interface{}, error) {
 		val := retValue.Value(context)
 		return val, breakCode{}
 	}, nil
 }
 
-func fail(stmt *Stmt) (func(*VM, *Context) (interface{}, error), error) {
-	return func(vm *VM, context *Context) (interface{}, error) {
+func fail(stmt *Stmt) (func(*Context) (interface{}, error), error) {
+	return func(context *Context) (interface{}, error) {
 		return nil, fmt.Errorf("%v", stmt.Arg("msg", context))
 	}, nil
 }
 
-func define(stmt *Stmt) (func(*VM, *Context) (interface{}, error), error) {
+func define(stmt *Stmt) (func(*Context) (interface{}, error), error) {
 	var err error
 	funcName := util.MaybeString(stmt.Args["name"].Value(nil))
 	defineNode := MappingNodeToMap(stmt.RawNode["define"])
@@ -162,16 +163,18 @@ func define(stmt *Stmt) (func(*VM, *Context) (interface{}, error), error) {
 	if err != nil {
 		return nil, stmt.Errorf("error in define body: %s", err)
 	}
-	var body func(*VM, *Context) (interface{}, error)
+	var body func(*Context) (interface{}, error)
 	RegisterStmtParser(
 		funcName,
-		func(aStmt *Stmt) (func(*VM, *Context) (interface{}, error), error) {
-			return func(vm *VM, context *Context) (value interface{}, err error) {
-				newContext := NewContext()
+		func(aStmt *Stmt) (func(*Context) (interface{}, error), error) {
+			return func(context *Context) (value interface{}, err error) {
+				vm := context.VM
+				newContext := NewContext(vm)
 				for key := range funcArgs {
 					newContext.Set(key, aStmt.Arg(key, context))
 				}
-				value, err = body(vm, newContext)
+				value, err = body(newContext)
+
 				if vm.debugReturn {
 					vm.debugReturn = false
 					vm.debug = true
@@ -183,20 +186,20 @@ func define(stmt *Stmt) (func(*VM, *Context) (interface{}, error), error) {
 	if err != nil {
 		return nil, err
 	}
-	return func(vm *VM, context *Context) (interface{}, error) {
+	return func(context *Context) (interface{}, error) {
 		return nil, nil
 	}, nil
 }
 
-func debugger(stmt *Stmt) (func(*VM, *Context) (interface{}, error), error) {
-	return func(vm *VM, context *Context) (interface{}, error) {
-		vm.debug = true
+func debugger(stmt *Stmt) (func(*Context) (interface{}, error), error) {
+	return func(context *Context) (interface{}, error) {
+		context.VM.debug = true
 		return nil, nil
 	}, nil
 }
 
-func debug(stmt *Stmt) (func(*VM, *Context) (interface{}, error), error) {
-	return func(vm *VM, context *Context) (interface{}, error) {
+func debug(stmt *Stmt) (func(*Context) (interface{}, error), error) {
+	return func(context *Context) (interface{}, error) {
 		if msg, ok := stmt.Args["msg"]; ok {
 			log.Debug("[%s:%d] %s",
 				stmt.File,
@@ -219,8 +222,8 @@ func debug(stmt *Stmt) (func(*VM, *Context) (interface{}, error), error) {
 	}, nil
 }
 
-func logWarn(stmt *Stmt) (func(*VM, *Context) (interface{}, error), error) {
-	return func(vm *VM, context *Context) (interface{}, error) {
+func logWarn(stmt *Stmt) (func(*Context) (interface{}, error), error) {
+	return func(context *Context) (interface{}, error) {
 		log.Warning("%s:%d %s",
 			stmt.File,
 			stmt.Line,
@@ -229,8 +232,8 @@ func logWarn(stmt *Stmt) (func(*VM, *Context) (interface{}, error), error) {
 	}, nil
 }
 
-func logInfo(stmt *Stmt) (func(*VM, *Context) (interface{}, error), error) {
-	return func(vm *VM, context *Context) (interface{}, error) {
+func logInfo(stmt *Stmt) (func(*Context) (interface{}, error), error) {
+	return func(context *Context) (interface{}, error) {
 		log.Info("%s:%d %s",
 			stmt.File,
 			stmt.Line,
@@ -239,8 +242,8 @@ func logInfo(stmt *Stmt) (func(*VM, *Context) (interface{}, error), error) {
 	}, nil
 }
 
-func logError(stmt *Stmt) (func(*VM, *Context) (interface{}, error), error) {
-	return func(vm *VM, context *Context) (interface{}, error) {
+func logError(stmt *Stmt) (func(*Context) (interface{}, error), error) {
+	return func(context *Context) (interface{}, error) {
 		log.Error(fmt.Sprintf("%s:%d %s",
 			stmt.File,
 			stmt.Line,
@@ -249,8 +252,8 @@ func logError(stmt *Stmt) (func(*VM, *Context) (interface{}, error), error) {
 	}, nil
 }
 
-func yamlTemplate(stmt *Stmt) (func(*VM, *Context) (interface{}, error), error) {
-	return func(vm *VM, context *Context) (interface{}, error) {
+func yamlTemplate(stmt *Stmt) (func(*Context) (interface{}, error), error) {
+	return func(context *Context) (interface{}, error) {
 		if y, ok := stmt.Args["yaml"]; ok {
 			yamlString := y.Value(context)
 			var data interface{}
@@ -261,15 +264,15 @@ func yamlTemplate(stmt *Stmt) (func(*VM, *Context) (interface{}, error), error) 
 	}, nil
 }
 
-func sleep(stmt *Stmt) (func(*VM, *Context) (interface{}, error), error) {
-	return func(vm *VM, context *Context) (interface{}, error) {
+func sleep(stmt *Stmt) (func(*Context) (interface{}, error), error) {
+	return func(context *Context) (interface{}, error) {
 		duration := time.Duration(util.MaybeInt(stmt.Arg("sleep", context))) * time.Millisecond
 		timer := time.NewTimer(duration)
 		for {
 			select {
 			case <-timer.C:
 				return nil, nil
-			case f := <-vm.StopChan:
+			case f := <-context.VM.StopChan:
 				timer.Stop()
 				f()
 				return nil, nil
@@ -278,8 +281,8 @@ func sleep(stmt *Stmt) (func(*VM, *Context) (interface{}, error), error) {
 	}, nil
 }
 
-func testSuite(stmt *Stmt) (func(*VM, *Context) (interface{}, error), error) {
-	var beforeEach func(*VM, *Context) (interface{}, error)
+func testSuite(stmt *Stmt) (func(*Context) (interface{}, error), error) {
+	var beforeEach func(*Context) (interface{}, error)
 	testNode := MappingNodeToMap(stmt.RawNode["test_suite"])
 	tests := testNode["tests"]
 	if testNode["before_each"] != nil {
@@ -292,14 +295,14 @@ func testSuite(stmt *Stmt) (func(*VM, *Context) (interface{}, error), error) {
 			return nil, err
 		}
 	}
-	return func(vm *VM, context *Context) (interface{}, error) {
+	return func(context *Context) (interface{}, error) {
 		var successCount, failedCount int
 		for _, test := range tests.Children {
 			testMap := MappingNodeToMap(test)
 			name := testMap["name"].Value
 			testContext := context.Extend(nil)
 			if beforeEach != nil {
-				_, err := beforeEach(vm, testContext)
+				_, err := beforeEach(testContext)
 				if err != nil {
 					log.Error(fmt.Sprintf("%s ... failed", name))
 					log.Error(err.Error())
@@ -315,7 +318,7 @@ func testSuite(stmt *Stmt) (func(*VM, *Context) (interface{}, error), error) {
 				continue
 			}
 			testRunner, err := StmtsToFunc("test", testsStmt)
-			_, err = testRunner(vm, testContext)
+			_, err = testRunner(testContext)
 			if err != nil {
 				log.Error(fmt.Sprintf("%s ... failed", name))
 				log.Error(err.Error())
@@ -333,8 +336,8 @@ func testSuite(stmt *Stmt) (func(*VM, *Context) (interface{}, error), error) {
 	}, nil
 }
 
-func assert(stmt *Stmt) (func(*VM, *Context) (interface{}, error), error) {
-	return func(vm *VM, context *Context) (interface{}, error) {
+func assert(stmt *Stmt) (func(*Context) (interface{}, error), error) {
+	return func(context *Context) (interface{}, error) {
 		expect := stmt.Arg("expect", context)
 		actual := stmt.Arg("actual", context)
 		if expect != actual {
@@ -348,24 +351,24 @@ func assert(stmt *Stmt) (func(*VM, *Context) (interface{}, error), error) {
 	}, nil
 }
 
-func minigo(stmt *Stmt) (func(*VM, *Context) (interface{}, error), error) {
+func minigo(stmt *Stmt) (func(*Context) (interface{}, error), error) {
 	code := stmt.Args["minigo"].Value(nil)
 	minigo, err := CompileGoStmt(code.(string))
 	if err != nil {
 		return nil, err
 	}
-	return func(vm *VM, context *Context) (interface{}, error) {
-		return minigo.Run(vm, context)
+	return func(context *Context) (interface{}, error) {
+		return minigo.Run(context)
 	}, nil
 }
 
-func minigoFunc(stmt *Stmt) (func(*VM, *Context) (interface{}, error), error) {
+func minigoFunc(stmt *Stmt) (func(*Context) (interface{}, error), error) {
 	code := stmt.Args["minigo_func"].Value(nil)
 	err := CompileFile(code.(string))
 	if err != nil {
 		return nil, err
 	}
-	return func(vm *VM, context *Context) (interface{}, error) {
+	return func(context *Context) (interface{}, error) {
 		return nil, nil
 	}, nil
 }

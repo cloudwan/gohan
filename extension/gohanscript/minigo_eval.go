@@ -40,8 +40,8 @@ func (stack *Stack) pop() interface{} {
 }
 
 //Run code with given context.
-func (code *MiniGo) Run(vm *VM, context *Context) (interface{}, error) {
-	results, err := code.Eval(vm, 0, NewStack(), context)
+func (code *MiniGo) Run(context *Context) (interface{}, error) {
+	results, err := code.Eval(context, 0, NewStack())
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +52,8 @@ func (code *MiniGo) Run(vm *VM, context *Context) (interface{}, error) {
 }
 
 //Eval executes byte code.
-func (code *MiniGo) Eval(vm *VM, offset int, stack *Stack, context *Context) ([]interface{}, error) {
+func (code *MiniGo) Eval(context *Context, offset int, stack *Stack) ([]interface{}, error) {
+	vm := context.VM
 	for ; offset < code.len(); offset++ {
 		select {
 		case f := <-vm.StopChan:
@@ -320,7 +321,7 @@ func (code *MiniGo) Eval(vm *VM, offset int, stack *Stack, context *Context) ([]
 							stack.push(value)
 						}
 						stack.push(i)
-						code.Eval(vm, offset+1, stack, context)
+						code.Eval(context, offset+1, stack)
 					}
 				case map[string]interface{}:
 					for key, value := range t {
@@ -328,7 +329,7 @@ func (code *MiniGo) Eval(vm *VM, offset int, stack *Stack, context *Context) ([]
 							stack.push(value)
 						}
 						stack.push(key)
-						code.Eval(vm, offset+1, stack, context)
+						code.Eval(context, offset+1, stack)
 					}
 				}
 				offset = op.x - 1

@@ -8,8 +8,8 @@ import (
 
 func init() {
 	gohanscript.RegisterStmtParser("split",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				value, _ := stmt.Arg("value", context).(string)
 				sep, _ := stmt.Arg("sep", context).(string)
 				var err error
@@ -28,8 +28,8 @@ func init() {
 			return []interface{}{result1, result2}
 		})
 	gohanscript.RegisterStmtParser("join",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				value, _ := stmt.Arg("value", context).([]interface{})
 				sep, _ := stmt.Arg("sep", context).(string)
 				var err error

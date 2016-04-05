@@ -29,10 +29,10 @@ func init() {
 	gohanscript.RegisterStmtParser("command", command)
 }
 
-func command(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
+func command(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
 	stmt.Args = gohanscript.MapToValue(util.MaybeMap(stmt.RawData["args"]))
 	stmt.Args["command"] = gohanscript.NewValue(stmt.RawData["command"])
-	return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+	return func(context *gohanscript.Context) (interface{}, error) {
 		chdir := stmt.Arg("chdir", context)
 		if chdir != nil {
 			currentDir, _ := filepath.Abs(".")

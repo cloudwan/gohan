@@ -8,8 +8,8 @@ import (
 
 func init() {
 	gohanscript.RegisterStmtParser("add_int",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				a, _ := stmt.Arg("a", context).(int)
 				b, _ := stmt.Arg("b", context).(int)
 				result1 := lib.AddInt(a, b)
@@ -27,8 +27,8 @@ func init() {
 			return []interface{}{result1}
 		})
 	gohanscript.RegisterStmtParser("sub_int",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				a, _ := stmt.Arg("a", context).(int)
 				b, _ := stmt.Arg("b", context).(int)
 				result1 := lib.SubInt(a, b)
@@ -46,8 +46,8 @@ func init() {
 			return []interface{}{result1}
 		})
 	gohanscript.RegisterStmtParser("mul_int",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				a, _ := stmt.Arg("a", context).(int)
 				b, _ := stmt.Arg("b", context).(int)
 				result1 := lib.MulInt(a, b)
@@ -65,8 +65,8 @@ func init() {
 			return []interface{}{result1}
 		})
 	gohanscript.RegisterStmtParser("div_int",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				a, _ := stmt.Arg("a", context).(int)
 				b, _ := stmt.Arg("b", context).(int)
 				result1 := lib.DivInt(a, b)

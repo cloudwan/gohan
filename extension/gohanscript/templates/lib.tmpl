@@ -14,8 +14,8 @@ func init(){
 {% for decl in funcs %}
 {%     if decl.Body != nil %}
            gohanscript.RegisterStmtParser("{{ decl.Name.Name | to_under_score_case }}",
-           func (stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-               return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+           func (stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+               return func(context *gohanscript.Context) (interface{}, error) {
 {%         for param in decl.Type.Params.List %}
 {%             for name in param.Names %}
                         {{ name.Name }}, _ := stmt.Arg("{{ name.Name | to_under_score_case }}", context).({{ param.Type | astType }})

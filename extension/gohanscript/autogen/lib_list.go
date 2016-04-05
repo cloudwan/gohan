@@ -8,8 +8,8 @@ import (
 
 func init() {
 	gohanscript.RegisterStmtParser("append",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				list, _ := stmt.Arg("list", context).([]interface{})
 				value, _ := stmt.Arg("value", context).(interface{})
 				result1 := lib.Append(list, value)
@@ -27,8 +27,8 @@ func init() {
 			return []interface{}{result1}
 		})
 	gohanscript.RegisterStmtParser("contains",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				list, _ := stmt.Arg("list", context).([]interface{})
 				value, _ := stmt.Arg("value", context).(interface{})
 				result1 := lib.Contains(list, value)
@@ -46,8 +46,8 @@ func init() {
 			return []interface{}{result1}
 		})
 	gohanscript.RegisterStmtParser("size",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				list, _ := stmt.Arg("list", context).([]interface{})
 				result1 := lib.Size(list)
 				return result1, nil
@@ -62,8 +62,8 @@ func init() {
 			return []interface{}{result1}
 		})
 	gohanscript.RegisterStmtParser("shift",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				list, _ := stmt.Arg("list", context).([]interface{})
 				var err error
 				result1, result2 := lib.Shift(list)
@@ -79,8 +79,8 @@ func init() {
 			return []interface{}{result1, result2}
 		})
 	gohanscript.RegisterStmtParser("unshift",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				list, _ := stmt.Arg("list", context).([]interface{})
 				value, _ := stmt.Arg("value", context).(interface{})
 				result1 := lib.Unshift(list, value)
@@ -98,8 +98,8 @@ func init() {
 			return []interface{}{result1}
 		})
 	gohanscript.RegisterStmtParser("copy",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				list, _ := stmt.Arg("list", context).([]interface{})
 				result1 := lib.Copy(list)
 				return result1, nil
@@ -114,8 +114,8 @@ func init() {
 			return []interface{}{result1}
 		})
 	gohanscript.RegisterStmtParser("delete",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				list, _ := stmt.Arg("list", context).([]interface{})
 				index, _ := stmt.Arg("index", context).(int)
 				result1 := lib.Delete(list, index)
@@ -133,8 +133,8 @@ func init() {
 			return []interface{}{result1}
 		})
 	gohanscript.RegisterStmtParser("first",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				list, _ := stmt.Arg("list", context).([]interface{})
 				result1 := lib.First(list)
 				return result1, nil
@@ -149,8 +149,8 @@ func init() {
 			return []interface{}{result1}
 		})
 	gohanscript.RegisterStmtParser("last",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				list, _ := stmt.Arg("list", context).([]interface{})
 				result1 := lib.Last(list)
 				return result1, nil

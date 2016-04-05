@@ -31,7 +31,7 @@ func init() {
 	gohanscript.RegisterStmtParser("transaction", transactionFunc)
 }
 
-func transactionFunc(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
+func transactionFunc(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
 	stmts, err := gohanscript.MakeStmts(stmt.File, stmt.RawNode["transaction"])
 	if err != nil {
 		return nil, err
@@ -40,7 +40,7 @@ func transactionFunc(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript
 	if err != nil {
 		return nil, err
 	}
-	return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+	return func(context *gohanscript.Context) (interface{}, error) {
 		dbVar := util.MaybeString(stmt.RawData["db"])
 		if dbVar == "" {
 			dbVar = "db"
@@ -59,7 +59,7 @@ func transactionFunc(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript
 			transactionVar = "transaction"
 		}
 		context.Set(transactionVar, tx)
-		value, err := runner(vm, context)
+		value, err := runner(context)
 		if err == nil {
 			tx.Commit()
 		}

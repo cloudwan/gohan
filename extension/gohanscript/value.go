@@ -16,9 +16,10 @@
 package gohanscript
 
 import (
-	"github.com/flosch/pongo2"
 	"strconv"
 	"strings"
+
+	"github.com/flosch/pongo2"
 )
 
 //Value represents gohan script value interface
@@ -35,23 +36,44 @@ func (i *Nil) Value(context *Context) interface{} {
 	return nil
 }
 
-//Ident reprensents identifire in gohan script
-type Ident struct {
-	keys []string
+//MiniGoValue reprensents minigo value
+type MiniGoValue struct {
+	minigo *MiniGo
 }
 
-//Value returns correcponding value from context
-func (i *Ident) Value(context *Context) interface{} {
-	value, _ := GetByKeys(i.keys, context.data)
+//Value returns nil
+func (i *MiniGoValue) Value(context *Context) interface{} {
+	value, _ := i.minigo.Run(context)
 	return value
 }
 
-//NewIdent makes new identifier
-func NewIdent(key string) *Ident {
-	keys := KeyToList(key[1:]) //omit $
-	return &Ident{
-		keys: keys,
+//NewMiniGoValue makes a MiniGoValue value
+func NewMiniGoValue(param interface{}) *MiniGoValue {
+	code, ok := param.(string)
+	if !ok {
+		return nil
 	}
+	if code == "" {
+		return nil
+	}
+	if code[0] != '$' {
+		return nil
+	}
+	minigoCode := code[1:]
+	if minigoCode[0] == '{' {
+		minigoCode = minigoCode[1:]
+	}
+	if minigoCode[len(minigoCode)-1] == '}' {
+		minigoCode = minigoCode[:len(minigoCode)-1]
+	}
+	minigo, err := CompileExpr(minigoCode)
+	if err != nil {
+		return nil
+	}
+	t := &MiniGoValue{
+		minigo: minigo,
+	}
+	return t
 }
 
 //Constant represents donburi consntant.
@@ -68,14 +90,17 @@ func (c *Constant) Value(context *Context) interface{} {
 type Template struct {
 	templates map[string]*pongo2.Template
 	param     interface{}
+	minigos   map[string]*MiniGo
 }
 
 //NewTemplate makes a tempalte value
 func NewTemplate(param interface{}) *Template {
 	t := &Template{
 		param:     param,
-		templates: map[string]*pongo2.Template{}}
-	CacheTemplate(t.param, t.templates)
+		templates: map[string]*pongo2.Template{},
+		minigos:   map[string]*MiniGo{},
+	}
+	CacheTemplate(t.param, t.templates, t.minigos)
 	return t
 }
 
@@ -92,10 +117,9 @@ func NewValue(a interface{}) Value {
 	if a == nil {
 		return nil
 	}
-	if arg, ok := a.(string); ok {
-		if strings.HasPrefix(arg, "$") {
-			return NewIdent(arg)
-		}
+	miniGoValue := NewMiniGoValue(a)
+	if miniGoValue != nil {
+		return miniGoValue
 	}
 	if ContainsTemplate(a) {
 		return NewTemplate(a)
@@ -109,8 +133,12 @@ func NewValue(a interface{}) Value {
 func ApplyTemplate(template *Template, param interface{}, context *Context) (result interface{}) {
 	switch p := param.(type) {
 	case string:
-		if strings.HasPrefix(p, "$") {
-			result, _ := GetByKeys(KeyToList(p[1:]), context.data)
+		if p == "" {
+			return nil
+		}
+		if p[0] == '$' {
+			minigo := template.minigos[p]
+			result, _ := minigo.Run(context)
 			return result
 		}
 		tpl := template.templates[p]
@@ -144,30 +172,36 @@ func ApplyTemplate(template *Template, param interface{}, context *Context) (res
 }
 
 //CacheTemplate caches template to the statement
-func CacheTemplate(arg interface{}, templates map[string]*pongo2.Template) error {
+func CacheTemplate(arg interface{}, templates map[string]*pongo2.Template, minigos map[string]*MiniGo) error {
 	switch a := arg.(type) {
 	case string:
-		if !strings.HasPrefix(a, "$") {
+		if a == "" {
+			return nil
+		}
+		miniGoValue := NewMiniGoValue(a)
+		if miniGoValue == nil {
 			tpl, err := pongo2.FromString(a)
 			if err != nil {
 				return err
 			}
 			templates[a] = tpl
+		} else {
+			minigos[a] = miniGoValue.minigo
 		}
 	case []interface{}:
 		for _, item := range a {
-			err := CacheTemplate(item, templates)
+			err := CacheTemplate(item, templates, minigos)
 			if err != nil {
 				return err
 			}
 		}
 	case map[string]interface{}:
 		for key, item := range a {
-			err := CacheTemplate(key, templates)
+			err := CacheTemplate(key, templates, minigos)
 			if err != nil {
 				return err
 			}
-			err = CacheTemplate(item, templates)
+			err = CacheTemplate(item, templates, minigos)
 			if err != nil {
 				return err
 			}

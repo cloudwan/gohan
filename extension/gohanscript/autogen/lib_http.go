@@ -8,8 +8,8 @@ import (
 
 func init() {
 	gohanscript.RegisterStmtParser("http_get",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				url, _ := stmt.Arg("url", context).(string)
 				headers, _ := stmt.Arg("headers", context).(map[string]interface{})
 				var err error
@@ -28,8 +28,8 @@ func init() {
 			return []interface{}{result1, result2}
 		})
 	gohanscript.RegisterStmtParser("http_post",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				url, _ := stmt.Arg("url", context).(string)
 				headers, _ := stmt.Arg("headers", context).(map[string]interface{})
 				postData, _ := stmt.Arg("post_data", context).(map[string]interface{})
@@ -51,8 +51,8 @@ func init() {
 			return []interface{}{result1, result2}
 		})
 	gohanscript.RegisterStmtParser("http_put",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				url, _ := stmt.Arg("url", context).(string)
 				headers, _ := stmt.Arg("headers", context).(map[string]interface{})
 				postData, _ := stmt.Arg("post_data", context).(map[string]interface{})
@@ -74,8 +74,8 @@ func init() {
 			return []interface{}{result1, result2}
 		})
 	gohanscript.RegisterStmtParser("http_patch",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				url, _ := stmt.Arg("url", context).(string)
 				headers, _ := stmt.Arg("headers", context).(map[string]interface{})
 				postData, _ := stmt.Arg("post_data", context).(map[string]interface{})
@@ -97,8 +97,8 @@ func init() {
 			return []interface{}{result1, result2}
 		})
 	gohanscript.RegisterStmtParser("http_delete",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				url, _ := stmt.Arg("url", context).(string)
 				headers, _ := stmt.Arg("headers", context).(map[string]interface{})
 				var err error
@@ -117,8 +117,8 @@ func init() {
 			return []interface{}{result1, result2}
 		})
 	gohanscript.RegisterStmtParser("http_request",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				url, _ := stmt.Arg("url", context).(string)
 				method, _ := stmt.Arg("method", context).(string)
 				headers, _ := stmt.Arg("headers", context).(map[string]interface{})

@@ -8,8 +8,8 @@ import (
 
 func init() {
 	gohanscript.RegisterStmtParser("uuid",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				result1 := lib.UUID()
 				return result1, nil
 			}, nil
@@ -20,8 +20,8 @@ func init() {
 			return []interface{}{result1}
 		})
 	gohanscript.RegisterStmtParser("env",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				result1 := lib.Env()
 				return result1, nil
 			}, nil
@@ -32,8 +32,8 @@ func init() {
 			return []interface{}{result1}
 		})
 	gohanscript.RegisterStmtParser("normalize_map",
-		func(stmt *gohanscript.Stmt) (func(*gohanscript.VM, *gohanscript.Context) (interface{}, error), error) {
-			return func(vm *gohanscript.VM, context *gohanscript.Context) (interface{}, error) {
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			return func(context *gohanscript.Context) (interface{}, error) {
 				data, _ := stmt.Arg("data", context).(map[string]interface{})
 				result1 := lib.NormalizeMap(data)
 				return result1, nil
