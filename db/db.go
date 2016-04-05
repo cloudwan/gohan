@@ -73,6 +73,9 @@ func CopyDBResources(input, output DB) error {
 	defer otx.Close()
 
 	for _, s := range schemas {
+		if s.IsAbstract() {
+			continue
+		}
 		log.Info("Populating resources for schema %s", s.ID)
 		resources, _, err := itx.List(s, nil, nil)
 		if err != nil {
