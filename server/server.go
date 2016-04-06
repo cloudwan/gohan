@@ -178,7 +178,7 @@ func NewServer(configFile string) (*Server, error) {
 	port := os.Getenv("PORT")
 
 	if port == "" {
-		port = "9443"
+		port = "9091"
 	}
 
 	setupEditor(server)

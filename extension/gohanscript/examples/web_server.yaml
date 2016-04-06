@@ -1,0 +1,12 @@
+tasks:
+- http_server:
+    address: "localhost:20000"
+    paths:
+       "/v2.0/test":
+           get:
+              code: |
+                tasks:
+                - debug: msg="Log in Server"
+                - vars:
+                    response:
+                      msg: ok
