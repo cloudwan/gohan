@@ -101,16 +101,18 @@ func (env *Environment) HandleEvent(event string, context map[string]interface{}
 		for {
 			select {
 			case <-timer.C:
+				env.VM.Stop()
 				env.VM.StopChan <- func() {
 					panic(env.VM.timeoutError)
 				}
 				return
 			case <-successCh:
-				// extention executed successfully
+				env.VM.Stop()
 				return
 			}
 		}
 	}()
+
 	err = env.VM.Run(context)
 	for _, callback := range env.goCallbacks {
 		err = callback(event, context)

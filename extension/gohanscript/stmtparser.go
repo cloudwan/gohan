@@ -114,22 +114,16 @@ func background(stmt *Stmt) (func(*Context) (interface{}, error), error) {
 		return nil, err
 	}
 	return func(context *Context) (interface{}, error) {
-		newVM := NewVM()
 		newContext := context.Extend(map[string]interface{}{})
-		vm := context.VM
-		if vm.debug {
-			newVM.debug = true
-			f(newContext)
-		} else {
-			go func() {
-				defer func() {
-					if err := recover(); err != nil {
-						log.Error(fmt.Sprintf("panic: %s", err))
-					}
-				}()
-				f(newContext)
+		go func() {
+			defer func() {
+				if err := recover(); err != nil {
+					log.Error(fmt.Sprintf("panic: %s", err))
+				}
 			}()
-		}
+			f(newContext)
+			newContext.VM.Stop()
+		}()
 		return nil, nil
 	}, nil
 }

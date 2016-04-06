@@ -1079,6 +1079,11 @@ You can set breakpoint using "debugger"
     - debugger:
     - debug: msg="Hello {{ world }}"
 
+.. code-block:: shell
+
+    10:50:55.052 gohanscript INFO  Debugger port: telnet localhost 40000
+
+
 Supported command in debugger mode:
 
 - s: step task
@@ -1086,9 +1091,10 @@ Supported command in debugger mode:
 - r: return
 - c: continue
 - p: print current context
+- p code: execute miniGo
 - l: show current task
 
-Note that we won't do concurrent execution in debug mode.
+You will get seperate port per go routine.
 
 Command line argument
 ~~~~~~~~~~~~~~~~~~~~~~

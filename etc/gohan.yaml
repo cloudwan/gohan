@@ -10,7 +10,6 @@ database:
     # connection string
     # it is file path for yaml, json and sqlite3 backend
     connection: "./gohan.db"
-    drop_on_create: true
     # maximum connections
     max_open_conn: 100
 schemas:
