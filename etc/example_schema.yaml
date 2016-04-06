@@ -155,6 +155,8 @@ extensions:
     tasks:
     - when: event_type == "post_create_in_transaction"
       blocks:
+      #  Try debugger
+      # - debugger:
       - db_get:
           tx: $transaction
           schema_id: pet

@@ -23,6 +23,7 @@ type VM struct {
 	debug        bool
 	debugReturn  bool
 	timeoutError error
+	debuggerRPC  *DebuggerRPC
 	StopChan     chan func()
 	funcs        []func(*Context) (interface{}, error)
 }
@@ -45,6 +46,8 @@ func NewVM() *VM {
 //Clone clones a VM
 func (vm *VM) Clone() *VM {
 	newVM := NewVM()
+	newVM.StopChan = vm.StopChan
+	newVM.debug = vm.debug
 	newVM.funcs = vm.funcs
 	return newVM
 }
@@ -110,4 +113,11 @@ func (vm *VM) Run(data map[string]interface{}) error {
 		}
 	}
 	return nil
+}
+
+//Stop stops vm
+func (vm *VM) Stop() {
+	if vm.debuggerRPC != nil {
+		vm.debuggerRPC.close()
+	}
 }

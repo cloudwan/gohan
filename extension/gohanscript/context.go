@@ -174,7 +174,7 @@ func (context *Context) HasKey(key string) bool {
 
 // Extend clones context and extend it
 func (context *Context) Extend(values map[string]interface{}) *Context {
-	newContext := NewContext(context.VM)
+	newContext := NewContext(context.VM.Clone())
 	for key, value := range context.data {
 		newContext.Set(key, value)
 	}
