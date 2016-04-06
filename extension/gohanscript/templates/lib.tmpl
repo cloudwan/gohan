@@ -55,10 +55,16 @@ func init(){
 {%             endfor %}
 {%        endfor %}
 {%     endif %}
+
+{%        if decl.Type.Results.List | length == 0 %}
+         {{package}}.{{ decl.Name.Name }}({% for param in decl.Type.Params.List %}{% for name in param.Names %}{{ name.Name }},{% endfor %}{% endfor %})
+         return []interface{}{ {% for param in decl.Type.Results.List %}result{{forloop.Counter}}{% if !forloop.Last %},{% endif %}{% endfor %} }
+          })
+{%            else %}
          {% for param in decl.Type.Results.List %}result{{ forloop.Counter }}{% if !forloop.Last %},{% endif %}{% endfor %} := {{package}}.{{ decl.Name.Name }}({% for param in decl.Type.Params.List %}{% for name in param.Names %}{{ name.Name }},{% endfor %}{% endfor %})
          return []interface{}{ {% for param in decl.Type.Results.List %}result{{forloop.Counter}}{% if !forloop.Last %},{% endif %}{% endfor %} }
           })
-
+{%            endif %}
 {%     endif %}
 {% endfor %}
 }

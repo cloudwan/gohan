@@ -2,9 +2,22 @@ test_suite:
   tests:
   - name: You can do http request
     test:
-    - http_get: url=https://status.github.com/api/status.json
+    - http_server:
+        test: true
+        paths:
+          "/test":
+            get:
+              code: |
+                tasks:
+                - vars:
+                    response:
+                        msg: ok
+      register: testServer
+    - http_get: url='${GetTestServerURL(testServer) + "/test"}'
       register: result
-    - assert: expect=200 actual="{{result.status_code}}"
+    - assert: expect="ok" actual="{{result.contents.msg}}"
+    - stop_test_server:
+        server: $testServer
   - name: Generate UUID
     test:
     - uuid:
