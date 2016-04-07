@@ -16,10 +16,9 @@
 package gohanscript
 
 import (
+	"github.com/flosch/pongo2"
 	"strconv"
 	"strings"
-
-	"github.com/flosch/pongo2"
 )
 
 //Value represents gohan script value interface
@@ -178,15 +177,15 @@ func CacheTemplate(arg interface{}, templates map[string]*pongo2.Template, minig
 		if a == "" {
 			return nil
 		}
-		miniGoValue := NewMiniGoValue(a)
-		if miniGoValue == nil {
+		if a[0] == '$' {
+			miniGoValue := NewMiniGoValue(a)
+			minigos[a] = miniGoValue.minigo
+		} else {
 			tpl, err := pongo2.FromString(a)
 			if err != nil {
 				return err
 			}
 			templates[a] = tpl
-		} else {
-			minigos[a] = miniGoValue.minigo
 		}
 	case []interface{}:
 		for _, item := range a {
