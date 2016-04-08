@@ -19,13 +19,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/pagination"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/extension"
+	"github.com/cloudwan/gohan/job"
 
 	"github.com/cloudwan/gohan/schema"
 	gohan_sync "github.com/cloudwan/gohan/sync"
@@ -529,7 +529,6 @@ func startSyncWatchProcess(server *Server) {
 	config := util.GetConfig()
 	watch := config.GetStringList("watch/keys", nil)
 	events := config.GetStringList("watch/events", nil)
-	maxWorkerCount := config.GetParam("watch/worker_count", 0).(int)
 	if watch == nil {
 		return
 	}
@@ -569,34 +568,21 @@ func startSyncWatchProcess(server *Server) {
 	}
 	//main response lisnter process
 	go func() {
-		var wg sync.WaitGroup
-		workerCount := 0
 		for server.running {
 			response := <-responseChan
-			wg.Add(1)
-			workerCount++
-			//spawn workers up to max worker count
-			go func() {
-				defer util.LogPanic(log)
-				defer func() {
-					workerCount--
-					wg.Done()
-				}()
-				for _, event := range events {
-					//match extensions
-					if strings.HasPrefix(response.Key, "/"+event) {
-						env := extensions[event]
-						runExtensionOnSync(server, response, env.Clone())
-						return
+			server.queue.Add(job.NewJob(
+				func() {
+					defer util.LogPanic(log)
+					for _, event := range events {
+						//match extensions
+						if strings.HasPrefix(response.Key, "/"+event) {
+							env := extensions[event]
+							runExtensionOnSync(server, response, env.Clone())
+							return
+						}
 					}
-				}
-			}()
-			// Wait if worker pool is full
-			if workerCount > maxWorkerCount {
-				wg.Wait()
-			}
+				}))
 		}
-		stopChan <- true
 	}()
 
 }

@@ -26,6 +26,7 @@ import (
 
 	"github.com/cloudwan/gohan/cloud"
 	"github.com/cloudwan/gohan/db"
+	"github.com/cloudwan/gohan/job"
 	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/server/middleware"
@@ -55,6 +56,7 @@ type Server struct {
 	MaxOpenConn      int
 	extensionType    string
 	keystoneIdentity middleware.IdentityService
+	queue            *job.Queue
 }
 
 func (server *Server) mapRoutes() {
@@ -311,6 +313,10 @@ func NewServer(configFile string) (*Server, error) {
 		server.martini.Use(martini.Static(documentRootABS))
 	}
 	server.mapRoutes()
+
+	maxWorkerCount := config.GetInt("workers", 100)
+	server.queue = job.NewQueue(uint(maxWorkerCount))
+
 	return server, nil
 }
 
@@ -335,6 +341,7 @@ func (server *Server) Stop() {
 	stopAMQPProcess(server)
 	stopSNMPProcess(server)
 	stopCRONProcess(server)
+	server.queue.Stop()
 }
 
 //RunServer runs gohan api server

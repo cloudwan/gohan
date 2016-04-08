@@ -393,11 +393,11 @@ WARNING: The value of watched etcd keys must be a JSON dictionary.
 
   snmp:
     address: "localhost:8888"
-    
+
 - extention timelimit
- 
+
   You can make timelimit for extention execution. default is 30 sec
-  
+
 .. code-block:: yaml
 
   extention:
@@ -414,6 +414,15 @@ WARNING: The value of watched etcd keys must be a JSON dictionary.
   cron:
       - path: cron://cron_job_sample
         timing: "*/5 * * * * *"
+
+- Job queue
+
+  Gohan uses background job queue & workers.
+  You can decide how many worker can run concurrently.
+
+.. code-block:: yaml
+
+   workers: 100
 
 - schema editor
 

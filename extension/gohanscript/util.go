@@ -21,11 +21,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	"github.com/nati/yaml"
 	"github.com/op/go-logging"
 
+	"github.com/cloudwan/gohan/job"
 	"github.com/cloudwan/gohan/util"
 	"github.com/k0kubun/pp"
 )
@@ -79,6 +79,13 @@ func pprint(obj interface{}) {
 }
 
 func forEachList(vm *VM, obj []interface{}, workerNum int, f func(item interface{})) {
+	if obj == nil {
+		return
+	}
+	size := len(obj)
+	if size == 0 {
+		return
+	}
 	if workerNum == 0 {
 		for _, value := range obj {
 			select {
@@ -91,33 +98,15 @@ func forEachList(vm *VM, obj []interface{}, workerNum int, f func(item interface
 		}
 		return
 	}
-	if obj == nil {
-		return
+
+	queue := job.NewQueue(uint(workerNum))
+	for _, item := range obj {
+		localItem := item
+		queue.Add(job.NewJob(func() {
+			f(localItem)
+		}))
 	}
-	size := len(obj)
-	if size == 0 {
-		return
-	}
-	var wg sync.WaitGroup
-	if workerNum > size {
-		workerNum = size
-	}
-	numJob := size / workerNum
-	for start := 0; start < size; start += numJob {
-		wg.Add(1)
-		go func(start, end int) {
-			defer func() {
-				if err := recover(); err != nil {
-					log.Error(fmt.Sprintf("panic: %s", err))
-				}
-			}()
-			for i := start; i < end; i++ {
-				f(obj[i])
-			}
-			wg.Done()
-		}(start, start+numJob)
-	}
-	wg.Wait()
+	queue.Wait()
 	return
 }
 
