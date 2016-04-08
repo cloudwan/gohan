@@ -49,7 +49,8 @@ func serveResponse(w http.ResponseWriter, context map[string]interface{}) {
 func httpServer(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
 	return func(globalContext *gohanscript.Context) (interface{}, error) {
 		m := martini.Classic()
-		paths := util.MaybeMap(stmt.Args["paths"].Value(globalContext))
+		rawBody := util.MaybeMap(stmt.RawData["http_server"])
+		paths := util.MaybeMap(rawBody["paths"])
 		for path, body := range paths {
 			methods, ok := body.(map[string]interface{})
 			if !ok {
@@ -71,6 +72,7 @@ func httpServer(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}
 					m.Get(path, func(w http.ResponseWriter, r *http.Request, p martini.Params) {
 						context := map[string]interface{}{
 							"params": p,
+							"host":   r.Host,
 						}
 						vm.Run(context)
 						serveResponse(w, context)
@@ -80,6 +82,7 @@ func httpServer(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}
 						requestData, _ := middleware.ReadJSON(r)
 						context := map[string]interface{}{
 							"params":  p,
+							"host":    r.Host,
 							"request": requestData,
 						}
 						vm.Run(context)
@@ -90,6 +93,7 @@ func httpServer(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}
 						requestData, _ := middleware.ReadJSON(r)
 						context := map[string]interface{}{
 							"params":  p,
+							"host":    r.Host,
 							"request": requestData,
 						}
 						vm.Run(context)
@@ -99,6 +103,7 @@ func httpServer(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}
 					m.Delete(path, func(w http.ResponseWriter, r *http.Request, p martini.Params) {
 						context := map[string]interface{}{
 							"params": p,
+							"host":   r.Host,
 						}
 						vm.Run(context)
 						serveResponse(w, context)

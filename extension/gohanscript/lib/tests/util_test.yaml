@@ -9,13 +9,14 @@ test_suite:
             get:
               code: |
                 tasks:
+                - debug: msg='http://{{ host }}'
                 - vars:
                     response:
-                        msg: ok
+                        host: 'http://{{ host }}'
       register: testServer
     - http_get: url='${GetTestServerURL(testServer) + "/test"}'
       register: result
-    - assert: expect="ok" actual="{{result.contents.msg}}"
+    - assert: expect='${GetTestServerURL(testServer)}' actual="{{result.contents.host}}"
     - stop_test_server:
         server: $testServer
   - name: Generate UUID
