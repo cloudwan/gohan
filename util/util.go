@@ -19,21 +19,41 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/op/go-logging"
+	"golang.org/x/crypto/ssh"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync/atomic"
 	"text/template"
 	"time"
-
-	"github.com/op/go-logging"
-	"golang.org/x/crypto/ssh"
 
 	"github.com/xeipuuv/gojsonpointer"
 	"gopkg.in/yaml.v2"
 )
+
+//Counter represents atomic counter
+type Counter struct {
+	value int64
+}
+
+//NewCounter makes atomic counter
+func NewCounter(value int64) *Counter {
+	return &Counter{value: value}
+}
+
+//Add add value to the counter
+func (counter *Counter) Add(value int64) {
+	atomic.AddInt64(&counter.value, int64(value))
+}
+
+//Value get current value
+func (counter *Counter) Value() int64 {
+	return atomic.LoadInt64(&counter.value)
+}
 
 //GetByJSONPointer returns subdata of json using json pointer
 func GetByJSONPointer(inData interface{}, key string) (interface{}, error) {

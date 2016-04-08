@@ -16,7 +16,7 @@ format:
 
 test:
 	@echo "$(OK_COLOR)==> Testing$(NO_COLOR)"
-	ENABLE_V8="$(ENABLE_V8)" ./run_test.sh
+	./run_test.sh
 
 lint:
 	@echo "$(OK_COLOR)==> Linting$(NO_COLOR)"
