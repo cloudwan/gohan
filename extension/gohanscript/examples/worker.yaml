@@ -1,6 +1,8 @@
 tasks:
 - blocks:
-   - http_get: url="https://status.github.com/{{ item }}"
+   - http_get:
+       url: "https://status.github.com/{{ item }}"
+       headers: {}
      register: result
    - debug: var=$result.raw_body
   worker: 3

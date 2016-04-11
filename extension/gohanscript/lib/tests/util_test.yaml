@@ -14,7 +14,9 @@ test_suite:
                     response:
                         host: 'http://{{ host }}'
       register: testServer
-    - http_get: url='${GetTestServerURL(testServer) + "/test"}'
+    - http_get:
+       url: '${GetTestServerURL(testServer) + "/test"}'
+       headers: {}
       register: result
     - assert: expect='${GetTestServerURL(testServer)}' actual="{{result.contents.host}}"
     - stop_test_server:

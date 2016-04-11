@@ -7,44 +7,79 @@ import (
 )
 
 func init() {
+
 	gohanscript.RegisterStmtParser("split",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			stmtErr := stmt.HasArgs(
+				"value", "sep")
+			if stmtErr != nil {
+				return nil, stmtErr
+			}
 			return func(context *gohanscript.Context) (interface{}, error) {
-				value, _ := stmt.Arg("value", context).(string)
-				sep, _ := stmt.Arg("sep", context).(string)
-				var err error
-				result1, err := lib.Split(value, sep)
+
+				value := stmt.Arg("value", context).(string)
+				sep := stmt.Arg("sep", context).(string)
+
+				result1,
+					err :=
+					lib.Split(
+						value, sep)
+
 				return result1, err
+
 			}, nil
 		})
 	gohanscript.RegisterMiniGoFunc("Split",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
-			i := 0
-			value, _ := args[i].(string)
-			i++
-			sep, _ := args[i].(string)
-			i++
-			result1, result2 := lib.Split(value, sep)
-			return []interface{}{result1, result2}
+
+			value := args[0].(string)
+			sep := args[1].(string)
+
+			result1,
+				err :=
+				lib.Split(
+					value, sep)
+			return []interface{}{
+				result1,
+				err}
+
 		})
+
 	gohanscript.RegisterStmtParser("join",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			stmtErr := stmt.HasArgs(
+				"value", "sep")
+			if stmtErr != nil {
+				return nil, stmtErr
+			}
 			return func(context *gohanscript.Context) (interface{}, error) {
-				value, _ := stmt.Arg("value", context).([]interface{})
-				sep, _ := stmt.Arg("sep", context).(string)
-				var err error
-				result1, err := lib.Join(value, sep)
+
+				value := stmt.Arg("value", context).([]interface{})
+				sep := stmt.Arg("sep", context).(string)
+
+				result1,
+					err :=
+					lib.Join(
+						value, sep)
+
 				return result1, err
+
 			}, nil
 		})
 	gohanscript.RegisterMiniGoFunc("Join",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
-			i := 0
-			value, _ := args[i].([]interface{})
-			i++
-			sep, _ := args[i].(string)
-			i++
-			result1, result2 := lib.Join(value, sep)
-			return []interface{}{result1, result2}
+
+			value := args[0].([]interface{})
+			sep := args[0].(string)
+
+			result1,
+				err :=
+				lib.Join(
+					value, sep)
+			return []interface{}{
+				result1,
+				err}
+
 		})
+
 }

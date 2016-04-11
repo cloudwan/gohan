@@ -47,12 +47,16 @@ func LoadYAMLFile(file string) (*yaml.Node, error) {
 	if err != nil {
 		return nil, err
 	}
-	return LoadYAML(buf), nil
+	return LoadYAML(buf)
 }
 
 //LoadYAML loads YAML from byte buffer
-func LoadYAML(buf []byte) *yaml.Node {
-	return yaml.ParseYAML(buf).Children[0]
+func LoadYAML(buf []byte) (*yaml.Node, error) {
+	node, err := yaml.ParseYAML(buf)
+	if err != nil {
+		return nil, err
+	}
+	return node.Children[0], nil
 }
 
 func convertMapformat(d interface{}) interface{} {

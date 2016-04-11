@@ -161,6 +161,12 @@ func define(stmt *Stmt) (func(*Context) (interface{}, error), error) {
 	RegisterStmtParser(
 		funcName,
 		func(aStmt *Stmt) (func(*Context) (interface{}, error), error) {
+			for key := range funcArgs {
+				_, ok := aStmt.Args[key]
+				if !ok {
+					return nil, fmt.Errorf("missing augument %s", key)
+				}
+			}
 			return func(context *Context) (value interface{}, err error) {
 				vm := context.VM
 				newContext := NewContext(vm)
@@ -312,6 +318,12 @@ func testSuite(stmt *Stmt) (func(*Context) (interface{}, error), error) {
 				continue
 			}
 			testRunner, err := StmtsToFunc("test", testsStmt)
+			if err != nil {
+				log.Error(fmt.Sprintf("%s ... failed", name))
+				log.Error(err.Error())
+				failedCount++
+				continue
+			}
 			_, err = testRunner(testContext)
 			if err != nil {
 				log.Error(fmt.Sprintf("%s ... failed", name))

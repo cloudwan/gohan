@@ -161,6 +161,7 @@ extensions:
           tx: $transaction
           schema_id: pet
           id: $resource.pet_id
+          tenant_id: ""
         register: pet
       - when: pet.status != "available"
         blocks:
