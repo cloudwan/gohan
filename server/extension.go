@@ -34,13 +34,23 @@ package server
 import (
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/extension/gohanscript"
+	"github.com/cloudwan/gohan/extension/golang"
 	"github.com/cloudwan/gohan/extension/otto"
 	"time"
 )
 
 func (server *Server) newEnvironment() extension.Environment {
-	if server.extensionType == "gohanscript" {
-		return gohanscript.NewEnvironment(server.db, server.keystoneIdentity, time.Duration(server.timelimit)*time.Second)
+	envs := []extension.Environment{}
+	timelimit := time.Duration(server.timelimit) * time.Second
+	for _, extension := range server.extensions {
+		switch extension {
+		case "javascript":
+			envs = append(envs, otto.NewEnvironment(server.db, server.keystoneIdentity, timelimit))
+		case "gohanscript":
+			envs = append(envs, gohanscript.NewEnvironment(timelimit))
+		case "go":
+			envs = append(envs, golang.NewEnvironment())
+		}
 	}
-	return otto.NewEnvironment(server.db, server.keystoneIdentity, time.Duration(server.timelimit)*time.Second)
+	return extension.NewEnvironment(envs)
 }

@@ -21,13 +21,6 @@ import (
 	"github.com/cloudwan/gohan/schema"
 )
 
-var modules = map[string]interface{}{}
-
-//GoCallback is type for go based callback
-type GoCallback func(event string, context map[string]interface{}) error
-
-var goCallbacks = map[string]GoCallback{}
-
 //Environment is a interface for extension environment
 type Environment interface {
 	LoadExtensionsForPath(extensions []*schema.Extension, path string) error
@@ -83,34 +76,6 @@ func GetManager() *Manager {
 //ClearManager clears manager
 func ClearManager() {
 	manager = nil
-}
-
-//RegisterModule registers modules
-func RegisterModule(name string, module interface{}) {
-	modules[name] = module
-}
-
-//RequireModule returns module
-func RequireModule(name string) interface{} {
-	module, ok := modules[name]
-	if ok {
-		return module
-	}
-	return nil
-}
-
-//RegisterGoCallback register go call back
-func RegisterGoCallback(name string, callback GoCallback) {
-	goCallbacks[name] = callback
-}
-
-//GetGoCallback returns registered go callback
-func GetGoCallback(name string) GoCallback {
-	callback, ok := goCallbacks[name]
-	if !ok {
-		return nil
-	}
-	return callback
 }
 
 // Error is created when a problem has occured during event handling. It contains the information

@@ -88,6 +88,7 @@ var _ = Describe("Suite set up and tear down", func() {
 		testDB, err = db.ConnectDB(dbType, dbFile)
 		Expect(err).ToNot(HaveOccurred(), "Failed to connect database.")
 		manager := schema.GetManager()
+		schema.DefaultExtension = "gohanscript"
 		config := util.GetConfig()
 		Expect(config.ReadConfig(configFile)).To(Succeed())
 		schemaFiles := config.GetStringList("schemas", nil)

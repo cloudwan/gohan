@@ -31,16 +31,28 @@ import (
 )
 
 var inits = []func(env *Environment){}
+var modules = map[string]interface{}{}
 
-//GoCallback is type for go based callback
+//RegisterModule registers modules
+func RegisterModule(name string, module interface{}) {
+	modules[name] = module
+}
+
+//RequireModule returns module
+func RequireModule(name string) interface{} {
+	module, ok := modules[name]
+	if ok {
+		return module
+	}
+	return nil
+}
 
 //Environment javascript based environment for gohan extension
 type Environment struct {
-	VM          *otto.Otto
-	goCallbacks []ext.GoCallback
-	DataStore   db.DB
-	timelimit   time.Duration
-	Identity    middleware.IdentityService
+	VM        *otto.Otto
+	DataStore db.DB
+	timelimit time.Duration
+	Identity  middleware.IdentityService
 }
 
 //NewEnvironment create new gohan extension environment based on context
@@ -62,7 +74,6 @@ func (env *Environment) SetUp() {
 	for _, init := range inits {
 		init(env)
 	}
-	env.goCallbacks = []ext.GoCallback{}
 }
 
 //RegisterInit registers init code
@@ -94,21 +105,19 @@ func (env *Environment) LoadExtensionsForPath(extensions []*schema.Extension, pa
 	for _, extension := range extensions {
 		if extension.Match(path) {
 			code := extension.Code
-			if extension.CodeType == "go" {
-				callback := ext.GetGoCallback(code)
-				if callback != nil {
-					env.goCallbacks = append(env.goCallbacks, callback)
-				}
-			} else {
-				script, err := env.VM.Compile(extension.URL, code)
-				if err != nil {
-					return err
-				}
-				_, err = env.VM.Run(script)
-				if err != nil {
-					return err
-				}
+			if extension.CodeType != "javascript" {
+				continue
 			}
+
+			script, err := env.VM.Compile(extension.URL, code)
+			if err != nil {
+				return err
+			}
+			_, err = env.VM.Run(script)
+			if err != nil {
+				return err
+			}
+
 		}
 	}
 
@@ -200,13 +209,6 @@ func (env *Environment) HandleEvent(event string, context map[string]interface{}
 	if err != nil {
 		return err
 	}
-
-	for _, callback := range env.goCallbacks {
-		err = callback(event, context)
-		if err != nil {
-			return err
-		}
-	}
 	return err
 }
 
@@ -214,7 +216,6 @@ func (env *Environment) HandleEvent(event string, context map[string]interface{}
 func (env *Environment) Clone() ext.Environment {
 	newEnv := NewEnvironment(env.DataStore, env.Identity, env.timelimit)
 	newEnv.VM = env.VM.Copy()
-	newEnv.goCallbacks = env.goCallbacks
 	return newEnv
 }
 

@@ -19,7 +19,8 @@ import (
 	"fmt"
 
 	"github.com/cloudwan/gohan/cli"
-	"github.com/cloudwan/gohan/extension"
+	"github.com/cloudwan/gohan/extension/golang"
+	"github.com/cloudwan/gohan/extension/otto"
 )
 
 //ExampleModule shows example javascript module
@@ -35,7 +36,7 @@ func main() {
 	//Customize code
 
 	//Register go callback
-	extension.RegisterGoCallback("exampleapp_callback",
+	golang.RegisterGoCallback("exampleapp_callback",
 		func(event string, context map[string]interface{}) error {
 			fmt.Printf("callback on %s : %v", event, context)
 			return nil
@@ -44,6 +45,6 @@ func main() {
 	exampleModule := &ExampleModule{}
 
 	//Register go based module for javascript
-	extension.RegisterModule("exampleapp", exampleModule)
+	otto.RegisterModule("exampleapp", exampleModule)
 	cli.Run("exampleapp", "exampleapp", "0.0.1")
 }

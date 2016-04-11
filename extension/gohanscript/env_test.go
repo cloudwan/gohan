@@ -28,7 +28,6 @@ import (
 
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/schema"
-	"github.com/cloudwan/gohan/server/middleware"
 )
 
 var _ = Describe("Gohanscript extension manager", func() {
@@ -74,7 +73,7 @@ var _ = Describe("Gohanscript extension manager", func() {
 				})
 				Expect(err).ToNot(HaveOccurred())
 				extensions := []*schema.Extension{extension}
-				env := gohanscript.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
+				env := gohanscript.NewEnvironment(timelimit)
 				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
 
 				context := map[string]interface{}{
@@ -94,7 +93,7 @@ var _ = Describe("Gohanscript extension manager", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				extensions := []*schema.Extension{extension}
-				env := gohanscript.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
+				env := gohanscript.NewEnvironment(timelimit)
 				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
 
 				context := map[string]interface{}{
@@ -123,7 +122,7 @@ var _ = Describe("Gohanscript extension manager", func() {
 				})
 				Expect(err).ToNot(HaveOccurred())
 				extensions := []*schema.Extension{extension}
-				env := gohanscript.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
+				env := gohanscript.NewEnvironment(timelimit)
 				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
 
 				context := map[string]interface{}{
@@ -151,7 +150,7 @@ var _ = Describe("Gohanscript extension manager", func() {
 				})
 				Expect(err).ToNot(HaveOccurred())
 				extensions := []*schema.Extension{extension}
-				env := gohanscript.NewEnvironment(testDB, &middleware.FakeIdentity{}, time.Duration(100))
+				env := gohanscript.NewEnvironment(time.Duration(100))
 				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
 				context := map[string]interface{}{
 					"id": "test",

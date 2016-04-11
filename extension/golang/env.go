@@ -13,29 +13,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package gohanscript
+package golang
 
 import (
-	"time"
-
 	ext "github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/schema"
 )
 
 //Environment gohan script based environment for gohan extension
 type Environment struct {
-	VM        *VM
-	timelimit time.Duration
+	goCallbacks []GoCallback
 }
 
 //NewEnvironment create new gohan extension environment based on context
-func NewEnvironment(timelimit time.Duration) *Environment {
-	vm := NewVM()
-	env := &Environment{
-		VM:        vm,
-		timelimit: timelimit,
-	}
+func NewEnvironment() *Environment {
+	env := &Environment{}
+	env.SetUp()
 	return env
+}
+
+//SetUp initialize environment
+func (env *Environment) SetUp() {
+	env.goCallbacks = []GoCallback{}
 }
 
 //Load loads script for environment
@@ -45,19 +44,16 @@ func (env *Environment) Load(source, code string) error {
 
 //LoadExtensionsForPath for returns extensions for specific path
 func (env *Environment) LoadExtensionsForPath(extensions []*schema.Extension, path string) error {
-	var err error
 	for _, extension := range extensions {
 		if extension.Match(path) {
-			if extension.CodeType != "gohanscript" {
+			if extension.CodeType != "go" {
 				continue
 			}
-
-			err = env.VM.LoadString(extension.File, extension.Code)
-			if err != nil {
-				log.Error(extension.Code)
-				return err
+			code := extension.Code
+			callback := GetGoCallback(code)
+			if callback != nil {
+				env.goCallbacks = append(env.goCallbacks, callback)
 			}
-
 		}
 	}
 	return nil
@@ -66,46 +62,18 @@ func (env *Environment) LoadExtensionsForPath(extensions []*schema.Extension, pa
 //HandleEvent handles event
 func (env *Environment) HandleEvent(event string, context map[string]interface{}) (err error) {
 	context["event_type"] = event
-
-	successCh := make(chan bool)
-
-	defer func() {
-		if caught := recover(); caught != nil {
-			if caught == env.VM.timeoutError {
-				log.Error(env.VM.timeoutError.Error())
-				err = env.VM.timeoutError
-				return
-			}
-			panic(caught) // Something else happened, repanic!
+	for _, callback := range env.goCallbacks {
+		err = callback(event, context)
+		if err != nil {
+			return
 		}
-	}()
-	timer := time.NewTimer(env.timelimit)
-
-	go func() {
-		for {
-			select {
-			case <-timer.C:
-				env.VM.Stop()
-				env.VM.StopChan <- func() {
-					panic(env.VM.timeoutError)
-				}
-				return
-			case <-successCh:
-				env.VM.Stop()
-				return
-			}
-		}
-	}()
-
-	err = env.VM.Run(context)
-	timer.Stop()
-	successCh <- true
+	}
 	return
 }
 
 //Clone makes clone of the environment
 func (env *Environment) Clone() ext.Environment {
-	newEnv := NewEnvironment(env.timelimit)
-	newEnv.VM = env.VM.Clone()
+	newEnv := NewEnvironment()
+	newEnv.goCallbacks = env.goCallbacks
 	return newEnv
 }
