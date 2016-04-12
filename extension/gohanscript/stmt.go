@@ -24,6 +24,11 @@ import (
 	"github.com/nati/yaml"
 )
 
+//Error represent error for gohanscript
+type Error struct {
+	error
+}
+
 //Stmt represents gohan script statement.
 //Stmt is responseible to generate go function from
 //YAML definitions.
@@ -73,7 +78,15 @@ func MakeStmts(FileName string, node *yaml.Node) ([]*Stmt, error) {
 
 //Errorf makes err with stmt information
 func (stmt *Stmt) Errorf(msg string, args ...interface{}) error {
-	return fmt.Errorf("[%s:%d] %s", stmt.File, stmt.Line, fmt.Sprintf(msg, args...))
+	return &Error{fmt.Errorf("%s:%d error %s", stmt.File, stmt.Line, fmt.Sprintf(msg, args...))}
+}
+
+//Error makes err with stmt information
+func (stmt *Stmt) Error(err error) error {
+	if _, ok := err.(*Error); ok {
+		return err
+	}
+	return &Error{fmt.Errorf("%s:%d: error %s", stmt.File, stmt.Line, err)}
 }
 
 //NewStmt makes gohan statement from yaml node
@@ -93,15 +106,15 @@ func NewStmt(FileName string, node *yaml.Node) (stmt *Stmt, err error) {
 	stmt.Dir = filepath.Dir(stmt.File)
 	stmt.Always, err = MakeStmts(FileName, stmt.RawNode["always"])
 	if err != nil {
-		return nil, stmt.Errorf("always path parse error: %s", err)
+		return nil, stmt.Error(err)
 	}
 	stmt.Rescue, err = MakeStmts(FileName, stmt.RawNode["rescue"])
 	if err != nil {
-		return nil, stmt.Errorf("rescue path parse error: %s", err)
+		return nil, stmt.Error(err)
 	}
 	stmt.ElseStmt, err = MakeStmts(FileName, stmt.RawNode["else"])
 	if err != nil {
-		return nil, stmt.Errorf("else path parse error: %s", err)
+		return nil, stmt.Error(err)
 	}
 	stmt.Retry = util.MaybeInt(stmt.RawData["retries"])
 	stmt.Worker = util.MaybeInt(stmt.RawData["worker"])
@@ -118,13 +131,13 @@ func NewStmt(FileName string, node *yaml.Node) (stmt *Stmt, err error) {
 	if stmt.RawData["when"] != nil {
 		stmt.When, err = CompileExpr(util.MaybeString(stmt.RawData["when"]))
 		if err != nil {
-			return nil, stmt.Errorf("when code parse error: %s", err)
+			return nil, stmt.Error(err)
 		}
 	}
 	if stmt.RawData["until"] != nil {
 		stmt.Until, err = CompileExpr(util.MaybeString(stmt.RawData["until"]))
 		if err != nil {
-			return nil, stmt.Errorf("until code parse error: %s", err)
+			return nil, stmt.Error(err)
 		}
 	}
 	stmt.Register = util.MaybeString(stmt.RawData["register"])
@@ -173,7 +186,7 @@ func (stmt *Stmt) Func() (func(context *Context) (interface{}, error), error) {
 	}
 	f, err := stmtParser(stmt)
 	if err != nil {
-		return nil, stmt.Errorf("StmtParser failed: %s", err)
+		return nil, stmt.Error(err)
 	}
 	return applyWrappers(stmt, f)
 }
