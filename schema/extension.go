@@ -25,6 +25,9 @@ import (
 	"github.com/cloudwan/gohan/util"
 )
 
+//DefaultExtension configuraion
+var DefaultExtension = "javascript"
+
 //Extension is a small plugin for gohan
 type Extension struct {
 	ID, CodeType, URL, File string
@@ -38,6 +41,9 @@ func NewExtension(raw interface{}) (*Extension, error) {
 	extension := &Extension{}
 	extension.ID, _ = typeData["id"].(string)
 	extension.CodeType, _ = typeData["code_type"].(string)
+	if extension.CodeType == "" {
+		extension.CodeType = DefaultExtension
+	}
 	if _, ok := typeData["url"].(string); ok {
 		url, err := url.Parse(typeData["url"].(string))
 		if err != nil {

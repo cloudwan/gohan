@@ -319,6 +319,29 @@ You can also specify schemes including file://, http://, https:// and embed://.
 For embed scheme, you can read embedded data in gohan binary.
 Currenlty, contents under etc/schema and etc/extentions are embedded.
 
+Extension
+-----------
+- enable extension
+
+You can select extension types you use.
+
+.. code-block:: yaml
+
+  extention:
+    default: javascript
+    use:
+    - javascript
+    - gohanscript
+    - go
+
+- extension timelimit
+
+  You can make timelimit for extention execution. default is 30 sec
+
+.. code-block:: yaml
+
+  extension:
+    timelimit: 30
 
 Misc
 --------------
@@ -393,16 +416,6 @@ WARNING: The value of watched etcd keys must be a JSON dictionary.
 
   snmp:
     address: "localhost:8888"
-
-- extention timelimit
-
-  You can make timelimit for extention execution. default is 30 sec
-
-.. code-block:: yaml
-
-  extention:
-    timelimit: 30
-
 
 - cron
 

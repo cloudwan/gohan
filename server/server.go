@@ -54,7 +54,7 @@ type Server struct {
 	martini          *martini.ClassicMartini
 	timelimit        int
 	MaxOpenConn      int
-	extensionType    string
+	extensions       []string
 	keystoneIdentity middleware.IdentityService
 	queue            *job.Queue
 }
@@ -184,7 +184,14 @@ func NewServer(configFile string) (*Server, error) {
 	}
 
 	setupEditor(server)
-	server.extensionType = config.GetString("extension/type", "otto")
+
+	server.timelimit = config.GetInt("extension/timelimit", 30)
+	server.extensions = config.GetStringList("extension/use", []string{
+		"javascript",
+		"gohanscript",
+		"go",
+	})
+	schema.DefaultExtension = config.GetString("extension/default", "javascript")
 	server.address = config.GetString("address", ":"+port)
 	if config.GetBool("tls/enabled", false) {
 		log.Info("TLS enabled")
@@ -273,7 +280,7 @@ func NewServer(configFile string) (*Server, error) {
 			rw.Header().Add("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE")
 		})
 	}
-	server.timelimit = config.GetInt("extension/timelimit", 30)
+
 	documentRoot := config.GetString("document_root", "embed")
 	if config.GetBool("webui_config/enabled", false) {
 		m.Use(func(res http.ResponseWriter, req *http.Request, c martini.Context) {

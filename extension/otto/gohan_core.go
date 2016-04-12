@@ -19,8 +19,6 @@ import (
 	"github.com/dop251/otto"
 
 	"github.com/cloudwan/gohan/schema"
-
-	"github.com/cloudwan/gohan/extension"
 	"github.com/op/go-logging"
 
 	l "github.com/cloudwan/gohan/log"
@@ -35,7 +33,7 @@ func init() {
 			"require": func(call otto.FunctionCall) otto.Value {
 				VerifyCallArguments(&call, "require", 1)
 				moduleName := call.Argument(0).String()
-				value, _ := vm.ToValue(extension.RequireModule(moduleName))
+				value, _ := vm.ToValue(RequireModule(moduleName))
 				return value
 			},
 			"gohan_schemas": func(call otto.FunctionCall) otto.Value {

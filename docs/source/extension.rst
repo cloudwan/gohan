@@ -676,19 +676,54 @@ Note: This function is experimental. Any APIs are subject to change.
 Gohan script is an Ansible-like MACRO language
 for extending your Go code with MACRO functionality.
 
-Enable gohan script
-~~~~~~~~~~~~~~~~~~~~~
-
-You need specify extension type in config file.
-
-.. code-block:: yaml
-
-  extension:
-     type: gohanscript
-
 
 Example
 ~~~~~~~
+
+.. code-block:: yaml
+
+extensions:
+- id: order
+  path: /v1.0/store/orders
+  code: |
+    tasks:
+    - when: event_type == "post_create_in_transaction"
+      blocks:
+      #  Try debugger
+      # - debugger:
+      - db_get:
+          tx: $transaction
+          schema_id: pet
+          id: $resource.pet_id
+        register: pet
+      - when: pet.status != "available"
+        blocks:
+        - vars:
+            exception:
+              name: CustomException
+              code: 400
+              message: "Selected pet isn't available"
+        else:
+        - db_update:
+            tx: $transaction
+            schema_id: pet
+            data:
+                id: $resource.pet_id
+                status: "pending"
+    - when: event_type == "post_update_in_transaction"
+      blocks:
+      - when: resource.status == "approved"
+        blocks:
+        - db_update:
+            tx: $transaction
+            schema_id: pet
+            data:
+              id: $resource.pet_id
+              status: "sold"
+
+
+Standalone Example
+~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: yaml
 
