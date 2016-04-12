@@ -202,7 +202,10 @@ func panicWrapper(stmt *Stmt, f func(*Context) (interface{}, error)) (func(*Cont
 				if caught == context.VM.timeoutError {
 					panic(caught)
 				}
-				panic(stmt.Errorf("%s", caught))
+				if err, ok := caught.(error); ok {
+					panic(stmt.Error(err))
+				}
+				panic(caught)
 			}
 		}()
 		return f(context)

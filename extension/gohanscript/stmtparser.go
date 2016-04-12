@@ -201,17 +201,17 @@ func debugger(stmt *Stmt) (func(*Context) (interface{}, error), error) {
 func debug(stmt *Stmt) (func(*Context) (interface{}, error), error) {
 	return func(context *Context) (interface{}, error) {
 		if msg, ok := stmt.Args["msg"]; ok {
-			log.Debug("[%s:%d] %s",
+			log.Debug("%s:%d %s",
 				stmt.File,
 				stmt.Line,
 				msg.Value(context))
 		} else if id, ok := stmt.Args["var"]; ok {
-			log.Debug("[%s:%d] %v",
+			log.Debug("%s:%d %v",
 				stmt.File,
 				stmt.Line,
 				id.Value(context))
 		} else {
-			log.Debug("[%s:%d] Dump vars",
+			log.Debug("%s:%d Dump vars",
 				stmt.File,
 				stmt.Line)
 			for key, value := range context.data {

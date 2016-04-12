@@ -793,8 +793,8 @@ save this file to hello_world.yaml.
 .. code-block:: shell
 
     $ gohan run hello_world.yaml
-    15:17:07.029 ▶ DEBUG  [hello_world.yaml line:1 column:4] Hello World
-    15:17:07.029 ▶ DEBUG  [hello_world.yaml line:2 column:4] This is gohan script
+    15:17:07.029 ▶ DEBUG  hello_world.yaml:1: Hello World
+    15:17:07.029 ▶ DEBUG  hello_world.yaml:2: This is gohan script
 
 Variables
 ~~~~~~~~~
@@ -823,11 +823,11 @@ a variable identifier.
 .. code-block:: shell
 
     $ gohan run variable.yaml
-    15:21:43.090 ▶ DEBUG  [variable.yaml line:6 column:2] Hello Earth
-    15:21:43.091 ▶ DEBUG  [variable.yaml line:7 column:2] Earth
-    15:21:43.091 ▶ DEBUG  [variable.yaml line:8 column:2] Hello John
-    15:21:43.091 ▶ DEBUG  [variable.yaml line:9 column:2] John
-    15:21:43.091 ▶ DEBUG  [variable.yaml line:10 column:2] Dump vars
+    15:21:43.090 ▶ DEBUG  variable.yaml:6 Hello Earth
+    15:21:43.091 ▶ DEBUG  variable.yaml:7 Earth
+    15:21:43.091 ▶ DEBUG  variable.yaml:8 Hello John
+    15:21:43.091 ▶ DEBUG  variable.yaml:9 John
+    15:21:43.091 ▶ DEBUG  variable.yaml:10 Dump vars
     15:21:43.091 ▶ DEBUG      person: map[name:John age:30]
     15:21:43.091 ▶ DEBUG      __file__: variable.yaml
     15:21:43.091 ▶ DEBUG      __dir__: .
@@ -857,12 +857,12 @@ You can loop over the list item.
 .. code-block:: shell
 
     $ gohan run with_items.yaml
-    15:28:47.736 ▶ DEBUG  [with_items.yaml line:6 column:2] apple
-    15:28:47.736 ▶ DEBUG  [with_items.yaml line:6 column:2] orange
-    15:28:47.736 ▶ DEBUG  [with_items.yaml line:6 column:2] banana
-    15:28:47.736 ▶ DEBUG  [with_items.yaml line:11 column:2] apple
-    15:28:47.736 ▶ DEBUG  [with_items.yaml line:11 column:2] orange
-    15:28:47.736 ▶ DEBUG  [with_items.yaml line:11 column:2] banana
+    15:28:47.736 ▶ DEBUG  with_items.yaml:6 apple
+    15:28:47.736 ▶ DEBUG  with_items.yaml:6 orange
+    15:28:47.736 ▶ DEBUG  with_items.yaml:6 banana
+    15:28:47.736 ▶ DEBUG  with_items.yaml:11 apple
+    15:28:47.736 ▶ DEBUG  with_items.yaml:11 orange
+    15:28:47.736 ▶ DEBUG  with_items.yaml:11 banana
 
 You can also loop over a dict.
 
@@ -883,10 +883,10 @@ You can also loop over a dict.
 .. code-block:: shell
 
     $ gohan run with_items.yaml
-    15:32:42.513 ▶ DEBUG  [with_items.yaml line:5 column:2] name John
-    15:32:42.513 ▶ DEBUG  [with_items.yaml line:5 column:2] age 30
-    15:32:42.513 ▶ DEBUG  [with_items.yaml line:9 column:2] name John
-    15:32:42.513 ▶ DEBUG  [with_items.yaml line:9 column:2] age 30
+    15:32:42.513 ▶ DEBUG  with_items.yaml:5 name John
+    15:32:42.513 ▶ DEBUG  with_items.yaml:5 age 30
+    15:32:42.513 ▶ DEBUG  with_items.yaml:9 name John
+    15:32:42.513 ▶ DEBUG  with_items.yaml:9 age 30
 
 you can specify loop variable name by specifying loop_var:
 
@@ -932,7 +932,7 @@ You can use "else" blocks with "when".
 .. code-block:: shell
 
     $ gohan run when.yaml
-    15:35:55.358 ▶ DEBUG  [when.yaml line:3 column:2] Should be called
+    15:35:55.358 ▶ DEBUG  when.yaml:3 Should be called
 
 Retry
 ~~~~~~~~~~~~~
@@ -972,8 +972,8 @@ blocks also supports loops, conditional and retries.
 .. code-block:: shell
 
     $ gohan run blocks.yaml
-    15:48:30.231 ▶ DEBUG  [blocks.yaml line:2 column:4] hello
-    15:48:30.231 ▶ DEBUG  [blocks.yaml line:3 column:4] from in block
+    15:48:30.231 ▶ DEBUG  blocks.yaml:2 hello
+    15:48:30.231 ▶ DEBUG  blocks.yaml:3 from in block
 
 Register
 ~~~~~~~~~~~~~
@@ -1015,9 +1015,9 @@ We support concurrent execution over a loop.
 .. code-block:: shell
 
     $ gohan run worker.yaml
-    15:58:49.151 ▶ DEBUG  [worker.yaml line:4 column:5] {"status_url":"https://status.github.com/api/status.json","messages_url":"https://status.github.com/api/messages.json","last_message_url":"https://status.github.com/api/last-message.json","daily_summary":"https://status.github.com/api/daily-summary.json"}
-    15:58:49.156 ▶ DEBUG  [worker.yaml line:4 column:5] {"status":"good","body":"Everything operating normally.","created_on":"2016-03-03T22:03:59Z"}
-    15:58:49.156 ▶ DEBUG  [worker.yaml line:4 column:5] {"status":"good","last_updated":"2016-03-08T23:58:27Z"}
+    15:58:49.151 ▶ DEBUG  worker.yaml:4 {"status_url":"https://status.github.com/api/status.json","messages_url":"https://status.github.com/api/messages.json","last_message_url":"https://status.github.com/api/last-message.json","daily_summary":"https://status.github.com/api/daily-summary.json"}
+    15:58:49.156 ▶ DEBUG  worker.yaml:4 {"status":"good","body":"Everything operating normally.","created_on":"2016-03-03T22:03:59Z"}
+    15:58:49.156 ▶ DEBUG  worker.yaml:4 {"status":"good","last_updated":"2016-03-08T23:58:27Z"}
 
 You can also execute tasks in background.
 
@@ -1034,9 +1034,9 @@ You can also execute tasks in background.
 .. code-block:: shell
 
     $ gohan run background.yaml
-    16:02:55.034 ▶ DEBUG  [background.yaml line:6 column:2] called 1
-    16:02:56.038 ▶ DEBUG  [background.yaml line:4 column:4] called 2
-    16:02:57.038 ▶ DEBUG  [background.yaml line:8 column:2] called 3
+    16:02:55.034 ▶ DEBUG  background.yaml:6 called 1
+    16:02:56.038 ▶ DEBUG  background.yaml:4 called 2
+    16:02:57.038 ▶ DEBUG  background.yaml:8 called 3
 
 
 Define function
@@ -1080,7 +1080,7 @@ you can use return task in function block.
 .. code-block:: shell
 
     $ gohan run fib.yaml
-    16:07:39.964 ▶ DEBUG  [fib.yaml line:23 column:2] result = 55
+    16:07:39.964 ▶ DEBUG  fib.yaml:23 result = 55
 
 Include
 ~~~~~~~
@@ -1095,7 +1095,7 @@ You can include gohan script
 .. code-block:: shell
 
     $ gohan run include.yaml
-    16:11:20.569 ▶ DEBUG  [lib.yaml line:0 column:2] imported
+    16:11:20.569 ▶ DEBUG  lib.yaml:0 imported
 
 Debugger mode
 ~~~~~~~~~~~~~~
