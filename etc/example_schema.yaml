@@ -151,6 +151,7 @@ policies:
 extensions:
 - id: order
   path: /v1.0/store/orders
+  code_type: gohanscript
   code: |
     tasks:
     - when: event_type == "post_create_in_transaction"

@@ -102,7 +102,7 @@ func etcSchemaCoreJson() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "etc/schema/core.json", size: 4424, mode: os.FileMode(420), modTime: time.Unix(1445886845, 0)}
+	info := bindataFileInfo{name: "etc/schema/core.json", size: 4424, mode: os.FileMode(420), modTime: time.Unix(1445535064, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -122,7 +122,7 @@ func etcSchemaGohanJson() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "etc/schema/gohan.json", size: 33085, mode: os.FileMode(420), modTime: time.Unix(1460454642, 0)}
+	info := bindataFileInfo{name: "etc/schema/gohan.json", size: 33085, mode: os.FileMode(420), modTime: time.Unix(1459379991, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -142,7 +142,7 @@ func etcExtensionsGohan_extensionYaml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "etc/extensions/gohan_extension.yaml", size: 106, mode: os.FileMode(420), modTime: time.Unix(1460454642, 0)}
+	info := bindataFileInfo{name: "etc/extensions/gohan_extension.yaml", size: 106, mode: os.FileMode(420), modTime: time.Unix(1456945742, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -162,7 +162,7 @@ func etcTemplatesSwaggerTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "etc/templates/swagger.tmpl", size: 8215, mode: os.FileMode(420), modTime: time.Unix(1460454642, 0)}
+	info := bindataFileInfo{name: "etc/templates/swagger.tmpl", size: 8215, mode: os.FileMode(420), modTime: time.Unix(1459794006, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -182,7 +182,7 @@ func publicWebui46661d6d65debc63884004fed6e37e5cSvg() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/46661d6d65debc63884004fed6e37e5c.svg", size: 41, mode: os.FileMode(420), modTime: time.Unix(1460454642, 0)}
+	info := bindataFileInfo{name: "public/webui/46661d6d65debc63884004fed6e37e5c.svg", size: 41, mode: os.FileMode(420), modTime: time.Unix(1459206121, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -202,7 +202,7 @@ func publicWebuiB7449d6115c7b39d6d92f8b310a062b0Png() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/b7449d6115c7b39d6d92f8b310a062b0.png", size: 12292, mode: os.FileMode(420), modTime: time.Unix(1460454642, 0)}
+	info := bindataFileInfo{name: "public/webui/b7449d6115c7b39d6d92f8b310a062b0.png", size: 12292, mode: os.FileMode(420), modTime: time.Unix(1459206121, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -222,7 +222,7 @@ func publicWebuiBundleJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/bundle.js", size: 816362, mode: os.FileMode(420), modTime: time.Unix(1460454642, 0)}
+	info := bindataFileInfo{name: "public/webui/bundle.js", size: 816362, mode: os.FileMode(420), modTime: time.Unix(1459206121, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -242,7 +242,7 @@ func publicWebuiConfigJsonSample() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/config.json.sample", size: 277, mode: os.FileMode(420), modTime: time.Unix(1460454642, 0)}
+	info := bindataFileInfo{name: "public/webui/config.json.sample", size: 277, mode: os.FileMode(420), modTime: time.Unix(1459206121, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -262,7 +262,7 @@ func publicWebuiFontawesomeWebfontEot() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/fontawesome-webfont.eot", size: 70807, mode: os.FileMode(420), modTime: time.Unix(1460454642, 0)}
+	info := bindataFileInfo{name: "public/webui/fontawesome-webfont.eot", size: 70807, mode: os.FileMode(420), modTime: time.Unix(1459206121, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -282,7 +282,7 @@ func publicWebuiFontawesomeWebfontSvg() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/fontawesome-webfont.svg", size: 365616, mode: os.FileMode(420), modTime: time.Unix(1460454642, 0)}
+	info := bindataFileInfo{name: "public/webui/fontawesome-webfont.svg", size: 365616, mode: os.FileMode(420), modTime: time.Unix(1459206121, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -302,7 +302,7 @@ func publicWebuiFontawesomeWebfontTtf() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/fontawesome-webfont.ttf", size: 142072, mode: os.FileMode(420), modTime: time.Unix(1460454642, 0)}
+	info := bindataFileInfo{name: "public/webui/fontawesome-webfont.ttf", size: 142072, mode: os.FileMode(420), modTime: time.Unix(1459206121, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -322,7 +322,7 @@ func publicWebuiFontawesomeWebfontWoff() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/fontawesome-webfont.woff", size: 83588, mode: os.FileMode(420), modTime: time.Unix(1460454642, 0)}
+	info := bindataFileInfo{name: "public/webui/fontawesome-webfont.woff", size: 83588, mode: os.FileMode(420), modTime: time.Unix(1459206121, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -342,7 +342,7 @@ func publicWebuiFontawesomeWebfontWoff2() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/fontawesome-webfont.woff2", size: 66624, mode: os.FileMode(420), modTime: time.Unix(1460454642, 0)}
+	info := bindataFileInfo{name: "public/webui/fontawesome-webfont.woff2", size: 66624, mode: os.FileMode(420), modTime: time.Unix(1459206121, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -362,7 +362,7 @@ func publicWebuiGlyphiconsHalflingsRegularEot() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/glyphicons-halflings-regular.eot", size: 20127, mode: os.FileMode(420), modTime: time.Unix(1460454642, 0)}
+	info := bindataFileInfo{name: "public/webui/glyphicons-halflings-regular.eot", size: 20127, mode: os.FileMode(420), modTime: time.Unix(1459206121, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -382,7 +382,7 @@ func publicWebuiGlyphiconsHalflingsRegularSvg() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/glyphicons-halflings-regular.svg", size: 82, mode: os.FileMode(420), modTime: time.Unix(1460454642, 0)}
+	info := bindataFileInfo{name: "public/webui/glyphicons-halflings-regular.svg", size: 82, mode: os.FileMode(420), modTime: time.Unix(1459206121, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -402,7 +402,7 @@ func publicWebuiGlyphiconsHalflingsRegularTtf() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/glyphicons-halflings-regular.ttf", size: 45404, mode: os.FileMode(420), modTime: time.Unix(1460454642, 0)}
+	info := bindataFileInfo{name: "public/webui/glyphicons-halflings-regular.ttf", size: 45404, mode: os.FileMode(420), modTime: time.Unix(1459206121, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -422,7 +422,7 @@ func publicWebuiGlyphiconsHalflingsRegularWoff() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/glyphicons-halflings-regular.woff", size: 23424, mode: os.FileMode(420), modTime: time.Unix(1460454642, 0)}
+	info := bindataFileInfo{name: "public/webui/glyphicons-halflings-regular.woff", size: 23424, mode: os.FileMode(420), modTime: time.Unix(1459206121, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -442,7 +442,7 @@ func publicWebuiGlyphiconsHalflingsRegularWoff2() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/glyphicons-halflings-regular.woff2", size: 18028, mode: os.FileMode(420), modTime: time.Unix(1460454642, 0)}
+	info := bindataFileInfo{name: "public/webui/glyphicons-halflings-regular.woff2", size: 18028, mode: os.FileMode(420), modTime: time.Unix(1459206121, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -462,7 +462,7 @@ func publicWebuiIndexHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/index.html", size: 343, mode: os.FileMode(420), modTime: time.Unix(1460454642, 0)}
+	info := bindataFileInfo{name: "public/webui/index.html", size: 343, mode: os.FileMode(420), modTime: time.Unix(1459206121, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -482,7 +482,7 @@ func publicWebuiStylesCss() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/styles.css", size: 271063, mode: os.FileMode(420), modTime: time.Unix(1460454642, 0)}
+	info := bindataFileInfo{name: "public/webui/styles.css", size: 271063, mode: os.FileMode(420), modTime: time.Unix(1459206121, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
