@@ -89,7 +89,10 @@ func (vm *VM) LoadFile(file string) error {
 
 //LoadString loads gohan script code from string and make func
 func (vm *VM) LoadString(fileName, yamlString string) error {
-	code := LoadYAML([]byte(yamlString))
+	code, err := LoadYAML([]byte(yamlString))
+	if err != nil {
+		return err
+	}
 	main, err := NewStmt(fileName, code)
 	if err != nil {
 		return err

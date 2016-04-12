@@ -144,6 +144,17 @@ func (stmt *Stmt) parser() StmtParser {
 	return nil
 }
 
+//HasArgs checks if statement has functions
+func (stmt *Stmt) HasArgs(keys ...string) error {
+	for _, key := range keys {
+		_, ok := stmt.Args[key]
+		if !ok {
+			return fmt.Errorf("missing argument %s", key)
+		}
+	}
+	return nil
+}
+
 //Arg get augument data using key and context
 func (stmt *Stmt) Arg(key string, context *Context) interface{} {
 	arg := stmt.Args[key]
@@ -157,7 +168,8 @@ func (stmt *Stmt) Arg(key string, context *Context) interface{} {
 func (stmt *Stmt) Func() (func(context *Context) (interface{}, error), error) {
 	stmtParser := stmt.parser()
 	if stmtParser == nil {
-		stmtParser = vars
+		yamlCode, _ := yaml.Marshal(&stmt.RawData)
+		return nil, stmt.Errorf("Undefined function, %s", yamlCode)
 	}
 	f, err := stmtParser(stmt)
 	if err != nil {

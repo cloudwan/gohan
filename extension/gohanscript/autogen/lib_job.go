@@ -8,68 +8,121 @@ import (
 )
 
 func init() {
+
 	gohanscript.RegisterStmtParser("make_queue",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			stmtErr := stmt.HasArgs(
+				"workers")
+			if stmtErr != nil {
+				return nil, stmtErr
+			}
 			return func(context *gohanscript.Context) (interface{}, error) {
-				workers, _ := stmt.Arg("workers", context).(int)
-				result1 := lib.MakeQueue(workers)
+
+				workers := stmt.Arg("workers", context).(int)
+
+				result1 :=
+					lib.MakeQueue(
+						workers)
+
 				return result1, nil
+
 			}, nil
 		})
 	gohanscript.RegisterMiniGoFunc("MakeQueue",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
-			i := 0
-			workers, _ := args[i].(int)
-			i++
-			result1 := lib.MakeQueue(workers)
-			return []interface{}{result1}
+
+			workers := args[0].(int)
+
+			result1 :=
+				lib.MakeQueue(
+					workers)
+			return []interface{}{
+				result1}
+
 		})
+
 	gohanscript.RegisterStmtParser("wait_queue",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			stmtErr := stmt.HasArgs(
+				"queue")
+			if stmtErr != nil {
+				return nil, stmtErr
+			}
 			return func(context *gohanscript.Context) (interface{}, error) {
-				queue, _ := stmt.Arg("queue", context).(*job.Queue)
-				lib.WaitQueue(queue)
+
+				queue := stmt.Arg("queue", context).(*job.Queue)
+
+				lib.WaitQueue(
+					queue)
 				return nil, nil
+
 			}, nil
 		})
 	gohanscript.RegisterMiniGoFunc("WaitQueue",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
-			i := 0
-			queue, _ := args[i].(*job.Queue)
-			i++
-			lib.WaitQueue(queue)
-			return []interface{}{}
+
+			queue := args[0].(*job.Queue)
+
+			lib.WaitQueue(
+				queue)
+			return nil
+
 		})
+
 	gohanscript.RegisterStmtParser("stop",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			stmtErr := stmt.HasArgs(
+				"queue")
+			if stmtErr != nil {
+				return nil, stmtErr
+			}
 			return func(context *gohanscript.Context) (interface{}, error) {
-				queue, _ := stmt.Arg("queue", context).(*job.Queue)
-				lib.Stop(queue)
+
+				queue := stmt.Arg("queue", context).(*job.Queue)
+
+				lib.Stop(
+					queue)
 				return nil, nil
+
 			}, nil
 		})
 	gohanscript.RegisterMiniGoFunc("Stop",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
-			i := 0
-			queue, _ := args[i].(*job.Queue)
-			i++
-			lib.Stop(queue)
-			return []interface{}{}
+
+			queue := args[0].(*job.Queue)
+
+			lib.Stop(
+				queue)
+			return nil
+
 		})
+
 	gohanscript.RegisterStmtParser("force_stop",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			stmtErr := stmt.HasArgs(
+				"queue")
+			if stmtErr != nil {
+				return nil, stmtErr
+			}
 			return func(context *gohanscript.Context) (interface{}, error) {
-				queue, _ := stmt.Arg("queue", context).(*job.Queue)
-				lib.ForceStop(queue)
+
+				queue := stmt.Arg("queue", context).(*job.Queue)
+
+				lib.ForceStop(
+					queue)
 				return nil, nil
+
 			}, nil
 		})
 	gohanscript.RegisterMiniGoFunc("ForceStop",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
-			i := 0
-			queue, _ := args[i].(*job.Queue)
-			i++
-			lib.ForceStop(queue)
-			return []interface{}{}
+
+			queue := args[0].(*job.Queue)
+
+			lib.ForceStop(
+				queue)
+			return nil
+
 		})
+
 }
