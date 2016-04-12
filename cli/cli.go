@@ -44,6 +44,8 @@ import (
 
 var log = logging.MustGetLogger(l.GetModuleName())
 
+const defaultConfigFile = "gohan.yaml"
+
 //Run execute main command
 func Run(name, usage, version string) {
 	app := cli.NewApp()
@@ -293,7 +295,7 @@ func getServerCommand() cli.Command {
 		Usage:       "Run API Server",
 		Description: "Run Gohan API server",
 		Flags: []cli.Flag{
-			cli.StringFlag{Name: "config-file", Value: "etc/gohan.yaml", Usage: "Server config File"},
+			cli.StringFlag{Name: "config-file", Value: defaultConfigFile, Usage: "Server config File"},
 		},
 		Action: func(c *cli.Context) {
 			configFile := c.String("config-file")
@@ -371,7 +373,7 @@ func getRunCommand() cli.Command {
 		Description: `
 Run gohan script code.`,
 		Flags: []cli.Flag{
-			cli.StringFlag{Name: "config-file,c", Value: "", Usage: "config file path"},
+			cli.StringFlag{Name: "config-file,c", Value: defaultConfigFile, Usage: "config file path"},
 			cli.StringFlag{Name: "args,a", Value: "", Usage: "arguments"},
 		},
 		Action: func(c *cli.Context) {
@@ -410,7 +412,7 @@ func getTestCommand() cli.Command {
 		Description: `
 Run gohan script yaml code.`,
 		Flags: []cli.Flag{
-			cli.StringFlag{Name: "config-file,c", Value: "", Usage: "config file path"},
+			cli.StringFlag{Name: "config-file,c", Value: defaultConfigFile, Usage: "config file path"},
 		},
 		Action: func(c *cli.Context) {
 			dir := c.Args()[0]
@@ -427,7 +429,7 @@ func loadConfig(configFile string) {
 	}
 	config := util.GetConfig()
 	err := config.ReadConfig(configFile)
-	if err != nil {
+	if err != nil && configFile != defaultConfigFile {
 		fmt.Println(err)
 		os.Exit(1)
 		return

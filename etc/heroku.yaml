@@ -60,4 +60,8 @@ logging:
         filename: ./gohan.log
 
 extension:
-  type: gohanscript
+  default: gohanscript
+  use:
+  - gohanscript
+  - javascript
+  - go
