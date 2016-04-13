@@ -434,11 +434,11 @@ func startStateUpdatingProcess(server *Server) {
 	stateStopChan := make(chan bool)
 
 	if _, err := server.sync.Fetch(statePrefix); err != nil {
-		server.sync.Update(statePrefix, "{}")
+		server.sync.Update(statePrefix, "")
 	}
 
 	if _, err := server.sync.Fetch(statePrefix); err == nil {
-		server.sync.Update(monitoringPrefix, "{}")
+		server.sync.Update(monitoringPrefix, "")
 	}
 
 	go func() {
