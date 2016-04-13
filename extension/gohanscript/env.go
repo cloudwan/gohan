@@ -54,7 +54,7 @@ func (env *Environment) LoadExtensionsForPath(extensions []*schema.Extension, pa
 
 			err = env.VM.LoadString(extension.File, extension.Code)
 			if err != nil {
-				log.Error(extension.Code)
+				log.Fatalf("%s", err)
 				return err
 			}
 
