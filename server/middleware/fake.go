@@ -76,6 +76,8 @@ var serviceCatalog = []interface{}{
 		"endpoints": []interface{}{
 			map[string]interface{}{
 				"adminURL": "http://127.0.0.1:9091",
+				"internalURL": "http://127.0.0.1:9091",
+				"publicURL": "http://127.0.0.1:9091",
 				"region":   "RegionOne",
 				"id":       "2dad48f09e2a447a9bf852bcd93548ef",
 			},

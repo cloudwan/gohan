@@ -55,6 +55,8 @@ func getAuthResponse(gohanEndpointURL string) interface{} {
 					"endpoints": []map[string]interface{}{
 						map[string]interface{}{
 							"adminURL": gohanEndpointURL,
+							"internalURL": gohanEndpointURL,
+							"publicURL": gohanEndpointURL,
 							"region":   "RegionOne",
 							"id":       "2dad48f09e2a447a9bf852bcd93548ef",
 						},
