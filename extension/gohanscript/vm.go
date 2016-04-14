@@ -52,8 +52,8 @@ func (vm *VM) Clone() *VM {
 	return newVM
 }
 
-//RunFile load data from file and execute it
-func (vm *VM) RunFile(file string) (interface{}, error) {
+//MakeFile makes function from yaml file
+func (vm *VM) MakeFile(file string) (func(*Context) (interface{}, error), error) {
 	code, err := LoadYAMLFile(file)
 	if err != nil {
 		return nil, err
@@ -62,7 +62,12 @@ func (vm *VM) RunFile(file string) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	runner, err := main.Func()
+	return main.Func()
+}
+
+//RunFile load data from file and execute it
+func (vm *VM) RunFile(file string) (interface{}, error) {
+	runner, err := vm.MakeFile(file)
 	if err != nil {
 		return nil, err
 	}
