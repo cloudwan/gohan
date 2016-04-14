@@ -49,6 +49,11 @@ func serveResponse(w http.ResponseWriter, context map[string]interface{}) {
 func httpServer(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
 	return func(globalContext *gohanscript.Context) (interface{}, error) {
 		m := martini.Classic()
+
+		m.Handlers()
+		m.Use(middleware.Logging())
+		m.Use(martini.Recovery())
+
 		rawBody := util.MaybeMap(stmt.RawData["http_server"])
 		paths := util.MaybeMap(rawBody["paths"])
 		for path, body := range paths {
