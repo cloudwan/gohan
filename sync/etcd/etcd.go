@@ -47,17 +47,17 @@ func NewSync(etcdServers []string) *Sync {
 
 //Update sync update sync
 func (s *Sync) Update(key, jsonString string) error {
-    var err error
-    if jsonString == "" {
-        _, err = s.etcdClient.SetDir(key, 0)
-    } else {
-        _, err = s.etcdClient.Set(key, jsonString, 0)
-    }
-    if err != nil {
-        log.Error(fmt.Sprintf("failed to sync with backend %s", err))
-        return err
-    }
-    return nil
+	var err error
+	if jsonString == "" {
+		_, err = s.etcdClient.SetDir(key, 0)
+	} else {
+		_, err = s.etcdClient.Set(key, jsonString, 0)
+	}
+	if err != nil {
+		log.Error(fmt.Sprintf("failed to sync with backend %s", err))
+		return err
+	}
+	return nil
 }
 
 //Delete sync update sync
