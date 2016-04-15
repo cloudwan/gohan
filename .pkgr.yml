@@ -1,1 +1,2 @@
 cli: gohan
+after_install: ./packager/debian/postinst
