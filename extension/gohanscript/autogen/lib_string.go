@@ -17,8 +17,16 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				value := stmt.Arg("value", context).(string)
-				sep := stmt.Arg("sep", context).(string)
+				var value string
+				ivalue := stmt.Arg("value", context)
+				if ivalue != nil {
+					value = ivalue.(string)
+				}
+				var sep string
+				isep := stmt.Arg("sep", context)
+				if isep != nil {
+					sep = isep.(string)
+				}
 
 				result1,
 					err :=
@@ -54,8 +62,16 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				value := stmt.Arg("value", context).([]interface{})
-				sep := stmt.Arg("sep", context).(string)
+				var value []interface{}
+				ivalue := stmt.Arg("value", context)
+				if ivalue != nil {
+					value = ivalue.([]interface{})
+				}
+				var sep string
+				isep := stmt.Arg("sep", context)
+				if isep != nil {
+					sep = isep.(string)
+				}
 
 				result1,
 					err :=

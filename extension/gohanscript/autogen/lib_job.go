@@ -18,7 +18,11 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				workers := stmt.Arg("workers", context).(int)
+				var workers int
+				iworkers := stmt.Arg("workers", context)
+				if iworkers != nil {
+					workers = iworkers.(int)
+				}
 
 				result1 :=
 					lib.MakeQueue(
@@ -50,7 +54,11 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				queue := stmt.Arg("queue", context).(*job.Queue)
+				var queue *job.Queue
+				iqueue := stmt.Arg("queue", context)
+				if iqueue != nil {
+					queue = iqueue.(*job.Queue)
+				}
 
 				lib.WaitQueue(
 					queue)
@@ -78,7 +86,11 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				queue := stmt.Arg("queue", context).(*job.Queue)
+				var queue *job.Queue
+				iqueue := stmt.Arg("queue", context)
+				if iqueue != nil {
+					queue = iqueue.(*job.Queue)
+				}
 
 				lib.Stop(
 					queue)
@@ -106,7 +118,11 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				queue := stmt.Arg("queue", context).(*job.Queue)
+				var queue *job.Queue
+				iqueue := stmt.Arg("queue", context)
+				if iqueue != nil {
+					queue = iqueue.(*job.Queue)
+				}
 
 				lib.ForceStop(
 					queue)

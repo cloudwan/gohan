@@ -18,12 +18,36 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				authURL := stmt.Arg("auth_url", context).(string)
-				userName := stmt.Arg("user_name", context).(string)
-				password := stmt.Arg("password", context).(string)
-				domainName := stmt.Arg("domain_name", context).(string)
-				tenantName := stmt.Arg("tenant_name", context).(string)
-				version := stmt.Arg("version", context).(string)
+				var authURL string
+				iauthURL := stmt.Arg("auth_url", context)
+				if iauthURL != nil {
+					authURL = iauthURL.(string)
+				}
+				var userName string
+				iuserName := stmt.Arg("user_name", context)
+				if iuserName != nil {
+					userName = iuserName.(string)
+				}
+				var password string
+				ipassword := stmt.Arg("password", context)
+				if ipassword != nil {
+					password = ipassword.(string)
+				}
+				var domainName string
+				idomainName := stmt.Arg("domain_name", context)
+				if idomainName != nil {
+					domainName = idomainName.(string)
+				}
+				var tenantName string
+				itenantName := stmt.Arg("tenant_name", context)
+				if itenantName != nil {
+					tenantName = itenantName.(string)
+				}
+				var version string
+				iversion := stmt.Arg("version", context)
+				if iversion != nil {
+					version = iversion.(string)
+				}
 
 				result1,
 					err :=
@@ -63,7 +87,11 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				client := stmt.Arg("client", context).(*gophercloud.ServiceClient)
+				var client *gophercloud.ServiceClient
+				iclient := stmt.Arg("client", context)
+				if iclient != nil {
+					client = iclient.(*gophercloud.ServiceClient)
+				}
 
 				result1 :=
 					lib.OpenstackToken(
@@ -95,8 +123,16 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				client := stmt.Arg("client", context).(*gophercloud.ServiceClient)
-				url := stmt.Arg("url", context).(string)
+				var client *gophercloud.ServiceClient
+				iclient := stmt.Arg("client", context)
+				if iclient != nil {
+					client = iclient.(*gophercloud.ServiceClient)
+				}
+				var url string
+				iurl := stmt.Arg("url", context)
+				if iurl != nil {
+					url = iurl.(string)
+				}
 
 				result1,
 					err :=
@@ -132,9 +168,21 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				client := stmt.Arg("client", context).(*gophercloud.ServiceClient)
-				url := stmt.Arg("url", context).(string)
-				data := stmt.Arg("data", context).(interface{})
+				var client *gophercloud.ServiceClient
+				iclient := stmt.Arg("client", context)
+				if iclient != nil {
+					client = iclient.(*gophercloud.ServiceClient)
+				}
+				var url string
+				iurl := stmt.Arg("url", context)
+				if iurl != nil {
+					url = iurl.(string)
+				}
+				var data interface{}
+				idata := stmt.Arg("data", context)
+				if idata != nil {
+					data = idata.(interface{})
+				}
 
 				result1,
 					err :=
@@ -171,9 +219,21 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				client := stmt.Arg("client", context).(*gophercloud.ServiceClient)
-				url := stmt.Arg("url", context).(string)
-				data := stmt.Arg("data", context).(interface{})
+				var client *gophercloud.ServiceClient
+				iclient := stmt.Arg("client", context)
+				if iclient != nil {
+					client = iclient.(*gophercloud.ServiceClient)
+				}
+				var url string
+				iurl := stmt.Arg("url", context)
+				if iurl != nil {
+					url = iurl.(string)
+				}
+				var data interface{}
+				idata := stmt.Arg("data", context)
+				if idata != nil {
+					data = idata.(interface{})
+				}
 
 				result1,
 					err :=
@@ -210,8 +270,16 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				client := stmt.Arg("client", context).(*gophercloud.ServiceClient)
-				url := stmt.Arg("url", context).(string)
+				var client *gophercloud.ServiceClient
+				iclient := stmt.Arg("client", context)
+				if iclient != nil {
+					client = iclient.(*gophercloud.ServiceClient)
+				}
+				var url string
+				iurl := stmt.Arg("url", context)
+				if iurl != nil {
+					url = iurl.(string)
+				}
 
 				result1,
 					err :=
@@ -247,11 +315,31 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				client := stmt.Arg("client", context).(*gophercloud.ServiceClient)
-				endpointType := stmt.Arg("endpoint_type", context).(string)
-				name := stmt.Arg("name", context).(string)
-				region := stmt.Arg("region", context).(string)
-				availability := stmt.Arg("availability", context).(string)
+				var client *gophercloud.ServiceClient
+				iclient := stmt.Arg("client", context)
+				if iclient != nil {
+					client = iclient.(*gophercloud.ServiceClient)
+				}
+				var endpointType string
+				iendpointType := stmt.Arg("endpoint_type", context)
+				if iendpointType != nil {
+					endpointType = iendpointType.(string)
+				}
+				var name string
+				iname := stmt.Arg("name", context)
+				if iname != nil {
+					name = iname.(string)
+				}
+				var region string
+				iregion := stmt.Arg("region", context)
+				if iregion != nil {
+					region = iregion.(string)
+				}
+				var availability string
+				iavailability := stmt.Arg("availability", context)
+				if iavailability != nil {
+					availability = iavailability.(string)
+				}
 
 				result1,
 					err :=
