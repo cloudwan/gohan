@@ -26,7 +26,11 @@ import (
 
 {% macro gohanscript_cast_params(decl) %}
 {% for param in decl.Type.Params.List %}{% for name in param.Names %}
-{{ name.Name }} := stmt.Arg("{{ name.Name | to_under_score_case }}", context).({{ param.Type | astType }}){% endfor %}
+var {{ name.Name }} {{ param.Type | astType }}
+i{{ name.Name }} := stmt.Arg("{{ name.Name | to_under_score_case }}", context)
+if i{{ name.Name }} != nil {
+    {{ name.Name }} = i{{ name.Name }}.({{ param.Type | astType }})
+}{% endfor %}
 {% endfor %}
 {% endmacro %}
 

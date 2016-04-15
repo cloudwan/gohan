@@ -44,9 +44,21 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				m := stmt.Arg("m", context).(cmap.ConcurrentMap)
-				key := stmt.Arg("key", context).(string)
-				value := stmt.Arg("value", context).(interface{})
+				var m cmap.ConcurrentMap
+				im := stmt.Arg("m", context)
+				if im != nil {
+					m = im.(cmap.ConcurrentMap)
+				}
+				var key string
+				ikey := stmt.Arg("key", context)
+				if ikey != nil {
+					key = ikey.(string)
+				}
+				var value interface{}
+				ivalue := stmt.Arg("value", context)
+				if ivalue != nil {
+					value = ivalue.(interface{})
+				}
 
 				lib.MapSet(
 					m, key, value)
@@ -76,8 +88,16 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				m := stmt.Arg("m", context).(cmap.ConcurrentMap)
-				key := stmt.Arg("key", context).(string)
+				var m cmap.ConcurrentMap
+				im := stmt.Arg("m", context)
+				if im != nil {
+					m = im.(cmap.ConcurrentMap)
+				}
+				var key string
+				ikey := stmt.Arg("key", context)
+				if ikey != nil {
+					key = ikey.(string)
+				}
 
 				result1 :=
 					lib.MapGet(
@@ -110,8 +130,16 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				m := stmt.Arg("m", context).(cmap.ConcurrentMap)
-				key := stmt.Arg("key", context).(string)
+				var m cmap.ConcurrentMap
+				im := stmt.Arg("m", context)
+				if im != nil {
+					m = im.(cmap.ConcurrentMap)
+				}
+				var key string
+				ikey := stmt.Arg("key", context)
+				if ikey != nil {
+					key = ikey.(string)
+				}
 
 				result1 :=
 					lib.MapHas(
@@ -144,8 +172,16 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				m := stmt.Arg("m", context).(cmap.ConcurrentMap)
-				key := stmt.Arg("key", context).(string)
+				var m cmap.ConcurrentMap
+				im := stmt.Arg("m", context)
+				if im != nil {
+					m = im.(cmap.ConcurrentMap)
+				}
+				var key string
+				ikey := stmt.Arg("key", context)
+				if ikey != nil {
+					key = ikey.(string)
+				}
 
 				lib.MapRemove(
 					m, key)
@@ -174,7 +210,11 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				value := stmt.Arg("value", context).(int)
+				var value int
+				ivalue := stmt.Arg("value", context)
+				if ivalue != nil {
+					value = ivalue.(int)
+				}
 
 				result1 :=
 					lib.MakeCounter(
@@ -206,8 +246,16 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				counter := stmt.Arg("counter", context).(*util.Counter)
-				value := stmt.Arg("value", context).(int)
+				var counter *util.Counter
+				icounter := stmt.Arg("counter", context)
+				if icounter != nil {
+					counter = icounter.(*util.Counter)
+				}
+				var value int
+				ivalue := stmt.Arg("value", context)
+				if ivalue != nil {
+					value = ivalue.(int)
+				}
 
 				lib.CounterAdd(
 					counter, value)
@@ -236,7 +284,11 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				counter := stmt.Arg("counter", context).(*util.Counter)
+				var counter *util.Counter
+				icounter := stmt.Arg("counter", context)
+				if icounter != nil {
+					counter = icounter.(*util.Counter)
+				}
 
 				result1 :=
 					lib.CounterValue(
