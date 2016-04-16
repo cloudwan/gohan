@@ -429,9 +429,11 @@ func loadConfig(configFile string) {
 	}
 	config := util.GetConfig()
 	err := config.ReadConfig(configFile)
-	if err != nil && configFile != defaultConfigFile {
-		fmt.Println(err)
-		os.Exit(1)
+	if err != nil {
+		if configFile != defaultConfigFile {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 		return
 	}
 	err = l.SetUpLogging(config)
