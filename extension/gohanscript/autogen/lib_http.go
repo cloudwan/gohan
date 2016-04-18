@@ -17,8 +17,16 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				url := stmt.Arg("url", context).(string)
-				headers := stmt.Arg("headers", context).(map[string]interface{})
+				var url string
+				iurl := stmt.Arg("url", context)
+				if iurl != nil {
+					url = iurl.(string)
+				}
+				var headers map[string]interface{}
+				iheaders := stmt.Arg("headers", context)
+				if iheaders != nil {
+					headers = iheaders.(map[string]interface{})
+				}
 
 				result1,
 					err :=
@@ -54,9 +62,21 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				url := stmt.Arg("url", context).(string)
-				headers := stmt.Arg("headers", context).(map[string]interface{})
-				postData := stmt.Arg("post_data", context).(map[string]interface{})
+				var url string
+				iurl := stmt.Arg("url", context)
+				if iurl != nil {
+					url = iurl.(string)
+				}
+				var headers map[string]interface{}
+				iheaders := stmt.Arg("headers", context)
+				if iheaders != nil {
+					headers = iheaders.(map[string]interface{})
+				}
+				var postData map[string]interface{}
+				ipostData := stmt.Arg("post_data", context)
+				if ipostData != nil {
+					postData = ipostData.(map[string]interface{})
+				}
 
 				result1,
 					err :=
@@ -93,9 +113,21 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				url := stmt.Arg("url", context).(string)
-				headers := stmt.Arg("headers", context).(map[string]interface{})
-				postData := stmt.Arg("post_data", context).(map[string]interface{})
+				var url string
+				iurl := stmt.Arg("url", context)
+				if iurl != nil {
+					url = iurl.(string)
+				}
+				var headers map[string]interface{}
+				iheaders := stmt.Arg("headers", context)
+				if iheaders != nil {
+					headers = iheaders.(map[string]interface{})
+				}
+				var postData map[string]interface{}
+				ipostData := stmt.Arg("post_data", context)
+				if ipostData != nil {
+					postData = ipostData.(map[string]interface{})
+				}
 
 				result1,
 					err :=
@@ -132,9 +164,21 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				url := stmt.Arg("url", context).(string)
-				headers := stmt.Arg("headers", context).(map[string]interface{})
-				postData := stmt.Arg("post_data", context).(map[string]interface{})
+				var url string
+				iurl := stmt.Arg("url", context)
+				if iurl != nil {
+					url = iurl.(string)
+				}
+				var headers map[string]interface{}
+				iheaders := stmt.Arg("headers", context)
+				if iheaders != nil {
+					headers = iheaders.(map[string]interface{})
+				}
+				var postData map[string]interface{}
+				ipostData := stmt.Arg("post_data", context)
+				if ipostData != nil {
+					postData = ipostData.(map[string]interface{})
+				}
 
 				result1,
 					err :=
@@ -171,8 +215,16 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				url := stmt.Arg("url", context).(string)
-				headers := stmt.Arg("headers", context).(map[string]interface{})
+				var url string
+				iurl := stmt.Arg("url", context)
+				if iurl != nil {
+					url = iurl.(string)
+				}
+				var headers map[string]interface{}
+				iheaders := stmt.Arg("headers", context)
+				if iheaders != nil {
+					headers = iheaders.(map[string]interface{})
+				}
 
 				result1,
 					err :=
@@ -208,10 +260,26 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				url := stmt.Arg("url", context).(string)
-				method := stmt.Arg("method", context).(string)
-				headers := stmt.Arg("headers", context).(map[string]interface{})
-				postData := stmt.Arg("post_data", context).(map[string]interface{})
+				var url string
+				iurl := stmt.Arg("url", context)
+				if iurl != nil {
+					url = iurl.(string)
+				}
+				var method string
+				imethod := stmt.Arg("method", context)
+				if imethod != nil {
+					method = imethod.(string)
+				}
+				var headers map[string]interface{}
+				iheaders := stmt.Arg("headers", context)
+				if iheaders != nil {
+					headers = iheaders.(map[string]interface{})
+				}
+				var postData map[string]interface{}
+				ipostData := stmt.Arg("post_data", context)
+				if ipostData != nil {
+					postData = ipostData.(map[string]interface{})
+				}
 
 				result1,
 					err :=

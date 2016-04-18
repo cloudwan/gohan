@@ -19,7 +19,11 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				server := stmt.Arg("server", context).(*httptest.Server)
+				var server *httptest.Server
+				iserver := stmt.Arg("server", context)
+				if iserver != nil {
+					server = iserver.(*httptest.Server)
+				}
 
 				result1 :=
 					lib.GetTestServerURL(
@@ -51,7 +55,11 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				server := stmt.Arg("server", context).(*httptest.Server)
+				var server *httptest.Server
+				iserver := stmt.Arg("server", context)
+				if iserver != nil {
+					server = iserver.(*httptest.Server)
+				}
 
 				lib.StopTestServer(
 					server)

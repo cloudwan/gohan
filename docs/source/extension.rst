@@ -602,25 +602,6 @@ A sample test may look like this:
       /* ... */
   }
 
-Javascript Backend
--------------------------
-
-Currenly, gohan is using Otto. Otto is a pure golang implementation
-for javascript.
-Gohan also have experimental support for v8. v8 runs js code 100-1000 times faster than Otto.
-
-TODOs
-- no build-in are implemented yet
-
-In order to make v8 version of Gohan, you need v8worker https://github.com/ry/v8worker installed in your env. (see more instruction on the repository).
-
-In order to enable v8 support on extension. then set ENABLE_V8=true
-
-.. code-block:: shell
-
-  ENABLE_V8=true make
-
-
 Go based extension
 -------------------------
 
@@ -803,17 +784,17 @@ You can define variables using "vars".
 
 .. code-block:: yaml
 
-    vars:
-        place: "Earth"
-        person:
-            name: "John"
-            age: "30"
-    tasks:
-    - debug: msg="Hello {{place}}"
-    - debug: var=$place
-    - debug: msg="Hello {{person.name}} "
-    - debug: var=$person.name
-    - debug: # show everything
+  tasks:
+  - vars:
+      place: "Earth"
+      person:
+        name: "John"
+        age: "30"
+  - debug: msg="Hello {{place}}"
+  - debug: var=$place
+  - debug: msg="Hello {{person.name}} "
+  - debug: var=$person.name
+  - debug: # show everything
 
 Any string including "{{" get considered as django template. so
 you can use variables in their. if string start with "$", it get considered as

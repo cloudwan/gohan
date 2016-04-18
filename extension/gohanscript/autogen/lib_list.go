@@ -17,8 +17,16 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				list := stmt.Arg("list", context).([]interface{})
-				value := stmt.Arg("value", context).(interface{})
+				var list []interface{}
+				ilist := stmt.Arg("list", context)
+				if ilist != nil {
+					list = ilist.([]interface{})
+				}
+				var value interface{}
+				ivalue := stmt.Arg("value", context)
+				if ivalue != nil {
+					value = ivalue.(interface{})
+				}
 
 				result1 :=
 					lib.Append(
@@ -51,8 +59,16 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				list := stmt.Arg("list", context).([]interface{})
-				value := stmt.Arg("value", context).(interface{})
+				var list []interface{}
+				ilist := stmt.Arg("list", context)
+				if ilist != nil {
+					list = ilist.([]interface{})
+				}
+				var value interface{}
+				ivalue := stmt.Arg("value", context)
+				if ivalue != nil {
+					value = ivalue.(interface{})
+				}
 
 				result1 :=
 					lib.Contains(
@@ -85,7 +101,11 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				list := stmt.Arg("list", context).([]interface{})
+				var list []interface{}
+				ilist := stmt.Arg("list", context)
+				if ilist != nil {
+					list = ilist.([]interface{})
+				}
 
 				result1 :=
 					lib.Size(
@@ -117,7 +137,11 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				list := stmt.Arg("list", context).([]interface{})
+				var list []interface{}
+				ilist := stmt.Arg("list", context)
+				if ilist != nil {
+					list = ilist.([]interface{})
+				}
 
 				result1,
 					result2 :=
@@ -154,8 +178,16 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				list := stmt.Arg("list", context).([]interface{})
-				value := stmt.Arg("value", context).(interface{})
+				var list []interface{}
+				ilist := stmt.Arg("list", context)
+				if ilist != nil {
+					list = ilist.([]interface{})
+				}
+				var value interface{}
+				ivalue := stmt.Arg("value", context)
+				if ivalue != nil {
+					value = ivalue.(interface{})
+				}
 
 				result1 :=
 					lib.Unshift(
@@ -188,7 +220,11 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				list := stmt.Arg("list", context).([]interface{})
+				var list []interface{}
+				ilist := stmt.Arg("list", context)
+				if ilist != nil {
+					list = ilist.([]interface{})
+				}
 
 				result1 :=
 					lib.Copy(
@@ -220,8 +256,16 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				list := stmt.Arg("list", context).([]interface{})
-				index := stmt.Arg("index", context).(int)
+				var list []interface{}
+				ilist := stmt.Arg("list", context)
+				if ilist != nil {
+					list = ilist.([]interface{})
+				}
+				var index int
+				iindex := stmt.Arg("index", context)
+				if iindex != nil {
+					index = iindex.(int)
+				}
 
 				result1 :=
 					lib.Delete(
@@ -254,7 +298,11 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				list := stmt.Arg("list", context).([]interface{})
+				var list []interface{}
+				ilist := stmt.Arg("list", context)
+				if ilist != nil {
+					list = ilist.([]interface{})
+				}
 
 				result1 :=
 					lib.First(
@@ -286,7 +334,11 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				list := stmt.Arg("list", context).([]interface{})
+				var list []interface{}
+				ilist := stmt.Arg("list", context)
+				if ilist != nil {
+					list = ilist.([]interface{})
+				}
 
 				result1 :=
 					lib.Last(
