@@ -189,7 +189,10 @@ func (server *Server) syncEvent(resource *schema.Resource) error {
 	path := resource.Get("path").(string)
 	path = configPrefix + path
 	body := resource.Get("body").(string)
-	version, _ := resource.Get("version").(int64)
+	version, ok := resource.Get("version").(int)
+    if !ok {
+        log.Debug("cannot cast version value in int for %s", path)
+    }
 	log.Debug("event %s", eventType)
 
 	if eventType == "create" || eventType == "update" {
