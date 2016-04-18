@@ -1,2 +1,3 @@
 cli: gohan
+buildpack: https://github.com/cloudwan/heroku-buildpack-go.git
 after_install: ./packager/debian/postinst
