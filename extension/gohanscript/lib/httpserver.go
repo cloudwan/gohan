@@ -16,8 +16,11 @@
 package lib
 
 import (
+	"bytes"
+	"encoding/json"
+	"io/ioutil"
 	"net/http"
-
+	//"github.com/k0kubun/pp"
 	"net/http/httptest"
 
 	"github.com/cloudwan/gohan/extension/gohanscript"
@@ -46,6 +49,16 @@ func serveResponse(w http.ResponseWriter, context map[string]interface{}) {
 	}
 }
 
+func fillInContext(context middleware.Context,
+	r *http.Request, w http.ResponseWriter, p martini.Params) {
+	context["path"] = r.URL.Path
+	context["http_request"] = r
+	context["http_response"] = w
+	context["params"] = p
+	context["host"] = r.Host
+	context["method"] = r.Method
+}
+
 func httpServer(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
 	return func(globalContext *gohanscript.Context) (interface{}, error) {
 		m := martini.Classic()
@@ -56,6 +69,29 @@ func httpServer(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}
 
 		rawBody := util.MaybeMap(stmt.RawData["http_server"])
 		paths := util.MaybeMap(rawBody["paths"])
+		middlewareCode := util.MaybeString(rawBody["middleware"])
+		if middlewareCode != "" {
+			vm := gohanscript.NewVM()
+			err := vm.LoadString(stmt.File, middlewareCode)
+
+			if err != nil {
+				return nil, err
+			}
+			m.Use(func(w http.ResponseWriter, r *http.Request) {
+				context := globalContext.Extend(nil)
+				fillInContext(context.Data(), r, w, nil)
+
+				reqData, _ := ioutil.ReadAll(r.Body)
+				buff := ioutil.NopCloser(bytes.NewBuffer(reqData))
+				r.Body = buff
+				var data interface{}
+				json.Unmarshal(reqData, data)
+
+				context.Set("request", data)
+				vm.Run(context.Data())
+			})
+		}
+
 		for path, body := range paths {
 			methods, ok := body.(map[string]interface{})
 			if !ok {
@@ -75,43 +111,35 @@ func httpServer(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}
 				switch method {
 				case "get":
 					m.Get(path, func(w http.ResponseWriter, r *http.Request, p martini.Params) {
-						context := map[string]interface{}{
-							"params": p,
-							"host":   r.Host,
-						}
-						vm.Run(context)
-						serveResponse(w, context)
+						context := globalContext.Extend(nil)
+						fillInContext(context.Data(), r, w, p)
+						vm.Run(context.Data())
+						serveResponse(w, context.Data())
 					})
 				case "post":
 					m.Post(path, func(w http.ResponseWriter, r *http.Request, p martini.Params) {
+						context := globalContext.Extend(nil)
+						fillInContext(context.Data(), r, w, p)
 						requestData, _ := middleware.ReadJSON(r)
-						context := map[string]interface{}{
-							"params":  p,
-							"host":    r.Host,
-							"request": requestData,
-						}
-						vm.Run(context)
-						serveResponse(w, context)
+						context.Set("request", requestData)
+						vm.Run(context.Data())
+						serveResponse(w, context.Data())
 					})
 				case "put":
 					m.Put(path, func(w http.ResponseWriter, r *http.Request, p martini.Params) {
+						context := globalContext.Extend(nil)
+						fillInContext(context.Data(), r, w, p)
 						requestData, _ := middleware.ReadJSON(r)
-						context := map[string]interface{}{
-							"params":  p,
-							"host":    r.Host,
-							"request": requestData,
-						}
-						vm.Run(context)
-						serveResponse(w, context)
+						context.Set("request", requestData)
+						vm.Run(context.Data())
+						serveResponse(w, context.Data())
 					})
 				case "delete":
 					m.Delete(path, func(w http.ResponseWriter, r *http.Request, p martini.Params) {
-						context := map[string]interface{}{
-							"params": p,
-							"host":   r.Host,
-						}
-						vm.Run(context)
-						serveResponse(w, context)
+						context := globalContext.Extend(nil)
+						fillInContext(context.Data(), r, w, p)
+						vm.Run(context.Data())
+						serveResponse(w, context.Data())
 					})
 				}
 			}

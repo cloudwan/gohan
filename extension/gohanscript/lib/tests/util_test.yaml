@@ -1,26 +1,5 @@
 test_suite:
   tests:
-  - name: You can do http request
-    test:
-    - http_server:
-        test: true
-        paths:
-          "/test":
-            get:
-              code: |
-                tasks:
-                - debug: msg='http://{{ host }}'
-                - vars:
-                    response:
-                        host: 'http://{{ host }}'
-      register: testServer
-    - http_get:
-       url: '${GetTestServerURL(testServer) + "/test"}'
-       headers: {}
-      register: result
-    - assert: expect='${GetTestServerURL(testServer)}' actual="{{result.contents.host}}"
-    - stop_test_server:
-        server: $testServer
   - name: Generate UUID
     test:
     - uuid:
