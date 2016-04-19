@@ -1,0 +1,72 @@
+test_suite:
+  tests:
+  - name: You can do http request
+    test:
+    - make_counter:
+        value: 0
+      register: score
+    - make_counter:
+        value: 0
+      register: deleteCount
+    - http_server:
+        test: true
+        middleware: |
+          tasks:
+          - debug:
+          - counter_add:
+              counter: $score
+              value: 1
+        paths:
+          "/test":
+            get:
+              code: |
+                tasks:
+                - vars:
+                    response:
+                        host: 'http://{{ host }}'
+            post:
+              code: |
+                tasks:
+                - debug:
+                - vars:
+                    response:
+                        post: $request.input
+            put:
+              code: |
+                tasks:
+                - vars:
+                    response:
+                        put: $request.input
+            delete:
+              code: |
+                tasks:
+                - counter_add:
+                    counter: $deleteCount
+                    value: 1
+      register: testServer
+    - http_get:
+       url: '${GetTestServerURL(testServer) + "/test"}'
+       headers: {}
+      register: result
+    - assert: expect='${GetTestServerURL(testServer)}' actual="{{result.contents.host}}"
+    - http_post:
+       url: '${GetTestServerURL(testServer) + "/test"}'
+       headers: {}
+       post_data:
+         input: postData
+      register: result
+    - assert: expect='postData' actual="{{result.contents.post}}"
+    - http_put:
+       url: '${GetTestServerURL(testServer) + "/test"}'
+       headers: {}
+       post_data:
+         input: putData
+      register: result
+    - assert: expect='putData' actual="{{result.contents.put}}"
+    - http_delete:
+       url: '${GetTestServerURL(testServer) + "/test"}'
+       headers: {}
+    - assert: expect=1 actual="${CounterValue(deleteCount)}"
+    - assert: expect=4 actual="${CounterValue(score)}"
+    - stop_test_server:
+        server: $testServer

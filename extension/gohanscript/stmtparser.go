@@ -347,10 +347,9 @@ func assert(stmt *Stmt) (func(*Context) (interface{}, error), error) {
 		expect := stmt.Arg("expect", context)
 		actual := stmt.Arg("actual", context)
 		if expect != actual {
-			return nil, fmt.Errorf("[%s line: %d column %d] expected: '%v', actual: '%v'",
+			return nil, fmt.Errorf("%s:%d error expected: '%v', actual: '%v'",
 				stmt.File,
 				stmt.Line,
-				stmt.Column,
 				expect, actual)
 		}
 		return nil, nil
