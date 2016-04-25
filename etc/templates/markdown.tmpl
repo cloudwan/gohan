@@ -72,7 +72,7 @@ HTTP Status Code: 200 (OK)
     "{{schema.Singular}}": {
 {% for property in schema.Properties %}
         "{{ property.ID }}": ${{ property.ID }}{% if not forloop.Last %},{%endif%}{% endfor %}
-      }
+    }
   }
 ```
 
@@ -108,7 +108,7 @@ HTTP Status Code: 201 (Accepted)
 {% for property in schema.Properties %}
         "{{ property.ID }}": ${{ property.ID }}{% if not forloop.Last %},{%endif%}{% endfor %}
       }
-    ]
+    }
   }
 
 ```
@@ -153,7 +153,7 @@ HTTP Status Code: 200 (OK)
 {% for property in schema.Properties %}
         "{{ property.ID }}": ${{ property.ID }}{% if not forloop.Last %},{%endif%}{% endfor %}
       }
-    ]
+    }
   }
 
 ```
