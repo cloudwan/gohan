@@ -678,11 +678,11 @@ afford swagger utility tools.
 
 .. code-block:: shell
 
-    gohan template --config-file etc/gohan.yaml
+    gohan openapi --config-file etc/gohan.yaml
 
     # or you can customize template file using
 
-    gohan template --config-file etc/gohan.yaml --template etc/templates/swagger.tmpl
+    gohan openapi --config-file etc/gohan.yaml --template etc/templates/swagger.tmpl
 
 then you will get swagger.json.
 You can use this file for using swagger utility tools.

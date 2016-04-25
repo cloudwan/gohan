@@ -157,9 +157,10 @@ func (schema *Schema) Init() error {
 
 	required := util.MaybeStringList(jsonSchema["required"])
 	properties := util.MaybeMap(jsonSchema["properties"])
+	propertiesOrder := util.MaybeStringList(jsonSchema["propertiesOrder"])
 	if parent != "" && properties[FormatParentID(parent)] == nil {
 		properties[FormatParentID(parent)] = getParentPropertyObj(parent, parent)
-		jsonSchema["propertiesOrder"] = append(util.MaybeStringList(jsonSchema["propertiesOrder"]), FormatParentID(parent))
+		propertiesOrder = append(propertiesOrder, FormatParentID(parent))
 		required = append(required, FormatParentID(parent))
 	}
 
@@ -169,8 +170,18 @@ func (schema *Schema) Init() error {
 	schema.JSONSchemaOnUpdate = filterSchemaByPermission(jsonSchema, "update")
 
 	schema.Properties = []Property{}
+	for key := range properties {
+		if !util.ContainsString(propertiesOrder, key) {
+			propertiesOrder = append(propertiesOrder, key)
+		}
+	}
+	jsonSchema["propertiesOrder"] = propertiesOrder
 
-	for id, property := range properties {
+	for _, id := range propertiesOrder {
+		property, ok := properties[id]
+		if !ok {
+			continue
+		}
 		propertyRequired := util.ContainsString(required, id)
 		propertyObj, err := NewPropertyFromObj(id, property, propertyRequired)
 		if err != nil {

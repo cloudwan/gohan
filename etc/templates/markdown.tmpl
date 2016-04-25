@@ -1,0 +1,182 @@
+Common 
+=========
+
+HTTP Header
+
+X-Auth-Token:  keystone Token
+
+Common HTTP Status
+
+| Code | Status | Description |
+|------|--------|-------------|
+| 401  | Unauthorized | Authentication requried or you don't have permission to perform action for a resource |
+| 404  | Not Found |  Resource Not Found |
+| 500  | Internal Server Error | Server Side issue occured. Please contact administrator |
+
+- Not Found: 404  Resource Not Found
+- Internal Server Error: 500  Server Side issue occured. Please contact administrator
+
+{% for schema in schemas %}{% if schema.Metadata.type != "metaschema" && schema.Type != "abstract" %}
+{{ schema.Title }}
+============================
+
+Description: {{ schema.Description }}
+
+Properties
+------------  
+
+| "Key" | "Title" | "Description" | "Type" | "Default" |  "Format" | "Permission" |
+| ----- | ------- | ------------- | ------ | --------- | --------- | ------------ |{%  for property in schema.Properties %}
+| {{ property.ID }} | {{ property.Title }} | {{property.Description}} | {{ property.Type }} | {{ property.Default }} | {{ property.Format }} | {{ property.Permission }} |{%  endfor %}
+
+Note: it is mandatory property if there is no default value specified.
+id is an exception. if id property is null, gohan server will put uuid.  
+
+API Endpoint
+
+List API
+-----------
+
+GET {{schema.GetPluralURL() }}
+
+Sample Output
+
+HTTP Status Code: 200 (OK)
+
+
+``` json
+
+  {
+    "{{schema.Plural}}": [ 
+      {
+{% for property in schema.Properties %}
+        "{{ property.ID }}": ${{ property.ID }}{% if not forloop.Last %},{%endif%}{% endfor %}
+      }
+    ]
+  }
+
+```
+
+Show API
+-----------
+
+GET {{schema.GetSingleURL() }}
+
+Sample Output
+
+HTTP Status Code: 200 (OK)
+
+``` json
+
+  {
+    "{{schema.Singular}}": {
+{% for property in schema.Properties %}
+        "{{ property.ID }}": ${{ property.ID }}{% if not forloop.Last %},{%endif%}{% endfor %}
+      }
+  }
+```
+
+POST API
+-----------
+
+POST {{schema.GetPluralURL() }}
+
+Sample Request
+
+``` json
+
+  {
+    "{{schema.Singular}}": { 
+      {
+{% for property in schema.Properties %}{% if "create" in schema.Permission || schema.Permission  == null %}
+        "{{ property.ID }}": ${{ property.ID }}{% if not forloop.Last %},{%endif%}{% endif %}{% endfor %}
+      }
+    }
+  }
+ 
+ ```
+  
+Sample Output
+
+HTTP Status Code: 201 (Accepted)
+
+``` json
+
+  {
+    "{{schema.Singular}}": { 
+      {
+{% for property in schema.Properties %}
+        "{{ property.ID }}": ${{ property.ID }}{% if not forloop.Last %},{%endif%}{% endfor %}
+      }
+    ]
+  }
+
+```
+
+Error Codes
+
+| Code | Status | Description |
+|------|--------|-------------|
+| 400  | Bad Request |  There are one or more errors in request value |
+| 409  | Conflicts | Data integlity issue such as deleting resource with reference from the other resources |
+
+
+Update API
+-----------
+
+PUT {{schema.GetSingleURL() }}
+
+Sample Request
+
+``` json
+
+  {
+    "{{schema.Singular}}": { 
+      {
+{% for property in schema.Properties %}{% if "update" in schema.Permission || schema.Permission  == null %}
+        "{{ property.ID }}": ${{ property.ID }}{% if not forloop.Last %},{%endif%}{% endif %}{% endfor %}
+      }
+    }
+  }
+
+```
+  
+Sample Output
+
+HTTP Status Code: 200 (OK)
+
+``` json
+
+  {
+    "{{schema.Singular}}": { 
+      {
+{% for property in schema.Properties %}
+        "{{ property.ID }}": ${{ property.ID }}{% if not forloop.Last %},{%endif%}{% endfor %}
+      }
+    ]
+  }
+
+```
+
+Error Codes
+
+| Code | Status | Description |
+|------|--------|-------------|
+| 400  | Bad Request |  There are one or more errors in request value |
+| 409  | Conflicts | Data integlity issue such as deleting resource with reference from the other resources |
+  
+Delete API
+-----------
+
+DELETE {{schema.GetSingleURL() }}
+
+HTTP Status Code: 204 (No Content)
+
+Error Codes
+
+| Code | Status | Description |
+|------|--------|-------------|
+| 400  | Bad Request |  There are one or more errors in request value |
+| 409  | Conflicts | Data integlity issue such as deleting resource with reference from the other resources |
+
+{% endif %}{% endfor %}

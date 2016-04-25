@@ -67,6 +67,8 @@ func Run(name, usage, version string) {
 		getTemplateCommand(),
 		getRunCommand(),
 		getTestCommand(),
+		getOpenAPICommand(),
+		getMarkdownCommand(),
 	}
 	app.Run(os.Args)
 }
@@ -210,7 +212,7 @@ Useful for development purposes.`,
 		Flags: []cli.Flag{
 			cli.StringFlag{Name: "database-type, t", Value: "sqlite3", Usage: "Backend datebase type"},
 			cli.StringFlag{Name: "database, d", Value: "gohan.db", Usage: "DB connection string"},
-			cli.StringFlag{Name: "schema, s", Value: "etc/schema/gohan.json", Usage: "Schema definition"},
+			cli.StringFlag{Name: "schema, s", Value: "embed://etc/schema/gohan.json", Usage: "Schema definition"},
 			cli.BoolFlag{Name: "drop-on-create", Usage: "If true, old database will be dropped"},
 			cli.BoolFlag{Name: "cascade", Usage: "If true, FOREIGN KEYS in database will be created with ON DELETE CASCADE"},
 			cli.StringFlag{Name: "meta-schema, m", Value: "", Usage: "Meta-schema file (optional)"},
