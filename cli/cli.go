@@ -171,11 +171,14 @@ Validate document against schema.
 It's especially useful to validate schema files against gohan meta-schema.`,
 		Flags: []cli.Flag{
 			cli.StringFlag{Name: "schema, s", Value: "etc/schema/gohan.json", Usage: "Schema path"},
-			cli.StringFlag{Name: "document, d", Value: "etc/apps/example.json", Usage: "Document path"},
+			cli.StringSliceFlag{Name: "document, d", Usage: "Document path"},
 		},
 		Action: func(c *cli.Context) {
 			schemaPath := c.String("schema")
-			documentPath := c.String("document")
+			documentPaths := c.StringSlice("document")
+            if len(documentPaths) == 0 {
+                util.ExitFatalf("At least one document should be specified for validation\n")
+            }
 
 			manager := schema.GetManager()
 			err := manager.LoadSchemaFromFile(schemaPath)
@@ -183,12 +186,13 @@ It's especially useful to validate schema files against gohan meta-schema.`,
 				util.ExitFatal("Failed to parse schema:", err)
 			}
 
-			err = manager.LoadSchemaFromFile(documentPath)
-			if err == nil {
-				fmt.Println("Schema is valid")
-			} else {
-				util.ExitFatalf("Schema is not valid, see errors below:\n%s\n", err)
-			}
+            for _, documentPath := range documentPaths {
+                err = manager.LoadSchemaFromFile(documentPath)
+                if err != nil {
+                    util.ExitFatalf("Schema is not valid, see errors below:\n%s\n", err)
+                }
+            }
+            fmt.Println("Schema is valid")
 		},
 	}
 }
