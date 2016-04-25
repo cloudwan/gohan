@@ -2,13 +2,14 @@ package cli
 
 import (
 	"encoding/json"
-	"github.com/cloudwan/gohan/schema"
-	"github.com/cloudwan/gohan/util"
-	"github.com/codegangsta/cli"
-	"io/ioutil"
+	"fmt"
 	"os"
 	"path"
 	"regexp"
+
+	"github.com/cloudwan/gohan/schema"
+	"github.com/cloudwan/gohan/util"
+	"github.com/codegangsta/cli"
 
 	"github.com/flosch/pongo2"
 )
@@ -56,6 +57,53 @@ func init() {
 	pongo2.RegisterFilter("swagger_path", toSwaggerPath)
 }
 
+func doTemplate(c *cli.Context) {
+	template := c.String("template")
+	manager := schema.GetManager()
+	configFile := c.String("config-file")
+	config := util.GetConfig()
+	err := config.ReadConfig(configFile)
+	if err != nil {
+		util.ExitFatal(err)
+		return
+	}
+	templateCode, err := util.GetContent(template)
+	if err != nil {
+		util.ExitFatal(err)
+		return
+	}
+	pwd, _ := os.Getwd()
+	os.Chdir(path.Dir(configFile))
+	schemaFiles := config.GetStringList("schemas", nil)
+	if schemaFiles == nil {
+		util.ExitFatal("No schema specified in configuraion")
+	} else {
+		err = manager.LoadSchemasFromFiles(schemaFiles...)
+		if err != nil {
+			util.ExitFatal(err)
+			return
+		}
+	}
+	schemas := manager.OrderedSchemas()
+
+	if err != nil {
+		util.ExitFatal(err)
+		return
+	}
+	tpl, err := pongo2.FromString(string(templateCode))
+	if err != nil {
+		util.ExitFatal(err)
+		return
+	}
+	output, err := tpl.Execute(pongo2.Context{"schemas": schemas})
+	if err != nil {
+		util.ExitFatal(err)
+		return
+	}
+	os.Chdir(pwd)
+	fmt.Println(output)
+}
+
 func getTemplateCommand() cli.Command {
 	return cli.Command{
 		Name:        "template",
@@ -63,56 +111,37 @@ func getTemplateCommand() cli.Command {
 		Usage:       "Convert gohan schema using pongo2 template",
 		Description: "Convert gohan schema using pongo2 template",
 		Flags: []cli.Flag{
-			cli.StringFlag{Name: "config-file", Value: "etc/gohan.yaml", Usage: "Server config File"},
-			cli.StringFlag{Name: "template, t", Value: "embed://etc/templates/swagger.tmpl", Usage: "Template File"},
-			cli.StringFlag{Name: "output, o", Value: "swagger.json", Usage: "Output file"},
+			cli.StringFlag{Name: "config-file", Value: "gohan.yaml", Usage: "Server config File"},
+			cli.StringFlag{Name: "template, t", Value: "", Usage: "Template File"},
 		},
-		Action: func(c *cli.Context) {
-			manager := schema.GetManager()
-			configFile := c.String("config-file")
-			outputFile := c.String("output")
-			config := util.GetConfig()
-			err := config.ReadConfig(configFile)
-			if err != nil {
-				util.ExitFatal(err)
-				return
-			}
-			template := c.String("template")
-			templateCode, err := util.GetContent(template)
-			if err != nil {
-				util.ExitFatal(err)
-				return
-			}
-			pwd, _ := os.Getwd()
-			os.Chdir(path.Dir(configFile))
-			schemaFiles := config.GetStringList("schemas", nil)
-			if schemaFiles == nil {
-				util.ExitFatal("No schema specified in configuraion")
-			} else {
-				err = manager.LoadSchemasFromFiles(schemaFiles...)
-				if err != nil {
-					util.ExitFatal(err)
-					return
-				}
-			}
-			schemas := manager.OrderedSchemas()
+		Action: doTemplate,
+	}
+}
 
-			if err != nil {
-				util.ExitFatal(err)
-				return
-			}
-			tpl, err := pongo2.FromString(string(templateCode))
-			if err != nil {
-				util.ExitFatal(err)
-				return
-			}
-			output, err := tpl.Execute(pongo2.Context{"schemas": schemas})
-			if err != nil {
-				util.ExitFatal(err)
-				return
-			}
-			os.Chdir(pwd)
-			ioutil.WriteFile(outputFile, []byte(output), os.ModePerm)
+func getOpenAPICommand() cli.Command {
+	return cli.Command{
+		Name:        "openapi",
+		ShortName:   "openapi",
+		Usage:       "Convert gohan schema to OpenAPI",
+		Description: "Convert gohan schema to OpenAPI",
+		Flags: []cli.Flag{
+			cli.StringFlag{Name: "config-file", Value: "gohan.yaml", Usage: "Server config File"},
+			cli.StringFlag{Name: "template, t", Value: "embed://etc/templates/openapi.tmpl", Usage: "Template File"},
 		},
+		Action: doTemplate,
+	}
+}
+
+func getMarkdownCommand() cli.Command {
+	return cli.Command{
+		Name:        "markdown",
+		ShortName:   "markdown",
+		Usage:       "Convert gohan schema using pongo2 template",
+		Description: "Convert gohan schema using pongo2 template",
+		Flags: []cli.Flag{
+			cli.StringFlag{Name: "config-file", Value: "gohan.yaml", Usage: "Server config File"},
+			cli.StringFlag{Name: "template, t", Value: "embed://etc/templates/markdown.tmpl", Usage: "Template File"},
+		},
+		Action: doTemplate,
 	}
 }

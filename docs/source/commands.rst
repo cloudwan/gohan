@@ -48,6 +48,63 @@ Validate
 
 
 -----------------
+Template
+-----------------
+
+.. code-block:: shell
+
+    NAME:
+        template - Convert gohan schema using pongo2 template
+
+    USAGE:
+        command template [command options] [arguments...]
+
+    DESCRIPTION:
+        Convert gohan schema using pongo2 template
+
+    OPTIONS:
+        --config-file "gohan.yaml"	Server config File
+        --template, -t 		Template File
+
+-----------------
+OpenAPI
+-----------------
+
+.. code-block:: shell
+
+    NAME:
+        openapi - Convert gohan schema to OpenAPI
+
+    USAGE:
+        command openapi [command options] [arguments...]
+
+    DESCRIPTION:
+        Convert gohan schema to OpenAPI
+
+    OPTIONS:
+        --config-file "gohan.yaml"				Server config File
+        --template, -t "embed://etc/templates/openapi.tmpl"	Template File
+
+-----------------
+MarkDown
+-----------------
+
+.. code-block:: shell
+
+    NAME:
+        markdown - Convert gohan schema using pongo2 template
+
+    USAGE:
+        command markdown [command options] [arguments...]
+
+    DESCRIPTION:
+        Convert gohan schema using pongo2 template
+
+    OPTIONS:
+        --config-file "gohan.yaml"				Server config File
+        --template, -t "embed://etc/templates/markdown.tmpl"	Template File
+
+-----------------
 CLI Client
 -----------------
 
