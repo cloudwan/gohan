@@ -132,7 +132,11 @@ func (server *Server) connectDB() error {
 	dbType, dbConnection, _, _ := server.getDatabaseConfig()
 	dbConn, err := db.ConnectDB(dbType, dbConnection)
 	dbConn.SetMaxOpenConns(server.MaxOpenConn)
-	server.db = &DbSyncWrapper{dbConn}
+	if server.sync == nil {
+		server.db = dbConn
+	} else {
+		server.db = &DbSyncWrapper{dbConn}
+	}
 	return err
 }
 
@@ -201,6 +205,12 @@ func NewServer(configFile string) (*Server, error) {
 		}
 	}
 
+	etcdServers := config.GetStringList("etcd", nil)
+	if etcdServers != nil {
+		log.Info("etcd servers: %s", etcdServers)
+		server.sync = etcd.NewSync(etcdServers)
+	}
+
 	server.connectDB()
 
 	schemaFiles := config.GetStringList("schemas", nil)
@@ -215,12 +225,6 @@ func NewServer(configFile string) (*Server, error) {
 	server.MaxOpenConn = config.GetInt("database/max_open_conn", 100)
 
 	server.initDB()
-
-	etcdServers := config.GetStringList("etcd", nil)
-	if etcdServers != nil {
-		log.Info("etcd servers: %s", etcdServers)
-		server.sync = etcd.NewSync(etcdServers)
-	}
 
 	if config.GetList("database/initial_data", nil) != nil {
 		initialDataList := config.GetList("database/initial_data", nil)
