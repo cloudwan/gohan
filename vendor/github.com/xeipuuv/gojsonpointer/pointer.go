@@ -37,7 +37,7 @@ const (
 	const_empty_pointer     = ``
 	const_pointer_separator = `/`
 
-	const_invalid_start = `JSON pointer must be empty or start with a "` + const_pointer_separator
+	const_invalid_start = `JSON pointer must be empty or start with a "` + const_pointer_separator + `"`
 )
 
 type implStruct struct {

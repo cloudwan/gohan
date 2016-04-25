@@ -178,9 +178,9 @@ It's especially useful to validate schema files against gohan meta-schema.`,
 		Action: func(c *cli.Context) {
 			schemaPath := c.String("schema")
 			documentPaths := c.StringSlice("document")
-            if len(documentPaths) == 0 {
-                util.ExitFatalf("At least one document should be specified for validation\n")
-            }
+			if len(documentPaths) == 0 {
+				util.ExitFatalf("At least one document should be specified for validation\n")
+			}
 
 			manager := schema.GetManager()
 			err := manager.LoadSchemaFromFile(schemaPath)
@@ -188,13 +188,13 @@ It's especially useful to validate schema files against gohan meta-schema.`,
 				util.ExitFatal("Failed to parse schema:", err)
 			}
 
-            for _, documentPath := range documentPaths {
-                err = manager.LoadSchemaFromFile(documentPath)
-                if err != nil {
-                    util.ExitFatalf("Schema is not valid, see errors below:\n%s\n", err)
-                }
-            }
-            fmt.Println("Schema is valid")
+			for _, documentPath := range documentPaths {
+				err = manager.LoadSchemaFromFile(documentPath)
+				if err != nil {
+					util.ExitFatalf("Schema is not valid, see errors below:\n%s\n", err)
+				}
+			}
+			fmt.Println("Schema is valid")
 		},
 	}
 }
