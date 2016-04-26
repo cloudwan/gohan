@@ -38,7 +38,10 @@ func (env *MultiEnvironment) SetUp() {
 //LoadExtensionsForPath for returns extensions for specific path
 func (env *MultiEnvironment) LoadExtensionsForPath(extensions []*schema.Extension, path string) error {
 	for _, env := range env.childEnv {
-		env.LoadExtensionsForPath(extensions, path)
+		err := env.LoadExtensionsForPath(extensions, path)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
