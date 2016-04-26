@@ -98,8 +98,8 @@ func Unmarshal(in []byte, out interface{}) (err error) {
 // ParseYAML decodes the first document found within the in byte slice
 // and assigns decoded values into Node representation.
 func ParseYAML(in []byte) (node *Node, err error) {
-	defer handleErr(&err)
 	p := newParser(in)
+	defer handleErr(&err)
 	defer p.destroy()
 	return p.parse(), nil
 }
