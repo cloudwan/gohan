@@ -798,6 +798,7 @@ var _ = Describe("Server package test", func() {
 					possibleEvent = gohan_sync.Event{
 						Action: "this is ignored here",
 						Data: map[string]interface{}{
+							"version":    float64(1),
 							"monitoring": "Ni rigardas tio",
 						},
 						Key: monitoringPrefix + networkResource.Path(),
@@ -817,10 +818,11 @@ var _ = Describe("Server package test", func() {
 					Expect(afterMonitoring.Monitoring).To(Equal("Ni rigardas tio"))
 				})
 
-				It("Should igonre updates if state is not up to date", func() {
+				It("Should ignore updates if state is not up to date", func() {
 					possibleEvent = gohan_sync.Event{
 						Action: "this is ignored here",
 						Data: map[string]interface{}{
+							"version":    float64(1),
 							"monitoring": "Ni rigardas tio",
 						},
 						Key: monitoringPrefix + networkResource.Path(),
@@ -839,6 +841,40 @@ var _ = Describe("Server package test", func() {
 					Expect(afterMonitoring.Error).To(Equal(""))
 					Expect(afterMonitoring.Monitoring).To(Equal(""))
 				})
+
+				It("Should ignore updates if version is not equal to config version", func() {
+					possibleEvent = gohan_sync.Event{
+						Action: "this is ignored here",
+						Data: map[string]interface{}{
+							"version": float64(1),
+							"error":   "",
+							"state":   "Ni malvarmetas",
+						},
+						Key: statePrefix + networkResource.Path(),
+					}
+					Expect(srv.StateUpdate(&possibleEvent, server)).To(Succeed())
+					possibleEvent = gohan_sync.Event{
+						Action: "this is ignored here",
+						Data: map[string]interface{}{
+							"version":    float64(9999),
+							"monitoring": "Ni rigardas tio",
+						},
+						Key: monitoringPrefix + networkResource.Path(),
+					}
+					Expect(srv.MonitoringUpdate(&possibleEvent, server)).To(Succeed())
+
+					tx, err := wrappedTestDB.Begin()
+					Expect(err).ToNot(HaveOccurred())
+					defer tx.Close()
+					afterMonitoring, err := tx.StateFetch(networkSchema, networkResource.ID(), nil)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(tx.Commit()).To(Succeed())
+					Expect(afterMonitoring.ConfigVersion).To(Equal(int64(1)))
+					Expect(afterMonitoring.StateVersion).To(Equal(int64(1)))
+					Expect(afterMonitoring.State).To(Equal("Ni malvarmetas"))
+					Expect(afterMonitoring.Error).To(Equal(""))
+					Expect(afterMonitoring.Monitoring).To(Equal(""))
+				})
 			})
 
 			Context("Invoked incorrectly", func() {
@@ -846,6 +882,7 @@ var _ = Describe("Server package test", func() {
 					possibleEvent = gohan_sync.Event{
 						Action: "this is ignored here",
 						Data: map[string]interface{}{
+							"version":    float64(1),
 							"monitoring": "Ni rigardas tio",
 						},
 						Key: monitoringPrefix + strings.Replace(networkResource.Path(), "network", "netwerk", 1),
@@ -858,6 +895,7 @@ var _ = Describe("Server package test", func() {
 					possibleEvent = gohan_sync.Event{
 						Action: "this is ignored here",
 						Data: map[string]interface{}{
+							"version":    float64(1),
 							"monitoring": "Ni rigardas tio",
 						},
 						Key: monitoringPrefix + networkResource.Path() + "malesta",
@@ -879,11 +917,35 @@ var _ = Describe("Server package test", func() {
 					Expect(srv.StateUpdate(&possibleEvent, server)).To(Succeed())
 					possibleEvent = gohan_sync.Event{
 						Action: "this is ignored here",
-						Data:   map[string]interface{}{},
-						Key:    monitoringPrefix + networkResource.Path(),
+						Data: map[string]interface{}{
+							"version": float64(1),
+						},
+						Key: monitoringPrefix + networkResource.Path(),
 					}
 					err := srv.MonitoringUpdate(&possibleEvent, server)
 					Expect(err).To(MatchError(ContainSubstring("No monitoring")))
+				})
+
+				It("Without version should return the proper error", func() {
+					possibleEvent = gohan_sync.Event{
+						Action: "this is ignored here",
+						Data: map[string]interface{}{
+							"version": float64(1),
+							"error":   "",
+							"state":   "Ni malvarmetas",
+						},
+						Key: statePrefix + networkResource.Path(),
+					}
+					Expect(srv.StateUpdate(&possibleEvent, server)).To(Succeed())
+					possibleEvent = gohan_sync.Event{
+						Action: "this is ignored here",
+						Data: map[string]interface{}{
+							"monitoring": "Ni rigardas tio",
+						},
+						Key: monitoringPrefix + networkResource.Path(),
+					}
+					err := srv.MonitoringUpdate(&possibleEvent, server)
+					Expect(err).To(MatchError(ContainSubstring("No version")))
 				})
 			})
 		})

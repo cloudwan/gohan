@@ -117,10 +117,12 @@ the result of this monitoring under the key
 .. code-block:: javascript
 
     {
+      "version": 1,
       "monitoring": "Alice is well"
     }
 
 Gohan will read this information and update the database accordingly.
 
 Any monitoring updates made when the state version does not yet equal
+the config version or the version in the JSON data doesn't match with
 the config version will be ignored.

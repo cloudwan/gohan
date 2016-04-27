@@ -397,9 +397,16 @@ func MonitoringUpdate(response *gohan_sync.Event, server *Server) error {
 		return nil
 	}
 	var ok bool
+	monitoringVersion, ok := response.Data["version"].(float64)
+	if !ok {
+		return fmt.Errorf("No version in monitoring information")
+	}
+	if resourceState.ConfigVersion != int64(monitoringVersion) {
+		return nil
+	}
 	resourceState.Monitoring, ok = response.Data["monitoring"].(string)
 	if !ok {
-		return fmt.Errorf("No monitoring in state information")
+		return fmt.Errorf("No monitoring in monitoring information")
 	}
 
 	environmentManager := extension.GetManager()
