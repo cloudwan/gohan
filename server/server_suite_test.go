@@ -62,7 +62,7 @@ var _ = Describe("Suit set up and tear down", func() {
 
 	var _ = BeforeSuite(func() {
 		var err error
-		testDB, err = db.ConnectDB(dbType, conn)
+		testDB, err = db.ConnectDB(dbType, conn, db.DefaultMaxOpenConn)
 		Expect(err).ToNot(HaveOccurred(), "Failed to connect database.")
 		if os.Getenv("MYSQL_TEST") == "true" {
 			err = startTestServer("./server_test_mysql_config.yaml")

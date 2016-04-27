@@ -43,9 +43,9 @@ var _ = Describe("Suite set up and tear down", func() {
 
 	var _ = BeforeSuite(func() {
 		var err error
-		testDB1, err = db.ConnectDB("sqlite3", testDBFile1)
+		testDB1, err = db.ConnectDB("sqlite3", testDBFile1, db.DefaultMaxOpenConn)
 		Expect(err).NotTo(HaveOccurred())
-		testDB2, err = db.ConnectDB("sqlite3", testDBFile2)
+		testDB2, err = db.ConnectDB("sqlite3", testDBFile2, db.DefaultMaxOpenConn)
 		Expect(err).NotTo(HaveOccurred())
 	})
 

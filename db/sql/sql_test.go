@@ -46,7 +46,7 @@ var _ = Describe("Sql", func() {
 		}
 
 		manager := schema.GetManager()
-		dbc, err := db.ConnectDB(dbType, conn)
+		dbc, err := db.ConnectDB(dbType, conn, db.DefaultMaxOpenConn)
 		sqlConn = dbc.(*DB)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manager.LoadSchemasFromFiles(
@@ -54,7 +54,7 @@ var _ = Describe("Sql", func() {
 		db.InitDBWithSchemas(dbType, conn, true, false)
 
 		// Insert fixture data
-		fixtureDB, err := db.ConnectDB("json", "test_fixture.json")
+		fixtureDB, err := db.ConnectDB("json", "test_fixture.json", db.DefaultMaxOpenConn)
 		Expect(err).ToNot(HaveOccurred())
 		db.CopyDBResources(fixtureDB, dbc)
 

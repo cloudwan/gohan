@@ -48,7 +48,7 @@ func NewDB() *DB {
 }
 
 //Connect connec to the db
-func (db *DB) Connect(format, conn string) error {
+func (db *DB) Connect(format, conn string, maxOpenConn int) error {
 	db.filePath = conn
 	db.load()
 	return nil
@@ -317,9 +317,4 @@ func boolInSlice(a bool, list []string) bool {
 		}
 	}
 	return false
-}
-
-//SetMaxOpenConns isn't supported
-func (db *DB) SetMaxOpenConns(int) {
-
 }

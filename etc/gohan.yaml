@@ -63,5 +63,5 @@ extension:
   default: gohanscript
   use:
   - gohanscript
-  - javascript
+ # - javascript
   - go

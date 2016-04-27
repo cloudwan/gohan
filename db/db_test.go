@@ -119,7 +119,7 @@ var _ = Describe("Database operation test", func() {
 
 		JustBeforeEach(func() {
 			os.Remove(conn)
-			dataStore, err = db.ConnectDB(dbType, conn)
+			dataStore, err = db.ConnectDB(dbType, conn, db.DefaultMaxOpenConn)
 			Expect(err).ToNot(HaveOccurred())
 
 			for _, s := range manager.Schemas() {
@@ -274,17 +274,17 @@ var _ = Describe("Database operation test", func() {
 		})
 
 		It("Should do it properly", func() {
-			inDB, err := db.ConnectDB("yaml", "test_data/conv_in.yaml")
+			inDB, err := db.ConnectDB("yaml", "test_data/conv_in.yaml", db.DefaultMaxOpenConn)
 			Expect(err).ToNot(HaveOccurred())
 			defer os.Remove("test_data/conv_in.db")
 
 			db.InitDBWithSchemas("sqlite3", "test_data/conv_out.db", false, false)
-			outDB, err := db.ConnectDB("sqlite3", "test_data/conv_out.db")
+			outDB, err := db.ConnectDB("sqlite3", "test_data/conv_out.db", db.DefaultMaxOpenConn)
 			Expect(err).ToNot(HaveOccurred())
 			defer os.Remove("test_data/conv_out.db")
 
 			db.InitDBWithSchemas("yaml", "test_data/conv_verify.yaml", false, false)
-			verifyDB, err := db.ConnectDB("yaml", "test_data/conv_verify.yaml")
+			verifyDB, err := db.ConnectDB("yaml", "test_data/conv_verify.yaml", db.DefaultMaxOpenConn)
 			Expect(err).ToNot(HaveOccurred())
 			defer os.Remove("test_data/conv_verify.yaml")
 

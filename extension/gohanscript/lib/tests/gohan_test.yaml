@@ -11,7 +11,7 @@ test_suite:
     - command: rm ./test.db
       rescue: []
     - gohan_load_schema: src="{{ __dir__ }}/schema.yaml"
-    - connect_db: db_type=sqlite3 connection=./test.db
+    - connect_db: db_type=sqlite3 connection=./test.db max_open_conn=1
       register: db
     - init_db:
         db_type: sqlite3

@@ -133,7 +133,7 @@ func (env *Environment) CheckAllMockCallsMade() error {
 }
 
 func newDBConnection(dbfilename string) (db.DB, error) {
-	connection, err := db.ConnectDB("sqlite3", dbfilename)
+	connection, err := db.ConnectDB("sqlite3", dbfilename, db.DefaultMaxOpenConn)
 	if err != nil {
 		return nil, err
 	}
