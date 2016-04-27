@@ -18,13 +18,13 @@ package sql
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/cloudwan/gohan/db/pagination"
+	"github.com/cloudwan/gohan/db/transaction"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/cloudwan/gohan/db/pagination"
-	"github.com/cloudwan/gohan/db/transaction"
-
+	"database/sql"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/jmoiron/sqlx"
 	sq "github.com/lann/squirrel"
@@ -198,13 +198,16 @@ func quote(str string) string {
 }
 
 //Connect connec to the db
-func (db *DB) Connect(sqlType, conn string) (err error) {
+func (db *DB) Connect(sqlType, conn string, maxOpenConn int) (err error) {
 	db.sqlType = sqlType
 	db.connectionString = conn
-	db.DB, err = sqlx.Open(db.sqlType, db.connectionString)
+	rawDB, err := sql.Open(db.sqlType, db.connectionString)
 	if err != nil {
 		return err
 	}
+	rawDB.SetMaxOpenConns(maxOpenConn)
+	rawDB.SetMaxIdleConns(maxOpenConn)
+	db.DB = sqlx.NewDb(rawDB, db.sqlType)
 
 	if db.sqlType == "sqlite3" {
 		db.DB.Exec("PRAGMA foreign_keys = ON;")
@@ -762,5 +765,6 @@ func addFilterToQuery(s *schema.Schema, q sq.SelectBuilder, filter map[string]in
 
 //SetMaxOpenConns limit maximum connections
 func (db *DB) SetMaxOpenConns(maxIdleConns int) {
-	db.DB.SetMaxOpenConns(maxIdleConns)
+	// db.DB.SetMaxOpenConns(maxIdleConns)
+	// db.DB.SetMaxIdleConns(maxIdleConns)
 }

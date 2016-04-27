@@ -219,7 +219,7 @@ func init() {
 	gohanscript.RegisterStmtParser("connect_db",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
 			stmtErr := stmt.HasArgs(
-				"db_type", "connection")
+				"db_type", "connection", "max_open_conn")
 			if stmtErr != nil {
 				return nil, stmtErr
 			}
@@ -235,11 +235,16 @@ func init() {
 				if iconnection != nil {
 					connection = iconnection.(string)
 				}
+				var maxOpenConn int
+				imaxOpenConn := stmt.Arg("max_open_conn", context)
+				if imaxOpenConn != nil {
+					maxOpenConn = imaxOpenConn.(int)
+				}
 
 				result1,
 					err :=
 					lib.ConnectDB(
-						dbType, connection)
+						dbType, connection, maxOpenConn)
 
 				return result1, err
 
@@ -250,11 +255,12 @@ func init() {
 
 			dbType := args[0].(string)
 			connection := args[0].(string)
+			maxOpenConn := args[0].(int)
 
 			result1,
 				err :=
 				lib.ConnectDB(
-					dbType, connection)
+					dbType, connection, maxOpenConn)
 			return []interface{}{
 				result1,
 				err}

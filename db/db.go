@@ -26,26 +26,28 @@ import (
 	"github.com/cloudwan/gohan/schema"
 )
 
+//Default Max Open Connection to db
+const DefaultMaxOpenConn = 100
+
 const noSchemasInManagerError = "No schemas in Manager. Did you remember to load them?"
 
 //DB is a common interface for handing db
 type DB interface {
-	Connect(string, string) error
-	SetMaxOpenConns(int)
+	Connect(string, string, int) error
 	Begin() (transaction.Transaction, error)
 	RegisterTable(*schema.Schema, bool) error
 	DropTable(*schema.Schema) error
 }
 
 //ConnectDB is builder function of DB
-func ConnectDB(dbType, conn string) (DB, error) {
+func ConnectDB(dbType, conn string, maxOpenConn int) (DB, error) {
 	var db DB
 	if dbType == "json" || dbType == "yaml" {
 		db = file.NewDB()
 	} else {
 		db = sql.NewDB()
 	}
-	err := db.Connect(dbType, conn)
+	err := db.Connect(dbType, conn, maxOpenConn)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +109,7 @@ func CopyDBResources(input, output DB) error {
 
 //InitDBWithSchemas initializes database using schemas stored in Manager
 func InitDBWithSchemas(dbType, dbConnection string, dropOnCreate, cascade bool) error {
-	aDb, err := ConnectDB(dbType, dbConnection)
+	aDb, err := ConnectDB(dbType, dbConnection, DefaultMaxOpenConn)
 	if err != nil {
 		return err
 	}

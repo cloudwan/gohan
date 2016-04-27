@@ -112,8 +112,8 @@ func GohanLoadSchema(src string) (interface{}, error) {
 }
 
 //ConnectDB start connection to db
-func ConnectDB(dbType string, connection string) (db.DB, error) {
-	return db.ConnectDB(dbType, connection)
+func ConnectDB(dbType string, connection string, maxOpenConn int) (db.DB, error) {
+	return db.ConnectDB(dbType, connection, maxOpenConn)
 }
 
 //InitDB initializes database using schema.

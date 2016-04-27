@@ -53,7 +53,6 @@ type Server struct {
 	running          bool
 	martini          *martini.ClassicMartini
 	timelimit        int
-	MaxOpenConn      int
 	extensions       []string
 	keystoneIdentity middleware.IdentityService
 	queue            *job.Queue
@@ -129,9 +128,10 @@ func (server *Server) initDB() error {
 }
 
 func (server *Server) connectDB() error {
+	config := util.GetConfig()
 	dbType, dbConnection, _, _ := server.getDatabaseConfig()
-	dbConn, err := db.ConnectDB(dbType, dbConnection)
-	dbConn.SetMaxOpenConns(server.MaxOpenConn)
+	maxConn := config.GetInt("database/max_open_conn", db.DefaultMaxOpenConn)
+	dbConn, err := db.ConnectDB(dbType, dbConnection, maxConn)
 	if server.sync == nil {
 		server.db = dbConn
 	} else {
@@ -222,7 +222,6 @@ func NewServer(configFile string) (*Server, error) {
 			return nil, fmt.Errorf("invalid schema: %s", err)
 		}
 	}
-	server.MaxOpenConn = config.GetInt("database/max_open_conn", 100)
 
 	server.initDB()
 
@@ -233,7 +232,7 @@ func NewServer(configFile string) (*Server, error) {
 			inType := initialDataConfig["type"].(string)
 			inConnection := initialDataConfig["connection"].(string)
 			log.Info("Importing data from %s ...", inConnection)
-			inDB, err := db.ConnectDB(inType, inConnection)
+			inDB, err := db.ConnectDB(inType, inConnection, db.DefaultMaxOpenConn)
 			if err != nil {
 				log.Fatal(err)
 			}

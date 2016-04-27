@@ -275,11 +275,11 @@ Useful for development purposes.`,
 				util.ExitFatal("Error loading schema:", err)
 			}
 
-			inDB, err := db.ConnectDB(inType, in)
+			inDB, err := db.ConnectDB(inType, in, db.DefaultMaxOpenConn)
 			if err != nil {
 				util.ExitFatal(err)
 			}
-			outDB, err := db.ConnectDB(outType, out)
+			outDB, err := db.ConnectDB(outType, out, db.DefaultMaxOpenConn)
 			if err != nil {
 				util.ExitFatal(err)
 			}

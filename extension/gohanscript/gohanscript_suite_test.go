@@ -85,7 +85,7 @@ var _ = Describe("Suite set up and tear down", func() {
 	var _ = BeforeSuite(func() {
 		var err error
 		Expect(os.Chdir(configDir)).To(Succeed())
-		testDB, err = db.ConnectDB(dbType, dbFile)
+		testDB, err = db.ConnectDB(dbType, dbFile, db.DefaultMaxOpenConn)
 		Expect(err).ToNot(HaveOccurred(), "Failed to connect database.")
 		manager := schema.GetManager()
 		schema.DefaultExtension = "gohanscript"
