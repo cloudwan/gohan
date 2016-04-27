@@ -43,7 +43,7 @@ keystone:
     tenant_name: "admin"
     password: "gohan"
 # CORS (Cross-origin resource sharing (CORS)) configuraion for javascript based client
-cors: "*"
+# cors: "*"
 
 # Generate webui config
 webui_config:
@@ -58,10 +58,6 @@ logging:
     stderr:
         enabled: true
         level: INFO
-    file:
-        enabled: true
-        level: INFO
-        filename: ./gohan.log
 
 extension:
   default: gohanscript

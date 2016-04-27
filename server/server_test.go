@@ -591,7 +591,7 @@ var _ = Describe("Server package test", func() {
 			Expect(json.Unmarshal([]byte(writtenConfig.Value), &configContentsRaw)).To(Succeed())
 			configContents, ok := configContentsRaw.(map[string]interface{})
 			Expect(ok).To(BeTrue())
-			Expect(configContents).To(HaveKeyWithValue("version", float64(0)))
+			Expect(configContents).To(HaveKeyWithValue("version", float64(1)))
 			var configNetworkRaw interface{}
 			Expect(json.Unmarshal([]byte(configContents["body"].(string)), &configNetworkRaw)).To(Succeed())
 			configNetwork, ok := configNetworkRaw.(map[string]interface{})

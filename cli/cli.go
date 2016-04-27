@@ -67,6 +67,8 @@ func Run(name, usage, version string) {
 		getTemplateCommand(),
 		getRunCommand(),
 		getTestCommand(),
+		getOpenAPICommand(),
+		getMarkdownCommand(),
 	}
 	app.Run(os.Args)
 }
@@ -171,11 +173,14 @@ Validate document against schema.
 It's especially useful to validate schema files against gohan meta-schema.`,
 		Flags: []cli.Flag{
 			cli.StringFlag{Name: "schema, s", Value: "etc/schema/gohan.json", Usage: "Schema path"},
-			cli.StringFlag{Name: "document, d", Value: "etc/apps/example.json", Usage: "Document path"},
+			cli.StringSliceFlag{Name: "document, d", Usage: "Document path"},
 		},
 		Action: func(c *cli.Context) {
 			schemaPath := c.String("schema")
-			documentPath := c.String("document")
+			documentPaths := c.StringSlice("document")
+			if len(documentPaths) == 0 {
+				util.ExitFatalf("At least one document should be specified for validation\n")
+			}
 
 			manager := schema.GetManager()
 			err := manager.LoadSchemaFromFile(schemaPath)
@@ -183,12 +188,13 @@ It's especially useful to validate schema files against gohan meta-schema.`,
 				util.ExitFatal("Failed to parse schema:", err)
 			}
 
-			err = manager.LoadSchemaFromFile(documentPath)
-			if err == nil {
-				fmt.Println("Schema is valid")
-			} else {
-				util.ExitFatalf("Schema is not valid, see errors below:\n%s\n", err)
+			for _, documentPath := range documentPaths {
+				err = manager.LoadSchemaFromFile(documentPath)
+				if err != nil {
+					util.ExitFatalf("Schema is not valid, see errors below:\n%s\n", err)
+				}
 			}
+			fmt.Println("Schema is valid")
 		},
 	}
 }
@@ -206,7 +212,7 @@ Useful for development purposes.`,
 		Flags: []cli.Flag{
 			cli.StringFlag{Name: "database-type, t", Value: "sqlite3", Usage: "Backend datebase type"},
 			cli.StringFlag{Name: "database, d", Value: "gohan.db", Usage: "DB connection string"},
-			cli.StringFlag{Name: "schema, s", Value: "etc/schema/gohan.json", Usage: "Schema definition"},
+			cli.StringFlag{Name: "schema, s", Value: "embed://etc/schema/gohan.json", Usage: "Schema definition"},
 			cli.BoolFlag{Name: "drop-on-create", Usage: "If true, old database will be dropped"},
 			cli.BoolFlag{Name: "cascade", Usage: "If true, FOREIGN KEYS in database will be created with ON DELETE CASCADE"},
 			cli.StringFlag{Name: "meta-schema, m", Value: "", Usage: "Meta-schema file (optional)"},
@@ -429,9 +435,11 @@ func loadConfig(configFile string) {
 	}
 	config := util.GetConfig()
 	err := config.ReadConfig(configFile)
-	if err != nil && configFile != defaultConfigFile {
-		fmt.Println(err)
-		os.Exit(1)
+	if err != nil {
+		if configFile != defaultConfigFile {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 		return
 	}
 	err = l.SetUpLogging(config)

@@ -44,7 +44,7 @@ deploy:
         code: |
           export PATH=/go/bin:$PATH
           cd /
-          TARGETS="linux/amd64 linux/386 darwin/amd64 darwin/386 windows/386" ./build.sh github.com/cloudwan/gohan
+          FLAG_LDFLAGS="-X main.BuildVersion=$WERCKER_GIT_COMMIT" TARGETS="linux/amd64 linux/386 darwin/amd64 darwin/386 windows/386" ./build.sh github.com/cloudwan/gohan
     - script:
         name: zip
         code: |

@@ -19,7 +19,11 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				schemaID := stmt.Arg("schema_id", context).(string)
+				var schemaID string
+				ischemaID := stmt.Arg("schema_id", context)
+				if ischemaID != nil {
+					schemaID = ischemaID.(string)
+				}
 
 				result1,
 					err :=
@@ -104,7 +108,11 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				path := stmt.Arg("path", context).(string)
+				var path string
+				ipath := stmt.Arg("path", context)
+				if ipath != nil {
+					path = ipath.(string)
+				}
 
 				err :=
 					lib.ReadConfig(
@@ -136,8 +144,16 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				key := stmt.Arg("key", context).(string)
-				defaultValue := stmt.Arg("default_value", context).(interface{})
+				var key string
+				ikey := stmt.Arg("key", context)
+				if ikey != nil {
+					key = ikey.(string)
+				}
+				var defaultValue interface{}
+				idefaultValue := stmt.Arg("default_value", context)
+				if idefaultValue != nil {
+					defaultValue = idefaultValue.(interface{})
+				}
 
 				result1 :=
 					lib.GetConfig(
@@ -170,7 +186,11 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				src := stmt.Arg("src", context).(string)
+				var src string
+				isrc := stmt.Arg("src", context)
+				if isrc != nil {
+					src = isrc.(string)
+				}
 
 				result1,
 					err :=
@@ -205,8 +225,16 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				dbType := stmt.Arg("db_type", context).(string)
-				connection := stmt.Arg("connection", context).(string)
+				var dbType string
+				idbType := stmt.Arg("db_type", context)
+				if idbType != nil {
+					dbType = idbType.(string)
+				}
+				var connection string
+				iconnection := stmt.Arg("connection", context)
+				if iconnection != nil {
+					connection = iconnection.(string)
+				}
 
 				result1,
 					err :=
@@ -242,10 +270,26 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				dbType := stmt.Arg("db_type", context).(string)
-				connection := stmt.Arg("connection", context).(string)
-				dropOnCreate := stmt.Arg("drop_on_create", context).(bool)
-				cascade := stmt.Arg("cascade", context).(bool)
+				var dbType string
+				idbType := stmt.Arg("db_type", context)
+				if idbType != nil {
+					dbType = idbType.(string)
+				}
+				var connection string
+				iconnection := stmt.Arg("connection", context)
+				if iconnection != nil {
+					connection = iconnection.(string)
+				}
+				var dropOnCreate bool
+				idropOnCreate := stmt.Arg("drop_on_create", context)
+				if idropOnCreate != nil {
+					dropOnCreate = idropOnCreate.(bool)
+				}
+				var cascade bool
+				icascade := stmt.Arg("cascade", context)
+				if icascade != nil {
+					cascade = icascade.(bool)
+				}
 
 				err :=
 					lib.InitDB(
@@ -280,7 +324,11 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				connection := stmt.Arg("connection", context).(db.DB)
+				var connection db.DB
+				iconnection := stmt.Arg("connection", context)
+				if iconnection != nil {
+					connection = iconnection.(db.DB)
+				}
 
 				result1,
 					err :=
@@ -315,7 +363,11 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				tx := stmt.Arg("tx", context).(transaction.Transaction)
+				var tx transaction.Transaction
+				itx := stmt.Arg("tx", context)
+				if itx != nil {
+					tx = itx.(transaction.Transaction)
+				}
 
 				err :=
 					lib.DBCommit(
@@ -347,7 +399,11 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				tx := stmt.Arg("tx", context).(transaction.Transaction)
+				var tx transaction.Transaction
+				itx := stmt.Arg("tx", context)
+				if itx != nil {
+					tx = itx.(transaction.Transaction)
+				}
 
 				err :=
 					lib.DBClose(
@@ -379,10 +435,26 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				tx := stmt.Arg("tx", context).(transaction.Transaction)
-				schemaID := stmt.Arg("schema_id", context).(string)
-				id := stmt.Arg("id", context).(string)
-				tenantID := stmt.Arg("tenant_id", context).(string)
+				var tx transaction.Transaction
+				itx := stmt.Arg("tx", context)
+				if itx != nil {
+					tx = itx.(transaction.Transaction)
+				}
+				var schemaID string
+				ischemaID := stmt.Arg("schema_id", context)
+				if ischemaID != nil {
+					schemaID = ischemaID.(string)
+				}
+				var id string
+				iid := stmt.Arg("id", context)
+				if iid != nil {
+					id = iid.(string)
+				}
+				var tenantID string
+				itenantID := stmt.Arg("tenant_id", context)
+				if itenantID != nil {
+					tenantID = itenantID.(string)
+				}
 
 				result1,
 					err :=
@@ -420,9 +492,21 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				tx := stmt.Arg("tx", context).(transaction.Transaction)
-				schemaID := stmt.Arg("schema_id", context).(string)
-				data := stmt.Arg("data", context).(map[string]interface{})
+				var tx transaction.Transaction
+				itx := stmt.Arg("tx", context)
+				if itx != nil {
+					tx = itx.(transaction.Transaction)
+				}
+				var schemaID string
+				ischemaID := stmt.Arg("schema_id", context)
+				if ischemaID != nil {
+					schemaID = ischemaID.(string)
+				}
+				var data map[string]interface{}
+				idata := stmt.Arg("data", context)
+				if idata != nil {
+					data = idata.(map[string]interface{})
+				}
 
 				err :=
 					lib.DBCreate(
@@ -456,9 +540,21 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				tx := stmt.Arg("tx", context).(transaction.Transaction)
-				schemaID := stmt.Arg("schema_id", context).(string)
-				filter := stmt.Arg("filter", context).(map[string]interface{})
+				var tx transaction.Transaction
+				itx := stmt.Arg("tx", context)
+				if itx != nil {
+					tx = itx.(transaction.Transaction)
+				}
+				var schemaID string
+				ischemaID := stmt.Arg("schema_id", context)
+				if ischemaID != nil {
+					schemaID = ischemaID.(string)
+				}
+				var filter map[string]interface{}
+				ifilter := stmt.Arg("filter", context)
+				if ifilter != nil {
+					filter = ifilter.(map[string]interface{})
+				}
 
 				result1,
 					err :=
@@ -495,9 +591,21 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				tx := stmt.Arg("tx", context).(transaction.Transaction)
-				schemaID := stmt.Arg("schema_id", context).(string)
-				data := stmt.Arg("data", context).(map[string]interface{})
+				var tx transaction.Transaction
+				itx := stmt.Arg("tx", context)
+				if itx != nil {
+					tx = itx.(transaction.Transaction)
+				}
+				var schemaID string
+				ischemaID := stmt.Arg("schema_id", context)
+				if ischemaID != nil {
+					schemaID = ischemaID.(string)
+				}
+				var data map[string]interface{}
+				idata := stmt.Arg("data", context)
+				if idata != nil {
+					data = idata.(map[string]interface{})
+				}
 
 				err :=
 					lib.DBUpdate(
@@ -531,9 +639,21 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				tx := stmt.Arg("tx", context).(transaction.Transaction)
-				schemaID := stmt.Arg("schema_id", context).(string)
-				id := stmt.Arg("id", context).(string)
+				var tx transaction.Transaction
+				itx := stmt.Arg("tx", context)
+				if itx != nil {
+					tx = itx.(transaction.Transaction)
+				}
+				var schemaID string
+				ischemaID := stmt.Arg("schema_id", context)
+				if ischemaID != nil {
+					schemaID = ischemaID.(string)
+				}
+				var id string
+				iid := stmt.Arg("id", context)
+				if iid != nil {
+					id = iid.(string)
+				}
 
 				err :=
 					lib.DBDelete(
@@ -567,10 +687,26 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				tx := stmt.Arg("tx", context).(transaction.Transaction)
-				schemaID := stmt.Arg("schema_id", context).(string)
-				sql := stmt.Arg("sql", context).(string)
-				arguments := stmt.Arg("arguments", context).([]interface{})
+				var tx transaction.Transaction
+				itx := stmt.Arg("tx", context)
+				if itx != nil {
+					tx = itx.(transaction.Transaction)
+				}
+				var schemaID string
+				ischemaID := stmt.Arg("schema_id", context)
+				if ischemaID != nil {
+					schemaID = ischemaID.(string)
+				}
+				var sql string
+				isql := stmt.Arg("sql", context)
+				if isql != nil {
+					sql = isql.(string)
+				}
+				var arguments []interface{}
+				iarguments := stmt.Arg("arguments", context)
+				if iarguments != nil {
+					arguments = iarguments.([]interface{})
+				}
 
 				result1,
 					err :=
@@ -608,8 +744,16 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				schemaID := stmt.Arg("schema_id", context).(string)
-				join := stmt.Arg("join", context).(bool)
+				var schemaID string
+				ischemaID := stmt.Arg("schema_id", context)
+				if ischemaID != nil {
+					schemaID = ischemaID.(string)
+				}
+				var join bool
+				ijoin := stmt.Arg("join", context)
+				if ijoin != nil {
+					join = ijoin.(bool)
+				}
 
 				result1,
 					err :=

@@ -67,7 +67,11 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				data := stmt.Arg("data", context).(map[string]interface{})
+				var data map[string]interface{}
+				idata := stmt.Arg("data", context)
+				if idata != nil {
+					data = idata.(map[string]interface{})
+				}
 
 				result1 :=
 					lib.NormalizeMap(

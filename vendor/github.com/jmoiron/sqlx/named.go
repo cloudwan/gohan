@@ -37,7 +37,7 @@ func (n *NamedStmt) Close() error {
 
 // Exec executes a named statement using the struct passed.
 func (n *NamedStmt) Exec(arg interface{}) (sql.Result, error) {
-	args, err := bindAnyArgs(n.Params, arg)
+	args, err := bindAnyArgs(n.Params, arg, n.Stmt.Mapper)
 	if err != nil {
 		return *new(sql.Result), err
 	}
@@ -46,7 +46,7 @@ func (n *NamedStmt) Exec(arg interface{}) (sql.Result, error) {
 
 // Query executes a named statement using the struct argument, returning rows.
 func (n *NamedStmt) Query(arg interface{}) (*sql.Rows, error) {
-	args, err := bindAnyArgs(n.Params, arg)
+	args, err := bindAnyArgs(n.Params, arg, n.Stmt.Mapper)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ func (n *NamedStmt) Query(arg interface{}) (*sql.Rows, error) {
 // create a *sql.Row with an error condition pre-set for binding errors, sqlx
 // returns a *sqlx.Row instead.
 func (n *NamedStmt) QueryRow(arg interface{}) *Row {
-	args, err := bindAnyArgs(n.Params, arg)
+	args, err := bindAnyArgs(n.Params, arg, n.Stmt.Mapper)
 	if err != nil {
 		return &Row{err: err}
 	}
@@ -79,7 +79,7 @@ func (n *NamedStmt) Queryx(arg interface{}) (*Rows, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Rows{Rows: *r, Mapper: n.Stmt.Mapper}, err
+	return &Rows{Rows: r, Mapper: n.Stmt.Mapper, unsafe: isUnsafe(n)}, err
 }
 
 // QueryRowx this NamedStmt.  Because of limitations with QueryRow, this is
@@ -90,19 +90,26 @@ func (n *NamedStmt) QueryRowx(arg interface{}) *Row {
 
 // Select using this NamedStmt
 func (n *NamedStmt) Select(dest interface{}, arg interface{}) error {
-	rows, err := n.Query(arg)
+	rows, err := n.Queryx(arg)
 	if err != nil {
 		return err
 	}
 	// if something happens here, we want to make sure the rows are Closed
 	defer rows.Close()
-	return StructScan(rows, dest)
+	return scanAll(rows, dest, false)
 }
 
 // Get using this NamedStmt
 func (n *NamedStmt) Get(dest interface{}, arg interface{}) error {
 	r := n.QueryRowx(arg)
-	return r.StructScan(dest)
+	return r.scanAny(dest, false)
+}
+
+// Unsafe creates an unsafe version of the NamedStmt
+func (n *NamedStmt) Unsafe() *NamedStmt {
+	r := &NamedStmt{Params: n.Params, Stmt: n.Stmt, QueryString: n.QueryString}
+	r.Stmt.unsafe = true
+	return r
 }
 
 // A union interface of preparer and binder, required to be able to prepare
@@ -129,17 +136,17 @@ func prepareNamed(p namedPreparer, query string) (*NamedStmt, error) {
 	}, nil
 }
 
-func bindAnyArgs(names []string, arg interface{}) ([]interface{}, error) {
+func bindAnyArgs(names []string, arg interface{}, m *reflectx.Mapper) ([]interface{}, error) {
 	if maparg, ok := arg.(map[string]interface{}); ok {
 		return bindMapArgs(names, maparg)
 	}
-	return bindArgs(names, arg)
+	return bindArgs(names, arg, m)
 }
 
 // private interface to generate a list of interfaces from a given struct
 // type, given a list of names to pull out of the struct.  Used by public
 // BindStruct interface.
-func bindArgs(names []string, arg interface{}) ([]interface{}, error) {
+func bindArgs(names []string, arg interface{}, m *reflectx.Mapper) ([]interface{}, error) {
 	arglist := make([]interface{}, 0, len(names))
 
 	// grab the indirected value of arg
@@ -148,13 +155,12 @@ func bindArgs(names []string, arg interface{}) ([]interface{}, error) {
 		v = v.Elem()
 	}
 
-	m := mapper()
 	fields := m.TraversalsByName(v.Type(), names)
 	for i, t := range fields {
 		if len(t) == 0 {
-			return arglist, fmt.Errorf("could not find name %s in %v", names[i], arg)
+			return arglist, fmt.Errorf("could not find name %s in %#v", names[i], arg)
 		}
-		val := reflectx.FieldByIndexes(v, t)
+		val := reflectx.FieldByIndexesReadOnly(v, t)
 		arglist = append(arglist, val.Interface())
 	}
 
@@ -168,7 +174,7 @@ func bindMapArgs(names []string, arg map[string]interface{}) ([]interface{}, err
 	for _, name := range names {
 		val, ok := arg[name]
 		if !ok {
-			return arglist, fmt.Errorf("could not find name %s in %v", name, arg)
+			return arglist, fmt.Errorf("could not find name %s in %#v", name, arg)
 		}
 		arglist = append(arglist, val)
 	}
@@ -178,13 +184,13 @@ func bindMapArgs(names []string, arg map[string]interface{}) ([]interface{}, err
 // bindStruct binds a named parameter query with fields from a struct argument.
 // The rules for binding field names to parameter names follow the same
 // conventions as for StructScan, including obeying the `db` struct tags.
-func bindStruct(bindType int, query string, arg interface{}) (string, []interface{}, error) {
+func bindStruct(bindType int, query string, arg interface{}, m *reflectx.Mapper) (string, []interface{}, error) {
 	bound, names, err := compileNamedQuery([]byte(query), bindType)
 	if err != nil {
 		return "", []interface{}{}, err
 	}
 
-	arglist, err := bindArgs(names, arg)
+	arglist, err := bindArgs(names, arg, m)
 	if err != nil {
 		return "", []interface{}{}, err
 	}
@@ -231,12 +237,16 @@ func compileNamedQuery(qs []byte, bindType int) (query string, names []string, e
 
 	for i, b := range qs {
 		// a ':' while we're in a name is an error
-		if b == ':' && inName {
-			err = errors.New("unexpected `:` while reading named param at " + strconv.Itoa(i))
-			return query, names, err
-			// if we encounter a ':' and we aren't in a name, it's a new parameter
-			// FIXME: escaping?
-		} else if b == ':' {
+		if b == ':' {
+			// if this is the second ':' in a '::' escape sequence, append a ':'
+			if inName && i > 0 && qs[i-1] == ':' {
+				rebound = append(rebound, ':')
+				inName = false
+				continue
+			} else if inName {
+				err = errors.New("unexpected `:` while reading named param at " + strconv.Itoa(i))
+				return query, names, err
+			}
 			inName = true
 			name = []byte{}
 			// if we're in a name, and this is an allowed character, continue
@@ -283,19 +293,31 @@ func compileNamedQuery(qs []byte, bindType int) (query string, names []string, e
 	return string(rebound), names, err
 }
 
-// Bind binds a struct or a map to a query with named parameters.
+// BindNamed binds a struct or a map to a query with named parameters.
+// DEPRECATED: use sqlx.Named` instead of this, it may be removed in future.
 func BindNamed(bindType int, query string, arg interface{}) (string, []interface{}, error) {
+	return bindNamedMapper(bindType, query, arg, mapper())
+}
+
+// Named takes a query using named parameters and an argument and
+// returns a new query with a list of args that can be executed by
+// a database.  The return value uses the `?` bindvar.
+func Named(query string, arg interface{}) (string, []interface{}, error) {
+	return bindNamedMapper(QUESTION, query, arg, mapper())
+}
+
+func bindNamedMapper(bindType int, query string, arg interface{}, m *reflectx.Mapper) (string, []interface{}, error) {
 	if maparg, ok := arg.(map[string]interface{}); ok {
 		return bindMap(bindType, query, maparg)
 	}
-	return bindStruct(bindType, query, arg)
+	return bindStruct(bindType, query, arg, m)
 }
 
 // NamedQuery binds a named query and then runs Query on the result using the
 // provided Ext (sqlx.Tx, sqlx.Db).  It works with both structs and with
 // map[string]interface{} types.
 func NamedQuery(e Ext, query string, arg interface{}) (*Rows, error) {
-	q, args, err := BindNamed(BindType(e.DriverName()), query, arg)
+	q, args, err := bindNamedMapper(BindType(e.DriverName()), query, arg, mapperFor(e))
 	if err != nil {
 		return nil, err
 	}
@@ -306,7 +328,7 @@ func NamedQuery(e Ext, query string, arg interface{}) (*Rows, error) {
 // then runs Exec on the result.  Returns an error from the binding
 // or the query excution itself.
 func NamedExec(e Ext, query string, arg interface{}) (sql.Result, error) {
-	q, args, err := BindNamed(BindType(e.DriverName()), query, arg)
+	q, args, err := bindNamedMapper(BindType(e.DriverName()), query, arg, mapperFor(e))
 	if err != nil {
 		return nil, err
 	}

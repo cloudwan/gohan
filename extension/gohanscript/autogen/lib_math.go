@@ -17,8 +17,16 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				a := stmt.Arg("a", context).(int)
-				b := stmt.Arg("b", context).(int)
+				var a int
+				ia := stmt.Arg("a", context)
+				if ia != nil {
+					a = ia.(int)
+				}
+				var b int
+				ib := stmt.Arg("b", context)
+				if ib != nil {
+					b = ib.(int)
+				}
 
 				result1 :=
 					lib.AddInt(
@@ -51,8 +59,16 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				a := stmt.Arg("a", context).(int)
-				b := stmt.Arg("b", context).(int)
+				var a int
+				ia := stmt.Arg("a", context)
+				if ia != nil {
+					a = ia.(int)
+				}
+				var b int
+				ib := stmt.Arg("b", context)
+				if ib != nil {
+					b = ib.(int)
+				}
 
 				result1 :=
 					lib.SubInt(
@@ -85,8 +101,16 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				a := stmt.Arg("a", context).(int)
-				b := stmt.Arg("b", context).(int)
+				var a int
+				ia := stmt.Arg("a", context)
+				if ia != nil {
+					a = ia.(int)
+				}
+				var b int
+				ib := stmt.Arg("b", context)
+				if ib != nil {
+					b = ib.(int)
+				}
 
 				result1 :=
 					lib.MulInt(
@@ -119,8 +143,16 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				a := stmt.Arg("a", context).(int)
-				b := stmt.Arg("b", context).(int)
+				var a int
+				ia := stmt.Arg("a", context)
+				if ia != nil {
+					a = ia.(int)
+				}
+				var b int
+				ib := stmt.Arg("b", context)
+				if ib != nil {
+					b = ib.(int)
+				}
 
 				result1 :=
 					lib.DivInt(

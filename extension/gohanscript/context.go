@@ -48,6 +48,11 @@ func (context *Context) SetMap(data map[string]interface{}) {
 	context.data = data
 }
 
+// Data returns context data
+func (context *Context) Data() map[string]interface{} {
+	return context.data
+}
+
 // Set set data in the context
 func (context *Context) Set(key string, value interface{}) {
 	context.data[key] = value

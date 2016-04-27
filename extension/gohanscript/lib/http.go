@@ -45,7 +45,7 @@ func HTTPPatch(url string, headers map[string]interface{}, postData map[string]i
 
 //HTTPDelete deletes data using HTTP.
 func HTTPDelete(url string, headers map[string]interface{}) (interface{}, error) {
-	return HTTPRequest(url, "Delete", headers, nil)
+	return HTTPRequest(url, "DELETE", headers, nil)
 }
 
 //HTTPRequest request HTTP.

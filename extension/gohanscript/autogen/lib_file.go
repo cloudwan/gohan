@@ -17,7 +17,11 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				path := stmt.Arg("path", context).(string)
+				var path string
+				ipath := stmt.Arg("path", context)
+				if ipath != nil {
+					path = ipath.(string)
+				}
 
 				result1,
 					err :=
@@ -52,8 +56,16 @@ func init() {
 			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
-				path := stmt.Arg("path", context).(string)
-				data := stmt.Arg("data", context).(interface{})
+				var path string
+				ipath := stmt.Arg("path", context)
+				if ipath != nil {
+					path = ipath.(string)
+				}
+				var data interface{}
+				idata := stmt.Arg("data", context)
+				if idata != nil {
+					data = idata.(interface{})
+				}
 
 				err :=
 					lib.SaveContent(
