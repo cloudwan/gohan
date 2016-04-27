@@ -25,7 +25,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/coreos/go-etcd/etcd"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -585,13 +584,11 @@ var _ = Describe("Server package test", func() {
 
 			sync := gohan_etcd.NewSync(nil)
 
-			writtenConfigRaw, err := sync.Fetch("config/" + networkResource.Path())
+			writtenConfig, err := sync.Fetch("config/" + networkResource.Path())
 			Expect(err).ToNot(HaveOccurred())
-			writtenConfig, ok := writtenConfigRaw.(*etcd.Response)
-			Expect(ok).To(BeTrue())
 
 			var configContentsRaw interface{}
-			Expect(json.Unmarshal([]byte(writtenConfig.Node.Value), &configContentsRaw)).To(Succeed())
+			Expect(json.Unmarshal([]byte(writtenConfig.Value), &configContentsRaw)).To(Succeed())
 			configContents, ok := configContentsRaw.(map[string]interface{})
 			Expect(ok).To(BeTrue())
 			Expect(configContents).To(HaveKeyWithValue("version", float64(1)))

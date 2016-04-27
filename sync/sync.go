@@ -20,7 +20,7 @@ type Sync interface {
 	HasLock(path string) bool
 	Lock(path string, block bool) error
 	Unlock(path string) error
-	Fetch(path string) (interface{}, error)
+	Fetch(path string) (*Node, error)
 	Update(path, json string) error
 	Delete(path string) error
 	Watch(path string, responseChan chan *Event, stopChan chan bool) error
@@ -31,4 +31,11 @@ type Event struct {
 	Action string
 	Data   map[string]interface{}
 	Key    string
+}
+
+// Node is a struct for Fetch response
+type Node struct {
+	Value    string
+	Key      string
+	Children []*Node
 }
