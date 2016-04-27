@@ -67,8 +67,36 @@ func (s *Sync) Delete(key string) error {
 }
 
 //Fetch data from sync
-func (s *Sync) Fetch(key string) (interface{}, error) {
-	return s.etcdClient.Get(key, true, true)
+func (s *Sync) Fetch(key string) (*sync.Node, error) {
+	resp, err := s.etcdClient.Get(key, true, true)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.recursiveFetch(resp.Node)
+}
+
+func (s *Sync) recursiveFetch(node *etcd.Node) (*sync.Node, error) {
+	children := make([]*sync.Node, 0, len(node.Nodes))
+	for _, child := range node.Nodes {
+		var err error
+		childNodes, err := s.recursiveFetch(child)
+		if err != nil {
+			return nil, err
+		}
+		children = append(children, childNodes)
+	}
+
+	n := &sync.Node{
+		Key: node.Key,
+	}
+	if node.Dir {
+		n.Children = children
+	} else {
+		n.Value = node.Value
+	}
+
+	return n, nil
 }
 
 //HasLock checks current process owns lock or not
