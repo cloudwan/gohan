@@ -21,7 +21,7 @@ import (
 	"strings"
 )
 
-//Config stores configuration paramters for api server
+//Config stores configuration parameters for api server
 type Config struct {
 	config map[string]interface{}
 }
@@ -39,7 +39,7 @@ func GetConfig() *Config {
 	return gohanConfig
 }
 
-//GetEnvMap reads environemnt vars and return key value
+//GetEnvMap reads environment vars and return key value
 func GetEnvMap() map[string]string {
 	envStrings := os.Environ()
 	envMap := map[string]string{}

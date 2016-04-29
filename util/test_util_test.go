@@ -54,15 +54,11 @@ var _ = Describe("Custom matchers", func() {
 	})
 	Describe("Utility functions", func() {
 		var (
-			list      []string
-			baseMap   map[string]interface{}
-			extendMap map[string]interface{}
+			list []string
 		)
 
 		BeforeEach(func() {
 			list = []string{"apple", "orange", "banana"}
-			baseMap = map[string]interface{}{"red": "#ff0000"}
-			extendMap = map[string]interface{}{"blue": "#00ff00"}
 		})
 
 		Context("ContainsString", func() {

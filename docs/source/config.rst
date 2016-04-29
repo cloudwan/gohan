@@ -86,7 +86,7 @@ later, so we don't recommend to have duplicated config file key in multiple file
 Environment Value
 --------------------
 
-You can use Environemnt value in the configuraion.
+You can use Environment value in the configuraion.
 
 .. code-block:: yaml
 
@@ -327,7 +327,7 @@ You can select extension types you use.
 
 .. code-block:: yaml
 
-  extention:
+  extension:
     default: javascript
     use:
     - javascript
@@ -336,7 +336,7 @@ You can select extension types you use.
 
 - extension timelimit
 
-  You can make timelimit for extention execution. default is 30 sec
+  You can make timelimit for extension execution. default is 30 sec
 
 .. code-block:: yaml
 

@@ -109,14 +109,14 @@ var _ = Describe("Environment manager", func() {
 				Expect(manager.UnRegisterEnvironment(schemaID1)).To(Succeed())
 
 				By("No longer returning it")
-				env, ok = manager.GetEnvironment(schemaID1)
+				_, ok = manager.GetEnvironment(schemaID1)
 				Expect(ok).To(BeFalse())
 
 				By("Registering another environment")
 				Expect(manager.RegisterEnvironment(schemaID2, env2)).To(Succeed())
 
 				By("Getting it when requested")
-				env, ok = manager.GetEnvironment(schemaID2)
+				_, ok = manager.GetEnvironment(schemaID2)
 				Expect(ok).To(BeTrue())
 
 				By("Clearing the whole manager")
@@ -124,7 +124,7 @@ var _ = Describe("Environment manager", func() {
 				manager = extension.GetManager()
 
 				By("No longer returning the environment")
-				env, ok = manager.GetEnvironment(schemaID2)
+				_, ok = manager.GetEnvironment(schemaID2)
 				Expect(ok).To(BeFalse())
 			})
 		})

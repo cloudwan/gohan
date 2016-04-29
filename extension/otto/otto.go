@@ -178,7 +178,7 @@ func (env *Environment) HandleEvent(event string, context map[string]interface{}
 				}
 				return
 			case <-successCh:
-				// extention executed successfully
+				// extension executed successfully
 				return
 			}
 		}

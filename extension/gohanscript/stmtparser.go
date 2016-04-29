@@ -24,7 +24,7 @@ import (
 	"github.com/nati/yaml"
 )
 
-//StmtParser converts gohan script statment for golang function.
+//StmtParser converts gohan script statement for golang function.
 //You can register your parser using RegisterStmtParser call, so that
 // you can have new gohan script function implemented by go
 type StmtParser func(stmt *Stmt) (func(*Context) (interface{}, error), error)

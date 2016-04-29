@@ -78,7 +78,7 @@ func ClearManager() {
 	manager = nil
 }
 
-// Error is created when a problem has occured during event handling. It contains the information
+// Error is created when a problem has occurred during event handling. It contains the information
 // required to reraise the javascript exception that caused this error.
 type Error struct {
 	error

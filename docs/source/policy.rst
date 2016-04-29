@@ -13,7 +13,7 @@ Policy has following properties.
 - effect : Allow api access or not
 - resource : target resource
   you can specify target resource using "path" and "properties"
-- condition : addtional condition (see below)
+- condition : additional condition (see below)
 - tenant_id : regexp matching the tenant, defaults to ``.*``
 
 ----------

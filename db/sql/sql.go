@@ -716,7 +716,7 @@ func (tx *Transaction) Commit() error {
 
 //Close closes connection
 func (tx *Transaction) Close() error {
-	//Rollback if it isn't commited yet
+	//Rollback if it isn't committed yet
 	var err error
 	if !tx.closed {
 		err = tx.transaction.Rollback()

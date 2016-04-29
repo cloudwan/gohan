@@ -46,7 +46,7 @@ const (
 	Unauthorized
 )
 
-// ResourceError is created when an anticipated problem has occured during resource manipulations.
+// ResourceError is created when an anticipated problem has occurred during resource manipulations.
 // It contains the original error, a message to the user and an integer indicating the type of the problem.
 type ResourceError struct {
 	error
@@ -59,7 +59,7 @@ func NewResourceError(err error, message string, problem ResourceProblem) Resour
 	return ResourceError{err, message, problem}
 }
 
-// ExtensionError is created when a problem has occured during event handling. It contains the information
+// ExtensionError is created when a problem has occurred during event handling. It contains the information
 // required to reraise the javascript exception that caused this error.
 type ExtensionError struct {
 	error

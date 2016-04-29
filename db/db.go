@@ -26,7 +26,7 @@ import (
 	"github.com/cloudwan/gohan/schema"
 )
 
-//Default Max Open Connection to db
+//DefaultMaxOpenConn will applied for db object
 const DefaultMaxOpenConn = 100
 
 const noSchemasInManagerError = "No schemas in Manager. Did you remember to load them?"

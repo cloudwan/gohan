@@ -327,7 +327,6 @@ func (manager *Manager) LoadSchemaFromFile(filePath string) error {
 		log.Warning("Error in reordering schema %s", err)
 	}
 
-	schemaObjList = []*Schema{}
 	for _, id := range schemaOrder {
 		schemaObj := schemaMap[id]
 		if !schemaObj.IsAbstract() {

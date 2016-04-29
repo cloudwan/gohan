@@ -50,8 +50,6 @@ var _ = Describe("Resource manager", func() {
 		env           extension.Environment
 		events        map[string]string
 		timelimit     time.Duration
-
-		defaultState map[string]interface{}
 	)
 
 	BeforeEach(func() {
@@ -65,14 +63,6 @@ var _ = Describe("Resource manager", func() {
 		context = middleware.Context{}
 
 		events = map[string]string{}
-
-		defaultState = map[string]interface{}{
-			"config_version":   1,
-			"state_version":    0,
-			"error":            "",
-			"state":            "",
-			"state_monitoring": "",
-		}
 	})
 
 	environmentManager := extension.GetManager()

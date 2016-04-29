@@ -126,7 +126,7 @@ func Authentication() martini.Handler {
 			c.Next()
 			return
 		}
-		//TODO(nati) make this configureable
+		//TODO(nati) make this configurable
 		if strings.HasPrefix(req.URL.Path, webuiPATH) {
 			c.Next()
 			return

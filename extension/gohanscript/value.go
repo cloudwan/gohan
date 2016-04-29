@@ -92,7 +92,7 @@ type Template struct {
 	minigos   map[string]*MiniGo
 }
 
-//NewTemplate makes a tempalte value
+//NewTemplate makes a template value
 func NewTemplate(param interface{}) *Template {
 	t := &Template{
 		param:     param,

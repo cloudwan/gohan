@@ -20,7 +20,7 @@ import (
 	"fmt"
 )
 
-//MiniGo is tiny interpreter for evaluating small expression in the gohan scirpt
+//MiniGo is tiny interpreter for evaluating small expression in the gohan script
 //MiniGo uses go parser, and implements subset of functions
 type MiniGo struct {
 	ops      []*Op
