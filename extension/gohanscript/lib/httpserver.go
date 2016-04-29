@@ -21,13 +21,13 @@ import (
 	"io/ioutil"
 	"net/http"
 	//"github.com/k0kubun/pp"
-	"net/http/httptest"
-	"github.com/cloudwan/gohan/server"
 	"github.com/cloudwan/gohan/extension/gohanscript"
+	"github.com/cloudwan/gohan/server"
 	"github.com/cloudwan/gohan/server/middleware"
 	"github.com/cloudwan/gohan/util"
 	"github.com/drone/routes"
 	"github.com/go-martini/martini"
+	"net/http/httptest"
 )
 
 func init() {
@@ -165,7 +165,7 @@ func StopTestServer(server *httptest.Server) {
 }
 
 //GohanServer starts gohan server from configFile
-func GohanServer(configFile string, test bool) (interface{}, error){
+func GohanServer(configFile string, test bool) (interface{}, error) {
 	s, err := server.NewServer(configFile)
 	if err != nil {
 		return nil, err

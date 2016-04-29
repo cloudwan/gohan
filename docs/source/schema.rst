@@ -359,7 +359,7 @@ Following properties are extended from json schema v4.
 
 - detail (array)
 
-  This paramter will be used in user side. Possible values are strings including read, create, delete, list, update.
+  This parameter will be used in user side. Possible values are strings including read, create, delete, list, update.
 
 
 type string
@@ -408,7 +408,7 @@ eg.
 type integer or type number
 -------------------------------
 
-type integer or type number for numetric properites.
+type integer or type number for numetric properties.
 You can use following parmeters to define valid range
 
 - maximum (number) and exclusiveMaximum (boolean)
@@ -464,7 +464,7 @@ following parameters supported in object type.
   Only allowed for object type
   You can define properties of this object
 
-- propertiesOrder (extended paramter in gohan)
+- propertiesOrder (extended parameter in gohan)
 
   Only allowed for object type
   JSON has no ordering on object key. This could be problematic if you want to

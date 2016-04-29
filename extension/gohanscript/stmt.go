@@ -57,7 +57,7 @@ type Stmt struct {
 	RawNode   map[string]*yaml.Node
 }
 
-//MakeStmts parses multiple statemantes
+//MakeStmts parses multiple statesmantes
 func MakeStmts(FileName string, node *yaml.Node) ([]*Stmt, error) {
 	if node == nil {
 		return nil, nil

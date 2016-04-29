@@ -78,4 +78,49 @@ func init() {
 
 		})
 
+	gohanscript.RegisterStmtParser("gohan_server",
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			stmtErr := stmt.HasArgs(
+				"config_file", "test")
+			if stmtErr != nil {
+				return nil, stmtErr
+			}
+			return func(context *gohanscript.Context) (interface{}, error) {
+
+				var configFile string
+				iconfigFile := stmt.Arg("config_file", context)
+				if iconfigFile != nil {
+					configFile = iconfigFile.(string)
+				}
+				var test bool
+				itest := stmt.Arg("test", context)
+				if itest != nil {
+					test = itest.(bool)
+				}
+
+				result1,
+					err :=
+					lib.GohanServer(
+						configFile, test)
+
+				return result1, err
+
+			}, nil
+		})
+	gohanscript.RegisterMiniGoFunc("GohanServer",
+		func(vm *gohanscript.VM, args []interface{}) []interface{} {
+
+			configFile := args[0].(string)
+			test := args[0].(bool)
+
+			result1,
+				err :=
+				lib.GohanServer(
+					configFile, test)
+			return []interface{}{
+				result1,
+				err}
+
+		})
+
 }

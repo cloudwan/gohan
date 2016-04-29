@@ -133,7 +133,7 @@ func parseDir(p string) (map[string]*ast.Package, error) {
 	return pkgs, nil
 }
 
-//Gen generate adapter code for specifed package
+//Gen generate adapter code for specified package
 func Gen(pkg, template, export, exportPath string) {
 	paths := []string{filepath.Join(os.Getenv("GOROOT"), "src")}
 	if os.Getenv("GOPATH") == "" {

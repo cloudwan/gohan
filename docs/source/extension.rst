@@ -20,7 +20,7 @@ Example Code
     id: test
     path: /v2.0/.*
 
-Javascirpt Code block
+Javascript Code block
 ---------------------
 
 In the gohan extension code, you need to register context using
@@ -799,7 +799,7 @@ You can define variables using "vars".
 Any string including "{{" get considered as django template. so
 you can use variables in their. if string start with "$", it get considered as
 a variable identifier.
-(We are using pongo2 which supports subset of django tempalte.)
+(We are using pongo2 which supports subset of django template..)
 
 .. code-block:: shell
 
@@ -1110,7 +1110,7 @@ Supported command in debugger mode:
 - p code: execute miniGo
 - l: show current task
 
-You will get seperate port per go routine.
+You will get separate port per go routine.
 
 Command line argument
 ~~~~~~~~~~~~~~~~~~~~~~

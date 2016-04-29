@@ -32,14 +32,10 @@ import (
 
 var _ = Describe("Gohanscript extension manager", func() {
 	var (
-		manager            *schema.Manager
-		environmentManager *extension.Manager
-		timelimit          time.Duration
+		timelimit time.Duration
 	)
 
 	BeforeEach(func() {
-		manager = schema.GetManager()
-		environmentManager = extension.GetManager()
 		timelimit = time.Second
 	})
 

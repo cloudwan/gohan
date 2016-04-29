@@ -3,6 +3,7 @@
 [![Join the chat at https://gitter.im/cloudwan/gohan](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/cloudwan/gohan?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Coverage Status](https://coveralls.io/repos/github/cloudwan/gohan/badge.svg?branch=master)](https://coveralls.io/github/cloudwan/gohan?branch=master)
 [![wercker status](https://app.wercker.com/status/cab137b4bfdd05c97cfface7ac12c039/ "wercker status")](https://app.wercker.com/project/bykey/cab137b4bfdd05c97cfface7ac12c039)
+[![Go Report Card](https://goreportcard.com/badge/github.com/cloudwan/gohan)](https://goreportcard.com/report/github.com/cloudwan/gohan)
 
 - API Definition Generation (including Swagger)
 - DB Table Generation & OR Mapping
@@ -126,7 +127,7 @@ make install
 * Create an issue in github
 * Send PR for github
 
-We recommend to rebase mulitple commits
+We recommend to rebase multiple commits
 
 # License
 Apache2

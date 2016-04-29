@@ -16,8 +16,6 @@
 package golang_test
 
 import (
-	"time"
-
 	"github.com/cloudwan/gohan/extension/golang"
 
 	. "github.com/onsi/ginkgo"
@@ -28,18 +26,6 @@ import (
 )
 
 var _ = Describe("Gohanscript extension manager", func() {
-	var (
-		manager            *schema.Manager
-		environmentManager *extension.Manager
-		timelimit          time.Duration
-	)
-
-	BeforeEach(func() {
-		manager = schema.GetManager()
-		environmentManager = extension.GetManager()
-		timelimit = time.Second
-	})
-
 	AfterEach(func() {
 		extension.ClearManager()
 	})

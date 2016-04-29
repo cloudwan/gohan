@@ -36,7 +36,6 @@ var _ = Describe("Database operation test", func() {
 
 		manager          *schema.Manager
 		networkSchema    *schema.Schema
-		subnetSchema     *schema.Schema
 		serverSchema     *schema.Schema
 		networkResource1 *schema.Resource
 		networkResource2 *schema.Resource
@@ -68,7 +67,7 @@ var _ = Describe("Database operation test", func() {
 			Expect(manager.LoadSchemaFromFile("../tests/test_schema.yaml")).To(Succeed())
 			networkSchema, ok = manager.Schema("network")
 			Expect(ok).To(BeTrue())
-			subnetSchema, ok = manager.Schema("subnet")
+			_, ok = manager.Schema("subnet")
 			Expect(ok).To(BeTrue())
 			serverSchema, ok = manager.Schema("server")
 			Expect(ok).To(BeTrue())

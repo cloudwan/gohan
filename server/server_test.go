@@ -1006,9 +1006,8 @@ var _ = Describe("Server package test", func() {
 			unknownAction := map[string]interface{}{
 				"name": "Heisenberg",
 			}
-			result = testURL("POST", responderPluralURL+"/r1/dzien_dobry", memberTokenID, unknownAction, http.StatusNotFound)
-
-			result = testURL("POST", responderPluralURL+"/r1/dzien_dobry", adminTokenID, unknownAction, http.StatusNotFound)
+			testURL("POST", responderPluralURL+"/r1/dzien_dobry", memberTokenID, unknownAction, http.StatusNotFound)
+			testURL("POST", responderPluralURL+"/r1/dzien_dobry", adminTokenID, unknownAction, http.StatusNotFound)
 		})
 	})
 })

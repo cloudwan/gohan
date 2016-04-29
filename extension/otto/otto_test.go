@@ -218,7 +218,7 @@ var _ = Describe("Otto extension manager", func() {
 
 				extensions := []*schema.Extension{goodExtension}
 				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
-				err = env.LoadExtensionsForPath(extensions, "test_path")
+				env.LoadExtensionsForPath(extensions, "test_path")
 
 				context := map[string]interface{}{
 					"id":   "test",
@@ -366,7 +366,6 @@ var _ = Describe("Otto extension manager", func() {
 	Describe("Using gohan database manipulation builtins", func() {
 		var (
 			adminAuth     schema.Authorization
-			memberAuth    schema.Authorization
 			auth          schema.Authorization
 			context       middleware.Context
 			schemaID      string
@@ -384,7 +383,6 @@ var _ = Describe("Otto extension manager", func() {
 
 		BeforeEach(func() {
 			adminAuth = schema.NewAuthorization(adminTenantID, "admin", adminTokenID, []string{"admin"}, nil)
-			memberAuth = schema.NewAuthorization(memberTenantID, "member", memberTokenID, []string{"_member_"}, nil)
 			auth = adminAuth
 
 			context = middleware.Context{}
