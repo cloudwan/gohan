@@ -22,7 +22,7 @@ import (
 	"net/http"
 	//"github.com/k0kubun/pp"
 	"net/http/httptest"
-
+	"github.com/cloudwan/gohan/server"
 	"github.com/cloudwan/gohan/extension/gohanscript"
 	"github.com/cloudwan/gohan/server/middleware"
 	"github.com/cloudwan/gohan/util"
@@ -162,4 +162,18 @@ func GetTestServerURL(server *httptest.Server) string {
 //StopTestServer stops test server
 func StopTestServer(server *httptest.Server) {
 	server.Close()
+}
+
+//GohanServer starts gohan server from configFile
+func GohanServer(configFile string, test bool) (interface{}, error){
+	s, err := server.NewServer(configFile)
+	if err != nil {
+		return nil, err
+	}
+	if test {
+		ts := httptest.NewServer(s.Router())
+		return ts, nil
+	}
+	s.Start()
+	return nil, nil
 }

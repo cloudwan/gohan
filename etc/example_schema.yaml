@@ -41,6 +41,7 @@ schemas:
     - id
     - name
     - tenant_id
+    - description
     required: []
     type: object
   singular: base
