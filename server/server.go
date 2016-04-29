@@ -313,14 +313,18 @@ func NewServer(configFile string) (*Server, error) {
 		})
 	}
 	if documentRoot == "embed" {
-		m.Use(staticbin.Static("public", util.Asset))
+		m.Use(staticbin.Static("public", util.Asset, staticbin.Options{
+			SkipLogging: true,
+		}))
 	} else {
 		log.Info("Static file serving from %s", documentRoot)
 		documentRootABS, err := filepath.Abs(documentRoot)
 		if err != nil {
 			return nil, err
 		}
-		server.martini.Use(martini.Static(documentRootABS))
+		server.martini.Use(martini.Static(documentRootABS, martini.StaticOptions{
+			SkipLogging: true,
+		}))
 	}
 	server.mapRoutes()
 

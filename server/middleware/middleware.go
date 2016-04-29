@@ -28,6 +28,8 @@ import (
 	"github.com/rackspace/gophercloud"
 )
 
+const webuiPATH = "/webui"
+
 type responseHijacker struct {
 	martini.ResponseWriter
 	Response *bytes.Buffer
@@ -45,6 +47,10 @@ func (rh *responseHijacker) Write(b []byte) (int, error) {
 //Logging logs requests and responses
 func Logging() martini.Handler {
 	return func(res http.ResponseWriter, req *http.Request, c martini.Context) {
+		if strings.HasPrefix(req.URL.Path, webuiPATH) {
+			c.Next()
+			return
+		}
 		start := time.Now()
 
 		addr := req.Header.Get("X-Real-IP")
@@ -121,13 +127,13 @@ func Authentication() martini.Handler {
 			return
 		}
 		//TODO(nati) make this configureable
-		if strings.HasPrefix(req.URL.Path, "/webui") {
+		if strings.HasPrefix(req.URL.Path, webuiPATH) {
 			c.Next()
 			return
 		}
 
 		if req.URL.Path == "/" || req.URL.Path == "/webui" {
-			http.Redirect(res, req, "/webui/", http.StatusTemporaryRedirect)
+			http.Redirect(res, req, webuiPATH, http.StatusTemporaryRedirect)
 			return
 		}
 
