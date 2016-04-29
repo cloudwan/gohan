@@ -31,6 +31,7 @@ import (
 	// DB import
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/nati/go-fakedb"
 )
 
 const retryDB = 50

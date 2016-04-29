@@ -344,6 +344,11 @@ func (server *Server) Start() (err error) {
 	return err
 }
 
+//Router returns http handler
+func (server *Server) Router() http.Handler {
+	return server.martini
+}
+
 //Stop stops GohanAPIServer
 func (server *Server) Stop() {
 	server.running = false
