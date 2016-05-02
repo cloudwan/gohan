@@ -72,7 +72,7 @@ func OpenstackEnsure(client *gophercloud.ServiceClient, url string, postURL stri
 		}
 		return OpenstackPost(client, postURL, data)
 	}
-	return OpenstackPut(client,url,data)
+	return OpenstackPut(client, url, data)
 }
 
 //OpenstackPut puts a resource using OpenStack API
