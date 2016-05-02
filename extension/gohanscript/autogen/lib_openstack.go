@@ -159,6 +159,63 @@ func init() {
 
 		})
 
+	gohanscript.RegisterStmtParser("openstack_ensure",
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			stmtErr := stmt.HasArgs(
+				"client", "url", "post_url", "data")
+			if stmtErr != nil {
+				return nil, stmtErr
+			}
+			return func(context *gohanscript.Context) (interface{}, error) {
+
+				var client *gophercloud.ServiceClient
+				iclient := stmt.Arg("client", context)
+				if iclient != nil {
+					client = iclient.(*gophercloud.ServiceClient)
+				}
+				var url string
+				iurl := stmt.Arg("url", context)
+				if iurl != nil {
+					url = iurl.(string)
+				}
+				var postURL string
+				ipostURL := stmt.Arg("post_url", context)
+				if ipostURL != nil {
+					postURL = ipostURL.(string)
+				}
+				var data interface{}
+				idata := stmt.Arg("data", context)
+				if idata != nil {
+					data = idata.(interface{})
+				}
+
+				result1,
+					err :=
+					lib.OpenstackEnsure(
+						client, url, postURL, data)
+
+				return result1, err
+
+			}, nil
+		})
+	gohanscript.RegisterMiniGoFunc("OpenstackEnsure",
+		func(vm *gohanscript.VM, args []interface{}) []interface{} {
+
+			client := args[0].(*gophercloud.ServiceClient)
+			url := args[0].(string)
+			postURL := args[0].(string)
+			data := args[0].(interface{})
+
+			result1,
+				err :=
+				lib.OpenstackEnsure(
+					client, url, postURL, data)
+			return []interface{}{
+				result1,
+				err}
+
+		})
+
 	gohanscript.RegisterStmtParser("openstack_put",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
 			stmtErr := stmt.HasArgs(

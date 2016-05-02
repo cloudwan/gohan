@@ -17,6 +17,7 @@ package lib
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/rackspace/gophercloud"
 	"github.com/rackspace/gophercloud/openstack"
@@ -59,6 +60,19 @@ func OpenstackGet(client *gophercloud.ServiceClient, url string) (interface{}, e
 		return nil, err
 	}
 	return response, nil
+}
+
+//OpenstackEnsure keep resource status to sync
+func OpenstackEnsure(client *gophercloud.ServiceClient, url string, postURL string, data interface{}) (interface{}, error) {
+	var response interface{}
+	resp, err := client.Get(url, &response, nil)
+	if err != nil {
+		if resp.StatusCode != http.StatusNotFound {
+			return nil, err
+		}
+		return OpenstackPost(client, postURL, data)
+	}
+	return OpenstackPut(client,url,data)
 }
 
 //OpenstackPut puts a resource using OpenStack API
