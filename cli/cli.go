@@ -66,6 +66,7 @@ func Run(name, usage, version string) {
 		getMigrateCommand(),
 		getTemplateCommand(),
 		getRunCommand(),
+		getCheckCommand(),
 		getTestCommand(),
 		getOpenAPICommand(),
 		getMarkdownCommand(),
@@ -373,11 +374,10 @@ func getMigrateCommand() cli.Command {
 
 func getRunCommand() cli.Command {
 	return cli.Command{
-		Name:      "run",
-		ShortName: "run",
-		Usage:     "Run Gohan script Code",
-		Description: `
-Run gohan script code.`,
+		Name:        "run",
+		ShortName:   "run",
+		Usage:       "Run Gohan script Code",
+		Description: `Run gohan script code.`,
 		Flags: []cli.Flag{
 			cli.StringFlag{Name: "config-file,c", Value: defaultConfigFile, Usage: "config file path"},
 			cli.StringFlag{Name: "args,a", Value: "", Usage: "arguments"},
@@ -401,6 +401,25 @@ Run gohan script code.`,
 			configFile := c.String("config-file")
 			loadConfig(configFile)
 			_, err := vm.RunFile(src)
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+				return
+			}
+		},
+	}
+}
+
+func getCheckCommand() cli.Command {
+	return cli.Command{
+		Name:        "check",
+		ShortName:   "check",
+		Usage:       "Check Gohan script Code",
+		Description: `Check gohan script code.`,
+		Action: func(c *cli.Context) {
+			src := c.Args()[0]
+			vm := gohanscript.NewVM()
+			_, err := vm.MakeFile(src)
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)
