@@ -25,7 +25,7 @@ Description: {{ schema.Description }}
 Properties
 ------------
 
-| "Key" | "Title" | "Description" | "Type" | "Default" |  "Format" | "Permission" |
+| Key | Title | Description | Type | Default |  Format | Permission |
 | ----- | ------- | ------------- | ------ | --------- | --------- | ------------ |{%  for property in schema.Properties %}
 | {{ property.ID }} | {{ property.Title }} | {{property.Description}} | {{ property.Type }} | {{ property.Default }} | {{ property.Format }} | {{ property.Permission }} |{%  endfor %}
 
