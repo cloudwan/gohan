@@ -40,7 +40,7 @@ func NewActionFromObject(id string, rawData interface{}) (Action, error) {
 	actionData, _ := rawData.(map[string]interface{})
 	method, _ := actionData["method"].(string)
 	path, _ := actionData["path"].(string)
-	inputSchema, _ := actionData["input"]
-	outputSchema, _ := actionData["output"]
-	return NewAction(id, method, path, inputSchema.(map[string]interface{}), outputSchema.(map[string]interface{})), nil
+	inputSchema, _ := actionData["input"].(map[string]interface{})
+	outputSchema, _ := actionData["output"].(map[string]interface{})
+	return NewAction(id, method, path, inputSchema, outputSchema), nil
 }

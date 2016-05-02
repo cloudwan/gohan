@@ -1325,6 +1325,72 @@ var _ = Describe("Resource manager", func() {
 		})
 	})
 
+	Describe("Running an action on a resource", func() {
+		var (
+			adminResourceData      map[string]interface{}
+			fakeIdentity           middleware.IdentityService
+			fakeAction             schema.Action
+			fakeActionWithoutInput schema.Action
+		)
+
+		BeforeEach(func() {
+			schemaID = "test"
+			action = "create"
+			adminResourceData = map[string]interface{}{
+				"id":          resourceID1,
+				"tenant_id":   adminTenantID,
+				"test_string": "Steloj estas en ordo.",
+			}
+			fakeIdentity = &middleware.FakeIdentity{}
+			inputSchema := map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"message": map[string]interface{}{
+						"type": "string",
+					},
+					"delay": map[string]interface{}{
+						"type": "string",
+					},
+				},
+			}
+			fakeAction = schema.NewAction("fake_action", "GET", "/:id/whatever", inputSchema, nil)
+			fakeActionWithoutInput = schema.NewAction("fake_action", "GET", "/:id/whatever", nil, nil)
+		})
+
+		// Actions do not care resource existence or tenant ownership
+		Describe("With extension", func() {
+			BeforeEach(func() {
+				events["fake_action"] = `throw new CustomException("malbona", 390);`
+			})
+
+			It("Should run the extension", func() {
+				err := resources.ActionResource(
+					context, testDB, fakeIdentity, currentSchema, fakeAction, resourceID1,
+					map[string]interface{}{"test_string": "Steloj ne estas en ordo."})
+				Expect(err).To(HaveOccurred())
+				extErr, ok := err.(extension.Error)
+				Expect(ok).To(BeTrue())
+				Expect(extErr.ExceptionInfo).To(HaveKeyWithValue("name", "CustomException"))
+				Expect(extErr.ExceptionInfo).To(HaveKeyWithValue("message", "malbona"))
+				Expect(extErr.ExceptionInfo).To(HaveKeyWithValue("code", int64(390)))
+			})
+
+			Context("Without input shcema", func() {
+				It("Should run the extension", func() {
+					err := resources.ActionResource(
+						context, testDB, fakeIdentity, currentSchema, fakeActionWithoutInput, resourceID1,
+						map[string]interface{}{"test_string": "Steloj ne estas en ordo."})
+					Expect(err).To(HaveOccurred())
+					extErr, ok := err.(extension.Error)
+					Expect(ok).To(BeTrue())
+					Expect(extErr.ExceptionInfo).To(HaveKeyWithValue("name", "CustomException"))
+					Expect(extErr.ExceptionInfo).To(HaveKeyWithValue("message", "malbona"))
+					Expect(extErr.ExceptionInfo).To(HaveKeyWithValue("code", int64(390)))
+				})
+			})
+		})
+	})
+
 	Describe("Executing a sequence of operations", func() {
 		var (
 			adminResourceData, memberResourceData                                 map[string]interface{}

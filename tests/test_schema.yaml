@@ -21,6 +21,14 @@ extensions:
     });
   id: test
   path: /v2.0/responder
+- code: |
+    gohan_register_handler("dobranoc", function (context) {
+        context.response_code = 200;
+        context.response = {"output": "Dobranoc!"};
+    });
+  id: test
+  path: /v2.0/responder
+
 
 networks: []
 
@@ -34,6 +42,12 @@ policies:
 - action: hello
   effect: allow
   id: member_hello
+  principal: _member_
+  resource:
+    path: /v2.0/responder.*
+- action: dobranoc
+  effect: allow
+  id: member_dobranoc
   principal: _member_
   resource:
     path: /v2.0/responder.*
@@ -371,5 +385,11 @@ schemas:
         type: object
       output:
         type: string
+    dobranoc:
+      method: GET
+      path: /:id/dobranoc
+      output:
+        type: string
+
 
 subnets: []
