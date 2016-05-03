@@ -16,14 +16,18 @@
 package server
 
 import (
+	"crypto/tls"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"path"
 	"path/filepath"
 	"strings"
+	"syscall"
 
+	"github.com/braintree/manners"
 	"github.com/cloudwan/gohan/cloud"
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/job"
@@ -35,10 +39,11 @@ import (
 	"github.com/cloudwan/gohan/util"
 	"github.com/drone/routes"
 	"github.com/go-martini/martini"
+	"github.com/lestrrat/go-server-starter/listener"
 	"github.com/martini-contrib/staticbin"
 )
 
-type tls struct {
+type tlsConfig struct {
 	CertFile string
 	KeyFile  string
 }
@@ -46,7 +51,7 @@ type tls struct {
 //Server is a struct for GohanAPIServer
 type Server struct {
 	address          string
-	tls              *tls
+	tls              *tlsConfig
 	documentRoot     string
 	db               db.DB
 	sync             sync.Sync
@@ -199,7 +204,7 @@ func NewServer(configFile string) (*Server, error) {
 	server.address = config.GetString("address", ":"+port)
 	if config.GetBool("tls/enabled", false) {
 		log.Info("TLS enabled")
-		server.tls = &tls{
+		server.tls = &tlsConfig{
 			KeyFile:  config.GetString("tls/key_file", "./etc/key.pem"),
 			CertFile: config.GetString("tls/cert_file", "./etc/cert.pem"),
 		}
@@ -336,12 +341,26 @@ func NewServer(configFile string) (*Server, error) {
 
 //Start starts GohanAPIServer
 func (server *Server) Start() (err error) {
-	if server.tls != nil {
-		err = http.ListenAndServeTLS(server.address, server.tls.CertFile, server.tls.KeyFile, server.martini)
+	listeners, err := listener.ListenAll()
+	var l net.Listener
+	if err != nil || len(listeners) == 0 {
+		l, err = net.Listen("tcp", server.address)
+		if err != nil {
+			return err
+		}
 	} else {
-		err = http.ListenAndServe(server.address, server.martini)
+		l = listeners[0]
 	}
-	return err
+	if server.tls != nil {
+		config := &tls.Config{}
+		config.Certificates = make([]tls.Certificate, 1)
+		config.Certificates[0], err = tls.LoadX509KeyPair(server.tls.CertFile, server.tls.KeyFile)
+		if err != nil {
+			return err
+		}
+		l = tls.NewListener(l, config)
+	}
+	return manners.Serve(l, server.martini)
 }
 
 //Router returns http handler
@@ -360,13 +379,14 @@ func (server *Server) Stop() {
 	stopAMQPProcess(server)
 	stopSNMPProcess(server)
 	stopCRONProcess(server)
+    manners.Close()
 	server.queue.Stop()
 }
 
 //RunServer runs gohan api server
 func RunServer(configFile string) {
 	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
+	signal.Notify(c, syscall.SIGTERM)
 	server, err := NewServer(configFile)
 	if err != nil {
 		log.Fatal(err)
@@ -387,9 +407,8 @@ func RunServer(configFile string) {
 		for _ = range c {
 			log.Info("Stopping the server...")
 			log.Info("Tearing down...")
+			log.Info("Stopping server...")
 			server.Stop()
-			log.Fatal("Finished - bye bye.  ;-)")
-			os.Exit(1)
 		}
 	}()
 	server.running = true
@@ -402,7 +421,10 @@ func RunServer(configFile string) {
 	startAMQPProcess(server)
 	startSNMPProcess(server)
 	startCRONProcess(server)
-	log.Error(fmt.Sprintf("Error in Serve: %s", server.Start()))
+	err = server.Start()
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func startAMQPNotificationProcess(server *Server) {

@@ -12,6 +12,12 @@
 			"revision": "65f62e43149e0c904c8184d9570c15ba695ebe84"
 		},
 		{
+			"checksumSHA1": "N0U6Eow0jWYAOSxLymEQwjFceCo=",
+			"path": "github.com/braintree/manners",
+			"revision": "82a8879fc5fd0381fa8b2d8033b19bf255252088",
+			"revisionTime": "2016-04-18T04:36:13Z"
+		},
+		{
 			"checksumSHA1": "kSisKvo5UsUzrAcjC/0VasZ6F8Y=",
 			"path": "github.com/cdevr/WapSNMP",
 			"revision": "bcf017cf9222e5e2d1f172de329f5ca7ad539588"
@@ -135,6 +141,18 @@
 			"checksumSHA1": "WDfSGZWgVPthyp+tVen+tai+xz8=",
 			"path": "github.com/lann/squirrel",
 			"revision": "e13dbacee404686afd0acf2d44b8d34869605e03"
+		},
+		{
+			"checksumSHA1": "jSUqIqpwa0Mi8QNbfoXTEkgClks=",
+			"path": "github.com/lestrrat/go-server-starter",
+			"revision": "901cec093d58ca36652e8d7906e4bd3e32793801",
+			"revisionTime": "2015-11-25T04:17:04Z"
+		},
+		{
+			"checksumSHA1": "QiCuxsn67airNOHAd0P+/KoJ3aM=",
+			"path": "github.com/lestrrat/go-server-starter/listener",
+			"revision": "901cec093d58ca36652e8d7906e4bd3e32793801",
+			"revisionTime": "2015-11-25T04:17:04Z"
 		},
 		{
 			"checksumSHA1": "ytMEeUvt4eeXwvZPDaakTBgXAMA=",
