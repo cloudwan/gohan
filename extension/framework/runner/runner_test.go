@@ -140,6 +140,17 @@ var _ = Describe("Runner", func() {
 			})
 		})
 
+		Context("When filling default values to create db data", func() {
+			BeforeEach(func() {
+				testFile = "./test_data/default_value_schema.js"
+			})
+
+			It("Should return no errors", func() {
+				Expect(errors).To(HaveLen(1))
+				Expect(errors).To(HaveKeyWithValue("testDBCreatePopulateDefault", BeNil()))
+			})
+		})
+
 		Context("When loading extensions", func() {
 			BeforeEach(func() {
 				testFile = "./test_data/extension_loading.js"
