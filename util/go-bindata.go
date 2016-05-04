@@ -3,12 +3,12 @@
 // etc/schema/core.json
 // etc/schema/gohan.json
 // etc/extensions/gohan_extension.yaml
+// etc/templates/.openapi.tmpl.un~
 // etc/templates/markdown.tmpl
 // etc/templates/openapi.tmpl
 // public/webui/46661d6d65debc63884004fed6e37e5c.svg
 // public/webui/b7449d6115c7b39d6d92f8b310a062b0.png
 // public/webui/bundle.js
-// public/webui/config.json
 // public/webui/fontawesome-webfont.eot
 // public/webui/fontawesome-webfont.svg
 // public/webui/fontawesome-webfont.ttf
@@ -103,7 +103,7 @@ func etcSchemaCoreJson() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "etc/schema/core.json", size: 4424, mode: os.FileMode(420), modTime: time.Unix(1461948756, 0)}
+	info := bindataFileInfo{name: "etc/schema/core.json", size: 4424, mode: os.FileMode(420), modTime: time.Unix(1461621408, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -123,7 +123,7 @@ func etcSchemaGohanJson() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "etc/schema/gohan.json", size: 33085, mode: os.FileMode(420), modTime: time.Unix(1461948756, 0)}
+	info := bindataFileInfo{name: "etc/schema/gohan.json", size: 33085, mode: os.FileMode(420), modTime: time.Unix(1461621408, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -143,7 +143,27 @@ func etcExtensionsGohan_extensionYaml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "etc/extensions/gohan_extension.yaml", size: 106, mode: os.FileMode(420), modTime: time.Unix(1461948756, 0)}
+	info := bindataFileInfo{name: "etc/extensions/gohan_extension.yaml", size: 106, mode: os.FileMode(420), modTime: time.Unix(1461621408, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _etcTemplatesOpenapiTmplUn = []byte("\x1f\x8b\x08\x00\x00\x09\x6e\x88\x00\xff\xec\x5a\xcf\x6f\x1c\xb5\x17\xdf\x7c\xf5\xa5\x12\x85\x22\x02\x2d\x81\x96\x80\x33\x6d\xa2\x56\x44\x9b\xb4\x14\x8a\x22\x45\x25\x34\x50\x82\x1a\x12\x11\x52\x0e\x28\xaa\x9c\x1d\xef\xee\x54\x9b\xf1\xd4\xe3\x69\x52\x36\x73\xe0\x50\xce\x1c\x39\x54\x02\x09\x71\xe1\xc2\xa1\x47\xfe\x09\xfe\x89\xc2\x5f\xc0\xb9\x3c\x7b\x3c\x5e\x8f\xc7\xb3\xd9\x90\xb4\xa5\xd5\x5a\xaa\xd4\xf5\xfb\xf8\xbd\xe7\xf7\xcb\x6f\xec\x5c\x0f\xb6\x7e\x5c\x0f\x17\xe9\x83\xda\xff\xc2\x8b\x2f\xdc\x7b\x78\xff\x9b\x1f\xee\xfd\xb2\xf8\xe7\xef\x3b\x47\xa7\x77\xbe\x1f\xbf\x7c\xff\xd2\x07\xb7\xef\x8e\xfe\x7c\x64\xec\xb7\x9f\xc6\x6b\xb5\xda\x48\xad\x38\x46\x8c\xb9\x11\xf3\xf7\x57\xe8\xdc\x77\xff\xcf\x28\x37\xfe\xa8\x95\x87\xb9\xb0\xf6\x10\x46\x89\xf5\x70\x1c\xe2\x00\x77\xdc\x55\xee\xf8\xfb\x75\x8b\xf6\x00\xfe\x9d\xe8\x4e\x22\x9c\x70\x4a\xe2\x06\x8e\x08\xa2\xcd\x26\x9a\x4c\xbb\x82\x80\x60\x78\xf1\x36\x6e\xb5\x08\xf3\xe6\x90\x77\xa1\x3e\xeb\x4d\x03\xe1\x98\x24\x04\x61\x93\xc2\xac\x40\xbe\x81\xd4\xf0\x6e\x13\x16\x07\x34\x14\xe8\xd9\xfa\x79\x89\x7e\x53\x13\x79\xc0\x3b\x44\x90\x5a\xb4\x8d\x43\xb4\xb0\xba\xe4\x01\xfd\x88\xa0\xa5\x02\x79\x5c\xa2\x36\x71\x4c\x56\x31\x6f\x0b\xe0\x8c\xe4\xf0\x72\xa6\x48\xa3\x4d\xb6\x48\x0c\xd3\x5f\xc3\xdc\x8b\x8a\x67\x9b\xf3\x48\x73\xd9\x10\xe8\x51\x39\xdf\xa0\x61\x9c\xf4\xe0\x27\xb5\x12\x38\x8a\x3a\x41\x03\x73\xd0\x72\xe6\x66\x0c\xaa\x3a\x16\x47\x8c\xfa\x49\x63\xdf\x8b\x79\xb6\x18\x74\x17\x2b\xbb\x08\x0c\xdb\xa4\x0c\x49\xc5\x31\x0a\x42\xf5\xbf\x58\xd8\x77\x12\x05\x4d\xf5\xbb\xbe\x4c\x38\xf6\x31\xc7\x75\x7e\x07\x1c\x30\x31\x8f\xbc\x2d\x98\xc9\x88\x1e\x9a\x9a\xca\x71\x5f\xe6\x64\xbc\x19\x73\x86\x1b\xdc\x03\x4e\x20\xf7\xac\xd6\xaf\xdb\xcd\xb1\x57\x09\x5f\xed\x24\x0c\x77\xd6\xbf\xb8\x76\xf6\x1c\x4a\x53\xe5\xaa\xe3\xc8\x18\x5e\x8b\x70\x35\x7f\x15\x59\xc3\xf3\x21\x20\x58\x10\x89\xbd\x7a\x08\x7c\x01\x1c\x51\x27\x88\x39\x44\x08\xea\xc9\x59\x5a\x4c\x53\xc4\x48\x4c\x13\x26\x0c\x26\xcc\x30\x5e\x62\x65\xd9\x73\xca\x06\x54\xda\xf6\x15\x1b\x25\xed\xfc\x56\x69\x2d\x28\x10\x81\xc3\xa5\x84\xae\x19\x73\x05\xd4\x85\xd9\x59\x45\xff\xc8\x45\x2f\xed\x7a\xce\x34\xa8\x41\x10\xd6\x14\x7a\x9c\xae\xe4\xa2\x7c\x97\x09\x9b\xae\x82\x49\xa8\xf0\xb9\x90\x84\x19\xc3\x77\x24\x5b\xa7\x79\x34\x3e\xe0\x64\x2b\xae\x72\x5a\x09\x7d\x86\x91\xa6\xe0\x7e\x7a\xc6\x27\xcd\x20\x0c\x84\xfa\xf1\x8c\xe9\x3e\xb1\x19\x97\xd3\xcc\x91\x9a\x39\xee\x22\xbe\xe6\x24\x88\xcd\xb8\xd5\x02\x65\x70\xd2\xc9\x63\x6f\xae\x52\x7d\xcb\x1b\x49\x48\x76\x22\xd2\xe0\xc4\x47\x84\x31\xca\xf6\xe3\x85\x6a\x21\x6e\x1b\x49\x01\xcb\xd4\x27\x1d\x6f\xaf\xdd\x9f\xa8\x22\x8c\xba\x26\x5f\x2a\x4c\x4c\xdb\xeb\xbd\x88\xc6\xb9\x61\x3e\x29\xe9\x6a\x27\xe5\x15\x46\x30\x27\x28\x24\xdb\xc8\x72\xaa\x4e\xca\xc7\x93\x93\x6f\x97\x05\x60\x86\xa1\x8e\xc1\x81\xa0\x44\x94\xac\x21\xb6\x58\x77\xca\x0d\x61\x65\x31\xfd\xb2\x40\x15\x92\x26\x9c\x2b\x02\x19\x20\x9b\xd4\xcf\x72\x68\xd1\x09\xaa\x4c\xee\xdc\x62\x34\x16\x16\x83\x52\x1d\x25\x5c\xf2\x99\x74\xf2\x61\xe4\x56\x12\x30\xe2\x03\x13\xce\x12\xe2\xdc\xbf\x04\x16\x22\xf0\x43\x27\x64\xa0\x0c\x5d\x92\x0a\xf5\x0b\xb5\x57\x4b\x93\x07\x2c\x95\xe7\x15\x7d\xc1\x45\x97\x98\x3d\xac\xd9\x90\xa1\xe9\xef\x27\x47\xaf\x54\xc1\x24\x74\xe0\x5a\x36\x2c\x55\x95\xbb\xdf\x5f\xa9\x3a\x66\x4f\x1c\xd5\x3f\xc4\x76\x3c\xad\x57\xcf\x09\xd0\x6e\x80\x17\x66\xba\x81\xbf\x57\xc7\x51\x3a\x83\x4b\xc5\x6d\xad\x4d\xb7\x11\x7e\xc2\xcd\xc6\xbf\x2d\x6c\xee\x32\x95\x17\xb6\xc0\xdf\xb3\x96\x89\x3e\x72\xf0\x5a\x06\xc1\x6f\xf5\x65\x22\x07\x39\x45\x4d\xc2\x1b\xed\xfd\xd5\xb2\x33\x4e\x60\xde\xa8\x40\xeb\x19\x84\x2d\xaf\x2a\x66\x9e\x89\x96\x6d\x58\x88\xfe\x5b\x85\xa8\xdc\x33\x15\xab\x8a\x38\x1d\x07\xad\x2a\xeb\x91\x2f\x5a\xa6\xa7\xb3\x5d\x3a\xbc\xaa\xf2\xb1\x13\x34\x68\x55\x49\xa4\x11\x1f\x4d\x59\x29\x59\x2c\x9d\x1e\x76\x8f\xee\x3e\x6c\xb0\x52\x94\x45\xfc\xe3\x6d\x1f\x67\x87\xed\xa3\xda\xe5\xb0\x6a\x67\x13\x62\x07\x63\xd6\x9e\x3b\x50\xf0\x94\xd6\xa5\x7a\x54\x2a\xdc\x8b\x12\x6e\x35\x84\x68\xd8\x11\xba\xec\xf5\x2c\x77\x84\x17\xab\x22\xa6\xca\x12\xb6\x0d\xe0\x1b\x04\x65\xb1\x37\x2c\x2f\x4f\x71\x79\x29\x7d\x9d\xea\x8b\xd6\x54\xdd\xbc\xe3\x86\xec\xfd\xf5\xcd\x7b\x7d\x41\x4e\x88\x0b\x78\xb1\xe1\x4f\xb5\xe6\x7d\xee\xcd\x81\x94\xb1\xa9\x8b\x47\x09\xb4\x8b\xd4\x83\xc8\x0d\x91\x8d\xbd\x7b\xf5\x77\x0a\x96\xe8\x2d\x5a\x26\xbc\x4d\xfd\xdd\x0e\xdd\x26\x4c\xa0\x51\x06\xbf\x54\x32\x9e\xe5\xa1\x4c\x53\xd4\x63\x24\xbe\x7d\x87\xf5\xed\x09\xd7\xb7\x0d\x1b\xa3\x1e\x72\x0a\xce\x86\x18\xc9\xdc\x3d\x3f\xaf\x6e\x73\x91\x8e\x45\x27\x04\xba\x45\xa4\x42\xd2\x69\xd8\xf9\xbe\x86\x35\x43\x24\x3b\x0d\x6f\x25\x44\x3c\xd3\x6c\xde\x84\x0c\x3f\xfc\xa6\x77\x2f\x61\x03\x1b\xdd\xf9\xe4\xa0\x6b\x0d\x00\x96\x5d\x00\x43\x03\xd1\x67\xaf\x65\x8f\x6b\x3a\x2d\x41\x47\x27\xdb\x34\x75\x9d\x28\xc2\x7d\x24\xf4\x83\x66\xf6\x90\xf6\xa8\xee\x2e\x96\x5c\x74\x89\xb1\xcc\x8b\x75\xd6\xdb\x0d\x8e\x94\x57\xed\x4c\xc9\xcc\x30\xdd\xf5\x2a\x50\xcf\x7c\x2b\x09\x1f\xdc\x7e\x92\x7f\x3a\x3c\xa1\x0e\x78\x42\x69\xcd\x54\xe0\x89\x43\x2a\x7f\x0c\x0e\x29\x17\x87\x56\x87\xd2\xa8\x7e\x0d\x43\x4e\x41\x45\x28\x86\xe7\x98\xf1\xd3\x5c\x5f\x33\x1f\xd1\x37\x94\x35\xf5\xf6\x0e\xf1\x29\x5a\x8a\x3a\xa5\xad\x69\x37\x37\x48\x44\xde\xfb\x39\xb9\x47\xfd\x6c\x6d\xe5\xf3\x3e\x71\xe6\xc1\xda\x42\xfc\xd8\x8c\xb3\xd7\x0f\xc9\xfd\x72\x3f\xee\x2b\xa1\x7a\x0e\xdb\x45\x7d\xc4\x4c\x54\x89\x51\x9f\xc9\x52\xce\x7a\x7f\x39\xea\x0e\x49\xef\x06\x99\x72\xd2\x82\xdf\x2c\x47\xe9\x2f\x20\xcf\x88\xba\x2c\x6c\x0b\xf5\x50\x1f\x3e\x46\x65\x3d\x55\x00\xc0\xa9\x1f\x11\xc6\x03\x5d\x85\x4e\xda\x21\x98\x89\x50\xd4\x77\x6d\xaa\x8a\x93\x42\xd6\xc9\x05\x68\x8b\xc4\x31\x6e\xf5\xbb\xdd\xd1\x7f\xc9\xd1\xcb\xcd\x03\x7d\x22\x94\x12\xe5\x79\xf3\xc7\x73\xf9\x7f\x46\xe4\x55\x45\x66\x51\xe3\x4f\x56\x26\xd3\xf7\xbe\xfd\xeb\xd7\x7f\x02\x00\x00\xff\xff\x72\xea\x9d\x33\xce\x24\x00\x00")
+
+func etcTemplatesOpenapiTmplUnBytes() ([]byte, error) {
+	return bindataRead(
+		_etcTemplatesOpenapiTmplUn,
+		"etc/templates/.openapi.tmpl.un~",
+	)
+}
+
+func etcTemplatesOpenapiTmplUn() (*asset, error) {
+	bytes, err := etcTemplatesOpenapiTmplUnBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "etc/templates/.openapi.tmpl.un~", size: 9422, mode: os.FileMode(420), modTime: time.Unix(1461725573, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -163,7 +183,7 @@ func etcTemplatesMarkdownTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "etc/templates/markdown.tmpl", size: 4002, mode: os.FileMode(420), modTime: time.Unix(1462211727, 0)}
+	info := bindataFileInfo{name: "etc/templates/markdown.tmpl", size: 4002, mode: os.FileMode(420), modTime: time.Unix(1462296649, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -183,7 +203,7 @@ func etcTemplatesOpenapiTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "etc/templates/openapi.tmpl", size: 8215, mode: os.FileMode(420), modTime: time.Unix(1461948756, 0)}
+	info := bindataFileInfo{name: "etc/templates/openapi.tmpl", size: 8215, mode: os.FileMode(420), modTime: time.Unix(1461624493, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -203,7 +223,7 @@ func publicWebui46661d6d65debc63884004fed6e37e5cSvg() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/46661d6d65debc63884004fed6e37e5c.svg", size: 41, mode: os.FileMode(420), modTime: time.Unix(1461969408, 0)}
+	info := bindataFileInfo{name: "public/webui/46661d6d65debc63884004fed6e37e5c.svg", size: 41, mode: os.FileMode(420), modTime: time.Unix(1461621408, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -223,7 +243,7 @@ func publicWebuiB7449d6115c7b39d6d92f8b310a062b0Png() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/b7449d6115c7b39d6d92f8b310a062b0.png", size: 12292, mode: os.FileMode(420), modTime: time.Unix(1461969408, 0)}
+	info := bindataFileInfo{name: "public/webui/b7449d6115c7b39d6d92f8b310a062b0.png", size: 12292, mode: os.FileMode(420), modTime: time.Unix(1461621408, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -243,27 +263,7 @@ func publicWebuiBundleJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/bundle.js", size: 1032389, mode: os.FileMode(420), modTime: time.Unix(1462207552, 0)}
-	a := &asset{bytes: bytes, info: info}
-	return a, nil
-}
-
-var _publicWebuiConfigJson = []byte("\x1f\x8b\x08\x00\x00\x09\x6e\x88\x00\xff\x74\x8d\x3d\x0b\xc2\x30\x10\x86\xf7\xfe\x8a\x72\xae\xd2\x6b\xdd\xda\xd5\xc5\xcd\x41\x9d\x44\xc2\x21\xc1\x08\xfd\xa2\xf9\x70\x90\xfc\x77\x93\x4b\x69\x45\x30\x53\x78\xdf\xe7\xb9\xf7\x9d\xe5\xe1\x01\x59\xa3\x2e\x53\x0b\x4d\x0e\xca\x98\xb1\x41\x14\xe2\x70\x3c\x9d\x85\x68\xea\xb2\xae\xd0\xed\x8a\x12\xb6\x89\x7d\x0c\x8a\xfa\x40\x26\x95\x23\x7d\x57\xb2\xa3\x68\x23\xb7\xe8\xca\xa2\xc2\x94\xea\xd9\x63\xd0\xfe\xdf\x00\xa6\xfc\x3c\x32\x0d\xd6\x48\x1d\xd8\xeb\x22\xaf\x7b\x4c\x8c\x64\x54\xbc\xb5\xc1\xaf\x01\x6e\xdc\x53\xbe\xf6\x2d\xe9\xa8\x83\xa6\x6e\x6c\x65\x8c\x7e\xb1\x9e\x3a\xb9\x12\xb0\x94\x9e\x7f\xb7\xcc\x67\x9f\x00\x00\x00\xff\xff\xfd\x3b\x21\xb7\x1d\x01\x00\x00")
-
-func publicWebuiConfigJsonBytes() ([]byte, error) {
-	return bindataRead(
-		_publicWebuiConfigJson,
-		"public/webui/config.json",
-	)
-}
-
-func publicWebuiConfigJson() (*asset, error) {
-	bytes, err := publicWebuiConfigJsonBytes()
-	if err != nil {
-		return nil, err
-	}
-
-	info := bindataFileInfo{name: "public/webui/config.json", size: 285, mode: os.FileMode(420), modTime: time.Unix(1461969408, 0)}
+	info := bindataFileInfo{name: "public/webui/bundle.js", size: 1032389, mode: os.FileMode(420), modTime: time.Unix(1462296649, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -283,7 +283,7 @@ func publicWebuiFontawesomeWebfontEot() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/fontawesome-webfont.eot", size: 75220, mode: os.FileMode(420), modTime: time.Unix(1462207552, 0)}
+	info := bindataFileInfo{name: "public/webui/fontawesome-webfont.eot", size: 75220, mode: os.FileMode(420), modTime: time.Unix(1462296649, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -303,7 +303,7 @@ func publicWebuiFontawesomeWebfontSvg() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/fontawesome-webfont.svg", size: 386421, mode: os.FileMode(420), modTime: time.Unix(1462207552, 0)}
+	info := bindataFileInfo{name: "public/webui/fontawesome-webfont.svg", size: 386421, mode: os.FileMode(420), modTime: time.Unix(1462296649, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -323,7 +323,7 @@ func publicWebuiFontawesomeWebfontTtf() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/fontawesome-webfont.ttf", size: 150920, mode: os.FileMode(420), modTime: time.Unix(1462207552, 0)}
+	info := bindataFileInfo{name: "public/webui/fontawesome-webfont.ttf", size: 150920, mode: os.FileMode(420), modTime: time.Unix(1462296649, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -343,7 +343,7 @@ func publicWebuiFontawesomeWebfontWoff() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/fontawesome-webfont.woff", size: 89076, mode: os.FileMode(420), modTime: time.Unix(1462207552, 0)}
+	info := bindataFileInfo{name: "public/webui/fontawesome-webfont.woff", size: 89076, mode: os.FileMode(420), modTime: time.Unix(1462296649, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -363,7 +363,7 @@ func publicWebuiFontawesomeWebfontWoff2() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/fontawesome-webfont.woff2", size: 70728, mode: os.FileMode(420), modTime: time.Unix(1462207552, 0)}
+	info := bindataFileInfo{name: "public/webui/fontawesome-webfont.woff2", size: 70728, mode: os.FileMode(420), modTime: time.Unix(1462296649, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -383,7 +383,7 @@ func publicWebuiGlyphiconsHalflingsRegularEot() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/glyphicons-halflings-regular.eot", size: 20127, mode: os.FileMode(420), modTime: time.Unix(1461969408, 0)}
+	info := bindataFileInfo{name: "public/webui/glyphicons-halflings-regular.eot", size: 20127, mode: os.FileMode(420), modTime: time.Unix(1461621408, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -403,7 +403,7 @@ func publicWebuiGlyphiconsHalflingsRegularSvg() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/glyphicons-halflings-regular.svg", size: 82, mode: os.FileMode(420), modTime: time.Unix(1461969408, 0)}
+	info := bindataFileInfo{name: "public/webui/glyphicons-halflings-regular.svg", size: 82, mode: os.FileMode(420), modTime: time.Unix(1461621408, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -423,7 +423,7 @@ func publicWebuiGlyphiconsHalflingsRegularTtf() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/glyphicons-halflings-regular.ttf", size: 45404, mode: os.FileMode(420), modTime: time.Unix(1461969408, 0)}
+	info := bindataFileInfo{name: "public/webui/glyphicons-halflings-regular.ttf", size: 45404, mode: os.FileMode(420), modTime: time.Unix(1461621408, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -443,7 +443,7 @@ func publicWebuiGlyphiconsHalflingsRegularWoff() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/glyphicons-halflings-regular.woff", size: 23424, mode: os.FileMode(420), modTime: time.Unix(1461969408, 0)}
+	info := bindataFileInfo{name: "public/webui/glyphicons-halflings-regular.woff", size: 23424, mode: os.FileMode(420), modTime: time.Unix(1461621408, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -463,7 +463,7 @@ func publicWebuiGlyphiconsHalflingsRegularWoff2() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/glyphicons-halflings-regular.woff2", size: 18028, mode: os.FileMode(420), modTime: time.Unix(1461969408, 0)}
+	info := bindataFileInfo{name: "public/webui/glyphicons-halflings-regular.woff2", size: 18028, mode: os.FileMode(420), modTime: time.Unix(1461621408, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -483,7 +483,7 @@ func publicWebuiIndexHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/index.html", size: 343, mode: os.FileMode(420), modTime: time.Unix(1461969408, 0)}
+	info := bindataFileInfo{name: "public/webui/index.html", size: 343, mode: os.FileMode(420), modTime: time.Unix(1461621408, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -503,7 +503,7 @@ func publicWebuiStylesCss() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "public/webui/styles.css", size: 156128, mode: os.FileMode(420), modTime: time.Unix(1462207552, 0)}
+	info := bindataFileInfo{name: "public/webui/styles.css", size: 156128, mode: os.FileMode(420), modTime: time.Unix(1462296649, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -560,27 +560,27 @@ func AssetNames() []string {
 
 // _bindata is a table, holding each asset generator, mapped to its name.
 var _bindata = map[string]func() (*asset, error){
-	"etc/schema/core.json": etcSchemaCoreJson,
-	"etc/schema/gohan.json": etcSchemaGohanJson,
-	"etc/extensions/gohan_extension.yaml": etcExtensionsGohan_extensionYaml,
-	"etc/templates/markdown.tmpl": etcTemplatesMarkdownTmpl,
-	"etc/templates/openapi.tmpl": etcTemplatesOpenapiTmpl,
+	"etc/schema/core.json":                              etcSchemaCoreJson,
+	"etc/schema/gohan.json":                             etcSchemaGohanJson,
+	"etc/extensions/gohan_extension.yaml":               etcExtensionsGohan_extensionYaml,
+	"etc/templates/.openapi.tmpl.un~":                   etcTemplatesOpenapiTmplUn,
+	"etc/templates/markdown.tmpl":                       etcTemplatesMarkdownTmpl,
+	"etc/templates/openapi.tmpl":                        etcTemplatesOpenapiTmpl,
 	"public/webui/46661d6d65debc63884004fed6e37e5c.svg": publicWebui46661d6d65debc63884004fed6e37e5cSvg,
 	"public/webui/b7449d6115c7b39d6d92f8b310a062b0.png": publicWebuiB7449d6115c7b39d6d92f8b310a062b0Png,
-	"public/webui/bundle.js": publicWebuiBundleJs,
-	"public/webui/config.json": publicWebuiConfigJson,
-	"public/webui/fontawesome-webfont.eot": publicWebuiFontawesomeWebfontEot,
-	"public/webui/fontawesome-webfont.svg": publicWebuiFontawesomeWebfontSvg,
-	"public/webui/fontawesome-webfont.ttf": publicWebuiFontawesomeWebfontTtf,
-	"public/webui/fontawesome-webfont.woff": publicWebuiFontawesomeWebfontWoff,
-	"public/webui/fontawesome-webfont.woff2": publicWebuiFontawesomeWebfontWoff2,
-	"public/webui/glyphicons-halflings-regular.eot": publicWebuiGlyphiconsHalflingsRegularEot,
-	"public/webui/glyphicons-halflings-regular.svg": publicWebuiGlyphiconsHalflingsRegularSvg,
-	"public/webui/glyphicons-halflings-regular.ttf": publicWebuiGlyphiconsHalflingsRegularTtf,
-	"public/webui/glyphicons-halflings-regular.woff": publicWebuiGlyphiconsHalflingsRegularWoff,
-	"public/webui/glyphicons-halflings-regular.woff2": publicWebuiGlyphiconsHalflingsRegularWoff2,
-	"public/webui/index.html": publicWebuiIndexHtml,
-	"public/webui/styles.css": publicWebuiStylesCss,
+	"public/webui/bundle.js":                            publicWebuiBundleJs,
+	"public/webui/fontawesome-webfont.eot":              publicWebuiFontawesomeWebfontEot,
+	"public/webui/fontawesome-webfont.svg":              publicWebuiFontawesomeWebfontSvg,
+	"public/webui/fontawesome-webfont.ttf":              publicWebuiFontawesomeWebfontTtf,
+	"public/webui/fontawesome-webfont.woff":             publicWebuiFontawesomeWebfontWoff,
+	"public/webui/fontawesome-webfont.woff2":            publicWebuiFontawesomeWebfontWoff2,
+	"public/webui/glyphicons-halflings-regular.eot":     publicWebuiGlyphiconsHalflingsRegularEot,
+	"public/webui/glyphicons-halflings-regular.svg":     publicWebuiGlyphiconsHalflingsRegularSvg,
+	"public/webui/glyphicons-halflings-regular.ttf":     publicWebuiGlyphiconsHalflingsRegularTtf,
+	"public/webui/glyphicons-halflings-regular.woff":    publicWebuiGlyphiconsHalflingsRegularWoff,
+	"public/webui/glyphicons-halflings-regular.woff2":   publicWebuiGlyphiconsHalflingsRegularWoff2,
+	"public/webui/index.html":                           publicWebuiIndexHtml,
+	"public/webui/styles.css":                           publicWebuiStylesCss,
 }
 
 // AssetDir returns the file names below a certain
@@ -622,38 +622,39 @@ type bintree struct {
 	Func     func() (*asset, error)
 	Children map[string]*bintree
 }
+
 var _bintree = &bintree{nil, map[string]*bintree{
 	"etc": &bintree{nil, map[string]*bintree{
 		"extensions": &bintree{nil, map[string]*bintree{
 			"gohan_extension.yaml": &bintree{etcExtensionsGohan_extensionYaml, map[string]*bintree{}},
 		}},
 		"schema": &bintree{nil, map[string]*bintree{
-			"core.json": &bintree{etcSchemaCoreJson, map[string]*bintree{}},
+			"core.json":  &bintree{etcSchemaCoreJson, map[string]*bintree{}},
 			"gohan.json": &bintree{etcSchemaGohanJson, map[string]*bintree{}},
 		}},
 		"templates": &bintree{nil, map[string]*bintree{
-			"markdown.tmpl": &bintree{etcTemplatesMarkdownTmpl, map[string]*bintree{}},
-			"openapi.tmpl": &bintree{etcTemplatesOpenapiTmpl, map[string]*bintree{}},
+			".openapi.tmpl.un~": &bintree{etcTemplatesOpenapiTmplUn, map[string]*bintree{}},
+			"markdown.tmpl":     &bintree{etcTemplatesMarkdownTmpl, map[string]*bintree{}},
+			"openapi.tmpl":      &bintree{etcTemplatesOpenapiTmpl, map[string]*bintree{}},
 		}},
 	}},
 	"public": &bintree{nil, map[string]*bintree{
 		"webui": &bintree{nil, map[string]*bintree{
 			"46661d6d65debc63884004fed6e37e5c.svg": &bintree{publicWebui46661d6d65debc63884004fed6e37e5cSvg, map[string]*bintree{}},
 			"b7449d6115c7b39d6d92f8b310a062b0.png": &bintree{publicWebuiB7449d6115c7b39d6d92f8b310a062b0Png, map[string]*bintree{}},
-			"bundle.js": &bintree{publicWebuiBundleJs, map[string]*bintree{}},
-			"config.json": &bintree{publicWebuiConfigJson, map[string]*bintree{}},
-			"fontawesome-webfont.eot": &bintree{publicWebuiFontawesomeWebfontEot, map[string]*bintree{}},
-			"fontawesome-webfont.svg": &bintree{publicWebuiFontawesomeWebfontSvg, map[string]*bintree{}},
-			"fontawesome-webfont.ttf": &bintree{publicWebuiFontawesomeWebfontTtf, map[string]*bintree{}},
-			"fontawesome-webfont.woff": &bintree{publicWebuiFontawesomeWebfontWoff, map[string]*bintree{}},
-			"fontawesome-webfont.woff2": &bintree{publicWebuiFontawesomeWebfontWoff2, map[string]*bintree{}},
-			"glyphicons-halflings-regular.eot": &bintree{publicWebuiGlyphiconsHalflingsRegularEot, map[string]*bintree{}},
-			"glyphicons-halflings-regular.svg": &bintree{publicWebuiGlyphiconsHalflingsRegularSvg, map[string]*bintree{}},
-			"glyphicons-halflings-regular.ttf": &bintree{publicWebuiGlyphiconsHalflingsRegularTtf, map[string]*bintree{}},
-			"glyphicons-halflings-regular.woff": &bintree{publicWebuiGlyphiconsHalflingsRegularWoff, map[string]*bintree{}},
-			"glyphicons-halflings-regular.woff2": &bintree{publicWebuiGlyphiconsHalflingsRegularWoff2, map[string]*bintree{}},
-			"index.html": &bintree{publicWebuiIndexHtml, map[string]*bintree{}},
-			"styles.css": &bintree{publicWebuiStylesCss, map[string]*bintree{}},
+			"bundle.js":                            &bintree{publicWebuiBundleJs, map[string]*bintree{}},
+			"fontawesome-webfont.eot":              &bintree{publicWebuiFontawesomeWebfontEot, map[string]*bintree{}},
+			"fontawesome-webfont.svg":              &bintree{publicWebuiFontawesomeWebfontSvg, map[string]*bintree{}},
+			"fontawesome-webfont.ttf":              &bintree{publicWebuiFontawesomeWebfontTtf, map[string]*bintree{}},
+			"fontawesome-webfont.woff":             &bintree{publicWebuiFontawesomeWebfontWoff, map[string]*bintree{}},
+			"fontawesome-webfont.woff2":            &bintree{publicWebuiFontawesomeWebfontWoff2, map[string]*bintree{}},
+			"glyphicons-halflings-regular.eot":     &bintree{publicWebuiGlyphiconsHalflingsRegularEot, map[string]*bintree{}},
+			"glyphicons-halflings-regular.svg":     &bintree{publicWebuiGlyphiconsHalflingsRegularSvg, map[string]*bintree{}},
+			"glyphicons-halflings-regular.ttf":     &bintree{publicWebuiGlyphiconsHalflingsRegularTtf, map[string]*bintree{}},
+			"glyphicons-halflings-regular.woff":    &bintree{publicWebuiGlyphiconsHalflingsRegularWoff, map[string]*bintree{}},
+			"glyphicons-halflings-regular.woff2":   &bintree{publicWebuiGlyphiconsHalflingsRegularWoff2, map[string]*bintree{}},
+			"index.html":                           &bintree{publicWebuiIndexHtml, map[string]*bintree{}},
+			"styles.css":                           &bintree{publicWebuiStylesCss, map[string]*bintree{}},
 		}},
 	}},
 }}
@@ -704,4 +705,3 @@ func _filePath(dir, name string) string {
 	cannonicalName := strings.Replace(name, "\\", "/", -1)
 	return filepath.Join(append([]string{dir}, strings.Split(cannonicalName, "/")...)...)
 }
-
