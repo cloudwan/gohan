@@ -136,11 +136,25 @@ func getMarkdownCommand() cli.Command {
 	return cli.Command{
 		Name:        "markdown",
 		ShortName:   "markdown",
-		Usage:       "Convert gohan schema using pongo2 template",
-		Description: "Convert gohan schema using pongo2 template",
+		Usage:       "Convert gohan schema to markdown doc",
+		Description: "Convert gohan schema to markdown doc",
 		Flags: []cli.Flag{
 			cli.StringFlag{Name: "config-file", Value: "gohan.yaml", Usage: "Server config File"},
 			cli.StringFlag{Name: "template, t", Value: "embed://etc/templates/markdown.tmpl", Usage: "Template File"},
+		},
+		Action: doTemplate,
+	}
+}
+
+func getDotCommand() cli.Command {
+	return cli.Command{
+		Name:        "dot",
+		ShortName:   "dot",
+		Usage:       "Convert gohan schema to dot file for graphviz",
+		Description: "Convert gohan schema to dot file for graphviz",
+		Flags: []cli.Flag{
+			cli.StringFlag{Name: "config-file", Value: "gohan.yaml", Usage: "Server config File"},
+			cli.StringFlag{Name: "template, t", Value: "embed://etc/templates/dot.tmpl", Usage: "Template File"},
 		},
 		Action: doTemplate,
 	}

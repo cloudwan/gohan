@@ -379,7 +379,7 @@ func (server *Server) Stop() {
 	stopAMQPProcess(server)
 	stopSNMPProcess(server)
 	stopCRONProcess(server)
-    manners.Close()
+	manners.Close()
 	server.queue.Stop()
 }
 

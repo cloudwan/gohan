@@ -69,8 +69,7 @@ HTTP Status Code: 200 (OK)
 ``` json
 
   {
-    "{{schema.Singular}}": {
-{% for property in schema.Properties %}
+    "{{schema.Singular}}": { {% for property in schema.Properties %}
         "{{ property.ID }}": ${{ property.ID }}{% if not forloop.Last %},{%endif%}{% endfor %}
     }
   }
@@ -86,9 +85,7 @@ Sample Request
 ``` json
 
   {
-    "{{schema.Singular}}": {
-      {
-{% for property in schema.Properties %}{% if "create" in schema.Permission || schema.Permission  == null %}
+    "{{schema.Singular}}": { {% for property in schema.Properties %}{% if "create" in schema.Permission || schema.Permission  == null %}
         "{{ property.ID }}": ${{ property.ID }}{% if not forloop.Last %},{%endif%}{% endif %}{% endfor %}
       }
     }
@@ -103,9 +100,7 @@ HTTP Status Code: 201 (Accepted)
 ``` json
 
   {
-    "{{schema.Singular}}": {
-      {
-{% for property in schema.Properties %}
+    "{{schema.Singular}}": { {% for property in schema.Properties %}
         "{{ property.ID }}": ${{ property.ID }}{% if not forloop.Last %},{%endif%}{% endfor %}
       }
     }
@@ -131,9 +126,7 @@ Sample Request
 ``` json
 
   {
-    "{{schema.Singular}}": {
-      {
-{% for property in schema.Properties %}{% if "update" in schema.Permission || schema.Permission  == null %}
+    "{{schema.Singular}}": { {% for property in schema.Properties %}{% if "update" in schema.Permission || schema.Permission  == null %}
         "{{ property.ID }}": ${{ property.ID }}{% if not forloop.Last %},{%endif%}{% endif %}{% endfor %}
       }
     }
@@ -148,9 +141,7 @@ HTTP Status Code: 200 (OK)
 ``` json
 
   {
-    "{{schema.Singular}}": {
-      {
-{% for property in schema.Properties %}
+    "{{schema.Singular}}": { {% for property in schema.Properties %}
         "{{ property.ID }}": ${{ property.ID }}{% if not forloop.Last %},{%endif%}{% endfor %}
       }
     }
