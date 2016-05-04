@@ -446,3 +446,25 @@ WARNING: The value of watched etcd keys must be a JSON dictionary.
 .. code-block:: yaml
 
    editable_schema: ./example_schema.yaml
+
+Graceful Shutdown and Restart
+-----------------------------
+
+Gohan support graceful shutdown and restart.
+
+For graceful shutdown, send SIGTERM for gohan process.
+For graceful restart, you need to use server-starter utility.
+
+.. code-block:: shell
+
+  gohan glace-server --config-file etc/gohan.yaml
+
+or you can use start_server utility
+
+.. code-block:: shell
+
+  # Installation
+  go get github.com/lestrrat/go-server-starter/cmd/start_server
+  
+  # Run gohan server with start_server utility
+  start_server --port 9091 -- gohan server --config-file etc/gohan.yaml

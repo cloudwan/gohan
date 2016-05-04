@@ -28,7 +28,7 @@ import (
 	"github.com/rackspace/gophercloud"
 )
 
-const webuiPATH = "/webui"
+const webuiPATH = "/webui/"
 
 type responseHijacker struct {
 	martini.ResponseWriter

@@ -1080,7 +1080,6 @@ func startTestServer(config string) error {
 			return
 		}
 	}()
-	defer server.Stop()
 	return nil
 }
 
