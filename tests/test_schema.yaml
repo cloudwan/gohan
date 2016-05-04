@@ -9,22 +9,19 @@ extensions:
   path: /v2.0/test.*
 - code: |
     gohan_register_handler("hello", function (context) {
-        context.response_code = 200;
         context.response = {"output": "Hello, " + context.input.name + "!"};
     });
   id: test
   path: /v2.0/responder
 - code: |
     gohan_register_handler("hi", function (context) {
-        context.response_code = 200;
-        context.response = {"output": "Hi, " + context.input.name + "!"};
+        context.response = ["Hi", context.input.name, "!"];
     });
   id: test
   path: /v2.0/responder
 - code: |
     gohan_register_handler("dobranoc", function (context) {
-        context.response_code = 200;
-        context.response = {"output": "Dobranoc!"};
+        context.response = "Dobranoc!";
     });
   id: test
   path: /v2.0/responder
