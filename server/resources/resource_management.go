@@ -700,9 +700,11 @@ func ActionResource(context middleware.Context, dataStore db.DB, identityService
 		return fmt.Errorf("No environment for schema")
 	}
 
-	err := resourceSchema.Validate(actionSchema, data)
-	if err != nil {
-		return ResourceError{err, fmt.Sprintf("Validation error: %s", err), WrongData}
+	if actionSchema != nil {
+		err := resourceSchema.Validate(actionSchema, data)
+		if err != nil {
+			return ResourceError{err, fmt.Sprintf("Validation error: %s", err), WrongData}
+		}
 	}
 
 	if err := extension.HandleEvent(context, environment, action.ID); err != nil {

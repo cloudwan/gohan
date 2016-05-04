@@ -329,7 +329,15 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 			addJSONContentTypeHeader(w)
 			fillInContext(context, dataStore, r, w, s, server.sync, identityService, server.queue)
 			id := p["id"]
-			input, err := middleware.ReadJSON(r)
+			input := make(map[string]interface{})
+			if action.InputSchema != nil {
+				var err error
+				input, err = middleware.ReadJSON(r)
+				if err != nil {
+					handleError(w, resources.NewResourceError(err, fmt.Sprintf("Failed to parse data: %s", err), resources.WrongData))
+					return
+				}
+			}
 
 			// TODO use authorization middleware
 			manager := schema.GetManager()
@@ -345,11 +353,6 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 			context["role"] = role
 			context["catalog"] = auth.Catalog()
 			context["auth"] = auth
-
-			if err != nil {
-				handleError(w, resources.NewResourceError(err, fmt.Sprintf("Failed to parse data: %s", err), resources.WrongData))
-				return
-			}
 
 			if err := resources.ActionResource(
 				context, dataStore, identityService, s, action, id, input); err != nil {
