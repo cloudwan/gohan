@@ -719,11 +719,8 @@ func ActionResource(context middleware.Context, dataStore db.DB, identityService
 		return err
 	}
 
-	if rawResponse, ok := context["response"]; ok {
-		if _, ok := rawResponse.(map[string]interface{}); ok {
-			return nil
-		}
-		return fmt.Errorf("extension returned invalid JSON: %v", rawResponse)
+	if _, ok := context["response"]; ok {
+		return nil
 	}
 
 	return fmt.Errorf("no response")
