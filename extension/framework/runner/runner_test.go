@@ -197,21 +197,33 @@ var _ = Describe("Runner", func() {
 			})
 		})
 
-		Context("When incorrectly using the Gohan HTTP mock", func() {
+		Context("When incorrectly using mock", func() {
 			BeforeEach(func() {
 				testFile = "./test_data/mock_validate.js"
 			})
 
 			It("Should return the proper errors", func() {
-				Expect(errors).To(HaveLen(4))
+				Expect(errors).To(HaveLen(3))
 				Expect(errors).To(HaveKeyWithValue(
 					"testMockExpectNotSpecified", MatchError(ContainSubstring("Expect() should be specified for each call to"))))
 				Expect(errors).To(HaveKeyWithValue(
 					"testMockReturnNotSpecified", MatchError(ContainSubstring("Return() should be specified for each call to"))))
 				Expect(errors).To(HaveKeyWithValue(
-					"testMockExpectEmpty", MatchError(ContainSubstring("Expect() should be called with at least one argument"))))
-				Expect(errors).To(HaveKeyWithValue(
 					"testMockReturnEmpty", MatchError(ContainSubstring("Return() should be called with exactly one argument"))))
+			})
+		})
+
+		Context("When mock expected calls do not occur", func() {
+			BeforeEach(func() {
+				testFile = "./test_data/mock_calls_not_made.js"
+			})
+
+			It("Should work", func() {
+				Expect(errors).To(HaveLen(2))
+				Expect(errors).To(HaveKeyWithValue(
+					"testFirstMockCallNotMade", MatchError("Expected call to gohan_http([POST]) with return value OK, but not made")))
+				Expect(errors).To(HaveKeyWithValue(
+					"testLastMockCallNotMade", MatchError("Expected call to gohan_http([GET]) with return value OK, but not made")))
 			})
 		})
 
@@ -234,17 +246,22 @@ var _ = Describe("Runner", func() {
 			})
 		})
 
-		Context("When Gohan HTTP mock expected calls do not occur", func() {
+		Context("When correctly using the Gohan DB Transaction mock", func() {
 			BeforeEach(func() {
-				testFile = "./test_data/mock_calls_not_made.js"
+				testFile = "./test_data/gohan_db_transaction_mock.js"
 			})
 
 			It("Should work", func() {
-				Expect(errors).To(HaveLen(2))
+				Expect(errors).To(HaveLen(4))
 				Expect(errors).To(HaveKeyWithValue(
-					"testFirstMockCallNotMade", MatchError("Expected call to gohan_http([POST]) with return value OK, but not made")))
+					"testUnexpectedCall", MatchError(ContainSubstring("Unexpected call"))))
+				Expect(errors).To(HaveKeyWithValue("testSingleReturnSingleCall", BeNil()))
 				Expect(errors).To(HaveKeyWithValue(
-					"testLastMockCallNotMade", MatchError("Expected call to gohan_http([GET]) with return value OK, but not made")))
+					"testSingleReturnMultipleCalls", MatchError(ContainSubstring("Unexpected call"))))
+				Expect(errors).To(HaveKeyWithValue(
+					"testWrongArgumentsCall", MatchError(ContainSubstring("Wrong arguments"))))
+				Expect(errors).To(HaveKeyWithValue(
+					"testWrongArgumentsCall", MatchError(ContainSubstring("expected []"))))
 			})
 		})
 

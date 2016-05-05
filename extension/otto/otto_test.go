@@ -555,6 +555,53 @@ var _ = Describe("Otto extension manager", func() {
 			})
 		})
 
+		Describe("Using gohan_db_transaction", func() {
+			BeforeEach(func() {
+				schemaID = "network"
+				action = "read"
+			})
+
+			Context("When given a transaction", func() {
+				It("Correctly handles CRUD operations", func() {
+					extension, err := schema.NewExtension(map[string]interface{}{
+						"id": "test_extension",
+						"code": `
+						gohan_register_handler("test_event", function(context){
+						  var tx = gohan_db_transaction();
+						  gohan_db_create(tx,
+						    'network', {
+								'id':'test1',
+								'name': 'name',
+								'description': 'description',
+								'providor_networks': {},
+								'route_targets': [],
+								'shared': false,
+								'tenant_id': 'admin'});
+						  context.network = gohan_db_fetch(tx, 'network', 'test1', 'admin');
+						  gohan_db_update(tx,
+						    'network', {'id':'test1', 'name': 'name_updated', 'tenant_id': 'admin'});
+						  context.networks = gohan_db_list(tx, 'network', {});
+						  gohan_db_delete(tx, 'network', 'test1');
+						  context.networks2 = gohan_db_list(tx, 'network', {});
+						  tx.Commit();
+						});`,
+						"path": ".*",
+					})
+					Expect(err).ToNot(HaveOccurred())
+					extensions := []*schema.Extension{extension}
+					env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
+					env.LoadExtensionsForPath(extensions, "test_path")
+
+					context := map[string]interface{}{
+						"id": "test",
+					}
+					Expect(env.HandleEvent("test_event", context)).To(Succeed())
+					Expect(context["network"]).ToNot(BeNil())
+					Expect(context["networks"]).ToNot(BeNil())
+				})
+			})
+		})
+
 		Describe("Using chaining builtins", func() {
 			BeforeEach(func() {
 				schemaID = "network"

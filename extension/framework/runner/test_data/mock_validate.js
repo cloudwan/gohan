@@ -25,10 +25,6 @@ function testMockReturnNotSpecified() {
   gohan_http.Expect("POST");
 }
 
-function testMockExpectEmpty() {
-  gohan_http.Expect().Return("OK");
-}
-
 function testMockReturnEmpty() {
   gohan_http.Expect("POST").Return();
 }

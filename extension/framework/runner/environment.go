@@ -21,6 +21,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/cloudwan/gohan/db"
@@ -185,6 +186,7 @@ func (env *Environment) addTestingAPI() {
 	// function, so the following function has to be written in pure JavaScript.
 	env.VM.Run(`function GohanTrigger(event, context) { gohan_handle_event(event, context); }`)
 	env.mockFunction("gohan_http")
+	env.mockFunction("gohan_db_transaction")
 }
 
 func (env *Environment) getTransaction() transaction.Transaction {
@@ -234,9 +236,6 @@ func (env *Environment) mockFunction(functionName string) {
 	env.setToOtto(functionName, "requests", [][]otto.Value{})
 	env.setToOtto(functionName, "Expect", func(call otto.FunctionCall) otto.Value {
 		requests := env.getFromOtto(functionName, "requests").([][]otto.Value)
-		if len(call.ArgumentList) == 0 {
-			call.Otto.Call("Fail", nil, "Expect() should be called with at least one argument")
-		}
 		requests = append(requests, call.ArgumentList)
 		env.setToOtto(functionName, "requests", requests)
 
@@ -294,12 +293,11 @@ func argumentsEqual(a, b []otto.Value) bool {
 }
 
 func valueSliceToString(input []otto.Value) string {
-	output := "["
-	for _, v := range input {
-		output += fmt.Sprintf("%v, ", gohan_otto.ConvertOttoToGo(v))
+	values := make([]string, len(input))
+	for i, v := range input {
+		values[i] = fmt.Sprintf("%v", gohan_otto.ConvertOttoToGo(v))
 	}
-	output = output[:len(output)-2] + "]"
-	return output
+	return "[" + strings.Join(values, ", ") + "]"
 }
 
 func (env *Environment) loadSchemas() error {
