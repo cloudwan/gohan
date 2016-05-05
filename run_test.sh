@@ -17,7 +17,6 @@ echo "mode: count" > profile.cov
 # Standard go tooling behavior is to ignore dirs with leading underscors
 for dir in $(find . -maxdepth 10 -not -path './.git*' -not -path '*/_*' -not -path './vendor/*' -type d);
 do
-result=0
 if ls $dir/*.go &> /dev/null; then
     go test -race -covermode=atomic -coverprofile=$dir/profile.tmp $dir
     result=$?
@@ -27,14 +26,10 @@ if ls $dir/*.go &> /dev/null; then
         rm $dir/profile.tmp
     fi
     if [ $result -ne 0 ]; then
-        exit
+        exit $result
     fi
 fi
 done
 
-if [ $result -eq 0 ]; then
-    go tool cover -func profile.cov
-fi
-
+go tool cover -func profile.cov
 kill $ETCD_PID
-exit $result
