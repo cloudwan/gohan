@@ -70,6 +70,7 @@ func Run(name, usage, version string) {
 		getTestCommand(),
 		getOpenAPICommand(),
 		getMarkdownCommand(),
+		getDotCommand(),
 		getGraceServerCommand(),
 	}
 	app.Run(os.Args)
