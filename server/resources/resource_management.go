@@ -707,17 +707,8 @@ func ActionResource(context middleware.Context, dataStore db.DB, identityService
 		}
 	}
 
-	if err := extension.HandleEvent(context, environment, action.ID); err != nil {
-		return err
-	}
-
-	if err := InTransaction(context, dataStore, transaction.GetIsolationLevel(resourceSchema, action.ID), func() error {
-		return extension.HandleEvent(context, environment, fmt.Sprintf("post_%s_in_transaction", action.ID))
-	}); err != nil {
-		return err
-	}
-
-	if err := extension.HandleEvent(context, environment, fmt.Sprintf("post_%s", action.ID)); err != nil {
+	err := extension.HandleEvent(context, environment, action.ID)
+	if err != nil {
 		return err
 	}
 

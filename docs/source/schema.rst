@@ -623,23 +623,11 @@ Then, register extension to handle it, e.g.
 
 .. code-block:: javascript
 
-  gohan_register_handler("pre_action_reboot_in_transaction", function(context){
-    // retrieve necessary details regarding vm from db
-  });
-
   gohan_register_handler("action_reboot", function(context){
     // handle reboot in southbound
   });
 
 In order to query above action, POST to /v1.0/servers/:id/action with
-
-Available events
-
-- pre_$action
-- pre_$action_in_transaction
-- $action
-- post_$action_in_transaction
-- post_$action
 
 .. code-block:: json
 

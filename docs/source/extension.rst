@@ -131,6 +131,11 @@ update data in db without informing etcd
 
 delete data in db
 
+- gohan_db_transaction()
+
+start a new DB transaction. You are responsible for managing tranansactions created by this function. Call .Close() or .Commit() after using the return value.
+
+
 - gohan_model_list(context, schema_id, filter)
 
   Retrieve data through Gohan.

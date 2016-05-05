@@ -27,6 +27,15 @@ func init() {
 	gohanDBInit := func(env *Environment) {
 		vm := env.VM
 		builtins := map[string]interface{}{
+			"gohan_db_transaction": func(call otto.FunctionCall) otto.Value {
+				VerifyCallArguments(&call, "gohan_db_transaction", 0)
+				tx, err := env.DataStore.Begin()
+				if err != nil {
+					ThrowOttoException(&call, "failed to start a transaction")
+				}
+				value, _ := vm.ToValue(tx)
+				return value
+			},
 			"gohan_db_list": func(call otto.FunctionCall) otto.Value {
 				VerifyCallArguments(&call, "gohan_db_list", 3)
 				rawTransaction, _ := call.Argument(0).Export()
