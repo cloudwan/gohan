@@ -155,7 +155,6 @@ extensions:
   code_type: gohanscript
   code: |
     tasks:
-    - sleep: 10000
     - when: event_type == "post_create_in_transaction"
       blocks:
       #  Try debugger
