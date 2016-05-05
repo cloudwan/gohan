@@ -972,13 +972,18 @@ var _ = Describe("Server package test", func() {
 			Expect(result).To(Equal(map[string]interface{}{
 				"output": "Hello, Heisenberg!",
 			}))
+
+			testHiAction := map[string]interface{}{
+				"name": "Heisenberg",
+			}
+
+			result = testURL("POST", responderPluralURL+"/r1/hi", adminTokenID, testHiAction, http.StatusOK)
+			Expect(result).To(Equal([]interface{}{"Hi", "Heisenberg", "!"}))
 		})
 
 		It("should work without input shema", func() {
 			result := testURL("GET", responderPluralURL+"/r1/dobranoc", memberTokenID, nil, http.StatusOK)
-			Expect(result).To(Equal(map[string]interface{}{
-				"output": "Dobranoc!",
-			}))
+			Expect(result).To(Equal("Dobranoc!"))
 		})
 
 		It("should be unauthorized", func() {
