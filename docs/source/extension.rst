@@ -95,7 +95,7 @@ data : post or put data
 options : dictionary of options for http client
 opaque : boolean - whether to parse URL or to treat it as raw
 
-- gohan_db_list(transaction, schema_id, filter_object)
+- gohan_db_list(transaction, schema_id, filter_object[, order_key[, limit[, offset]]])
 
 retrive all data from database
 

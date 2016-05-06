@@ -18,6 +18,7 @@ package otto
 import (
 	"github.com/dop251/otto"
 
+	"github.com/cloudwan/gohan/db/pagination"
 	"github.com/cloudwan/gohan/db/sql"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
@@ -37,7 +38,14 @@ func init() {
 				return value
 			},
 			"gohan_db_list": func(call otto.FunctionCall) otto.Value {
-				VerifyCallArguments(&call, "gohan_db_list", 3)
+				if len(call.ArgumentList) < 3 {
+					ThrowOttoException(
+						&call,
+						"Expected at least 3 arguments in gohan_db_list call, %d arguments given",
+						len(call.ArgumentList),
+					)
+				}
+
 				rawTransaction, _ := call.Argument(0).Export()
 				transaction, ok := rawTransaction.(transaction.Transaction)
 				var err error
@@ -55,12 +63,41 @@ func init() {
 				if filterObj != nil {
 					filter = filterObj.(map[string]interface{})
 				}
+
 				manager := schema.GetManager()
 				schema, ok := manager.Schema(schemaID)
 				if !ok {
 					ThrowOttoException(&call, unknownSchemaErrorMesssageFormat, schemaID)
 				}
-				resources, _, err := transaction.List(schema, filter, nil)
+
+				var pagenator *pagination.Paginator
+				if len(call.ArgumentList) > 3 {
+					key := call.Argument(3).String()
+					limit := uint64(0)  // no limit
+					offset := uint64(0) // no offset
+					if len(call.ArgumentList) > 4 {
+						rawLimit, err := call.Argument(4).ToInteger()
+						if err != nil {
+							ThrowOttoException(&call, "limit must be an integer")
+						}
+						limit = uint64(rawLimit)
+					}
+					if len(call.ArgumentList) > 5 {
+						rawOffset, err := call.Argument(5).ToInteger()
+						if err != nil {
+							ThrowOttoException(&call, "offset must be an integer")
+						}
+						offset = uint64(rawOffset)
+					}
+
+					pagenator, err = pagination.NewPaginator(schema, key, "", limit, offset)
+					if err != nil {
+						ThrowOttoException(&call, "Error during gohan_db_list: %s", err.Error())
+					}
+				}
+
+				resources, _, err := transaction.List(schema, filter, pagenator)
+
 				if err != nil {
 					ThrowOttoException(&call, "Error during gohan_db_list: %s", err.Error())
 				}
