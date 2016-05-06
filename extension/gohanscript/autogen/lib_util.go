@@ -33,6 +33,45 @@ func init() {
 
 		})
 
+	gohanscript.RegisterStmtParser("format_uuid",
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			stmtErr := stmt.HasArgs(
+				"uuid")
+			if stmtErr != nil {
+				return nil, stmtErr
+			}
+			return func(context *gohanscript.Context) (interface{}, error) {
+
+				var uuid string
+				iuuid := stmt.Arg("uuid", context)
+				if iuuid != nil {
+					uuid = iuuid.(string)
+				}
+
+				result1,
+					err :=
+					lib.FormatUUID(
+						uuid)
+
+				return result1, err
+
+			}, nil
+		})
+	gohanscript.RegisterMiniGoFunc("FormatUUID",
+		func(vm *gohanscript.VM, args []interface{}) []interface{} {
+
+			uuid := args[0].(string)
+
+			result1,
+				err :=
+				lib.FormatUUID(
+					uuid)
+			return []interface{}{
+				result1,
+				err}
+
+		})
+
 	gohanscript.RegisterStmtParser("env",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
 			stmtErr := stmt.HasArgs()

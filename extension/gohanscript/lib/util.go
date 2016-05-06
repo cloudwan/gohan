@@ -12,6 +12,12 @@ func UUID() string {
 	return uuidlib.NewV4().String()
 }
 
+//FormatUUID format uuidv4
+func FormatUUID(uuid string) (string, error) {
+	u, err := uuidlib.Parse(uuid)
+	return u.String(), err
+}
+
 //Env returns map of env values
 func Env() map[string]interface{} {
 	envs := os.Environ()
