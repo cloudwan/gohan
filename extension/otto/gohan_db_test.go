@@ -32,11 +32,34 @@ import (
 
 var _ = Describe("GohanDb", func() {
 	var (
-		timelimit time.Duration
+		timelimit     time.Duration
+		manager       *schema.Manager
+		s             *schema.Schema
+		ok            bool
+		fakeResources []map[string]interface{}
+		err           error
+		r0, r1        *schema.Resource
 	)
+
+	var ()
 
 	BeforeEach(func() {
 		timelimit = time.Second
+
+		manager = schema.GetManager()
+		s, ok = manager.Schema("test")
+		Expect(ok).To(BeTrue())
+
+		fakeResources = []map[string]interface{}{
+			map[string]interface{}{"tenant_id": "t0", "test_string": "str0"},
+			map[string]interface{}{"tenant_id": "t1", "test_string": "str1"},
+		}
+
+		r0, err = schema.NewResource(s, fakeResources[0])
+		Expect(err).ToNot(HaveOccurred())
+		r1, err = schema.NewResource(s, fakeResources[1])
+		Expect(err).ToNot(HaveOccurred())
+
 	})
 
 	Describe("gohan_db_list", func() {
@@ -59,20 +82,6 @@ var _ = Describe("GohanDb", func() {
 				extensions := []*schema.Extension{extension}
 				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
 				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
-
-				manager := schema.GetManager()
-				s, ok := manager.Schema("test")
-				Expect(ok).To(BeTrue())
-
-				fakeResources := []map[string]interface{}{
-					map[string]interface{}{"tenant_id": "t0", "test_string": "str0"},
-					map[string]interface{}{"tenant_id": "t1", "test_string": "str1"},
-				}
-
-				r0, err := schema.NewResource(s, fakeResources[0])
-				Expect(err).ToNot(HaveOccurred())
-				r1, err := schema.NewResource(s, fakeResources[1])
-				Expect(err).ToNot(HaveOccurred())
 
 				var pagenator *pagination.Paginator
 				var fakeTx = new(mocks.Transaction)
@@ -117,20 +126,6 @@ var _ = Describe("GohanDb", func() {
 				extensions := []*schema.Extension{extension}
 				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
 				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
-
-				manager := schema.GetManager()
-				s, ok := manager.Schema("test")
-				Expect(ok).To(BeTrue())
-
-				fakeResources := []map[string]interface{}{
-					map[string]interface{}{"tenant_id": "t0", "test_string": "str0"},
-					map[string]interface{}{"tenant_id": "t1", "test_string": "str1"},
-				}
-
-				r0, err := schema.NewResource(s, fakeResources[0])
-				Expect(err).ToNot(HaveOccurred())
-				r1, err := schema.NewResource(s, fakeResources[1])
-				Expect(err).ToNot(HaveOccurred())
 
 				pagenator := &pagination.Paginator{
 					Key:   "test_string",
@@ -179,20 +174,6 @@ var _ = Describe("GohanDb", func() {
 				extensions := []*schema.Extension{extension}
 				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
 				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
-
-				manager := schema.GetManager()
-				s, ok := manager.Schema("test")
-				Expect(ok).To(BeTrue())
-
-				fakeResources := []map[string]interface{}{
-					map[string]interface{}{"tenant_id": "t0", "test_string": "str0"},
-					map[string]interface{}{"tenant_id": "t1", "test_string": "str1"},
-				}
-
-				r0, err := schema.NewResource(s, fakeResources[0])
-				Expect(err).ToNot(HaveOccurred())
-				r1, err := schema.NewResource(s, fakeResources[1])
-				Expect(err).ToNot(HaveOccurred())
 
 				pagenator := &pagination.Paginator{
 					Key:   "test_string",
@@ -243,20 +224,6 @@ var _ = Describe("GohanDb", func() {
 				extensions := []*schema.Extension{extension}
 				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
 				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
-
-				manager := schema.GetManager()
-				s, ok := manager.Schema("test")
-				Expect(ok).To(BeTrue())
-
-				fakeResources := []map[string]interface{}{
-					map[string]interface{}{"tenant_id": "t0", "test_string": "str0"},
-					map[string]interface{}{"tenant_id": "t1", "test_string": "str1"},
-				}
-
-				r0, err := schema.NewResource(s, fakeResources[0])
-				Expect(err).ToNot(HaveOccurred())
-				r1, err := schema.NewResource(s, fakeResources[1])
-				Expect(err).ToNot(HaveOccurred())
 
 				pagenator := &pagination.Paginator{
 					Key:    "test_string",
@@ -309,10 +276,6 @@ var _ = Describe("GohanDb", func() {
 				extensions := []*schema.Extension{extension}
 				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
 				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
-
-				manager := schema.GetManager()
-				s, ok := manager.Schema("test")
-				Expect(ok).To(BeTrue())
 
 				var fakeTx = new(mocks.Transaction)
 				fakeTx.On(
@@ -418,20 +381,6 @@ var _ = Describe("GohanDb", func() {
 				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
 				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
 
-				manager := schema.GetManager()
-				s, ok := manager.Schema("test")
-				Expect(ok).To(BeTrue())
-
-				fakeResources := []map[string]interface{}{
-					map[string]interface{}{"tenant_id": "t0", "test_string": "str0"},
-					map[string]interface{}{"tenant_id": "t1", "test_string": "str1"},
-				}
-
-				r0, err := schema.NewResource(s, fakeResources[0])
-				Expect(err).ToNot(HaveOccurred())
-				r1, err := schema.NewResource(s, fakeResources[1])
-				Expect(err).ToNot(HaveOccurred())
-
 				var fakeTx = new(mocks.Transaction)
 				fakeTx.On(
 					"Query", s, "SELECT DUMMY", []interface{}{"tenant0", "obj1"},
@@ -527,10 +476,6 @@ var _ = Describe("GohanDb", func() {
 				extensions := []*schema.Extension{extension}
 				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
 				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
-
-				manager := schema.GetManager()
-				s, ok := manager.Schema("test")
-				Expect(ok).To(BeTrue())
 
 				var fakeTx = new(mocks.Transaction)
 				fakeTx.On(
