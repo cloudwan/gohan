@@ -19,6 +19,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/cloudwan/gohan/db/pagination"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/db/transaction/mocks"
 	"github.com/cloudwan/gohan/extension/otto"
@@ -31,11 +32,227 @@ import (
 
 var _ = Describe("GohanDb", func() {
 	var (
-		timelimit time.Duration
+		timelimit     time.Duration
+		manager       *schema.Manager
+		s             *schema.Schema
+		ok            bool
+		fakeResources []map[string]interface{}
+		err           error
+		r0, r1        *schema.Resource
 	)
+
+	var ()
 
 	BeforeEach(func() {
 		timelimit = time.Second
+
+		manager = schema.GetManager()
+		s, ok = manager.Schema("test")
+		Expect(ok).To(BeTrue())
+
+		fakeResources = []map[string]interface{}{
+			map[string]interface{}{"tenant_id": "t0", "test_string": "str0"},
+			map[string]interface{}{"tenant_id": "t1", "test_string": "str1"},
+		}
+
+		r0, err = schema.NewResource(s, fakeResources[0])
+		Expect(err).ToNot(HaveOccurred())
+		r1, err = schema.NewResource(s, fakeResources[1])
+		Expect(err).ToNot(HaveOccurred())
+
+	})
+
+	Describe("gohan_db_list", func() {
+		Context("When valid minimum parameters are given", func() {
+			It("returns the list ordered by id", func() {
+				extension, err := schema.NewExtension(map[string]interface{}{
+					"id": "test_extension",
+					"code": `
+					  gohan_register_handler("test_event", function(context){
+					    var tx = context.transaction;
+					    context.resp = gohan_db_list(
+					      tx,
+					      "test",
+					      {"tenant_id": "tenant0"}
+					    );
+					  });`,
+					"path": ".*",
+				})
+				Expect(err).ToNot(HaveOccurred())
+				extensions := []*schema.Extension{extension}
+				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
+				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+
+				var pagenator *pagination.Paginator
+				var fakeTx = new(mocks.Transaction)
+				fakeTx.On(
+					"List", s, map[string]interface{}{"tenant_id": "tenant0"}, pagenator,
+				).Return(
+					[]*schema.Resource{r0, r1},
+					uint64(2),
+					nil,
+				)
+
+				context := map[string]interface{}{
+					"transaction": fakeTx,
+				}
+				Expect(env.HandleEvent("test_event", context)).To(Succeed())
+
+				Expect(context["resp"]).To(
+					Equal(
+						fakeResources,
+					),
+				)
+			})
+		})
+
+		Context("When 4 parameters are given", func() {
+			It("returns the list ordered by given clumn", func() {
+				extension, err := schema.NewExtension(map[string]interface{}{
+					"id": "test_extension",
+					"code": `
+					  gohan_register_handler("test_event", function(context){
+					    var tx = context.transaction;
+					    context.resp = gohan_db_list(
+					      tx,
+					      "test",
+					      {"tenant_id": "tenant0"},
+					      "test_string"
+					    );
+					  });`,
+					"path": ".*",
+				})
+				Expect(err).ToNot(HaveOccurred())
+				extensions := []*schema.Extension{extension}
+				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
+				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+
+				pagenator := &pagination.Paginator{
+					Key:   "test_string",
+					Order: pagination.ASC,
+				}
+				var fakeTx = new(mocks.Transaction)
+				fakeTx.On(
+					"List", s, map[string]interface{}{"tenant_id": "tenant0"}, pagenator,
+				).Return(
+					[]*schema.Resource{r0, r1},
+					uint64(2),
+					nil,
+				)
+
+				context := map[string]interface{}{
+					"transaction": fakeTx,
+				}
+				Expect(env.HandleEvent("test_event", context)).To(Succeed())
+
+				Expect(context["resp"]).To(
+					Equal(
+						fakeResources,
+					),
+				)
+			})
+		})
+
+		Context("When 5 parameters are given", func() {
+			It("returns the list ordered by given clumn and limited", func() {
+				extension, err := schema.NewExtension(map[string]interface{}{
+					"id": "test_extension",
+					"code": `
+					  gohan_register_handler("test_event", function(context){
+					    var tx = context.transaction;
+					    context.resp = gohan_db_list(
+					      tx,
+					      "test",
+					      {"tenant_id": "tenant0"},
+					      "test_string",
+					      100
+					    );
+					  });`,
+					"path": ".*",
+				})
+				Expect(err).ToNot(HaveOccurred())
+				extensions := []*schema.Extension{extension}
+				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
+				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+
+				pagenator := &pagination.Paginator{
+					Key:   "test_string",
+					Order: pagination.ASC,
+					Limit: 100,
+				}
+				var fakeTx = new(mocks.Transaction)
+				fakeTx.On(
+					"List", s, map[string]interface{}{"tenant_id": "tenant0"}, pagenator,
+				).Return(
+					[]*schema.Resource{r0, r1},
+					uint64(2),
+					nil,
+				)
+
+				context := map[string]interface{}{
+					"transaction": fakeTx,
+				}
+				Expect(env.HandleEvent("test_event", context)).To(Succeed())
+
+				Expect(context["resp"]).To(
+					Equal(
+						fakeResources,
+					),
+				)
+			})
+		})
+
+		Context("When 6 parameters are given", func() {
+			It("returns the list ordered by given clumn and limited with offset", func() {
+				extension, err := schema.NewExtension(map[string]interface{}{
+					"id": "test_extension",
+					"code": `
+					  gohan_register_handler("test_event", function(context){
+					    var tx = context.transaction;
+					    context.resp = gohan_db_list(
+					      tx,
+					      "test",
+					      {"tenant_id": "tenant0"},
+					      "test_string",
+					      100,
+					      10
+					    );
+					  });`,
+					"path": ".*",
+				})
+				Expect(err).ToNot(HaveOccurred())
+				extensions := []*schema.Extension{extension}
+				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
+				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+
+				pagenator := &pagination.Paginator{
+					Key:    "test_string",
+					Order:  pagination.ASC,
+					Limit:  100,
+					Offset: 10,
+				}
+				var fakeTx = new(mocks.Transaction)
+				fakeTx.On(
+					"List", s, map[string]interface{}{"tenant_id": "tenant0"}, pagenator,
+				).Return(
+					[]*schema.Resource{r0, r1},
+					uint64(2),
+					nil,
+				)
+
+				context := map[string]interface{}{
+					"transaction": fakeTx,
+				}
+				Expect(env.HandleEvent("test_event", context)).To(Succeed())
+
+				Expect(context["resp"]).To(
+					Equal(
+						fakeResources,
+					),
+				)
+			})
+		})
+
 	})
 
 	Describe("gohan_db_state_fetch", func() {
@@ -59,10 +276,6 @@ var _ = Describe("GohanDb", func() {
 				extensions := []*schema.Extension{extension}
 				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
 				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
-
-				manager := schema.GetManager()
-				s, ok := manager.Schema("test")
-				Expect(ok).To(BeTrue())
 
 				var fakeTx = new(mocks.Transaction)
 				fakeTx.On(
@@ -168,20 +381,6 @@ var _ = Describe("GohanDb", func() {
 				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
 				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
 
-				manager := schema.GetManager()
-				s, ok := manager.Schema("test")
-				Expect(ok).To(BeTrue())
-
-				fakeResources := []map[string]interface{}{
-					map[string]interface{}{"tenant_id": "t0", "test_string": "str0"},
-					map[string]interface{}{"tenant_id": "t1", "test_string": "str1"},
-				}
-
-				r0, err := schema.NewResource(s, fakeResources[0])
-				Expect(err).ToNot(HaveOccurred())
-				r1, err := schema.NewResource(s, fakeResources[1])
-				Expect(err).ToNot(HaveOccurred())
-
 				var fakeTx = new(mocks.Transaction)
 				fakeTx.On(
 					"Query", s, "SELECT DUMMY", []interface{}{"tenant0", "obj1"},
@@ -277,10 +476,6 @@ var _ = Describe("GohanDb", func() {
 				extensions := []*schema.Extension{extension}
 				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
 				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
-
-				manager := schema.GetManager()
-				s, ok := manager.Schema("test")
-				Expect(ok).To(BeTrue())
 
 				var fakeTx = new(mocks.Transaction)
 				fakeTx.On(
