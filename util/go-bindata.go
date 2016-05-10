@@ -164,7 +164,7 @@ func etcTemplatesDotTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "etc/templates/dot.tmpl", size: 467, mode: os.FileMode(420), modTime: time.Unix(1462392943, 0)}
+	info := bindataFileInfo{name: "etc/templates/dot.tmpl", size: 467, mode: os.FileMode(420), modTime: time.Unix(1462468357, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -184,7 +184,7 @@ func etcTemplatesMarkdownTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "etc/templates/markdown.tmpl", size: 3970, mode: os.FileMode(420), modTime: time.Unix(1462393323, 0)}
+	info := bindataFileInfo{name: "etc/templates/markdown.tmpl", size: 3970, mode: os.FileMode(420), modTime: time.Unix(1462468357, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
