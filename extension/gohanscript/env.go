@@ -107,5 +107,6 @@ func (env *Environment) HandleEvent(event string, context map[string]interface{}
 func (env *Environment) Clone() ext.Environment {
 	newEnv := NewEnvironment(env.timelimit)
 	newEnv.VM = env.VM.Clone()
+	newEnv.VM.StopChan = make(chan func(), 1)
 	return newEnv
 }
