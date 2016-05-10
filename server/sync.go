@@ -447,7 +447,7 @@ func startStateUpdatingProcess(server *Server) {
 		server.sync.Update(statePrefix, "")
 	}
 
-	if _, err := server.sync.Fetch(statePrefix); err == nil {
+	if _, err := server.sync.Fetch(monitoringPrefix); err != nil {
 		server.sync.Update(monitoringPrefix, "")
 	}
 
