@@ -30,6 +30,7 @@ limit             query       xsd:int        0                 Specifies maximum
 offset            query       xsd:int        0                 Specifies number of results to be skipped
 <parent>_id       query       xsd:string     N/A               When resources which have a parent are listed,
                                                                <parent>_id can be specified to show only parent's children.
+<property_id>     query       xsd:string     N/A               filter result by property (exact match). You can use multiple filters.
 ================  ==========  =============  ================  ====================================================
 
 When specified query parameters are invalid, server will return HTTP Status Code ``400`` (Bad Request)
