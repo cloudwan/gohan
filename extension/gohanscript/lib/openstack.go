@@ -18,10 +18,51 @@ package lib
 import (
 	"fmt"
 	"net/http"
+	"net/url"
+	"time"
 
 	"github.com/rackspace/gophercloud"
 	"github.com/rackspace/gophercloud/openstack"
 )
+
+func newClient(endpoint string) (*gophercloud.ProviderClient, error) {
+	u, err := url.Parse(endpoint)
+	if err != nil {
+		return nil, err
+	}
+	hadPath := u.Path != ""
+	u.Path, u.RawQuery, u.Fragment = "", "", ""
+	base := u.String()
+
+	endpoint = gophercloud.NormalizeURL(endpoint)
+	base = gophercloud.NormalizeURL(base)
+	timeout := time.Duration(20 * time.Second)
+
+	if !hadPath {
+		endpoint = ""
+	}
+	return &gophercloud.ProviderClient{
+		IdentityBase:     base,
+		IdentityEndpoint: endpoint,
+		HTTPClient: http.Client{
+			Timeout: timeout,
+		},
+	}, nil
+
+}
+
+func authenticatedClient(options gophercloud.AuthOptions) (*gophercloud.ProviderClient, error) {
+	client, err := newClient(options.IdentityEndpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	err = openstack.Authenticate(client, options)
+	if err != nil {
+		return nil, err
+	}
+	return client, nil
+}
 
 //GetOpenstackClient makes openstack client
 func GetOpenstackClient(authURL, userName, password, domainName, tenantName, version string) (*gophercloud.ServiceClient, error) {
