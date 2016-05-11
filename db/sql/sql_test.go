@@ -38,7 +38,7 @@ var _ = Describe("Sql", func() {
 	BeforeEach(func() {
 		var dbType string
 		if os.Getenv("MYSQL_TEST") == "true" {
-			conn = "root@/gohan_test"
+			conn = "gohan:gohan@/gohan_test"
 			dbType = "mysql"
 		} else {
 			conn = "./test.db"
@@ -158,6 +158,29 @@ var _ = Describe("Sql", func() {
 				Expect(table).To(ContainSubstring("REFERENCES `networks`(id) on delete cascade);"))
 				table = sqlConn.GenTableDef(subnet, false)
 				Expect(table).ToNot(ContainSubstring("REFERENCES `networks`(id) on delete cascade);"))
+			})
+		})
+
+		Context("Properties modifed", func() {
+			It("Generate proper alter table statements", func() {
+				server.Properties = append(server.Properties, schema.NewProperty(
+					"test",
+					"test",
+					"",
+					"test",
+					"string",
+					"",
+					"",
+					"varchar(255)",
+					false,
+					false,
+					false,
+					nil,
+					nil,
+				))
+				table, err := sqlConn.AlterTableDef(server, true)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(table).To(ContainSubstring("alter table`servers` add (`test`varchar(255));"))
 			})
 		})
 	})

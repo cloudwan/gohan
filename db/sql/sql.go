@@ -18,13 +18,16 @@ package sql
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/cloudwan/gohan/db/pagination"
-	"github.com/cloudwan/gohan/db/transaction"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/cloudwan/gohan/db/pagination"
+	"github.com/cloudwan/gohan/db/transaction"
+	"github.com/cloudwan/gohan/util"
+
 	"database/sql"
+
 	"github.com/cloudwan/gohan/schema"
 	"github.com/jmoiron/sqlx"
 	sq "github.com/lann/squirrel"
@@ -239,13 +242,14 @@ func (db *DB) Begin() (transaction.Transaction, error) {
 	}, nil
 }
 
-//GenTableDef generates table create sql
-func (db *DB) GenTableDef(s *schema.Schema, cascade bool) string {
-	schemaManager := schema.GetManager()
+func (db *DB) genTableCols(s *schema.Schema, cascade bool, exclude []string) ([]string, []string) {
 	var cols []string
 	var relations []string
-
+	schemaManager := schema.GetManager()
 	for _, property := range s.Properties {
+		if util.ContainsString(exclude, property.ID) {
+			continue
+		}
 		handler := db.handlers[property.Type]
 		dataType := property.SQLType
 		if db.sqlType == "sqlite3" {
@@ -281,6 +285,37 @@ func (db *DB) GenTableDef(s *schema.Schema, cascade bool) string {
 			}
 		}
 	}
+	return cols, relations
+}
+
+//AlterTableDef generates alter table sql
+func (db *DB) AlterTableDef(s *schema.Schema, cascade bool) (string, error) {
+	var existing []string
+	rows, err := db.DB.Query(fmt.Sprintf("select * from `%s`;", s.GetDbTableName()))
+	if err == nil {
+		defer rows.Close()
+		existing, err = rows.Columns()
+	}
+
+	if err != nil {
+		return "", err
+	}
+
+	cols, relations := db.genTableCols(s, cascade, existing)
+	cols = append(cols, relations...)
+	if len(cols) == 0 {
+		return "", nil
+	}
+	alterTable := fmt.Sprintf("alter table`%s` add (%s);\n", s.GetDbTableName(), strings.Join(cols, ","))
+	log.Debug("Altering table: " + alterTable)
+	return alterTable, nil
+}
+
+//GenTableDef generates create table sql
+func (db *DB) GenTableDef(s *schema.Schema, cascade bool) string {
+	schemaManager := schema.GetManager()
+	cols, relations := db.genTableCols(s, cascade, nil)
+
 	if s.Parent != "" {
 		foreignSchema, _ := schemaManager.Schema(s.Parent)
 		cascadeString := ""
@@ -290,6 +325,7 @@ func (db *DB) GenTableDef(s *schema.Schema, cascade bool) string {
 		relations = append(relations, fmt.Sprintf("foreign key(`%s_id`) REFERENCES `%s`(id) %s",
 			s.Parent, foreignSchema.GetDbTableName(), cascadeString))
 	}
+
 	if s.StateVersioning() {
 		cols = append(cols, quote(configVersionColumnName)+"int not null default 1")
 		cols = append(cols, quote(stateVersionColumnName)+"int not null default 0")
@@ -297,6 +333,7 @@ func (db *DB) GenTableDef(s *schema.Schema, cascade bool) string {
 		cols = append(cols, quote(stateColumnName)+"text not null default ''")
 		cols = append(cols, quote(stateMonitoringColumnName)+"text not null default ''")
 	}
+
 	cols = append(cols, relations...)
 	tableSQL := fmt.Sprintf("create table `%s` (%s);\n", s.GetDbTableName(), strings.Join(cols, ","))
 	log.Debug("Creating table: " + tableSQL)
@@ -308,7 +345,14 @@ func (db *DB) RegisterTable(s *schema.Schema, cascade bool) error {
 	if s.IsAbstract() {
 		return nil
 	}
-	_, err := db.DB.Exec(db.GenTableDef(s, cascade))
+	tableDef, err := db.AlterTableDef(s, cascade)
+	if err != nil {
+		tableDef = db.GenTableDef(s, cascade)
+	}
+	if tableDef == "" {
+		return nil
+	}
+	_, err = db.DB.Exec(tableDef)
 	return err
 }
 
