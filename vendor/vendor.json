@@ -133,6 +133,18 @@
 			"revision": "36d5366f4ec038f9a76dd85c7b29074089bb9b9e"
 		},
 		{
+			"checksumSHA1": "HIsIO4+e5awXjNSj/UJzbSePEZQ=",
+			"path": "github.com/kr/pretty",
+			"revision": "add1dbc86daf0f983cd4a48ceb39deb95c729b67",
+			"revisionTime": "2016-03-25T21:56:24Z"
+		},
+		{
+			"checksumSHA1": "uulQHQ7IsRKqDudBC8Go9J0gtAc=",
+			"path": "github.com/kr/text",
+			"revision": "7cafcd837844e784b526369c9bce262804aebc60",
+			"revisionTime": "2016-05-04T02:26:26Z"
+		},
+		{
 			"checksumSHA1": "Z7ikKBduXNW5pxRfmaZvTzQYfZw=",
 			"path": "github.com/lann/builder",
 			"revision": "c603884a2c1fcf331c71940f3227a8111d29f3ba"

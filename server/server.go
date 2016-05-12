@@ -383,6 +383,11 @@ func (server *Server) Stop() {
 	server.queue.Stop()
 }
 
+//Queue returns servers build-in queue
+func (server *Server) Queue() *job.Queue {
+	return server.queue
+}
+
 //RunServer runs gohan api server
 func RunServer(configFile string) {
 	c := make(chan os.Signal, 1)

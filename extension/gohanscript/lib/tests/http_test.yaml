@@ -45,28 +45,28 @@ test_suite:
                     value: 1
       register: testServer
     - http_get:
-       url: '${GetTestServerURL(testServer) + "/test"}'
+       url: '${GetTestServerURL(testServer.server) + "/test"}'
        headers: {}
       register: result
-    - assert: expect='${GetTestServerURL(testServer)}' actual="{{result.contents.host}}"
+    - assert: expect='${GetTestServerURL(testServer.server)}' actual="{{result.contents.host}}"
     - http_post:
-       url: '${GetTestServerURL(testServer) + "/test"}'
+       url: '${GetTestServerURL(testServer.server) + "/test"}'
        headers: {}
        post_data:
          input: postData
       register: result
     - assert: expect='postData' actual="{{result.contents.post}}"
     - http_put:
-       url: '${GetTestServerURL(testServer) + "/test"}'
+       url: '${GetTestServerURL(testServer.server) + "/test"}'
        headers: {}
        post_data:
          input: putData
       register: result
     - assert: expect='putData' actual="{{result.contents.put}}"
     - http_delete:
-       url: '${GetTestServerURL(testServer) + "/test"}'
+       url: '${GetTestServerURL(testServer.server) + "/test"}'
        headers: {}
     - assert: expect=1 actual="${CounterValue(deleteCount)}"
     - assert: expect=4 actual="${CounterValue(score)}"
     - stop_test_server:
-        server: $testServer
+        server: $testServer.server

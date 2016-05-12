@@ -82,25 +82,28 @@ func pprint(obj interface{}) {
 	pp.Print(obj)
 }
 
-func forEachList(vm *VM, obj []interface{}, workerNum int, f func(item interface{})) {
+func forEachList(vm *VM, obj []interface{}, workerNum int, f func(item interface{}) error) error {
 	if obj == nil {
-		return
+		return nil
 	}
 	size := len(obj)
 	if size == 0 {
-		return
+		return nil
 	}
 	if workerNum == 0 {
 		for _, value := range obj {
 			select {
 			case f := <-vm.StopChan:
 				f()
-				return
+				return nil
 			default:
-				f(value)
+				err := f(value)
+				if err != nil {
+					return err
+				}
 			}
 		}
-		return
+		return nil
 	}
 
 	queue := job.NewQueue(uint(workerNum))
@@ -111,7 +114,7 @@ func forEachList(vm *VM, obj []interface{}, workerNum int, f func(item interface
 		}))
 	}
 	queue.Wait()
-	return
+	return nil
 }
 
 //RunTests find tests under a directory and it executes them.

@@ -21,7 +21,10 @@ import (
 	"time"
 
 	"github.com/cloudwan/gohan/util"
+	"github.com/kr/pretty"
 	"github.com/nati/yaml"
+	"reflect"
+	"strings"
 )
 
 //StmtParser converts gohan script statement for golang function.
@@ -202,17 +205,17 @@ func debug(stmt *Stmt) (func(*Context) (interface{}, error), error) {
 	return func(context *Context) (interface{}, error) {
 		if msg, ok := stmt.Args["msg"]; ok {
 			log.Debug("%s:%d %s",
-				stmt.File,
+				filepath.Base(stmt.File),
 				stmt.Line,
 				msg.Value(context))
 		} else if id, ok := stmt.Args["var"]; ok {
 			log.Debug("%s:%d %v",
-				stmt.File,
+				filepath.Base(stmt.File),
 				stmt.Line,
 				id.Value(context))
 		} else {
 			log.Debug("%s:%d Dump vars",
-				stmt.File,
+				filepath.Base(stmt.File),
 				stmt.Line)
 			for key, value := range context.data {
 				log.Debug("    %s: %v", key, value)
@@ -346,11 +349,13 @@ func assert(stmt *Stmt) (func(*Context) (interface{}, error), error) {
 	return func(context *Context) (interface{}, error) {
 		expect := stmt.Arg("expect", context)
 		actual := stmt.Arg("actual", context)
-		if expect != actual {
-			return nil, fmt.Errorf("%s:%d error expected: '%v', actual: '%v'",
+		if !reflect.DeepEqual(expect, actual) {
+			return nil, fmt.Errorf("%s:%d error expected: '%v', actual: '%v' \n%v",
 				stmt.File,
 				stmt.Line,
-				expect, actual)
+				expect, actual,
+				strings.Join(pretty.Diff(expect, actual), "\n"),
+			)
 		}
 		return nil, nil
 	}, nil

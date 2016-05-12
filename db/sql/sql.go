@@ -232,6 +232,9 @@ func (db *DB) Begin() (transaction.Transaction, error) {
 	if err != nil {
 		return nil, err
 	}
+	if db.sqlType == "sqlite3" {
+		transaction.Exec("PRAGMA foreign_keys = ON;")
+	}
 	return &Transaction{
 		db:          db,
 		transaction: transaction,

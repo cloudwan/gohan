@@ -102,7 +102,7 @@ func NewStmt(FileName string, node *yaml.Node) (stmt *Stmt, err error) {
 	yaml.UnmarshalNode(node, &rawData)
 	stmt.RawData = util.MaybeMap(convertMapformat(rawData))
 	stmt.Name = util.MaybeString(stmt.RawData["name"])
-	stmt.File = FileName
+	stmt.File, _ = filepath.Abs(FileName)
 	stmt.Dir = filepath.Dir(stmt.File)
 	stmt.Always, err = MakeStmts(FileName, stmt.RawNode["always"])
 	if err != nil {
