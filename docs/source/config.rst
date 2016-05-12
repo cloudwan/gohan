@@ -32,6 +32,8 @@ Gohan server configuration is written in YAML format.
       # connection string
       # it is file path for yaml, json and sqlite3 backend
       connection: "./etc/test.db"
+      # please set no_init true in the production env, so that gohan don't initialize table
+      # no_init: true
       initial_data:
           - type: "yaml"
             connection: "./etc/examples/heat_template.yaml"
@@ -465,6 +467,6 @@ or you can use start_server utility
 
   # Installation
   go get github.com/lestrrat/go-server-starter/cmd/start_server
-  
+
   # Run gohan server with start_server utility
   start_server --port 9091 -- gohan server --config-file etc/gohan.yaml
