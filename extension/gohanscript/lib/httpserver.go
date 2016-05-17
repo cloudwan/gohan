@@ -21,13 +21,14 @@ import (
 	"io/ioutil"
 	"net/http"
 	//"github.com/k0kubun/pp"
+	"net/http/httptest"
+
 	"github.com/cloudwan/gohan/extension/gohanscript"
 	"github.com/cloudwan/gohan/server"
 	"github.com/cloudwan/gohan/server/middleware"
 	"github.com/cloudwan/gohan/util"
 	"github.com/drone/routes"
 	"github.com/go-martini/martini"
-	"net/http/httptest"
 )
 
 func init() {
@@ -62,11 +63,13 @@ func fillInContext(context middleware.Context,
 func httpServer(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
 	return func(globalContext *gohanscript.Context) (interface{}, error) {
 		m := martini.Classic()
-
+		history := []interface{}{}
+		server := map[string]interface{}{
+			"history": history,
+		}
 		m.Handlers()
 		m.Use(middleware.Logging())
 		m.Use(martini.Recovery())
-
 		rawBody := util.MaybeMap(stmt.RawData["http_server"])
 		paths := util.MaybeMap(rawBody["paths"])
 		middlewareCode := util.MaybeString(rawBody["middleware"])
@@ -85,13 +88,29 @@ func httpServer(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}
 				buff := ioutil.NopCloser(bytes.NewBuffer(reqData))
 				r.Body = buff
 				var data interface{}
-				json.Unmarshal(reqData, data)
+				if reqData != nil {
+					json.Unmarshal(reqData, &data)
+				}
 
 				context.Set("request", data)
 				vm.Run(context.Data())
 			})
 		}
-
+		m.Use(func(w http.ResponseWriter, r *http.Request) {
+			reqData, _ := ioutil.ReadAll(r.Body)
+			buff := ioutil.NopCloser(bytes.NewBuffer(reqData))
+			r.Body = buff
+			var data interface{}
+			if reqData != nil {
+				json.Unmarshal(reqData, &data)
+			}
+			server["history"] = append(server["history"].([]interface{}),
+				map[string]interface{}{
+					"method": r.Method,
+					"path":   r.URL.String(),
+					"data":   data,
+				})
+		})
 		for path, body := range paths {
 			methods, ok := body.(map[string]interface{})
 			if !ok {
@@ -147,7 +166,8 @@ func httpServer(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}
 		testMode := stmt.Args["test"].Value(globalContext).(bool)
 		if testMode {
 			ts := httptest.NewServer(m)
-			return ts, nil
+			server["server"] = ts
+			return server, nil
 		}
 		m.RunOnAddr(stmt.Args["address"].Value(globalContext).(string))
 		return nil, nil
@@ -172,7 +192,10 @@ func GohanServer(configFile string, test bool) (interface{}, error) {
 	}
 	if test {
 		ts := httptest.NewServer(s.Router())
-		return ts, nil
+		return map[string]interface{}{
+			"server": ts,
+			"queue":  s.Queue(),
+		}, nil
 	}
 	s.Start()
 	return nil, nil

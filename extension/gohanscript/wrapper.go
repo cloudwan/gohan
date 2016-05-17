@@ -157,7 +157,7 @@ func loopWrapper(stmt *Stmt, f func(*Context) (interface{}, error)) (func(*Conte
 
 		if len(items) > 0 {
 			worker := stmt.Worker
-			forEachList(vm, items, worker, func(item interface{}) {
+			err = forEachList(vm, items, worker, func(item interface{}) error {
 				loopContext := context
 				if stmt.Worker > 0 {
 					loopContext = context.Extend(nil)
@@ -166,11 +166,12 @@ func loopWrapper(stmt *Stmt, f func(*Context) (interface{}, error)) (func(*Conte
 				_, err := f(loopContext)
 				if err != nil {
 					loopContext.Set("error", err.Error())
-					return
+					return err
 				}
 				if stmt.Worker > 0 {
 					loopContext.VM.Stop()
 				}
+				return nil
 			})
 			if err != nil {
 				return

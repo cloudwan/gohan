@@ -78,12 +78,12 @@ func SaveFile(file string, data interface{}) error {
 		bytes, err = json.MarshalIndent(data, "", "    ")
 	} else if strings.HasSuffix(file, ".yaml") || strings.HasSuffix(file, ".yml") {
 		bytes, err = yaml.Marshal(data)
+
 	}
 	if err != nil {
 		return err
 	}
-	ioutil.WriteFile(file, bytes, os.ModePerm)
-	return nil
+	return ioutil.WriteFile(file, bytes, os.ModePerm)
 }
 
 //LoadMap loads map object from file. suffix of filepath will be
