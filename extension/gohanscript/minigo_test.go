@@ -71,6 +71,8 @@ var _ = Describe("Run minigo test", func() {
 			testExpr(context, "2.1 - 1.1", 1.0)
 			testExpr(context, "2.1 / 3.0", 0.7)
 			testExpr(context, "5 % 2", 1)
+			testExpr(context, "1 << 8", 256)
+			testExpr(context, "256 >> 8", 1)
 			context.Set("list", []interface{}{1, 2, 3})
 			testExpr(context, "len(list) == 3", true)
 			testExpr(context, "2 > 1", true)

@@ -154,9 +154,23 @@ func (code *MiniGo) Eval(context *Context, offset int, stack *Stack) ([]interfac
 					return nil, fmt.Errorf("operator ^ not defined for type")
 				}
 			case SHL:
-				return nil, fmt.Errorf("operator << not defined for type")
+				ia := stack.pop()
+				ib := stack.pop()
+				switch a := ia.(type) {
+				case int:
+					stack.push(ib.(int) << uint(a))
+				default:
+					return nil, fmt.Errorf("operator ^ not defined for type")
+				}
 			case SHR:
-				return nil, fmt.Errorf("operator >> not defined for type")
+				ia := stack.pop()
+				ib := stack.pop()
+				switch a := ia.(type) {
+				case int:
+					stack.push(ib.(int) >> uint(a))
+				default:
+					return nil, fmt.Errorf("operator ^ not defined for type")
+				}
 			case AND_NOT:
 				ia := stack.pop()
 				ib := stack.pop()
