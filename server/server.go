@@ -227,8 +227,9 @@ func NewServer(configFile string) (*Server, error) {
 			return nil, fmt.Errorf("invalid schema: %s", err)
 		}
 	}
-
-	server.initDB()
+	if !config.GetBool("database/no_init", false) {
+		server.initDB()
+	}
 
 	if config.GetList("database/initial_data", nil) != nil {
 		initialDataList := config.GetList("database/initial_data", nil)

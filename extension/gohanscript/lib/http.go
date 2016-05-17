@@ -21,6 +21,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"time"
 )
 
 //HTTPGet fetch data using HTTP.
@@ -50,7 +51,8 @@ func HTTPDelete(url string, headers map[string]interface{}) (interface{}, error)
 
 //HTTPRequest request HTTP.
 func HTTPRequest(url string, method string, headers map[string]interface{}, postData map[string]interface{}) (map[string]interface{}, error) {
-	client := &http.Client{}
+	timeout := time.Duration(20 * time.Second)
+	client := &http.Client{Timeout: timeout}
 	var reader io.Reader
 	if postData != nil {
 		jsonByte, err := json.Marshal(postData)
