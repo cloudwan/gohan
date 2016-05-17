@@ -161,13 +161,14 @@ func handleError(writer http.ResponseWriter, err error) {
 
 func fillInContext(context middleware.Context, db db.DB,
 	r *http.Request, w http.ResponseWriter,
-	s *schema.Schema, sync sync.Sync,
+	s *schema.Schema, p martini.Params, sync sync.Sync,
 	identityService middleware.IdentityService,
 	queue *job.Queue) {
 	context["path"] = r.URL.Path
 	context["http_request"] = r
 	context["http_response"] = w
 	context["schema"] = s
+	context["params"] = p
 	context["sync"] = sync
 	context["db"] = db
 	context["queue"] = queue
@@ -208,7 +209,7 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 	//setup list route
 	getPluralFunc := func(w http.ResponseWriter, r *http.Request, p martini.Params, identityService middleware.IdentityService, context middleware.Context) {
 		addJSONContentTypeHeader(w)
-		fillInContext(context, dataStore, r, w, s, server.sync, identityService, server.queue)
+		fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, server.queue)
 		if err := resources.GetMultipleResources(context, dataStore, s, r.URL.Query()); err != nil {
 			handleError(w, err)
 			return
@@ -225,7 +226,7 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 	//setup show route
 	getSingleFunc := func(w http.ResponseWriter, r *http.Request, p martini.Params, identityService middleware.IdentityService, context middleware.Context) {
 		addJSONContentTypeHeader(w)
-		fillInContext(context, dataStore, r, w, s, server.sync, identityService, server.queue)
+		fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, server.queue)
 		id := p["id"]
 		if err := resources.GetSingleResource(context, dataStore, s, id); err != nil {
 			handleError(w, err)
@@ -242,7 +243,7 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 	//setup delete route
 	deleteSingleFunc := func(w http.ResponseWriter, r *http.Request, p martini.Params, identityService middleware.IdentityService, context middleware.Context) {
 		addJSONContentTypeHeader(w)
-		fillInContext(context, dataStore, r, w, s, server.sync, identityService, server.queue)
+		fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, server.queue)
 		id := p["id"]
 		if err := resources.DeleteResource(context, dataStore, s, id); err != nil {
 			handleError(w, err)
@@ -259,7 +260,7 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 	//setup create route
 	postPluralFunc := func(w http.ResponseWriter, r *http.Request, p martini.Params, identityService middleware.IdentityService, context middleware.Context) {
 		addJSONContentTypeHeader(w)
-		fillInContext(context, dataStore, r, w, s, server.sync, identityService, server.queue)
+		fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, server.queue)
 		dataMap, err := middleware.ReadJSON(r)
 		if err != nil {
 			handleError(w, resources.NewResourceError(err, fmt.Sprintf("Failed to parse data: %s", err), resources.WrongData))
@@ -292,7 +293,7 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 	//setup update route
 	putSingleFunc := func(w http.ResponseWriter, r *http.Request, p martini.Params, identityService middleware.IdentityService, context middleware.Context) {
 		addJSONContentTypeHeader(w)
-		fillInContext(context, dataStore, r, w, s, server.sync, identityService, server.queue)
+		fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, server.queue)
 		id := p["id"]
 		dataMap, err := middleware.ReadJSON(r)
 		if err != nil {
@@ -327,7 +328,7 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 		ActionFunc := func(w http.ResponseWriter, r *http.Request, p martini.Params,
 			identityService middleware.IdentityService, auth schema.Authorization, context middleware.Context) {
 			addJSONContentTypeHeader(w)
-			fillInContext(context, dataStore, r, w, s, server.sync, identityService, server.queue)
+			fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, server.queue)
 			id := p["id"]
 			input := make(map[string]interface{})
 			if action.InputSchema != nil {
