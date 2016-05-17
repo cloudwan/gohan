@@ -41,6 +41,7 @@ context has following items
 
   context.schema : schema information
   context.path : url path
+  context.params : query params
   context.role : user role
   context.auth : auth_context information
   context.http_request : Go HTTP request object
