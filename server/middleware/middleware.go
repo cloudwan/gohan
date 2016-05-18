@@ -105,6 +105,35 @@ type IdentityService interface {
 	GetClient() *gophercloud.ServiceClient
 }
 
+//NoIdentityService for disabled auth
+type NoIdentityService struct {
+}
+
+//GetTenantID returns always admin
+func (i *NoIdentityService) GetTenantID(string) (string, error) {
+	return "admin", nil
+}
+
+//GetTenantName returns always admin
+func (i *NoIdentityService) GetTenantName(string) (string, error) {
+	return "admin", nil
+}
+
+//VerifyToken returns always authorization for admin
+func (i *NoIdentityService) VerifyToken(string) (schema.Authorization, error) {
+	return schema.NewAuthorization("admin", "admin", "admin_token", []string{"admin"}, nil), nil
+}
+
+//GetServiceAuthorization returns always authorization for admin
+func (i *NoIdentityService) GetServiceAuthorization() (schema.Authorization, error) {
+	return schema.NewAuthorization("admin", "admin", "admin_token", []string{"admin"}, nil), nil
+}
+
+//GetClient returns always nil
+func (i *NoIdentityService) GetClient() *gophercloud.ServiceClient {
+	return nil
+}
+
 //HTTPJSONError helper for returning JSON errors
 func HTTPJSONError(res http.ResponseWriter, err string, code int) {
 	errorMessage := ""

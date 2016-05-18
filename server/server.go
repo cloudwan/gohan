@@ -270,6 +270,9 @@ func NewServer(configFile string) (*Server, error) {
 		m.MapTo(server.keystoneIdentity, (*middleware.IdentityService)(nil))
 		m.Use(middleware.Authentication())
 		//m.Use(Authorization())
+	}else{
+		m.MapTo(&middleware.NoIdentityService{}, (*middleware.IdentityService)(nil))
+		m.Map(schema.NewAuthorization("admin", "admin", "admin_token", []string{"admin"}, nil))
 	}
 
 	if err != nil {
