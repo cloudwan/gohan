@@ -26,7 +26,7 @@ func IPAdd(ip string, value int) string {
 	i := big.NewInt(0)
 	if strings.Contains(ip, ".") {
 		i.SetBytes(net.ParseIP(ip).To4())
-	}else{
+	} else {
 		i.SetBytes(net.ParseIP(ip).To16())
 	}
 	j := big.NewInt(int64(value))

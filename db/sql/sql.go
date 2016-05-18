@@ -127,6 +127,9 @@ func (handler *boolHandler) encode(property *schema.Property, data interface{}) 
 func (handler *boolHandler) decode(property *schema.Property, data interface{}) (res interface{}, err error) {
 	// different SQL drivers encode result with different type
 	// so we need to do manual checks
+	if data == nil {
+		return nil, nil
+	}
 	switch t := data.(type) {
 	default:
 		err = fmt.Errorf("unknown type %T", t)
@@ -155,10 +158,12 @@ func (handler *numberHandler) encode(property *schema.Property, data interface{}
 func (handler *numberHandler) decode(property *schema.Property, data interface{}) (res interface{}, err error) {
 	// different SQL drivers encode result with different type
 	// so we need to do manual checks
+	if data == nil {
+		return nil, nil
+	}
 	switch t := data.(type) {
 	default:
-		err = fmt.Errorf("unknown type %T", t)
-		return
+		return data, nil
 	case []uint8: // mysql
 		uintValue, _ := strconv.ParseUint(string(t), 10, 64)
 		res = int(uintValue)

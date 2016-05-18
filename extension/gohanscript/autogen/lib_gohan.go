@@ -741,6 +741,54 @@ func init() {
 
 		})
 
+	gohanscript.RegisterStmtParser("db_exec",
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			stmtErr := stmt.HasArgs(
+				"tx", "sql", "arguments")
+			if stmtErr != nil {
+				return nil, stmtErr
+			}
+			return func(context *gohanscript.Context) (interface{}, error) {
+
+				var tx transaction.Transaction
+				itx := stmt.Arg("tx", context)
+				if itx != nil {
+					tx = itx.(transaction.Transaction)
+				}
+				var sql string
+				isql := stmt.Arg("sql", context)
+				if isql != nil {
+					sql = isql.(string)
+				}
+				var arguments []interface{}
+				iarguments := stmt.Arg("arguments", context)
+				if iarguments != nil {
+					arguments = iarguments.([]interface{})
+				}
+
+				err :=
+					lib.DBExec(
+						tx, sql, arguments)
+
+				return nil, err
+
+			}, nil
+		})
+	gohanscript.RegisterMiniGoFunc("DBExec",
+		func(vm *gohanscript.VM, args []interface{}) []interface{} {
+
+			tx := args[0].(transaction.Transaction)
+			sql := args[0].(string)
+			arguments := args[0].([]interface{})
+
+			err :=
+				lib.DBExec(
+					tx, sql, arguments)
+			return []interface{}{
+				err}
+
+		})
+
 	gohanscript.RegisterStmtParser("db_column",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
 			stmtErr := stmt.HasArgs(

@@ -231,6 +231,11 @@ func DBQuery(tx transaction.Transaction, schemaID string, sql string, arguments 
 	return resp, err
 }
 
+//DBExec closes a transaction.
+func DBExec(tx transaction.Transaction, sql string, arguments []interface{}) error {
+	return tx.Exec(sql, arguments...)
+}
+
 //DBColumn makes partiall part of sql query from schema
 func DBColumn(schemaID string, join bool) (string, error) {
 	manager := schema.GetManager()
