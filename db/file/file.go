@@ -300,6 +300,11 @@ func (tx *Transaction) Query(s *schema.Schema, query string, arguments []interfa
 	panic("Not implemented")
 }
 
+// Exec executes sql in transaction
+func (tx *Transaction) Exec(sql string, args ...interface{}) error {
+	panic("Not implemented")
+}
+
 func stringInSlice(a string, list []string) bool {
 	for _, b := range list {
 		if b == a {

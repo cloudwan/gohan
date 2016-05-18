@@ -60,6 +60,7 @@ type Transaction interface {
 	RawTransaction() *sqlx.Tx
 	Query(*schema.Schema, string, []interface{}) (list []*schema.Resource, err error)
 	Commit() error
+	Exec(query string, args ...interface{}) error
 	Close() error
 	Closed() bool
 }

@@ -243,3 +243,8 @@ func (_m *Transaction) Closed() bool {
 func (_m *Transaction) SetIsolationLevel(level transaction.Type) error {
 	return nil
 }
+
+// Exec executes sql in transaction
+func (_m *Transaction) Exec(sql string, args ...interface{}) error {
+	return nil
+}
