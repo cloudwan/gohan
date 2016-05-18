@@ -196,10 +196,10 @@ func init() {
 				dataMap, _ := data.(map[string]interface{})
 				manager := schema.GetManager()
 				resource, err := manager.LoadResource(schemaID, dataMap)
-				resource.PopulateDefaults()
 				if err != nil {
 					ThrowOttoException(&call, "Error during gohan_db_create: %s", err.Error())
 				}
+				resource.PopulateDefaults()
 				if err = transaction.Create(resource); err != nil {
 					ThrowOttoException(&call, "Error during gohan_db_create: %s", err.Error())
 				}
