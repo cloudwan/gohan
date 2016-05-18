@@ -30,8 +30,15 @@ func init() {
 }
 
 func command(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-	stmt.Args = gohanscript.MapToValue(util.MaybeMap(stmt.RawData["args"]))
-	stmt.Args["command"] = gohanscript.NewValue(stmt.RawData["command"])
+	var err error
+	stmt.Args, err = gohanscript.MapToValue(util.MaybeMap(stmt.RawData["args"]))
+	if err != nil {
+		return nil, err
+	}
+	stmt.Args["command"], err = gohanscript.NewValue(stmt.RawData["command"])
+	if err != nil {
+		return nil, err
+	}
 	return func(context *gohanscript.Context) (interface{}, error) {
 		chdir := stmt.Arg("chdir", context)
 		if chdir != nil {

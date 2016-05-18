@@ -126,8 +126,14 @@ func NewStmt(FileName string, node *yaml.Node) (stmt *Stmt, err error) {
 		stmt.Retry = 1
 	}
 	stmt.Delay = util.MaybeInt(stmt.RawData["delay"])
-	stmt.WithItems = NewValue(stmt.RawData["with_items"])
-	stmt.WithDict = NewValue(stmt.RawData["with_dict"])
+	stmt.WithItems, err = NewValue(stmt.RawData["with_items"])
+	if err != nil {
+		return nil, stmt.Error(err)
+	}
+	stmt.WithDict, err = NewValue(stmt.RawData["with_dict"])
+	if err != nil {
+		return nil, stmt.Error(err)
+	}
 	if stmt.RawData["when"] != nil {
 		stmt.When, err = CompileExpr(util.MaybeString(stmt.RawData["when"]))
 		if err != nil {
@@ -141,20 +147,23 @@ func NewStmt(FileName string, node *yaml.Node) (stmt *Stmt, err error) {
 		}
 	}
 	stmt.Register = util.MaybeString(stmt.RawData["register"])
-	stmt.Vars = MapToValue(util.MaybeMap(stmt.RawData["vars"]))
+	stmt.Vars, err = MapToValue(util.MaybeMap(stmt.RawData["vars"]))
+	if err != nil {
+		return nil, stmt.Error(err)
+	}
 	return stmt, nil
 }
 
-func (stmt *Stmt) parser() StmtParser {
+func (stmt *Stmt) parser() (parser StmtParser, err error) {
 	for key, value := range stmt.RawData {
-		parser := GetStmtParser(key)
+		parser = GetStmtParser(key)
 		if parser != nil {
 			stmt.funcName = key
-			stmt.Args = MapToValue(parseCode(key, value))
-			return parser
+			stmt.Args, err = MapToValue(parseCode(key, value))
+			return
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 //HasArgs checks if statement has functions
@@ -179,7 +188,10 @@ func (stmt *Stmt) Arg(key string, context *Context) interface{} {
 
 //Func generates function from stmt
 func (stmt *Stmt) Func() (func(context *Context) (interface{}, error), error) {
-	stmtParser := stmt.parser()
+	stmtParser, err := stmt.parser()
+	if err != nil {
+		return nil, stmt.Error(err)
+	}
 	if stmtParser == nil {
 		yamlCode, _ := yaml.Marshal(&stmt.RawData)
 		return nil, stmt.Errorf("Undefined function, %s", yamlCode)
@@ -227,15 +239,15 @@ func StmtsToFunc(funcName string, stmts []*Stmt) (func(*Context) (interface{}, e
 }
 
 //MapToValue converts interface map to value map
-func MapToValue(a map[string]interface{}) map[string]Value {
-	result := map[string]Value{}
+func MapToValue(a map[string]interface{}) (result map[string]Value, err error) {
+	result = map[string]Value{}
 	if a == nil {
-		return result
+		return
 	}
 	for key, value := range a {
-		result[key] = NewValue(value)
+		result[key], err = NewValue(value)
 	}
-	return result
+	return
 }
 
 //MappingNodeToMap convert yaml node to map
