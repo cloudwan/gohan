@@ -26,7 +26,10 @@ func init() {
 
 func backgroundJob(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
 	stmts, err := gohanscript.MakeStmts(stmt.File, stmt.RawNode["job"])
-	queueArg := gohanscript.NewValue(stmt.RawData["queue"])
+	if err != nil {
+		return nil, stmt.Errorf("background code error: %s", err)
+	}
+	queueArg, err := gohanscript.NewValue(stmt.RawData["queue"])
 	if err != nil {
 		return nil, stmt.Errorf("background code error: %s", err)
 	}

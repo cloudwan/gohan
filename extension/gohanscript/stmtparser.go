@@ -96,14 +96,20 @@ func include(stmt *Stmt) (func(*Context) (interface{}, error), error) {
 	}
 	stmt.Args = map[string]Value{}
 	for key, value := range stmt.RawData {
-		stmt.Args[key] = NewValue(value)
+		stmt.Args[key], err = NewValue(value)
+		if err != nil {
+			return nil, stmt.Errorf("yaml parse error: %s", err)
+		}
 	}
 	stmt.File = source
 	stmts, err := MakeStmts(stmt.File, importedCode)
 	if err != nil {
 		return nil, stmt.Errorf("import code parse error: %s", err)
 	}
-	stmt.Vars = MapToValue(util.MaybeMap(stmt.RawData["vars"]))
+	stmt.Vars, err = MapToValue(util.MaybeMap(stmt.RawData["vars"]))
+	if err != nil {
+		return nil, stmt.Errorf("yaml parse error: %s", err)
+	}
 	return StmtsToFunc(stmt.funcName, stmts)
 }
 
@@ -138,7 +144,10 @@ func vars(stmt *Stmt) (func(*Context) (interface{}, error), error) {
 }
 
 func returnCode(stmt *Stmt) (func(*Context) (interface{}, error), error) {
-	retValue := NewValue(stmt.RawData["return"])
+	retValue, err := NewValue(stmt.RawData["return"])
+	if err != nil {
+		return nil, err
+	}
 	return func(context *Context) (interface{}, error) {
 		val := retValue.Value(context)
 		return val, breakCode{}

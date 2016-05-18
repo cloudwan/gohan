@@ -47,16 +47,16 @@ func (i *MiniGoValue) Value(context *Context) interface{} {
 }
 
 //NewMiniGoValue makes a MiniGoValue value
-func NewMiniGoValue(param interface{}) *MiniGoValue {
+func NewMiniGoValue(param interface{}) (*MiniGoValue, error) {
 	code, ok := param.(string)
 	if !ok {
-		return nil
+		return nil, nil
 	}
 	if code == "" {
-		return nil
+		return nil, nil
 	}
 	if code[0] != '$' {
-		return nil
+		return nil, nil
 	}
 	minigoCode := code[1:]
 	if minigoCode[0] == '{' {
@@ -67,12 +67,12 @@ func NewMiniGoValue(param interface{}) *MiniGoValue {
 	}
 	minigo, err := CompileExpr(minigoCode)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	t := &MiniGoValue{
 		minigo: minigo,
 	}
-	return t
+	return t, nil
 }
 
 //Constant represents donburi consntant.
@@ -112,20 +112,23 @@ func (t *Template) Value(context *Context) interface{} {
 }
 
 //NewValue makes gohan script value from an yaml data
-func NewValue(a interface{}) Value {
+func NewValue(a interface{}) (Value, error) {
 	if a == nil {
-		return nil
+		return nil, nil
 	}
-	miniGoValue := NewMiniGoValue(a)
+	miniGoValue, err := NewMiniGoValue(a)
+	if err != nil {
+		return nil, err
+	}
 	if miniGoValue != nil {
-		return miniGoValue
+		return miniGoValue, nil
 	}
 	if ContainsTemplate(a) {
-		return NewTemplate(a)
+		return NewTemplate(a), nil
 	}
 	return &Constant{
 		value: a,
-	}
+	}, nil
 }
 
 //ApplyTemplate apply template code for input params.
@@ -178,7 +181,10 @@ func CacheTemplate(arg interface{}, templates map[string]*pongo2.Template, minig
 			return nil
 		}
 		if a[0] == '$' {
-			miniGoValue := NewMiniGoValue(a)
+			miniGoValue, err := NewMiniGoValue(a)
+			if err != nil {
+				return err
+			}
 			minigos[a] = miniGoValue.minigo
 		} else {
 			tpl, err := pongo2.FromString(a)
