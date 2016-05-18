@@ -120,8 +120,16 @@ func forEachList(vm *VM, obj []interface{}, workerNum int, f func(item interface
 //RunTests find tests under a directory and it executes them.
 func RunTests(dir string) (total, success, failed int) {
 	vm := NewVM()
-	filepath.Walk(dir,
+	abs, _ := filepath.Abs(dir)
+	filepath.Walk(abs,
 		func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				fmt.Println(err)
+				return err
+			}
+			if info == nil {
+				return nil
+			}
 			if info.IsDir() {
 				return nil
 			}
