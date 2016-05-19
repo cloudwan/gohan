@@ -186,9 +186,11 @@ func (server *Server) syncEvent(resource *schema.Resource) error {
 	}
 	defer tx.Close()
 	eventType := resource.Get("type").(string)
-	path := resource.Get("path").(string)
-	path = configPrefix + path
+	resourcePath := resource.Get("path").(string)
 	body := resource.Get("body").(string)
+
+	path := generatePath(resourcePath, body)
+
 	version, ok := resource.Get("version").(int)
 	if !ok {
 		log.Debug("cannot cast version value in int for %s", path)
@@ -232,6 +234,28 @@ func (server *Server) syncEvent(resource *schema.Resource) error {
 		return err
 	}
 	return nil
+}
+
+func generatePath(resourcePath string, body string) string {
+	var curSchema = schema.GetSchemaByPath(resourcePath)
+
+	path := resourcePath
+	if _, ok := curSchema.SyncKeyTemplate(); ok {
+		var data map[string]interface{}
+		err := json.Unmarshal(([]byte)(body), &data)
+		if err != nil {
+			log.Error(fmt.Sprintf("Error %v during unmarshaling data %v", err, data))
+		} else {
+			path, err = curSchema.GenerateCustomPath(data)
+			if err != nil {
+				path = resourcePath
+				log.Error(fmt.Sprintf("%v", err))
+			}
+		}
+	}
+	path = configPrefix + path
+	log.Info("Generated path: %s", path)
+	return path
 }
 
 //Start sync Process
@@ -282,19 +306,12 @@ func (server *Server) Sync() error {
 func StateUpdate(response *gohan_sync.Event, server *Server) error {
 	dataStore := server.db
 	schemaPath := "/" + strings.TrimPrefix(response.Key, statePrefix)
-	var curSchema *schema.Schema
-	manager := schema.GetManager()
-	for _, s := range manager.Schemas() {
-		if strings.HasPrefix(schemaPath, s.URL) {
-			curSchema = s
-			break
-		}
-	}
+	var curSchema = schema.GetSchemaByPath(schemaPath)
 	if curSchema == nil || !curSchema.StateVersioning() {
 		log.Debug("State update on unexpected path '%s'", schemaPath)
 		return nil
 	}
-	resourceID := strings.TrimPrefix(schemaPath, curSchema.URL+"/")
+	resourceID := curSchema.GetResourceIdFromPath(schemaPath)
 
 	tx, err := dataStore.Begin()
 	if err != nil {
@@ -366,19 +383,12 @@ func StateUpdate(response *gohan_sync.Event, server *Server) error {
 func MonitoringUpdate(response *gohan_sync.Event, server *Server) error {
 	dataStore := server.db
 	schemaPath := "/" + strings.TrimPrefix(response.Key, monitoringPrefix)
-	var curSchema *schema.Schema
-	manager := schema.GetManager()
-	for _, s := range manager.Schemas() {
-		if strings.HasPrefix(schemaPath, s.URL) {
-			curSchema = s
-			break
-		}
-	}
+	var curSchema = schema.GetSchemaByPath(schemaPath)
 	if curSchema == nil || !curSchema.StateVersioning() {
 		log.Debug("Monitoring update on unexpected path '%s'", schemaPath)
 		return nil
 	}
-	resourceID := strings.TrimPrefix(schemaPath, curSchema.URL+"/")
+	resourceID := curSchema.GetResourceIdFromPath(schemaPath)
 
 	tx, err := dataStore.Begin()
 	if err != nil {

@@ -69,7 +69,14 @@
                             "update"
                         ],
                         "title": "Metadata",
-                        "type": "object"
+                        "type": "object",
+
+                        "patternProperties": {
+                            "sync_key_template": {
+                                "type": "string",
+                                "format": "sync-key-template"
+                            }
+                        }
                     },
                     "namespace": {
                         "default": "",

@@ -312,6 +312,11 @@ Metadata
 
   whether to support :ref:`state versioning <subsection-state-update>`, defaults to false.
 
+- sync_key_template (string)
+
+  configurable sync key path for schemas based on properties, for example: /v1.0/devices/{{device_id}}/virtual_machine/{{id}},
+  it must contain '{{id}}'
+
 Properties
 -------------------------------
 
