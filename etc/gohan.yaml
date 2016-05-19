@@ -38,7 +38,7 @@ document_root: "embed"
 #    - "http://127.0.0.1:4001"
 # keystone configuraion
 keystone:
-    use_keystone: true
+    use_keystone: false
     fake: true
     # Keystone admin URL
     auth_url: "http://localhost:9091/v2.0"
