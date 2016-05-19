@@ -396,6 +396,37 @@ var _ = Describe("GohanDb", func() {
 			})
 		})
 
+		Context("When an invalid transaction is provided", func() {
+			It("fails and return an error", func() {
+				extension, err := schema.NewExtension(map[string]interface{}{
+					"id": "test_extension",
+					"code": `
+					  gohan_register_handler("test_event", function(context){
+					    var tx = context.transaction;
+					    context.resp = gohan_db_query(
+					      tx,
+					      "test",
+					      "SELECT DUMMY",
+					      ["tenant0", "obj1"]
+					    );
+					  });`,
+					"path": ".*",
+				})
+				Expect(err).ToNot(HaveOccurred())
+				extensions := []*schema.Extension{extension}
+				env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
+				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+
+				context := map[string]interface{}{
+					"transaction": "not_a_transaction",
+				}
+
+				err = env.HandleEvent("test_event", context)
+				Expect(err).NotTo(BeNil())
+				Expect(err.Error()).To(MatchRegexp("test_event: Argument 'not_a_transaction' should be of type 'Transaction'"))
+			})
+		})
+
 		Context("When an invalid schema ID is provided", func() {
 			It("fails and return an error", func() {
 				extension, err := schema.NewExtension(map[string]interface{}{
@@ -452,7 +483,7 @@ var _ = Describe("GohanDb", func() {
 				}
 				err = env.HandleEvent("test_event", context)
 				Expect(err).NotTo(BeNil())
-				Expect(err.Error()).To(MatchRegexp("test_event: Gievn arguments is not \\[\\]interface\\{\\}"))
+				Expect(err.Error()).To(MatchRegexp("test_event: Argument 'THIS IS NOT AN ARRAY' should be of type 'array'"))
 			})
 		})
 

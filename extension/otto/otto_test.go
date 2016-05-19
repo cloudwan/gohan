@@ -363,6 +363,47 @@ var _ = Describe("Otto extension manager", func() {
 		})
 	})
 
+	Describe("Using gohan_config builtin", func() {
+		It("Should return correct value", func() {
+			extension, err := schema.NewExtension(map[string]interface{}{
+				"id": "test_extension",
+				"code": `
+						gohan_register_handler("test_event", function(context){
+							context.resp = gohan_config("database", "");
+						});`,
+				"path": ".*",
+			})
+			Expect(err).ToNot(HaveOccurred())
+			extensions := []*schema.Extension{extension}
+			env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
+			Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+
+			context := map[string]interface{}{}
+			Expect(env.HandleEvent("test_event", context)).To(Succeed())
+			Expect(context).To(HaveKeyWithValue("resp", HaveKeyWithValue("connection", "test.db")))
+			Expect(context).To(HaveKeyWithValue("resp", HaveKeyWithValue("type", "sqlite3")))
+		})
+
+		It("Should return correct value - key not found", func() {
+			extension, err := schema.NewExtension(map[string]interface{}{
+				"id": "test_extension",
+				"code": `
+						gohan_register_handler("test_event", function(context){
+								context.resp = gohan_config("does not exist", false);
+						});`,
+				"path": ".*",
+			})
+			Expect(err).ToNot(HaveOccurred())
+			extensions := []*schema.Extension{extension}
+			env := otto.NewEnvironment(testDB, &middleware.FakeIdentity{}, timelimit)
+			Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+
+			context := map[string]interface{}{}
+			Expect(env.HandleEvent("test_event", context)).To(Succeed())
+			Expect(context).To(HaveKeyWithValue("resp", BeFalse()))
+		})
+	})
+
 	Describe("Using gohan database manipulation builtins", func() {
 		var (
 			adminAuth     schema.Authorization
@@ -1001,7 +1042,7 @@ var _ = Describe("Otto extension manager", func() {
 
 						It("Returns the proper error", func() {
 							err := env.HandleEvent("test", context)
-							Expect(err).To(MatchError(ContainSubstring("Not a dictionary")))
+							Expect(err).To(MatchError(ContainSubstring("be of type 'Object'")))
 						})
 					})
 				})
@@ -1125,7 +1166,7 @@ var _ = Describe("Otto extension manager", func() {
 							context["transaction"] = tx
 
 							err = env.HandleEvent("test", context)
-							Expect(err).To(MatchError(ContainSubstring("Not a dictionary")))
+							Expect(err).To(MatchError(ContainSubstring("be of type 'Object'")))
 						})
 					})
 				})

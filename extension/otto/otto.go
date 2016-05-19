@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/cloudwan/gohan/db"
+	"github.com/cloudwan/gohan/db/transaction"
 	ext "github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/server/middleware"
@@ -219,6 +220,20 @@ func (env *Environment) Clone() ext.Environment {
 	return newEnv
 }
 
+//GetOrCreateTransaction gets transaction from otto value or creates new is otto value is null
+func (env *Environment) GetOrCreateTransaction(value otto.Value) (transaction.Transaction, bool, error) {
+	if !value.IsNull() {
+		tx, err := GetTransaction(value)
+		return tx, false, err
+	}
+	dataStore := env.DataStore
+	tx, err := dataStore.Begin()
+	if err != nil {
+		return nil, false, fmt.Errorf("Error creating transaction: %v", err.Error())
+	}
+	return tx, true, nil
+}
+
 func throwOtto(call *otto.FunctionCall, exceptionName string, arguments ...interface{}) {
 	exception, _ := call.Otto.Call("new "+exceptionName, nil, arguments...)
 	panic(exception)
@@ -235,6 +250,102 @@ func VerifyCallArguments(call *otto.FunctionCall, functionName string, expectedA
 		ThrowOttoException(call, "Expected %d arguments in %s call, %d arguments given",
 			expectedArgumentsCount, functionName, len(call.ArgumentList))
 	}
+}
+
+const wrongArgumentType string = "Argument '%v' should be of type '%s'"
+
+//GetString gets string from otto value
+func GetString(value otto.Value) (string, error) {
+	rawString, _ := value.Export()
+	result, ok := rawString.(string)
+	if !ok {
+		return "", fmt.Errorf(wrongArgumentType, rawString, "string")
+	}
+	return result, nil
+}
+
+//GetMap gets map[string]interace{} from otto value
+func GetMap(value otto.Value) (map[string]interface{}, error) {
+	rawMap, _ := value.Export()
+	result, ok := rawMap.(map[string]interface{})
+	if !ok {
+		return map[string]interface{}{}, fmt.Errorf(wrongArgumentType, rawMap, "Object")
+	}
+	for key, value := range result {
+		result[key] = ConvertOttoToGo(value)
+	}
+	return result, nil
+}
+
+//GetTransaction gets Transaction from otto value
+func GetTransaction(value otto.Value) (transaction.Transaction, error) {
+	rawTransaction, _ := value.Export()
+	result, ok := rawTransaction.(transaction.Transaction)
+	if !ok {
+		return nil, fmt.Errorf(wrongArgumentType, rawTransaction, "Transaction")
+	}
+	return result, nil
+}
+
+//GetAuthorization gets Transaction from otto value
+func GetAuthorization(value otto.Value) (schema.Authorization, error) {
+	rawAuthorization, _ := value.Export()
+	result, ok := rawAuthorization.(schema.Authorization)
+	if !ok {
+		return nil, fmt.Errorf(wrongArgumentType, rawAuthorization, "Authorization")
+	}
+	return result, nil
+}
+
+//GetBool gets bool from otto value
+func GetBool(value otto.Value) (bool, error) {
+	rawBool, _ := value.Export()
+	result, ok := rawBool.(bool)
+	if !ok {
+		return false, fmt.Errorf(wrongArgumentType, rawBool, "bool")
+	}
+	return result, nil
+}
+
+//GetList gets []interface{} from otto value
+func GetList(value otto.Value) ([]interface{}, error) {
+	rawSlice, _ := value.Export()
+	result, ok := rawSlice.([]interface{})
+	if !ok {
+		return []interface{}{}, fmt.Errorf(wrongArgumentType, rawSlice, "array")
+	}
+	for i, value := range result {
+		result[i] = ConvertOttoToGo(value)
+	}
+	return result, nil
+}
+
+//GetStringList gets []string  from otto value
+func GetStringList(value otto.Value) ([]string, error) {
+	rawSlice, _ := value.Export()
+	errMessage := fmt.Errorf(wrongArgumentType, rawSlice, "array of strings")
+	rawResult, ok := rawSlice.([]interface{})
+	if !ok {
+		return []string{}, errMessage
+	}
+	result := []string{}
+	for _, rawItem := range rawResult {
+		item, ok := rawItem.(string)
+		if !ok {
+			return []string{}, errMessage
+		}
+		result = append(result, item)
+	}
+	return result, nil
+}
+
+//GetInt64 gets int64 from otto value
+func GetInt64(value otto.Value) (result int64, err error) {
+	result, err = value.ToInteger()
+	if err != nil {
+		err = fmt.Errorf(wrongArgumentType, value, "int64")
+	}
+	return
 }
 
 //ConvertOttoToGo ...
@@ -262,4 +373,13 @@ func ConvertOttoToGo(value interface{}) interface{} {
 		return listValue
 	}
 	return value
+}
+
+func getSchema(schemaID string) (*schema.Schema, error) {
+	manager := schema.GetManager()
+	schema, ok := manager.Schema(schemaID)
+	if !ok {
+		return nil, fmt.Errorf(unknownSchemaErrorMesssageFormat, schemaID)
+	}
+	return schema, nil
 }

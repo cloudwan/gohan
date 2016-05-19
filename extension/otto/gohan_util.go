@@ -31,10 +31,10 @@ import (
 	"github.com/twinj/uuid"
 
 	"github.com/cloudwan/gohan/schema"
+	"github.com/cloudwan/gohan/util"
 )
 
 const (
-	noTransactionErrorMessage        = "No transaction"
 	noContextMessage                 = "No context provided"
 	unknownSchemaErrorMesssageFormat = "Unknown schema '%s'"
 )
@@ -45,17 +45,30 @@ func init() {
 		builtins := map[string]interface{}{
 			"gohan_http": func(call otto.FunctionCall) otto.Value {
 				if len(call.ArgumentList) == 4 {
-					emptyOpts, _ := otto.ToValue(map[string]interface{}{})
-					call.ArgumentList = append(call.ArgumentList, emptyOpts)
+					defaultOpaque, _ := otto.ToValue(false)
+					call.ArgumentList = append(call.ArgumentList, defaultOpaque)
 				}
 				VerifyCallArguments(&call, "gohan_http", 5)
-				method := call.Argument(0).String()
-				url := call.Argument(1).String()
-				headers := ConvertOttoToGo(call.Argument(2))
+				method, err := GetString(call.Argument(0))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+				url, err := GetString(call.Argument(1))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+				rawHeaders, err := GetMap(call.Argument(2))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+				// A string or a map[string]interface{}
 				data := ConvertOttoToGo(call.Argument(3))
-				options := ConvertOttoToGo(call.Argument(4))
-				log.Debug("gohan_http  [%s] %s %s %s", method, headers, url, options)
-				code, headers, body, err := gohanHTTP(method, url, headers, data, options)
+				opaque, err := GetBool(call.Argument(4))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+				log.Debug("gohan_http  [%s] %s %s %s", method, rawHeaders, url, opaque)
+				code, headers, body, err := gohanHTTP(method, url, rawHeaders, data, opaque)
 				log.Debug("response code %d", code)
 				resp := map[string]interface{}{}
 				if err != nil {
@@ -83,11 +96,13 @@ func init() {
 			},
 			"gohan_schema_url": func(call otto.FunctionCall) otto.Value {
 				VerifyCallArguments(&call, "gohan_schema_url", 1)
-				schemaID := call.Argument(0).String()
-				manager := schema.GetManager()
-				schema, ok := manager.Schema(schemaID)
-				if !ok {
-					ThrowOttoException(&call, unknownSchemaErrorMesssageFormat, schemaID)
+				schemaID, err := GetString(call.Argument(0))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+				schema, err := getSchema(schemaID)
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
 				}
 				value, _ := vm.ToValue(schema.URL)
 				return value
@@ -107,9 +122,7 @@ func init() {
 				return value
 			},
 			"gohan_sleep": func(call otto.FunctionCall) otto.Value {
-				if len(call.ArgumentList) != 1 {
-					panic("Wrong number of arguments in gohan_schema_url call.")
-				}
+				VerifyCallArguments(&call, "gohan_sleep", 1)
 				rawSleep, _ := call.Argument(0).Export()
 				var sleep time.Duration
 				switch rawSleep.(type) {
@@ -122,14 +135,10 @@ func init() {
 				return otto.NullValue()
 			},
 			"gohan_template": func(call otto.FunctionCall) otto.Value {
-				if len(call.ArgumentList) != 2 {
-					panic("Wrong number of arguments in gohan_db_create call.")
-				}
-				rawTemplate, _ := call.Argument(0).Export()
-				templateString, ok := rawTemplate.(string)
-				if !ok {
-					value, _ := vm.ToValue(rawTemplate)
-					return value
+				VerifyCallArguments(&call, "gohan_template", 2)
+				templateString, err := GetString(call.Argument(0))
+				if err != nil {
+					return call.Argument(0)
 				}
 				data := ConvertOttoToGo(call.Argument(1))
 				t := template.Must(template.New("tmpl").Parse(templateString))
@@ -139,22 +148,14 @@ func init() {
 				return value
 			},
 			"gohan_exec": func(call otto.FunctionCall) otto.Value {
-				if len(call.ArgumentList) != 2 {
-					panic("Wrong number of arguments in gohan_db_create call.")
+				VerifyCallArguments(&call, "gohan_exec", 2)
+				command, err := GetString(call.Argument(0))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
 				}
-				rawCommand, _ := call.Argument(0).Export()
-				command, ok := rawCommand.(string)
-				if !ok {
-					return otto.NullValue()
-				}
-				stringArgs := []string{}
-				rawArgs, _ := call.Argument(1).Export()
-				args, ok := rawArgs.([]interface{})
-				if !ok {
-					return otto.NullValue()
-				}
-				for _, arg := range args {
-					stringArgs = append(stringArgs, arg.(string))
+				stringArgs, err := GetStringList(call.Argument(1))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
 				}
 				out, err := exec.Command(command, stringArgs...).Output()
 				resp := map[string]string{}
@@ -168,6 +169,21 @@ func init() {
 				value, _ := vm.ToValue(resp)
 				return value
 			},
+			"gohan_config": func(call otto.FunctionCall) otto.Value {
+				VerifyCallArguments(&call, "gohan_exec", 2)
+				configKey, err := GetString(call.Argument(0))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+				defaultValue, err := call.Argument(1).Export()
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+				config := util.GetConfig()
+				result := config.GetParam(configKey, defaultValue)
+				value, _ := vm.ToValue(result)
+				return value
+			},
 		}
 
 		for name, object := range builtins {
@@ -178,13 +194,11 @@ func init() {
 	RegisterInit(gohanUtilInit)
 }
 
-func gohanHTTP(method, rawURL string, headers interface{}, postData interface{}, options interface{}) (int, http.Header, string, error) {
+func gohanHTTP(method, rawURL string, headers map[string]interface{},
+	postData interface{}, opaque bool) (int, http.Header, string, error) {
+
 	client := &http.Client{}
 	var reader io.Reader
-	var headerMap map[string]interface{}
-	if headers != nil {
-		headerMap = headers.(map[string]interface{})
-	}
 
 	if postData != nil {
 		log.Debug("post data %v", postData)
@@ -192,10 +206,8 @@ func gohanHTTP(method, rawURL string, headers interface{}, postData interface{},
 		var err error
 
 		contentType := ""
-		if headerMap != nil {
-			if c, ok := headerMap["content-type"]; ok {
-				contentType = c.(string)
-			}
+		if c, ok := headers["content-type"]; ok {
+			contentType = c.(string)
 		}
 
 		if contentType == "text/plain" {
@@ -208,8 +220,8 @@ func gohanHTTP(method, rawURL string, headers interface{}, postData interface{},
 				return 0, http.Header{}, "", err
 			}
 			// set application/json as content-type because of json.Marshal
-			if headerMap != nil {
-				headerMap["content-type"] = "application/json"
+			if headers != nil {
+				headers["content-type"] = "application/json"
 			}
 		}
 		log.Debug("request data: %s", string(requestData))
@@ -218,8 +230,8 @@ func gohanHTTP(method, rawURL string, headers interface{}, postData interface{},
 	}
 
 	request, err := http.NewRequest(method, rawURL, reader)
-	if headerMap != nil {
-		for key, value := range headerMap {
+	if headers != nil {
+		for key, value := range headers {
 			request.Header.Add(key, value.(string))
 		}
 	}
@@ -227,15 +239,11 @@ func gohanHTTP(method, rawURL string, headers interface{}, postData interface{},
 		return 0, http.Header{}, "", err
 	}
 
-	if options != nil {
-		if value, ok := options.(map[string]interface{})["opaque_url"]; ok {
-			if value.(bool) == true {
-				request.URL = &url.URL{
-					Scheme: request.URL.Scheme,
-					Host:   request.URL.Host,
-					Opaque: rawURL,
-				}
-			}
+	if opaque {
+		request.URL = &url.URL{
+			Scheme: request.URL.Scheme,
+			Host:   request.URL.Host,
+			Opaque: rawURL,
 		}
 	}
 	resp, err := client.Do(request)
