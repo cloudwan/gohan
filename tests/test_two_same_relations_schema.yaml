@@ -1,0 +1,123 @@
+schemas:
+
+- id: city
+  description: City
+  singular: city
+  plural: cities
+  title: City
+  prefix: /v1.0
+  schema:
+    properties:
+      id:
+        description: The ID of City
+        title: ID
+        type: string
+        permission:
+        - create
+      name:
+        description: Name
+        title: Name
+        type: string
+        permission:
+        - create
+    propertiesOrder:
+    - id
+    - name
+    type: object
+
+- id: school
+  description: School
+  singular: school
+  plural: schools
+  title: School
+  prefix: /v1.0
+  schema:
+    properties:
+      id:
+        description: The ID of School
+        title: ID
+        type: string
+        permission:
+        - create
+      name:
+        description: Name
+        title: Name
+        type: string
+        permission:
+        - create
+      city_id:
+        description: City
+        title: City
+        type: string
+        relation: city
+        relation_property: city
+        permission:
+        - create
+    propertiesOrder:
+    - id
+    - name
+    - city_id
+    type: object
+
+- id: child
+  description: Child
+  singular: child
+  plural: children
+  title: Child
+  prefix: /v1.0
+  schema:
+    properties:
+      id:
+        description: The ID of Child
+        title: ID
+        type: string
+        permission:
+        - create
+      school_id:
+        description: School
+        title: School
+        type: string
+        relation: school
+        relation_property: school
+        permission:
+        - create
+    propertiesOrder:
+    - id
+    - school_id
+    type: object
+
+- id: parent
+  description: Parent
+  singular: parent
+  plural: parents
+  title: Parent
+  prefix: /v1.0
+  schema:
+    properties:
+      id:
+        description: The ID of Parent
+        title: ID
+        type: string
+        permission:
+        - create
+      boy_id:
+        description: Boy
+        title: Boy
+        type: string
+        relation: child
+        relation_property: boy
+        permission:
+        - create
+      girl_id:
+        description: Girl
+        title: Girl
+        type: string
+        relation: child
+        relation_property: girl
+        permission:
+        - create
+    propertiesOrder:
+    - id
+    - boy_id
+    - girl_id
+    type: object

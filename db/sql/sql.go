@@ -504,6 +504,10 @@ func makeColumn(tableName string, property schema.Property) string {
 	return fmt.Sprintf("%s.%s", tableName, quote(property.ID))
 }
 
+func makeAliasTableName(tableName string, property schema.Property) string {
+	return fmt.Sprintf("%s__%s", tableName, property.RelationProperty)
+}
+
 // MakeColumns generates an array that has Gohan style colmun names
 func MakeColumns(s *schema.Schema, tableName string, join bool) []string {
 	var cols []string
@@ -512,7 +516,8 @@ func MakeColumns(s *schema.Schema, tableName string, join bool) []string {
 		cols = append(cols, makeColumn(tableName, property)+" as "+quote(makeColumnID(tableName, property)))
 		if property.RelationProperty != "" && join {
 			relatedSchema, _ := manager.Schema(property.Relation)
-			cols = append(cols, MakeColumns(relatedSchema, property.RelationProperty, true)...)
+			aliasTableName := makeAliasTableName(tableName, property)
+			cols = append(cols, MakeColumns(relatedSchema, aliasTableName, true)...)
 		}
 	}
 	return cols
@@ -535,10 +540,11 @@ func makeJoin(s *schema.Schema, tableName string, q sq.SelectBuilder) sq.SelectB
 			continue
 		}
 		relatedSchema, _ := manager.Schema(property.Relation)
+		aliasTableName := makeAliasTableName(tableName, property)
 		q = q.LeftJoin(
-			fmt.Sprintf("%s as %s on %s.%s = %s.id", quote(relatedSchema.GetDbTableName()), quote(property.RelationProperty),
-				quote(tableName), quote(property.ID), quote(property.RelationProperty)))
-		q = makeJoin(relatedSchema, property.RelationProperty, q)
+			fmt.Sprintf("%s as %s on %s.%s = %s.id", quote(relatedSchema.GetDbTableName()), quote(aliasTableName),
+				quote(tableName), quote(property.ID), quote(aliasTableName)))
+		q = makeJoin(relatedSchema, aliasTableName, q)
 	}
 	return q
 }
@@ -559,7 +565,8 @@ func (tx *Transaction) decode(s *schema.Schema, tableName string, data map[strin
 		if property.RelationProperty != "" {
 			relatedSchema, _ := manager.Schema(property.Relation)
 			resourceData := map[string]interface{}{}
-			tx.decode(relatedSchema, property.RelationProperty, data, resourceData)
+			aliasTableName := makeAliasTableName(tableName, property)
+			tx.decode(relatedSchema, aliasTableName, data, resourceData)
 			resource[property.RelationProperty] = resourceData
 		}
 	}

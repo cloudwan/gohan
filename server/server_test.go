@@ -38,13 +38,17 @@ import (
 )
 
 var (
-	server           *srv.Server
-	baseURL          = "http://localhost:19090"
-	schemaURL        = baseURL + "/gohan/v0.1/schemas"
-	networkPluralURL = baseURL + "/v2.0/networks"
-	subnetPluralURL  = baseURL + "/v2.0/subnets"
-	serverPluralURL  = baseURL + "/v2.0/servers"
-	testPluralURL    = baseURL + "/v2.0/tests"
+	server            *srv.Server
+	baseURL           = "http://localhost:19090"
+	schemaURL         = baseURL + "/gohan/v0.1/schemas"
+	networkPluralURL  = baseURL + "/v2.0/networks"
+	subnetPluralURL   = baseURL + "/v2.0/subnets"
+	serverPluralURL   = baseURL + "/v2.0/servers"
+	testPluralURL     = baseURL + "/v2.0/tests"
+	parentsPluralURL  = baseURL + "/v1.0/parents"
+	childrenPluralURL = baseURL + "/v1.0/children"
+	schoolsPluralURL  = baseURL + "/v1.0/schools"
+	citiesPluralURL   = baseURL + "/v1.0/cities"
 )
 
 var _ = Describe("Server package test", func() {
@@ -234,6 +238,57 @@ var _ = Describe("Server package test", func() {
 			Expect(resp.Header.Get("X-Total-Count")).To(Equal("2"))
 			testURL("DELETE", getNetworkSingularURL("red"), adminTokenID, nil, http.StatusNoContent)
 			testURL("DELETE", getNetworkSingularURL("blue"), adminTokenID, nil, http.StatusNoContent)
+		})
+	})
+
+	Describe("TwoSameResourceRelations", func() {
+		It("should work", func() {
+			By("creating 2 cities")
+			austinCity := getCity("austin")
+			bexarCity := getCity("bexar")
+			testURL("POST", citiesPluralURL, adminTokenID, austinCity, http.StatusCreated)
+			testURL("POST", citiesPluralURL, adminTokenID, bexarCity, http.StatusCreated)
+
+			By("creating 2 schools")
+			austinSchool := getSchool("austin", austinCity["id"].(string))
+			bexarSchool := getSchool("bexar", bexarCity["id"].(string))
+			testURL("POST", schoolsPluralURL, adminTokenID, austinSchool, http.StatusCreated)
+			testURL("POST", schoolsPluralURL, adminTokenID, bexarSchool, http.StatusCreated)
+
+			By("creating 2 children")
+			aliceChild := getChild("alice", austinSchool["id"].(string))
+			bobChild := getChild("bob", bexarSchool["id"].(string))
+			testURL("POST", childrenPluralURL, adminTokenID, aliceChild, http.StatusCreated)
+			testURL("POST", childrenPluralURL, adminTokenID, bobChild, http.StatusCreated)
+
+			By("creating 1 parent")
+			charlieParent := getParent("charlie", bobChild["id"].(string), aliceChild["id"].(string))
+			testURL("POST", parentsPluralURL, adminTokenID, charlieParent, http.StatusCreated)
+
+			By("assuring 1 parent was returned without error")
+			result := testURL("GET", parentsPluralURL, adminTokenID, nil, http.StatusOK)
+			res := result.(map[string]interface{})
+			parents := res["parents"].([]interface{})
+			Expect(parents).To(HaveLen(1))
+
+			By("assuring related resources are all available")
+			parent := parents[0].(map[string]interface{})
+			Expect(parent).To(HaveKeyWithValue("id", charlieParent["id"]))
+
+			boy := parent["boy"].(map[string]interface{})
+			Expect(boy).To(HaveKeyWithValue("id", bobChild["id"]))
+			girl := parent["girl"].(map[string]interface{})
+			Expect(girl).To(HaveKeyWithValue("id", aliceChild["id"]))
+
+			boySchool := boy["school"].(map[string]interface{})
+			Expect(boySchool).To(HaveKeyWithValue("id", bexarSchool["id"]))
+			girlSchool := girl["school"].(map[string]interface{})
+			Expect(girlSchool).To(HaveKeyWithValue("id", austinSchool["id"]))
+
+			boySchoolCity := boySchool["city"].(map[string]interface{})
+			Expect(boySchoolCity).To(HaveKeyWithValue("id", bexarCity["id"]))
+			girlSchoolCity := girlSchool["city"].(map[string]interface{})
+			Expect(girlSchoolCity).To(HaveKeyWithValue("id", austinCity["id"]))
 		})
 	})
 
@@ -1111,6 +1166,36 @@ func getSubnet(color string, tenant string, parent string) map[string]interface{
 	}
 }
 
+func getCity(name string) map[string]interface{} {
+	return map[string]interface{}{
+		"id":   "city" + name,
+		"name": "City" + name,
+	}
+}
+
+func getSchool(name, cityID string) map[string]interface{} {
+	return map[string]interface{}{
+		"id":      "school" + name,
+		"name":    "School" + name,
+		"city_id": cityID,
+	}
+}
+
+func getChild(name, schoolID string) map[string]interface{} {
+	return map[string]interface{}{
+		"id":        name,
+		"school_id": schoolID,
+	}
+}
+
+func getParent(name, boyID, girlID string) map[string]interface{} {
+	return map[string]interface{}{
+		"id":      "parent" + name,
+		"boy_id":  boyID,
+		"girl_id": girlID,
+	}
+}
+
 func getNetworkSingularURL(color string) string {
 	s, _ := schema.GetManager().Schema("network")
 	return baseURL + s.URL + "/network" + color
@@ -1166,6 +1251,15 @@ func clearTable(tx transaction.Transaction, s *schema.Schema) error {
 			err := clearTable(tx, schema)
 			if err != nil {
 				return err
+			}
+		} else {
+			for _, property := range schema.Properties {
+				if property.Relation == s.Singular {
+					err := clearTable(tx, schema)
+					if err != nil {
+						return err
+					}
+				}
 			}
 		}
 	}

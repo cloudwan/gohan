@@ -5,6 +5,7 @@ schemas:
     - "embed://etc/schema/gohan.json"
     - "../tests/test_abstract_schema.yaml"
     - "../tests/test_schema.yaml"
+    - "../tests/test_two_same_relations_schema.yaml"
 address: ":19090"
 document_root: "embed"
 etcd:

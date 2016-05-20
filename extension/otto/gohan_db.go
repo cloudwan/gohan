@@ -300,7 +300,6 @@ func init() {
 				if err != nil {
 					ThrowOttoException(&call, err.Error())
 				}
-
 				value, _ := vm.ToValue(results)
 				return value
 			},
