@@ -22,6 +22,7 @@ import (
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/sql"
 	"github.com/cloudwan/gohan/db/transaction"
+	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/extension/gohanscript"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
@@ -244,4 +245,9 @@ func DBColumn(schemaID string, join bool) (string, error) {
 		return "", fmt.Errorf("Schema %s not found", schemaID)
 	}
 	return strings.Join(sql.MakeColumns(schemaObj, schemaObj.GetDbTableName(), join), ", "), nil
+}
+
+//Error returns extension Error
+func Error(code int, name, message string) error {
+	return extension.Errorf(code, name, message)
 }

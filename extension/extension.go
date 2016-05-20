@@ -88,7 +88,7 @@ type Error struct {
 //HandleEvent handles the event in the given environment
 func HandleEvent(context map[string]interface{}, environment Environment, event string) error {
 	if err := environment.HandleEvent(event, context); err != nil {
-		return fmt.Errorf("extension error: %s", err)
+		return err
 	}
 	exceptionInfoRaw, ok := context["exception"]
 	if !ok {
@@ -100,4 +100,14 @@ func HandleEvent(context map[string]interface{}, environment Environment, event 
 	}
 	exceptionMessage := context["exception_message"]
 	return Error{fmt.Errorf("%v", exceptionMessage), exceptionInfo}
+}
+
+//Errorf makes extension error
+func Errorf(code int, name, message string) Error {
+	return Error{fmt.Errorf("%v", message),
+		map[string]interface{}{
+			"code":    code,
+			"name":    name,
+			"message": message,
+		}}
 }
