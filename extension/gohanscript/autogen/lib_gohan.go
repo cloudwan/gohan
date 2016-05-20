@@ -834,4 +834,52 @@ func init() {
 
 		})
 
+	gohanscript.RegisterStmtParser("error",
+		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
+			stmtErr := stmt.HasArgs(
+				"code", "name", "message")
+			if stmtErr != nil {
+				return nil, stmtErr
+			}
+			return func(context *gohanscript.Context) (interface{}, error) {
+
+				var code int
+				icode := stmt.Arg("code", context)
+				if icode != nil {
+					code = icode.(int)
+				}
+				var name string
+				iname := stmt.Arg("name", context)
+				if iname != nil {
+					name = iname.(string)
+				}
+				var message string
+				imessage := stmt.Arg("message", context)
+				if imessage != nil {
+					message = imessage.(string)
+				}
+
+				err :=
+					lib.Error(
+						code, name, message)
+
+				return nil, err
+
+			}, nil
+		})
+	gohanscript.RegisterMiniGoFunc("Error",
+		func(vm *gohanscript.VM, args []interface{}) []interface{} {
+
+			code := args[0].(int)
+			name := args[0].(string)
+			message := args[1].(string)
+
+			err :=
+				lib.Error(
+					code, name, message)
+			return []interface{}{
+				err}
+
+		})
+
 }

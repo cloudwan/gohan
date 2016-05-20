@@ -167,11 +167,10 @@ extensions:
         register: pet
       - when: pet.status != "available"
         blocks:
-        - vars:
-            exception:
-              name: CustomException
-              code: 400
-              message: "Selected pet isn't available"
+        - error:
+            name: CustomException
+            code: 400
+            message: "Selected pet isn't available"
         else:
         - db_update:
             tx: $transaction
