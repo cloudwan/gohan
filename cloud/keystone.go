@@ -119,7 +119,8 @@ type RoundTripper struct {
 	maxReauthAttempts int
 }
 
-func newHTTPClient() http.Client {
+//NewHTTPClient returns http client with max reauth retry support
+func NewHTTPClient() http.Client {
 	return http.Client{
 		Transport: &RoundTripper{
 			rt:                http.DefaultTransport,
@@ -178,7 +179,7 @@ func NewKeystoneV3Client(authURL, userName, password, domainName, tenantName str
 	if err != nil {
 		return nil, err
 	}
-	client.HTTPClient = newHTTPClient()
+	client.HTTPClient = NewHTTPClient()
 	return &keystoneV3Client{client: openstack.NewIdentityV3(client)}, nil
 }
 
