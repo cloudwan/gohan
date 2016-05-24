@@ -21,6 +21,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/cloudwan/gohan/cloud"
 	"github.com/rackspace/gophercloud"
 	"github.com/rackspace/gophercloud/openstack"
 )
@@ -79,6 +80,7 @@ func GetOpenstackClient(authURL, userName, password, domainName, tenantName, ver
 	if err != nil {
 		return nil, err
 	}
+	client.HTTPClient = cloud.NewHTTPClient()
 	if version == "v2.0" {
 		return openstack.NewIdentityV2(client), nil
 	} else if version == "v3" {
