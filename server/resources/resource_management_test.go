@@ -56,7 +56,7 @@ var _ = Describe("Resource manager", func() {
 		manager = schema.GetManager()
 
 		adminAuth = schema.NewAuthorization(adminTenantID, "admin", adminTokenID, []string{"admin"}, nil)
-		memberAuth = schema.NewAuthorization(memberTenantID, "demo", memberTokenID, []string{"_member_"}, nil)
+		memberAuth = schema.NewAuthorization(memberTenantID, "demo", memberTokenID, []string{"Member"}, nil)
 		timelimit = time.Duration(1) * time.Second
 		auth = adminAuth
 

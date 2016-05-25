@@ -3,7 +3,7 @@ policies:
 - action: read
   effect: allow
   id: member_schema
-  principal: _member_
+  principal: Member
   resource:
     path: /gohan/v0.1/schemas*
 - action: '*'
@@ -11,7 +11,7 @@ policies:
   - is_owner
   effect: allow
   id: member_policy
-  principal: _member_
+  principal: Member
   resource:
     path: /v0.1/member_resources*
     properties:

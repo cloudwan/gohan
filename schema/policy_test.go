@@ -39,7 +39,7 @@ var _ = Describe("Policies", func() {
 			Expect(manager.LoadSchemaFromFile(schemaPath)).To(Succeed())
 
 			adminAuth = NewAuthorization(adminTenantID, "admin", "fake_token", []string{"admin"}, nil)
-			memberAuth = NewAuthorization(demoTenantID, "demo", "fake_token", []string{"_member_"}, nil)
+			memberAuth = NewAuthorization(demoTenantID, "demo", "fake_token", []string{"Member"}, nil)
 		})
 
 		AfterEach(func() {
@@ -56,19 +56,19 @@ var _ = Describe("Policies", func() {
 		It("creates network as member", func() {
 			memberPolicy, role := manager.PolicyValidate("create", "/v2.0/networks", memberAuth)
 			Expect(memberPolicy).NotTo(BeNil())
-			Expect(role.Match("_member_")).To(BeTrue())
+			Expect(role.Match("Member")).To(BeTrue())
 		})
 
 		It("creates network as member - long url", func() {
 			memberPolicy, role := manager.PolicyValidate("create", "/v2.0/networks/red", memberAuth)
 			Expect(memberPolicy).NotTo(BeNil())
-			Expect(role.Match("_member_")).To(BeTrue())
-			Expect(memberPolicy.RequireOwner()).To(BeTrue(), "_member_ should require ownership")
+			Expect(role.Match("Member")).To(BeTrue())
+			Expect(memberPolicy.RequireOwner()).To(BeTrue(), "Member should require ownership")
 		})
 
 		It("creates subnet as member", func() {
 			memberPolicy, role := manager.PolicyValidate("create", "/v2.0/network/test1/subnets", memberAuth)
-			Expect(memberPolicy).To(BeNil(), "_member_ should not be allowed to touch subnet %v", memberPolicy)
+			Expect(memberPolicy).To(BeNil(), "Member should not be allowed to touch subnet %v", memberPolicy)
 			Expect(role).To(BeNil())
 		})
 	})

@@ -39,13 +39,13 @@ policies:
 - action: hello
   effect: allow
   id: member_hello
-  principal: _member_
+  principal: Member
   resource:
     path: /v2.0/responder.*
 - action: dobranoc
   effect: allow
   id: member_dobranoc
-  principal: _member_
+  principal: Member
   resource:
     path: /v2.0/responder.*
 - action: '*'
@@ -56,14 +56,14 @@ policies:
     type: belongs_to
   effect: allow
   id: power_user_statement
-  principal: _member_
+  principal: Member
   resource:
     path: /v2.0/network.*
   tenant_id: acf5662bbff44060b93a.*
 - action: '*'
   effect: allow
   id: member_user_schemas
-  principal: _member_
+  principal: Member
   resource:
     path: /v0.1/schema.*
 - action: '*'
@@ -77,7 +77,7 @@ policies:
     type: belongs_to
   effect: allow
   id: member_statement
-  principal: _member_
+  principal: Member
   resource:
     path: /v2.0/networks/[^/]+/?$
     properties:
@@ -93,7 +93,7 @@ policies:
     type: belongs_to
   effect: allow
   id: member_statement2
-  principal: _member_
+  principal: Member
   resource:
     path: /v2.0/networks/?$
     properties:
@@ -106,7 +106,7 @@ policies:
   - is_owner
   effect: allow
   id: member_statement_test
-  principal: _member_
+  principal: Member
   resource:
     path: /v2.0/test.*
 - action: '*'
@@ -114,7 +114,7 @@ policies:
   - is_owner
   effect: allow
   id: member_statement_test
-  principal: _member_
+  principal: Member
   condition:
   - type: property
     action: read
@@ -150,7 +150,7 @@ policies:
   - is_owner
   effect: allow
   id: member_statement3
-  principal: _member_
+  principal: Member
   resource:
     path: /_all.*
 schemas:

@@ -118,21 +118,21 @@ policies:
 - action: read
   effect: allow
   id: policy1
-  principal: _member_
+  principal: Member
   resource:
     path: /gohan/v0.1/schemas*
 # Allow to read pets
 - action: read
   effect: allow
   id: policy2
-  principal: _member_
+  principal: Member
   resource:
     path: /v1.0/store/pets
 # Allow to read orders
 - action: read
   effect: allow
   id: policy3
-  principal: _member_
+  principal: Member
   condition:
   - is_owner
   resource:
@@ -141,7 +141,7 @@ policies:
 - action: create
   effect: allow
   id: policy4
-  principal: _member_
+  principal: Member
   resource:
     path: /v1.0/store/orders
   condition:

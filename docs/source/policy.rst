@@ -57,7 +57,7 @@ Example policy
       tenant_id: 8bab8453-1bc9-45af-8c70-f83aa9b50453
     effect: allow
     id: member_statement
-    principal: _member_
+    principal: Member
     resource:
       path: /v2.0/network/[^/]+/?$
       properties:
@@ -69,7 +69,7 @@ Example policy
     - is_owner
     effect: allow
     id: member_statement2
-    principal: _member_
+    principal: Member
     resource:
       path: /v2.0/networks/?$
       properties:
@@ -81,7 +81,7 @@ Example policy
     - is_owner
     effect: allow
     id: member_statement2
-    principal: _member_
+    principal: Member
     resource:
       path: /v2.0/server/?$
 

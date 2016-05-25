@@ -36,7 +36,7 @@ policies:
 - action: read # limit for only read
   effect: allow # allow access
   id: member_schema # unique id for this policy
-  principal: _member_ # member role
+  principal: Member # member role
   resource:
     path: /gohan/v0.1/schemas* # resource path
 # Allow access for member_resource
@@ -45,7 +45,7 @@ policies:
   - is_owner # access limited only if a member is owner of the resource
   effect: allow # allow access
   id: member_policy
-  principal: _member_
+  principal: Member
   resource:
     path: /v0.1/member_resources*
     properties: # limit properties here
