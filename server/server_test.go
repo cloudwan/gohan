@@ -402,7 +402,7 @@ var _ = Describe("Server package test", func() {
 			Expect(result).To(HaveKeyWithValue("network", networkExpected))
 
 			result = testURL("GET", baseURL+"/_all", memberTokenID, nil, http.StatusOK)
-			Expect(result).To(HaveLen(4))
+			Expect(result).To(HaveLen(5))
 			Expect(result).To(HaveKeyWithValue("networks", []interface{}{networkExpected}))
 			Expect(result).To(HaveKey("schemas"))
 			Expect(result).To(HaveKey("tests"))
@@ -410,13 +410,13 @@ var _ = Describe("Server package test", func() {
 			testURL("GET", baseURL+"/v2.0/network/unknownID", memberTokenID, nil, http.StatusNotFound)
 
 			testURL("POST", subnetPluralURL, memberTokenID, getSubnet("red", "red", "networkred"), http.StatusUnauthorized)
-			testURL("GET", getSubnetSingularURL("red"), memberTokenID, nil, http.StatusUnauthorized)
+			testURL("GET", getSubnetSingularURL("red"), memberTokenID, nil, http.StatusNotFound)
 			testURL("PUT", getSubnetSingularURL("red"), memberTokenID, getSubnet("red", "red", "networkred"), http.StatusUnauthorized)
 
 			testURL("PUT", getNetworkSingularURL("red"), memberTokenID, invalidNetwork, http.StatusUnauthorized)
 			testURL("PUT", getNetworkSingularURL("red"), memberTokenID, network, http.StatusBadRequest)
 
-			testURL("DELETE", getSubnetSingularURL("red"), memberTokenID, nil, http.StatusUnauthorized)
+			testURL("DELETE", getSubnetSingularURL("red"), memberTokenID, nil, http.StatusNotFound)
 			testURL("DELETE", getNetworkSingularURL("red"), memberTokenID, nil, http.StatusNoContent)
 			testURL("DELETE", getNetworkSingularURL("red"), memberTokenID, nil, http.StatusNotFound)
 		})

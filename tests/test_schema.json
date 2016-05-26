@@ -17,7 +17,7 @@
             ],
             "effect": "allow",
             "id": "member_statement",
-            "principal": "_member_",
+            "principal": "Member",
             "resource": {
                 "path": "/v2.0/network/[^/]+/?$",
                 "properties": [
@@ -34,7 +34,7 @@
             ],
             "effect": "allow",
             "id": "member_statement2",
-            "principal": "_member_",
+            "principal": "Member",
             "resource": {
                 "path": "/v2.0/networks/?$",
                 "properties": [

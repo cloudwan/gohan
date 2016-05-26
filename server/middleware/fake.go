@@ -112,7 +112,7 @@ var fakeTokens = map[string]interface{}{
 				"name": "demo",
 				"roles": []role{
 					role{
-						Name: "_member_",
+						Name: "Member",
 					},
 				},
 				"roles_links": map[string]interface{}{},
@@ -129,7 +129,7 @@ var fakeTokens = map[string]interface{}{
 				"name": "power_user",
 				"roles": []role{
 					role{
-						Name: "_member_",
+						Name: "Member",
 					},
 				},
 				"roles_links": map[string]interface{}{},
