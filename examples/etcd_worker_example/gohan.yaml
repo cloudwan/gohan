@@ -1,0 +1,57 @@
+#######################################################
+#  Gohan API Server example configuraion
+######################################################
+
+database:
+    type: "sqlite3"
+    connection: "./gohan.db"
+schemas:
+    - "embed://etc/schema/gohan.json"
+    - "embed://etc/extensions/gohan_extension.yaml"
+    - "../../etc/example_schema.yaml"
+    - "./worker.yaml"
+
+editable_schema: ./example_schema.yaml
+
+
+address: ":9091"
+
+# keystone configuraion
+keystone:
+    use_keystone: true
+    fake: true
+    auth_url: "http://localhost:9091/v2.0"
+    user_name: "admin"
+    tenant_name: "admin"
+    password: "gohan"
+
+cors: "*"
+
+logging:
+    stderr:
+        enabled: true
+        level: DEBUG
+        modules:
+        - name: gohanscript
+          level: DEBUG
+    file:
+        enabled: true
+        level: INFO
+        filename: ./gohan.log
+
+extension:
+    type: gohanscript
+
+etcd:
+    - http://127.0.0.1:4001
+
+watch:
+    keys:
+      - config/v1.0/store/
+    events:
+      - config/v1.0/store/pets
+    worker_count: 4
+
+webui_config:
+    enabled: true
+    tls: false
