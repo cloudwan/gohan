@@ -1,0 +1,8 @@
+extensions:
+- id: sync
+  path: sync://config/v1.0/store/pets
+  code_type: gohanscript
+  code: |
+    tasks:
+    - debug:
+schemas: []
