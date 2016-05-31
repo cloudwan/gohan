@@ -1,0 +1,66 @@
+schemas:
+- description: Metadata
+  id: metadata
+  plural: metadatas
+  metadata:
+    sync_key_template: /v1.0/metadata/{{m1}}/{{m2}}/{{m3}}
+  schema:
+    properties:
+      m1:
+        description: M1
+        title: M1
+        type: string
+        unique: false
+      m2:
+        description: M2
+        title: M2
+        type: boolean
+        unique: false
+        default: false
+      m3:
+        description: M3
+        title: M3
+        type: integer
+        unique: false
+        default: false
+    propertiesOrder:
+    - m1
+    - m2
+    - m3
+    type: object
+  singular: metadata
+  title: Metadata
+- description: MetadataFailed
+  id: metadata_failed
+  plural: metadatas_failed
+  metadata:
+    sync_key_template: /v1.0/metadata-failed/{{m1}}/{{failed}}
+  schema:
+    properties:
+      m1:
+        description: M1
+        title: M1
+        type: string
+        unique: false
+    propertiesOrder:
+    - m1
+    type: object
+  singular: metadata_failed
+  title: MetadataFailed
+- description: MetadataId
+  id: metadata_id
+  plural: metadatas_id
+  metadata:
+    sync_key_template: /v1.0/metadata-id/{{id}}/
+  schema:
+    properties:
+      id:
+        description: ID
+        title: ID
+        type: string
+        unique: true
+    propertiesOrder:
+    - id
+    type: object
+  singular: metadata_id
+  title: MetadataId

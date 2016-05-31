@@ -19,7 +19,9 @@ import (
 	"fmt"
 
 	"github.com/cloudwan/gohan/util"
+	"github.com/flosch/pongo2"
 	"github.com/xeipuuv/gojsonschema"
+	"strings"
 )
 
 //Schema type for defining data type
@@ -344,6 +346,62 @@ func (schema *Schema) StateVersioning() bool {
 		return false
 	}
 	return stateful
+}
+
+func (schema *Schema) SyncKeyTemplate() (syncKeyTemplate string, ok bool) {
+	syncKeyTemplateRaw, ok := schema.Metadata["sync_key_template"]
+	if !ok {
+		return
+	}
+	syncKeyTemplate, ok = syncKeyTemplateRaw.(string)
+	return
+}
+
+func (schema *Schema) GenerateCustomPath(data map[string]interface{}) (path string, err error) {
+	syncKeyTemplate, ok := schema.SyncKeyTemplate()
+	if !ok {
+		err = fmt.Errorf("Failed to read sync_key_template from schema %v", schema.URL)
+		return
+	}
+	tpl, err := pongo2.FromString(syncKeyTemplate)
+	if err != nil {
+		return
+	}
+	path, err = tpl.Execute(pongo2.Context{}.Update(data))
+	return
+}
+
+func (schema *Schema) GetResourceIdFromPath(schemaPath string) string {
+	syncKeyTemplate, ok := schema.SyncKeyTemplate()
+	if !ok {
+		return strings.TrimPrefix(schemaPath, schema.URL + "/")
+	}
+
+	syncKeyTemplateSplit := strings.Split(syncKeyTemplate, "/")
+	schemaPathSplit := strings.Split(schemaPath, "/")
+	if len(schemaPathSplit) >= len(syncKeyTemplateSplit) {
+		resourceID := ""
+		for k, v := range syncKeyTemplateSplit {
+			if v == "{{id}}" {
+				resourceID = schemaPathSplit[k]
+				break
+			}
+		}
+		return resourceID
+	} else {
+		return strings.TrimPrefix(schemaPath, schema.URL+"/")
+	}
+}
+
+func GetSchemaByPath(path string) *Schema {
+	var schemaByPath *Schema
+	for _, schema := range GetManager().Schemas() {
+		if strings.HasPrefix(path, schema.URL) {
+			schemaByPath = schema
+			break
+		}
+	}
+	return schemaByPath
 }
 
 // FormatParentID ...

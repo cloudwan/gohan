@@ -34,6 +34,7 @@ type nonHyphenatedUUIDFormatChecker struct{}
 type portFormatChecker struct{}
 type yamlFormatChecker struct{}
 type textFormatChecker struct{}
+type syncKeyTemplateFormatChecker struct{}
 
 func (f macFormatChecker) IsFormat(input string) bool {
 	match, _ := regexp.MatchString(`^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$`, input)
@@ -84,6 +85,11 @@ func (f textFormatChecker) IsFormat(input string) bool {
 	return true
 }
 
+func (f syncKeyTemplateFormatChecker) IsFormat(input string) bool {
+	match, _ := regexp.MatchString(`^.*({{id}}).*$`, input)
+	return match
+}
+
 func registerGohanFormats(checkers gojsonschema.FormatCheckerChain) {
 	checkers.Add("mac", macFormatChecker{})
 	checkers.Add("cidr", cidrFormatChecker{})
@@ -95,4 +101,5 @@ func registerGohanFormats(checkers gojsonschema.FormatCheckerChain) {
 	checkers.Add("port", portFormatChecker{})
 	checkers.Add("yaml", yamlFormatChecker{})
 	checkers.Add("text", textFormatChecker{})
+	checkers.Add("sync-key-template", syncKeyTemplateFormatChecker{})
 }
