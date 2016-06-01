@@ -374,7 +374,7 @@ func (schema *Schema) GenerateCustomPath(data map[string]interface{}) (path stri
 func (schema *Schema) GetResourceIdFromPath(schemaPath string) string {
 	syncKeyTemplate, ok := schema.SyncKeyTemplate()
 	if !ok {
-		return strings.TrimPrefix(schemaPath, schema.URL + "/")
+		return strings.TrimPrefix(schemaPath, schema.URL+"/")
 	}
 
 	syncKeyTemplateSplit := strings.Split(syncKeyTemplate, "/")

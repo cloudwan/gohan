@@ -88,6 +88,7 @@ func CopyDBResources(input, output DB) error {
 			log.Info("Creating resource %s", resource.ID())
 			destResource, _ := otx.Fetch(s, resource.ID(), nil)
 			if destResource == nil {
+				resource.PopulateDefaults()
 				err := otx.Create(resource)
 				if err != nil {
 					return err
