@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"time"
+	"fmt"
 )
 
 //HTTPGet fetch data using HTTP.
@@ -63,7 +64,7 @@ func HTTPRequest(url string, method string, headers map[string]interface{}, post
 	}
 	request, err := http.NewRequest(method, url, reader)
 	for key, value := range headers {
-		request.Header.Add(key, value.(string))
+		request.Header.Add(key, fmt.Sprintf("%v", value))
 	}
 
 	if err != nil {
