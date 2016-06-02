@@ -144,6 +144,7 @@ func init() {
 
 		  for (var i = 0; i < gohan_handler[event_type].length; ++i) {
 		    try {
+		      var old_module = gohan_log_module_push(event_type);
 		      gohan_handler[event_type][i](context);
 		      //backwards compatibility
 		      if (!_.isUndefined(context.response_code)) {
@@ -156,6 +157,8 @@ func init() {
 		      } else {
 		        throw e;
 		      }
+		    } finally {
+		      gohan_log_module_restore(old_module);
 		    }
 		  }
 		}

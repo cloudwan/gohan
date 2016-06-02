@@ -24,7 +24,6 @@ import (
 
 	"github.com/cloudwan/gohan/extension"
 
-	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
 	"github.com/streadway/amqp"
 	"github.com/twinj/uuid"
@@ -47,17 +46,15 @@ func listenAMQP(server *Server) {
 	hostname, _ := os.Hostname()
 	processID := hostname + uuid.NewV4().String()
 	config := util.GetConfig()
-	manager := schema.GetManager()
 	connection := config.GetString("amqp/connection", "amqp://guest:guest@127.0.0.1:5672/")
 	queues := config.GetStringList("amqp/queues", []string{"notifications.info", "notifications.error"})
 	events := config.GetStringList("amqp/events", []string{})
 	extensions := map[string]extension.Environment{}
 	for _, event := range events {
 		path := "amqp://" + event
-		env := server.newEnvironment()
-		err := env.LoadExtensionsForPath(manager.Extensions, path)
+		env, err := server.NewEnvironmentForPath("amqp."+event, path)
 		if err != nil {
-			log.Fatal(fmt.Sprintf("Extensions parsing error: %v", err))
+			log.Fatal(err.Error())
 		}
 		extensions[event] = env
 	}

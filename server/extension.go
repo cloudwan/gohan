@@ -32,20 +32,23 @@
 package server
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/extension/gohanscript"
 	"github.com/cloudwan/gohan/extension/golang"
 	"github.com/cloudwan/gohan/extension/otto"
-	"time"
+	"github.com/cloudwan/gohan/schema"
 )
 
-func (server *Server) newEnvironment() extension.Environment {
+func (server *Server) newEnvironment(name string) extension.Environment {
 	envs := []extension.Environment{}
 	timelimit := time.Duration(server.timelimit) * time.Second
 	for _, extension := range server.extensions {
 		switch extension {
 		case "javascript":
-			envs = append(envs, otto.NewEnvironment(server.db, server.keystoneIdentity, timelimit))
+			envs = append(envs, otto.NewEnvironment(name, server.db, server.keystoneIdentity, timelimit))
 		case "gohanscript":
 			envs = append(envs, gohanscript.NewEnvironment(timelimit))
 		case "go":
@@ -53,4 +56,16 @@ func (server *Server) newEnvironment() extension.Environment {
 		}
 	}
 	return extension.NewEnvironment(envs)
+}
+
+// NewEnvironmentForPath creates an extension environment and loads extensions for path
+func (server *Server) NewEnvironmentForPath(name string, path string) (env extension.Environment, err error) {
+	manager := schema.GetManager()
+
+	env = server.newEnvironment(name)
+	err = env.LoadExtensionsForPath(manager.Extensions, path)
+	if err != nil {
+		err = fmt.Errorf("Extensions parsing error: %v", err)
+	}
+	return
 }

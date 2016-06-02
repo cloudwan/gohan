@@ -17,16 +17,15 @@ package server
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/robfig/cron"
 
-	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
 )
 
 //CRON Process
 func startCRONProcess(server *Server) {
-	manager := schema.GetManager()
 	config := util.GetConfig()
 	jobList := config.GetParam("cron", nil)
 	if jobList == nil {
@@ -38,10 +37,10 @@ func startCRONProcess(server *Server) {
 		job := rawJob.(map[string]interface{})
 		path := job["path"].(string)
 		timing := job["timing"].(string)
-		env := server.newEnvironment()
-		err := env.LoadExtensionsForPath(manager.Extensions, path)
+		name := strings.TrimPrefix(path, "cron://")
+		env, err := server.NewEnvironmentForPath(name, path)
 		if err != nil {
-			log.Fatal(fmt.Sprintf("Extensions parsing error: %v", err))
+			log.Fatal(err.Error())
 		}
 		log.Info("New job for %s / %s", path, timing)
 		c.AddFunc(timing, func() {
