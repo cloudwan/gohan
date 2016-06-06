@@ -296,6 +296,18 @@ close ssh session
 
 Dynamically load modules
 
+- gohan_file_list(dir)
+
+List files in dir
+
+- gohan_file_read(path)
+
+Read file from path
+
+- gohan_file_dir(path)
+
+Check if dir
+
 .. _event:
 
 Event
