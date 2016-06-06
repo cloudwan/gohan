@@ -200,7 +200,11 @@ func (client *keystoneV3Client) VerifyToken(token string) (schema.Authorization,
 		roleIDs = append(roleIDs, roleBody.(map[string]interface{})["name"].(string))
 	}
 	tokenBodyMap := tokenBody.(map[string]interface{})
-	project := tokenBodyMap["project"].(map[string]interface{})
+	projectObj, ok := tokenBodyMap["project"]
+	if !ok {
+		return nil, fmt.Errorf("Token is unscoped")
+	}
+	project := projectObj.(map[string]interface{})
 	tenantID := project["id"].(string)
 	tenantName := project["name"].(string)
 	catalogList, ok := tokenBodyMap["catalog"].([]interface{})
@@ -267,6 +271,7 @@ func (client *keystoneV2Client) VerifyToken(token string) (schema.Authorization,
 	if err != nil {
 		return nil, fmt.Errorf("Invalid token")
 	}
+	fmt.Printf("%v", tokenResult)
 	tokenBody := tokenResult.(map[string]interface{})["access"]
 	userBody := tokenBody.(map[string]interface{})["user"]
 	roles := userBody.(map[string]interface{})["roles"]
@@ -275,7 +280,11 @@ func (client *keystoneV2Client) VerifyToken(token string) (schema.Authorization,
 		roleIDs = append(roleIDs, roleBody.(map[string]interface{})["name"].(string))
 	}
 	tokenBodyMap := tokenBody.(map[string]interface{})
-	tenant := tokenBodyMap["token"].(map[string]interface{})["tenant"].(map[string]interface{})
+	tenantObj, ok := tokenBodyMap["token"].(map[string]interface{})["tenant"]
+	if !ok {
+		return nil, fmt.Errorf("Token is unscoped")
+	}
+	tenant := tenantObj.(map[string]interface{})
 	tenantID := tenant["id"].(string)
 	tenantName := tenant["name"].(string)
 	catalogList := tokenBodyMap["serviceCatalog"].([]interface{})
