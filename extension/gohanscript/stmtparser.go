@@ -346,11 +346,15 @@ func testSuite(stmt *Stmt) (func(*Context) (interface{}, error), error) {
 				successCount++
 			}
 		}
+		var err error
+		if failedCount > 0 {
+			err = fmt.Errorf("Test failed")
+		}
 		return map[string]interface{}{
 			"count":   len(tests.Children),
 			"success": successCount,
 			"failed":  failedCount,
-		}, nil
+		}, err
 	}, nil
 }
 
