@@ -50,3 +50,17 @@ function testMockTransactions() {
         JSON.stringify([network1]), JSON.stringify(resources));
   }
 }
+
+function testMockTransactionsInOneTrigger() {
+  var context = {
+    "id": "net1"
+  };
+  gohan_db_transaction.Expect().Return(MockTransaction());
+  gohan_db_transaction.Expect().Return(MockTransaction(true));
+  GohanTrigger("custom_action", context);
+  var resource = gohan_db_fetch(MockTransaction(), "network", context.id, "");
+  if ("DOWN" !== resource.status) {
+    Fail("Fail to update resource status = expected %s, received %s",
+        "DOWN", resource.status);
+  }
+}

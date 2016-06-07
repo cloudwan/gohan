@@ -312,8 +312,9 @@ var _ = Describe("Runner", func() {
 			})
 
 			It("Should return no errors", func() {
-				Expect(errors).To(HaveLen(1))
+				Expect(errors).To(HaveLen(2))
 				Expect(errors).To(HaveKeyWithValue("testMockTransactions", BeNil()))
+				Expect(errors).To(HaveKeyWithValue("testMockTransactionsInOneTrigger", BeNil()))
 			})
 		})
 

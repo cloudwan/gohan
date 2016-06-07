@@ -530,12 +530,13 @@ following API:
 
   *  ``context`` - context passed to the event handler
 
-* ``MockTransaction() : <mock transaction>`` - return a mock transaction that
+* ``MockTransaction(is_new) : <mock transaction>`` - return a mock transaction that
   can be used with built-in Gohan methods. Each test is run using a separate
   database that is deleted after ``tearDown()``, so there is no need to
   clean up the database between tests. Multiple calls to ``MockTransaction()``
   within a single ``setUp()``, test, ``tearDown()`` routine when no call to
   ``CommitMockTransaction()`` has been made will yield the same transaction.
+  ``MockTransaction(true)`` returns forcibly new transaction.
 
 * ``CommitMockTransaction()`` - commit and close the last nonclosed
   transaction. After this call any calls to ``MockTransaction()`` return
