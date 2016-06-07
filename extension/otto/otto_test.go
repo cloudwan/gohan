@@ -1536,3 +1536,136 @@ var _ = Describe("Otto extension manager", func() {
 		})
 	})
 })
+var _ = Describe("Using gohan_file builtin", func() {
+	var (
+		context map[string]interface{}
+		env     *otto.Environment
+	)
+
+	BeforeEach(func() {
+		context = map[string]interface{}{
+			"id": "test",
+		}
+		env = newEnvironment()
+	})
+	Context("List files", func() {
+		It("Should work", func() {
+			extension, err := schema.NewExtension(map[string]interface{}{
+				"id": "list_files",
+				"code": `
+					gohan_register_handler("test_event", function(context){
+						context.list = gohan_file_list('./');
+					});`,
+				"path": ".*",
+			})
+			Expect(err).ToNot(HaveOccurred())
+			extensions := []*schema.Extension{extension}
+			Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+
+			Expect(env.HandleEvent("test_event", context)).To(Succeed())
+			Expect(context).To(HaveKey("list"))
+			Expect(context["list"]).ToNot(BeNil())
+		})
+		It("Shouldn't work", func() {
+			extension, err := schema.NewExtension(map[string]interface{}{
+				"id": "list_files",
+				"code": `
+					gohan_register_handler("test_event", function(context){
+						context.list = gohan_file_list('./doesnt_exist');
+					});`,
+				"path": ".*",
+			})
+			Expect(err).ToNot(HaveOccurred())
+			extensions := []*schema.Extension{extension}
+			Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+
+			Expect(env.HandleEvent("test_event", context)).ToNot(Succeed())
+			Expect(context).ToNot(HaveKey("list"))
+		})
+	})
+	Context("Read file", func() {
+		It("Should work", func() {
+			extension, err := schema.NewExtension(map[string]interface{}{
+				"id": "read_file",
+				"code": `
+					gohan_register_handler("test_event", function(context){
+						context.list = gohan_file_read('./test.db');
+					});`,
+				"path": ".*",
+			})
+			Expect(err).ToNot(HaveOccurred())
+			extensions := []*schema.Extension{extension}
+			Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+
+			Expect(env.HandleEvent("test_event", context)).To(Succeed())
+			Expect(context).To(HaveKey("list"))
+			Expect(context["list"]).ToNot(BeNil())
+		})
+		It("Shouldn't work", func() {
+			extension, err := schema.NewExtension(map[string]interface{}{
+				"id": "read_file",
+				"code": `
+					gohan_register_handler("test_event", function(context){
+						context.list = gohan_file_read('./doesnt_exist');
+					});`,
+				"path": ".*",
+			})
+			Expect(err).ToNot(HaveOccurred())
+			extensions := []*schema.Extension{extension}
+			Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+
+			Expect(env.HandleEvent("test_event", context)).ToNot(Succeed())
+			Expect(context).ToNot(HaveKey("list"))
+		})
+	})
+	Context("Is dir", func() {
+		It("Is dir", func() {
+			extension, err := schema.NewExtension(map[string]interface{}{
+				"id": "read_file",
+				"code": `
+					gohan_register_handler("test_event", function(context){
+						context.dir = gohan_file_dir('./');
+					});`,
+				"path": ".*",
+			})
+			Expect(err).ToNot(HaveOccurred())
+			extensions := []*schema.Extension{extension}
+			Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+
+			Expect(env.HandleEvent("test_event", context)).To(Succeed())
+			Expect(context).To(HaveKeyWithValue("dir", true))
+		})
+		It("Isn't dir", func() {
+			extension, err := schema.NewExtension(map[string]interface{}{
+				"id": "read_file",
+				"code": `
+					gohan_register_handler("test_event", function(context){
+						context.dir= gohan_file_dir('./test.db');
+					});`,
+				"path": ".*",
+			})
+			Expect(err).ToNot(HaveOccurred())
+			extensions := []*schema.Extension{extension}
+			Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+
+			Expect(env.HandleEvent("test_event", context)).To(Succeed())
+			Expect(context).To(HaveKeyWithValue("dir", false))
+		})
+		It("Shouldn't work", func() {
+			extension, err := schema.NewExtension(map[string]interface{}{
+				"id": "read_file",
+				"code": `
+					gohan_register_handler("test_event", function(context){
+						context.dir = gohan_file_dir('./doesnt_exist');
+					});`,
+				"path": ".*",
+			})
+			Expect(err).ToNot(HaveOccurred())
+			extensions := []*schema.Extension{extension}
+			Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+
+			Expect(env.HandleEvent("test_event", context)).ToNot(Succeed())
+			Expect(context).ToNot(HaveKey("dir"))
+		})
+	})
+})
