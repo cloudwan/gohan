@@ -265,6 +265,25 @@ var _ = Describe("Runner", func() {
 			})
 		})
 
+		Context("When correctly using the Gohan Config mock", func() {
+			BeforeEach(func() {
+				testFile = "./test_data/gohan_config_mock.js"
+			})
+
+			It("Should work", func() {
+				Expect(errors).To(HaveLen(4))
+				Expect(errors).To(HaveKeyWithValue(
+					"testUnexpectedCall", MatchError(ContainSubstring("Unexpected call"))))
+				Expect(errors).To(HaveKeyWithValue("testSingleReturnSingleCall", BeNil()))
+				Expect(errors).To(HaveKeyWithValue(
+					"testSingleReturnMultipleCalls", MatchError(ContainSubstring("Unexpected call"))))
+				Expect(errors).To(HaveKeyWithValue(
+					"testWrongArgumentsCall", MatchError(ContainSubstring("Wrong arguments"))))
+				Expect(errors).To(HaveKeyWithValue(
+					"testWrongArgumentsCall", MatchError(ContainSubstring("expected [database/type, sqlite3]"))))
+			})
+		})
+
 		Context("When using Gohan builtins", func() {
 			BeforeEach(func() {
 				testFile = "./test_data/gohan_builtins.js"
