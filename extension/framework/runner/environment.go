@@ -190,6 +190,7 @@ func (env *Environment) addTestingAPI() {
 	env.VM.Run(`function GohanTrigger(event, context) { gohan_handle_event(event, context); }`)
 	env.mockFunction("gohan_http")
 	env.mockFunction("gohan_db_transaction")
+	env.mockFunction("gohan_config")
 }
 
 func (env *Environment) getTransaction() transaction.Transaction {

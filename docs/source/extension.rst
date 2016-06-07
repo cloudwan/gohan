@@ -508,11 +508,12 @@ Framework API
 Test framework provides all built in function mentioned in subsection
 describing `gohan built in functions`_.
 
-To avoid making HTTP requests during tests, ``gohan_http`` function is a mock.
-You can pass values that will be returned for given arguments during subsequent
-calls by calling ``gohan_http.Expect(argument, ...).Return(value)``. One call to
-``gohan_http.Expect(arguments, ...).Return(value)`` provides one response of
-``gohan_http`` (FIFO queue). If no return value, or wrong arguments are provided
+In unit tests, you can use mocks of ``gohan_http``, ``gohan_config`` and
+``gohan_db_transaction``. You can pass values that will be returned for given
+arguments during subsequent calls by calling
+``gohan_*.Expect(argument, ...).Return(value)``. One call to
+``gohan_*.Expect(arguments, ...).Return(value)`` provides one response of
+``gohan_*`` (FIFO queue). If no return value, or wrong arguments are provided
 for a call then an unexpected call is assumed, which will result in test failures.
 
 In addition to the abovementioned functions, the framework provides the
