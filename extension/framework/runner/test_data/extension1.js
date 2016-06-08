@@ -29,3 +29,24 @@ CustomError.prototype = new Error;
 gohan_register_handler("pre_list", function(context) {
   throw new CustomError("ExtensionError");
 });
+
+gohan_register_handler("custom_action", function (context) {
+  var tx = gohan_db_transaction();
+  var new_network = {
+    "id": context.id,
+    "name": "Net1",
+    "status": "ACTIVE"
+  };
+  gohan_db_create(tx, "network", new_network);
+  tx.Commit();
+  tx.Close();
+
+  tx = gohan_db_transaction();
+  var new_network = {
+    "id": context.id,
+    "status": "DOWN"
+  };
+  gohan_db_update(tx, "network", new_network);
+  tx.Commit();
+  tx.Close();
+});

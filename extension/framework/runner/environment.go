@@ -164,11 +164,18 @@ func (env *Environment) addTestingAPI() {
 			panic(fmt.Errorf(format, args...))
 		},
 		"MockTransaction": func(call otto.FunctionCall) otto.Value {
-			transactionValue, _ := call.Otto.ToValue(env.getTransaction())
+			newTransaction := false
+			if len(call.ArgumentList) > 1 {
+				panic("Wrong number of arguments in MockTransaction call.")
+			} else if len(call.ArgumentList) == 1 {
+				rawNewTransaction, _ := call.Argument(0).Export()
+				newTransaction = rawNewTransaction.(bool)
+			}
+			transactionValue, _ := call.Otto.ToValue(env.getTransaction(newTransaction))
 			return transactionValue
 		},
 		"CommitMockTransaction": func(call otto.FunctionCall) otto.Value {
-			tx := env.getTransaction()
+			tx := env.getTransaction(false)
 			tx.Commit()
 			tx.Close()
 			return otto.Value{}
@@ -193,10 +200,12 @@ func (env *Environment) addTestingAPI() {
 	env.mockFunction("gohan_config")
 }
 
-func (env *Environment) getTransaction() transaction.Transaction {
-	for _, tx := range env.dbTransactions {
-		if !tx.Closed() {
-			return tx
+func (env *Environment) getTransaction(isNew bool) transaction.Transaction {
+	if !isNew {
+		for _, tx := range env.dbTransactions {
+			if !tx.Closed() {
+				return tx
+			}
 		}
 	}
 	tx, _ := env.dbConnection.Begin()

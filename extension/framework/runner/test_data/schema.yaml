@@ -77,6 +77,12 @@ schemas:
     - subnets
   singular: network
   title: Network
+  actions:
+    custom_action:
+      path: /:id/custom_action
+      method: POST
+      output:
+        type: object
 - description: Subnet
   id: subnet
   namespace: neutronV2
