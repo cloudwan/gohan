@@ -28,7 +28,7 @@ import (
 
 const (
 	adminTokenID      = "admin_token"
-	memberTokenID     = "member_token"
+	memberTokenID     = "demo_token"
 	powerUserTokenID  = "power_user_token"
 	adminTenantID     = "fc394f2ab2df4114bde39905f800dc57"
 	memberTenantID    = "fc394f2ab2df4114bde39905f800dc57"
