@@ -99,13 +99,13 @@ var fakeTokens = map[string]interface{}{
 					},
 				},
 				"roles_links": map[string]interface{}{},
-				"username":    "demo",
+				"username":    "admin",
 			},
 		},
 	},
-	"member_token": map[string]interface{}{
+	"demo_token": map[string]interface{}{
 		"access": map[string]interface{}{
-			"token":          getToken("member_token", allTenants[0]),
+			"token":          getToken("demo_token", allTenants[0]),
 			"serviceCatalog": serviceCatalog,
 			"user": map[string]interface{}{
 				"id":   "demo",
@@ -206,17 +206,35 @@ func FakeKeystone(martini *martini.ClassicMartini) {
 		if err != nil {
 			http.Error(w, "", http.StatusBadRequest)
 		}
+		tokenKey := ""
 		username, err := util.GetByJSONPointer(authRequest, "/auth/passwordCredentials/username")
-		if err != nil {
-			http.Error(w, "", http.StatusBadRequest)
+		if err == nil {
+			tokenKey = fmt.Sprintf("%v_token", username)
+		} else {
+			username, err = util.GetByJSONPointer(authRequest, "/auth/token/id")
+			tokenKey = fmt.Sprintf("%v", username)
+			if err != nil {
+				http.Error(w, "", http.StatusBadRequest)
+			}
 		}
 
-		token, ok := fakeTokens[fmt.Sprintf("%v_token", username)]
+		token, ok := fakeTokens[tokenKey]
 		if !ok {
 			http.Error(w, "", http.StatusUnauthorized)
 		}
 
 		serializedToken, _ := json.Marshal(token)
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Length", strconv.Itoa(len(serializedToken)))
+		w.Write(serializedToken)
+	})
+
+	martini.Get("/v2.0/tenants", func(w http.ResponseWriter, r *http.Request) {
+		tenants := map[string]interface{}{
+			"tenants": allTenants,
+		}
+
+		serializedToken, _ := json.Marshal(tenants)
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Content-Length", strconv.Itoa(len(serializedToken)))
 		w.Write(serializedToken)
