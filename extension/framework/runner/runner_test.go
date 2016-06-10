@@ -34,7 +34,7 @@ var _ = Describe("Runner", func() {
 	)
 
 	JustBeforeEach(func() {
-		theRunner := runner.NewTestRunner(testFile)
+		theRunner := runner.NewTestRunner(testFile, true)
 		errors = theRunner.Run()
 	})
 
