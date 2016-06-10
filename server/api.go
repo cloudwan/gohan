@@ -32,7 +32,7 @@ import (
 )
 
 var (
-	exceptionObjectDoestNotContainKeyError  = "Exception obejct does not contrain '%s'"
+	exceptionObjectDoestNotContainKeyError  = "Exception obejct does not contain '%s'"
 	exceptionPropertyIsNotExpectedTypeError = "Exception property '%s' is not '%s'"
 )
 
