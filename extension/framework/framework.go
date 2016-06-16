@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"regexp"
 
+	"github.com/cloudwan/gohan/extension/framework/buflog"
 	"github.com/cloudwan/gohan/extension/framework/runner"
 	"github.com/codegangsta/cli"
 	logging "github.com/op/go-logging"
@@ -28,40 +29,50 @@ import (
 
 var log = logging.MustGetLogger("extest")
 
-func setUpLogging() {
-	backend := logging.NewLogBackend(os.Stderr, "", 0)
-	format := logging.MustStringFormatter(
-		"%{color}%{time:15:04:05.000}: %{module} %{level} %{color:reset} %{message}")
-	backendFormatter := logging.NewBackendFormatter(backend, format)
-	leveledBackendFormatter := logging.AddModuleLevel(backendFormatter)
-	leveledBackendFormatter.SetLevel(logging.CRITICAL, "")
-	leveledBackendFormatter.SetLevel(logging.DEBUG, "extest")
-	logging.SetBackend(leveledBackendFormatter)
-}
-
-// RunTests runs extension tests when invoked from Gohan CLI
-func RunTests(c *cli.Context) {
-	setUpLogging()
+// TestExtensions runs extension tests when invoked from Gohan CLI
+func TestExtensions(c *cli.Context) {
+	buflog.SetUpDefaultLogging()
 
 	testFiles := getTestFiles(c.Args())
-	summary := map[string]error{}
+
+	returnCode := RunTests(testFiles, c.Bool("verbose"))
+	os.Exit(returnCode)
+}
+
+// RunTests runs extension tests for CLI
+func RunTests(testFiles []string, printAllLogs bool) (returnCode int) {
+	errors := map[string]map[string]error{}
 	for _, testFile := range testFiles {
-		log.Info("Running tests from '%s':", testFile)
-		testRunner := runner.NewTestRunner(testFile)
-		errors := testRunner.Run()
+		testRunner := runner.NewTestRunner(testFile, printAllLogs)
+		errors[testFile] = testRunner.Run()
+		if err, ok := errors[testFile][runner.GeneralError]; ok {
+			log.Error(fmt.Sprintf("\t ERROR (%s): %v", testFile, err))
+		}
+	}
+
+	summary := makeSummary(errors)
+	printSummary(summary, printAllLogs)
+
+	for _, err := range summary {
+		if err != nil {
+			return 1
+		}
+	}
+	return 0
+}
+
+func makeSummary(errors map[string]map[string]error) (summary map[string]error) {
+	summary = map[string]error{}
+	for testFile, errors := range errors {
 		if err, ok := errors[runner.GeneralError]; ok {
-			summary[testFile] = fmt.Errorf("%s", err.Error())
-			log.Error(fmt.Sprintf("Error: %s", err.Error()))
+			summary[testFile] = err
 			continue
 		}
 
 		failed := 0
-		for test, err := range errors {
+		for _, err := range errors {
 			if err != nil {
-				failed = failed + 1
-				log.Error(fmt.Sprintf("\t FAIL (%s): %s", test, err.Error()))
-			} else if c.Bool("verbose") {
-				log.Notice("\t PASS (%s)", test)
+				failed++
 			}
 		}
 		summary[testFile] = nil
@@ -69,18 +80,35 @@ func RunTests(c *cli.Context) {
 			summary[testFile] = fmt.Errorf("%d/%d tests failed", failed, len(errors))
 		}
 	}
+	return
+}
 
-	returnCode := 0
-	log.Info("Run %d test files:", len(summary))
+func printSummary(summary map[string]error, printAllLogs bool) {
+	allPassed := true
+
+	if !printAllLogs {
+		buflog.Buf().Activate()
+		defer func() {
+			if !allPassed {
+				buflog.Buf().PrintLogs()
+			}
+			buflog.Buf().Deactivate()
+		}()
+	}
+
+	log.Info("Run %d test files.", len(summary))
 	for testFile, err := range summary {
 		if err != nil {
-			returnCode = 1
-			log.Error(fmt.Sprintf("Failure in %s: %s", testFile, err.Error()))
-		} else {
-			log.Notice("OK %s ", testFile)
+			log.Error(fmt.Sprintf("\tFAIL\t%s: %s", testFile, err.Error()))
+			allPassed = false
+		} else if printAllLogs {
+			log.Notice("\tOK\t%s", testFile)
 		}
 	}
-	os.Exit(returnCode)
+
+	if allPassed {
+		log.Notice("All tests have passed.")
+	}
 }
 
 func getTestFiles(args cli.Args) []string {
@@ -107,16 +135,11 @@ func getTestFiles(args cli.Args) []string {
 				return nil
 			}
 
-			fullPath, err := filepath.Abs(filePath)
-			if err != nil {
-				log.Error(fmt.Sprintf("Failed to traverse file '%s': %s", fullPath, err.Error()))
-				return nil
-			}
-			fullPath = filepath.Clean(fullPath)
+			filePath = filepath.Clean(filePath)
 
-			if !seen[fullPath] {
-				testFiles = append(testFiles, fullPath)
-				seen[fullPath] = true
+			if !seen[filePath] {
+				testFiles = append(testFiles, filePath)
+				seen[filePath] = true
 			}
 
 			return nil

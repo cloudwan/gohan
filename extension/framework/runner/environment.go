@@ -66,6 +66,7 @@ func NewEnvironment(testFileName string, testSource []byte) *Environment {
 // InitializeEnvironment creates new transaction for the test
 func (env *Environment) InitializeEnvironment() error {
 	var err error
+
 	_, file := filepath.Split(env.testFileName)
 	env.dbFile, err = ioutil.TempFile(os.TempDir(), file)
 	if err != nil {
