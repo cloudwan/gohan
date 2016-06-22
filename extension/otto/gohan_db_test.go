@@ -58,8 +58,8 @@ var _ = Describe("GohanDb", func() {
 		Expect(ok).To(BeTrue())
 
 		fakeResources = []map[string]interface{}{
-			map[string]interface{}{"tenant_id": "t0", "test_string": "str0"},
-			map[string]interface{}{"tenant_id": "t1", "test_string": "str1"},
+			map[string]interface{}{"tenant_id": "t0", "test_string": "str0", "test_bool": false},
+			map[string]interface{}{"tenant_id": "t1", "test_string": "str1", "test_bool": true},
 		}
 
 		r0, err = schema.NewResource(s, fakeResources[0])
@@ -106,6 +106,49 @@ var _ = Describe("GohanDb", func() {
 				Expect(context["resp"]).To(
 					Equal(
 						fakeResources,
+					),
+				)
+			})
+		})
+
+		Context("When boolean parameter is given", func() {
+			It("returns the list test_bool is true", func() {
+				extension, err := schema.NewExtension(map[string]interface{}{
+					"id": "test_extension",
+					"code": `
+					  gohan_register_handler("test_event", function(context){
+					    var tx = context.transaction;
+					    context.resp = gohan_db_list(
+					      tx,
+					      "test",
+					      {"test_bool": true}
+					    );
+					  });`,
+					"path": ".*",
+				})
+				Expect(err).ToNot(HaveOccurred())
+				env := newEnvironmentWithExtension(extension)
+
+				var pagenator *pagination.Paginator
+				var fakeTx = new(mocks.Transaction)
+				fakeTx.On(
+					"List", s, map[string]interface{}{"test_bool": true}, pagenator,
+				).Return(
+					[]*schema.Resource{r1},
+					uint64(1),
+					nil,
+				)
+
+				context := map[string]interface{}{
+					"transaction": fakeTx,
+				}
+				Expect(env.HandleEvent("test_event", context)).To(Succeed())
+
+				Expect(context["resp"]).To(
+					Equal(
+						[]map[string]interface{}{
+							map[string]interface{}{"tenant_id": "t1", "test_string": "str1", "test_bool": true},
+						},
 					),
 				)
 			})

@@ -538,8 +538,9 @@ var _ = Describe("Otto extension manager", func() {
 						  gohan_db_update(context.transaction,
 						    'network', {'id':'test1', 'name': 'name_updated', 'tenant_id': 'admin'});
 						  context.networks = gohan_db_list(context.transaction, 'network', {});
+						  context.networks2 = gohan_db_list(context.transaction, 'network', {'shared': false});
 						  gohan_db_delete(context.transaction, 'network', 'test1');
-						  context.networks2 = gohan_db_list(context.transaction, 'network', {});
+						  context.networks3 = gohan_db_list(context.transaction, 'network', {});
 						});`,
 						"path": ".*",
 					})
@@ -555,6 +556,7 @@ var _ = Describe("Otto extension manager", func() {
 					Expect(env.HandleEvent("test_event", context)).To(Succeed())
 					Expect(context["network"]).ToNot(BeNil())
 					Expect(context["networks"]).ToNot(BeNil())
+					Expect(context["networks2"]).ToNot(BeNil())
 				})
 			})
 

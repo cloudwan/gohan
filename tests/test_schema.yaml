@@ -301,6 +301,15 @@ schemas:
         title: Test string
         type: string
         unique: false
+      test_bool:
+        default: false
+        description: Test boolean
+        permission:
+        - create
+        - update
+        title: Test boolean
+        type: boolean
+        unique: false
     propertiesOrder:
     - id
     - tenant_id
