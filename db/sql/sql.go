@@ -810,9 +810,10 @@ func addFilterToQuery(s *schema.Schema, q sq.SelectBuilder, filter map[string]in
 			column = quote(key)
 		}
 
-		if property.Type == "boolean" {
-			v := make([]bool, len(value.([]string)))
-			for i, j := range value.([]string) {
+		queryValues, ok := value.([]string)
+		if ok && property.Type == "boolean" {
+			v := make([]bool, len(queryValues))
+			for i, j := range queryValues {
 				v[i], _ = strconv.ParseBool(j)
 			}
 			q = q.Where(sq.Eq{column: v})

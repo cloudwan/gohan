@@ -367,11 +367,13 @@ var _ = Describe("Resource manager", func() {
 					"id":          resourceID1,
 					"tenant_id":   adminTenantID,
 					"test_string": "Steloj estas en ordo.",
+					"test_bool":   false,
 				}
 				memberResourceData = map[string]interface{}{
 					"id":          resourceID2,
 					"tenant_id":   powerUserTenantID,
 					"test_string": "Mi estas la pordo, mi estas la sxlosilo.",
+					"test_bool":   false,
 				}
 			})
 
@@ -524,11 +526,13 @@ var _ = Describe("Resource manager", func() {
 					"id":          resourceID1,
 					"tenant_id":   adminTenantID,
 					"test_string": "Steloj estas en ordo.",
+					"test_bool":   false,
 				}
 				memberResourceData = map[string]interface{}{
 					"id":          resourceID2,
 					"tenant_id":   powerUserTenantID,
 					"test_string": "Mi estas la pordo, mi estas la sxlosilo.",
+					"test_bool":   false,
 				}
 			})
 
@@ -773,11 +777,13 @@ var _ = Describe("Resource manager", func() {
 					"id":          resourceID1,
 					"tenant_id":   adminTenantID,
 					"test_string": "Steloj estas en ordo.",
+					"test_bool":   false,
 				}
 				memberResourceData = map[string]interface{}{
 					"id":          resourceID2,
 					"tenant_id":   powerUserTenantID,
 					"test_string": "Mi estas la pordo, mi estas la sxlosilo.",
+					"test_bool":   false,
 				}
 			})
 
@@ -910,11 +916,13 @@ var _ = Describe("Resource manager", func() {
 				"id":          resourceID1,
 				"tenant_id":   adminTenantID,
 				"test_string": "Steloj estas en ordo.",
+				"test_bool":   false,
 			}
 			memberResourceData = map[string]interface{}{
 				"id":          resourceID2,
 				"tenant_id":   powerUserTenantID,
 				"test_string": "Mi estas la pordo, mi estas la sxlosilo.",
+				"test_bool":   false,
 			}
 			fakeIdentity = &middleware.FakeIdentity{}
 		})
@@ -1103,11 +1111,13 @@ var _ = Describe("Resource manager", func() {
 				"id":          resourceID1,
 				"tenant_id":   adminTenantID,
 				"test_string": "Steloj estas en ordo.",
+				"test_bool":   false,
 			}
 			memberResourceData = map[string]interface{}{
 				"id":          resourceID2,
 				"tenant_id":   powerUserTenantID,
 				"test_string": "Mi estas la pordo, mi estas la sxlosilo.",
+				"test_bool":   false,
 			}
 			fakeIdentity = &middleware.FakeIdentity{}
 		})
@@ -1341,6 +1351,7 @@ var _ = Describe("Resource manager", func() {
 				"id":          resourceID1,
 				"tenant_id":   adminTenantID,
 				"test_string": "Steloj estas en ordo.",
+				"test_bool":   false,
 			}
 			fakeIdentity = &middleware.FakeIdentity{}
 			inputSchema := map[string]interface{}{
@@ -1406,11 +1417,13 @@ var _ = Describe("Resource manager", func() {
 				"id":          resourceID1,
 				"tenant_id":   adminTenantID,
 				"test_string": "Steloj estas en ordo.",
+				"test_bool":   false,
 			}
 			memberResourceData = map[string]interface{}{
 				"id":          resourceID2,
 				"tenant_id":   powerUserTenantID,
 				"test_string": "Mi estas la pordo, mi estas la sxlosilo.",
+				"test_bool":   false,
 			}
 			listContext = middleware.Context{}
 			showContext = middleware.Context{}
