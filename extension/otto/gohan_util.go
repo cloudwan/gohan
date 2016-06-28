@@ -32,6 +32,7 @@ import (
 
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
+	"strings"
 )
 
 const (
@@ -82,6 +83,63 @@ func init() {
 				}
 				log.Debug("response code %d", code)
 				value, _ := vm.ToValue(resp)
+				return value
+			},
+			"gohan_raw_http": func(call otto.FunctionCall) otto.Value {
+				VerifyCallArguments(&call, "gohan_raw_http", 4)
+				method, err := GetString(call.Argument(0))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+				url, err := GetString(call.Argument(1))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+				rawHeaders, err := GetMap(call.Argument(2))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+				rawData, err := GetString(call.Argument(3))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+				//TODO: pass Transport options like timeouts
+
+				// prepare request
+				request, err := http.NewRequest(method, url, strings.NewReader(rawData))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+
+				// set headers
+				for header, rawValue := range rawHeaders {
+					value, ok := rawValue.(string)
+					if !ok {
+						ThrowOttoException(&call, fmt.Sprintf(
+							"Header '%s' value must be a string type", header))
+					}
+					request.Header.Set(header, value)
+				}
+
+				// run query
+				response, err := http.DefaultTransport.RoundTrip(request)
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+
+				// process response
+				result := map[string]interface{}{}
+				result["status"] = response.Status
+				result["status_code"] = response.StatusCode
+				result["headers"] = response.Header
+
+				body, err := ioutil.ReadAll(response.Body)
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+				result["body"] = body
+
+				value, _ := vm.ToValue(result)
 				return value
 			},
 			"gohan_schemas": func(call otto.FunctionCall) otto.Value {
