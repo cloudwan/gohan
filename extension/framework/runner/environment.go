@@ -197,6 +197,7 @@ func (env *Environment) addTestingAPI() {
 	// function, so the following function has to be written in pure JavaScript.
 	env.VM.Run(`function GohanTrigger(event, context) { gohan_handle_event(event, context); }`)
 	env.mockFunction("gohan_http")
+	env.mockFunction("gohan_raw_http")
 	env.mockFunction("gohan_db_transaction")
 	env.mockFunction("gohan_config")
 }

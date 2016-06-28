@@ -368,6 +368,89 @@ var _ = Describe("Otto extension manager", func() {
 		})
 	})
 
+	Describe("Using gohan_raw_http builtin", func() {
+		Context("When the destination is reachable", func() {
+			It("Should return the contents", func() {
+				server := ghttp.NewServer()
+				server.AppendHandlers(ghttp.CombineHandlers(
+					ghttp.VerifyRequest("POST", "/contents"),
+					ghttp.VerifyHeader(http.Header{"Content-Type": []string{"application/json"}}),
+					ghttp.VerifyBody([]byte("{\"input\":\"value\"}")),
+					ghttp.RespondWith(200, []byte("{\"output\":\"value\"}")),
+				))
+
+				extension, err := schema.NewExtension(map[string]interface{}{
+					"id": "test_extension",
+					"code": `
+						gohan_register_handler("test_event", function(context){
+						    var headers = {
+						        "content-type": "application/json"
+						    };
+						    var body = JSON.stringify({
+						      input: "value"
+						    });
+						    context.response = gohan_raw_http('POST', '` + server.URL() + `/contents', headers, body);
+
+						});`,
+					"path": ".*",
+				})
+				Expect(err).ToNot(HaveOccurred())
+				extensions := []*schema.Extension{extension}
+				env := newEnvironment()
+				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+
+				context := map[string]interface{}{
+					"id": "test",
+				}
+				Expect(env.HandleEvent("test_event", context)).To(Succeed())
+				Expect(context).To(HaveKeyWithValue("response", HaveKeyWithValue("status_code", 200)))
+				Expect(context).To(HaveKeyWithValue("response", HaveKeyWithValue("body", []byte("{\"output\":\"value\"}"))))
+				server.Close()
+			})
+
+			It("Should not follow redirect", func() {
+				server := ghttp.NewServer()
+				server.AppendHandlers(ghttp.CombineHandlers(
+					ghttp.VerifyRequest("POST", "/contents"),
+					ghttp.VerifyHeader(http.Header{
+						"Content-Type": []string{"application/json"},
+					}),
+					ghttp.VerifyBody([]byte("{\"input\":\"value\"}")),
+					ghttp.RespondWith(302, []byte(""), http.Header{
+						"Location": []string{server.URL() + "/redirect"},
+					}),
+				))
+
+				extension, err := schema.NewExtension(map[string]interface{}{
+					"id": "test_extension",
+					"code": `
+						gohan_register_handler("test_event", function(context){
+						    var headers = {
+						        "content-type": "application/json"
+						    };
+						    var body = JSON.stringify({
+						      input: "value"
+						    });
+						    context.response = gohan_raw_http('POST', '` + server.URL() + `/contents', headers, body);
+						});`,
+					"path": ".*",
+				})
+				Expect(err).ToNot(HaveOccurred())
+				extensions := []*schema.Extension{extension}
+				env := newEnvironment()
+				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+
+				context := map[string]interface{}{
+					"id": "test",
+				}
+				Expect(env.HandleEvent("test_event", context)).To(Succeed())
+				Expect(context).To(HaveKeyWithValue("response", HaveKeyWithValue("status_code", 302)))
+				Expect(context).To(HaveKeyWithValue("response", HaveKeyWithValue("body", []byte(""))))
+				server.Close()
+			})
+		})
+	})
+
 	Describe("Using gohan_config builtin", func() {
 		It("Should return correct value", func() {
 			extension, err := schema.NewExtension(map[string]interface{}{
