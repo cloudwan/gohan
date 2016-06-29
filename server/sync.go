@@ -237,8 +237,7 @@ func (server *Server) syncEvent(resource *schema.Resource) error {
 }
 
 func generatePath(resourcePath string, body string) string {
-	var curSchema = schema.GetSchemaByPath(resourcePath)
-
+	var curSchema = schema.GetSchemaByURLPath(resourcePath)
 	path := resourcePath
 	if _, ok := curSchema.SyncKeyTemplate(); ok {
 		var data map[string]interface{}
@@ -311,7 +310,7 @@ func StateUpdate(response *gohan_sync.Event, server *Server) error {
 		log.Debug("State update on unexpected path '%s'", schemaPath)
 		return nil
 	}
-	resourceID := curSchema.GetResourceIdFromPath(schemaPath)
+	resourceID := curSchema.GetResourceIDFromPath(schemaPath)
 
 	tx, err := dataStore.Begin()
 	if err != nil {
@@ -388,7 +387,7 @@ func MonitoringUpdate(response *gohan_sync.Event, server *Server) error {
 		log.Debug("Monitoring update on unexpected path '%s'", schemaPath)
 		return nil
 	}
-	resourceID := curSchema.GetResourceIdFromPath(schemaPath)
+	resourceID := curSchema.GetResourceIDFromPath(schemaPath)
 
 	tx, err := dataStore.Begin()
 	if err != nil {
@@ -551,7 +550,6 @@ func startSyncWatchProcess(server *Server) {
 	if watch == nil {
 		return
 	}
-
 	extensions := map[string]extension.Environment{}
 	for _, event := range events {
 		path := "sync://" + event

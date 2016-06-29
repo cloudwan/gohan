@@ -348,6 +348,7 @@ func (schema *Schema) StateVersioning() bool {
 	return stateful
 }
 
+//SyncKeyTemplate - for custom paths in etcd
 func (schema *Schema) SyncKeyTemplate() (syncKeyTemplate string, ok bool) {
 	syncKeyTemplateRaw, ok := schema.Metadata["sync_key_template"]
 	if !ok {
@@ -357,6 +358,7 @@ func (schema *Schema) SyncKeyTemplate() (syncKeyTemplate string, ok bool) {
 	return
 }
 
+//GenerateCustomPath - returns custom path based on sync_key_template
 func (schema *Schema) GenerateCustomPath(data map[string]interface{}) (path string, err error) {
 	syncKeyTemplate, ok := schema.SyncKeyTemplate()
 	if !ok {
@@ -371,7 +373,8 @@ func (schema *Schema) GenerateCustomPath(data map[string]interface{}) (path stri
 	return
 }
 
-func (schema *Schema) GetResourceIdFromPath(schemaPath string) string {
+//GetResourceIDFromPath - parse path and gets resourceID from it
+func (schema *Schema) GetResourceIDFromPath(schemaPath string) string {
 	syncKeyTemplate, ok := schema.SyncKeyTemplate()
 	if !ok {
 		return strings.TrimPrefix(schemaPath, schema.URL+"/")
@@ -388,20 +391,49 @@ func (schema *Schema) GetResourceIdFromPath(schemaPath string) string {
 			}
 		}
 		return resourceID
-	} else {
-		return strings.TrimPrefix(schemaPath, schema.URL+"/")
 	}
+	return strings.TrimPrefix(schemaPath, schema.URL + "/")
 }
 
-func GetSchemaByPath(path string) *Schema {
-	var schemaByPath *Schema
+//GetSchemaByURLPath - gets schema by resource path (from API)
+func GetSchemaByURLPath(path string) *Schema {
 	for _, schema := range GetManager().Schemas() {
 		if strings.HasPrefix(path, schema.URL) {
-			schemaByPath = schema
-			break
+			return schema
 		}
 	}
-	return schemaByPath
+	return nil
+}
+
+//GetSchemaByPath - gets schema by sync_key_template path
+func GetSchemaByPath(path string) *Schema {
+	for _, schema := range GetManager().Schemas() {
+		syncKeyTemplate, ok := schema.SyncKeyTemplate()
+		if ok {
+			if checkIfPathMatchesSyncKeyTemplate(path, syncKeyTemplate) {
+				return schema
+			}
+		} else if strings.HasPrefix(path, schema.URL) {
+			return schema
+		}
+	}
+	return nil
+}
+
+func checkIfPathMatchesSyncKeyTemplate(path string, syncKeyTemplate string) bool {
+	syncKeyTemplateSplit := strings.Split(syncKeyTemplate, "/")
+	schemaPathSplit := strings.Split(path, "/")
+	if len(schemaPathSplit) == len(syncKeyTemplateSplit) {
+		for k, v := range syncKeyTemplateSplit {
+			if strings.HasPrefix(v, "{{") {
+				continue
+			} else if schemaPathSplit[k] != syncKeyTemplateSplit[k] {
+				return false
+			}
+		}
+		return true
+	}
+	return false
 }
 
 // FormatParentID ...
