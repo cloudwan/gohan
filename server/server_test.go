@@ -78,6 +78,12 @@ var _ = Describe("Server package test", func() {
 				Expect(data).To(HaveKeyWithValue("error", ContainSubstring("parse data")))
 			})
 
+			It("should not create network using PUT", func() {
+				data := testURL("PUT", getNetworkSingularURL("yellow"), adminTokenID,
+					malformedRequestBody, http.StatusBadRequest)
+				Expect(data).To(HaveKeyWithValue("error", ContainSubstring("parse data")))
+			})
+
 			It("should not update network", func() {
 				network := getNetwork("yellow", adminTenantID)
 				testURL("POST", networkPluralURL, adminTokenID, network, http.StatusCreated)
@@ -180,6 +186,14 @@ var _ = Describe("Server package test", func() {
 					Expect(result).To(HaveKeyWithValue("network", util.MatchAsJSON(networkUpdated)))
 				})
 			})
+		})
+
+		It("should create network using PUT and GET it", func() {
+			network := getNetwork("red", "red")
+			result := testURL("PUT", getNetworkSingularURL("red"), adminTokenID, network, http.StatusCreated)
+			Expect(result).To(HaveKeyWithValue("network", util.MatchAsJSON(network)))
+			result = testURL("GET", getNetworkSingularURL("red"), adminTokenID, nil, http.StatusOK)
+			Expect(result).To(HaveKeyWithValue("network", util.MatchAsJSON(network)))
 		})
 
 		Context("trying to create network with no tenant_id", func() {
