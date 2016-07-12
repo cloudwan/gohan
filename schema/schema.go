@@ -392,13 +392,13 @@ func (schema *Schema) GetResourceIDFromPath(schemaPath string) string {
 		}
 		return resourceID
 	}
-	return strings.TrimPrefix(schemaPath, schema.URL + "/")
+	return strings.TrimPrefix(schemaPath, schema.URL+"/")
 }
 
 //GetSchemaByURLPath - gets schema by resource path (from API)
 func GetSchemaByURLPath(path string) *Schema {
 	for _, schema := range GetManager().Schemas() {
-		if strings.HasPrefix(path, schema.URL) {
+		if strings.HasPrefix(path+"/", schema.URL+"/") {
 			return schema
 		}
 	}
