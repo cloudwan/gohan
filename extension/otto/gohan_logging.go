@@ -16,11 +16,11 @@
 package otto
 
 import (
-	"github.com/dop251/otto"
+	"github.com/robertkrimen/otto"
 
 	logging "github.com/op/go-logging"
 	//Import otto underscore lib
-	_ "github.com/dop251/otto/underscore"
+	_ "github.com/robertkrimen/otto/underscore"
 )
 
 const (

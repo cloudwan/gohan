@@ -1,5 +1,5 @@
-// Copyright (C) 2015 NTT Innovation Institute, Inc.
 //
+// Copyright (C) 2015 NTT Innovation Institute, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -18,7 +18,7 @@ package otto
 import (
 	"fmt"
 
-	"github.com/dop251/otto"
+	"github.com/robertkrimen/otto"
 
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/schema"
@@ -208,6 +208,11 @@ func GohanModelList(context map[string]interface{}, schemaID string,
 				}
 				filter[key] = v
 			}
+		case []string:
+			for _, val := range value {
+				filter[key] = val
+			}
+
 		}
 	}
 

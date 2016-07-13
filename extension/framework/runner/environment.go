@@ -29,10 +29,10 @@ import (
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/server/middleware"
-	"github.com/dop251/otto"
+	"github.com/robertkrimen/otto"
 
 	//Import otto underscore lib
-	_ "github.com/dop251/otto/underscore"
+	_ "github.com/robertkrimen/otto/underscore"
 
 	gohan_otto "github.com/cloudwan/gohan/extension/otto"
 )
@@ -83,12 +83,12 @@ func (env *Environment) InitializeEnvironment() error {
 	env.SetUp()
 	env.addTestingAPI()
 
-	script, err := env.VM.Compile(env.testFileName, env.testSource)
+	script, err := env.VM.Otto.Compile(env.testFileName, env.testSource)
 	if err != nil {
 		return fmt.Errorf("Failed to compile the file '%s': %s", env.testFileName, err.Error())
 	}
 
-	env.VM.Run(script)
+	env.VM.Otto.Run(script)
 	err = env.loadSchemas()
 	if err != nil {
 		schema.ClearManager()
@@ -195,7 +195,7 @@ func (env *Environment) addTestingAPI() {
 	}
 	// NOTE: There is no way to return error back to Otto after calling a Go
 	// function, so the following function has to be written in pure JavaScript.
-	env.VM.Run(`function GohanTrigger(event, context) { gohan_handle_event(event, context); }`)
+	env.VM.Otto.Run(`function GohanTrigger(event, context) { gohan_handle_event(event, context); }`)
 	env.mockFunction("gohan_http")
 	env.mockFunction("gohan_raw_http")
 	env.mockFunction("gohan_db_transaction")
@@ -320,18 +320,13 @@ func (env *Environment) loadSchemas() error {
 	if err != nil {
 		return fmt.Errorf("%s string array not specified", schemasVar)
 	}
-	schemaFilenamesRaw := gohan_otto.ConvertOttoToGo(schemaValue)
-	schemaFilenames, ok := schemaFilenamesRaw.([]interface{})
-	if !ok {
+	schemaFilenames, err := gohan_otto.GetStringList(schemaValue)
+	if err != nil {
 		return fmt.Errorf("Bad type of %s - expected an array of strings", schemasVar)
 	}
 
 	manager := schema.GetManager()
-	for _, schemaRaw := range schemaFilenames {
-		schema, ok := schemaRaw.(string)
-		if !ok {
-			return fmt.Errorf("Bad type of schema - expected a string")
-		}
+	for _, schema := range schemaFilenames {
 		err = manager.LoadSchemaFromFile(schema)
 		if err != nil {
 			return err

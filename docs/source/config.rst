@@ -345,6 +345,16 @@ You can select extension types you use.
   extension:
     timelimit: 30
 
+- extension npm_path
+
+  You can set npm_path for extensions. It should point to directory
+  where node_modules are put. Default is current working directory.
+
+.. code-block:: yaml
+
+  extension:
+    npm_path: .
+
 Misc
 --------------
 
