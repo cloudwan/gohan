@@ -138,6 +138,15 @@ data : post or put data
 options : dictionary of options for http client
 opaque : boolean - whether to parse URL or to treat it as raw
 
+- gohan_raw_http(method, url, headers, data)
+
+Fetch data from url. It uses GO RoundTripper instead of Client (as in gohan_http),
+which allows for more control.
+method : GET | POST | PUT | DELETE
+url : destination url
+headers : additional headers (eg. AUTH_TOKEN)
+data : request data (string)
+
 - gohan_config(key, default_value)
 
 get value from Gohan config. If key is not found, default value is returned.

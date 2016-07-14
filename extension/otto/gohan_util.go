@@ -137,7 +137,7 @@ func init() {
 				if err != nil {
 					ThrowOttoException(&call, err.Error())
 				}
-				result["body"] = body
+				result["body"] = string(body)
 
 				value, _ := vm.ToValue(result)
 				return value

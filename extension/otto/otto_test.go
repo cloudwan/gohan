@@ -404,7 +404,7 @@ var _ = Describe("Otto extension manager", func() {
 				}
 				Expect(env.HandleEvent("test_event", context)).To(Succeed())
 				Expect(context).To(HaveKeyWithValue("response", HaveKeyWithValue("status_code", 200)))
-				Expect(context).To(HaveKeyWithValue("response", HaveKeyWithValue("body", []byte("{\"output\":\"value\"}"))))
+				Expect(context).To(HaveKeyWithValue("response", HaveKeyWithValue("body", "{\"output\":\"value\"}")))
 				server.Close()
 			})
 
@@ -445,7 +445,7 @@ var _ = Describe("Otto extension manager", func() {
 				}
 				Expect(env.HandleEvent("test_event", context)).To(Succeed())
 				Expect(context).To(HaveKeyWithValue("response", HaveKeyWithValue("status_code", 302)))
-				Expect(context).To(HaveKeyWithValue("response", HaveKeyWithValue("body", []byte(""))))
+				Expect(context).To(HaveKeyWithValue("response", HaveKeyWithValue("body", "")))
 				server.Close()
 			})
 		})
