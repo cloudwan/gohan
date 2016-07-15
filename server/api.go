@@ -292,8 +292,35 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 			postPluralFunc(w, r, p, identityService, context)
 		})
 
-	//setup update route
+	//setup create or update route
 	putSingleFunc := func(w http.ResponseWriter, r *http.Request, p martini.Params, identityService middleware.IdentityService, context middleware.Context) {
+		addJSONContentTypeHeader(w)
+		fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, server.queue)
+		id := p["id"]
+		dataMap, err := middleware.ReadJSON(r)
+		if err != nil {
+			handleError(w, resources.NewResourceError(err, fmt.Sprintf("Failed to parse data: %s", err), resources.WrongData))
+			return
+		}
+		dataMap = removeResourceWrapper(s, dataMap)
+		if isCreated, err := resources.CreateOrUpdateResource(
+			context, dataStore, identityService, s, id, dataMap); err != nil {
+			handleError(w, err)
+			return
+		} else if isCreated {
+			w.WriteHeader(http.StatusCreated)
+		}
+		routes.ServeJson(w, context["response"])
+	}
+	route.Put(singleURL, middleware.Authorization(schema.ActionUpdate), putSingleFunc)
+	route.Put(singleURLWithParents, middleware.Authorization(schema.ActionUpdate),
+		func(w http.ResponseWriter, r *http.Request, p martini.Params, identityService middleware.IdentityService, context middleware.Context) {
+			addParamToQuery(r, schema.FormatParentID(s.Parent), p[s.Parent])
+			putSingleFunc(w, r, p, identityService, context)
+		})
+
+	//setup update route
+	patchSingleFunc := func(w http.ResponseWriter, r *http.Request, p martini.Params, identityService middleware.IdentityService, context middleware.Context) {
 		addJSONContentTypeHeader(w)
 		fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, server.queue)
 		id := p["id"]
@@ -310,18 +337,11 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 		}
 		routes.ServeJson(w, context["response"])
 	}
-	route.Put(singleURL, middleware.Authorization(schema.ActionUpdate), putSingleFunc)
-	route.Put(singleURLWithParents, middleware.Authorization(schema.ActionUpdate),
-		func(w http.ResponseWriter, r *http.Request, p martini.Params, identityService middleware.IdentityService, context middleware.Context) {
-			addParamToQuery(r, schema.FormatParentID(s.Parent), p[s.Parent])
-			putSingleFunc(w, r, p, identityService, context)
-		})
-
-	route.Patch(singleURL, middleware.Authorization(schema.ActionUpdate), putSingleFunc)
+	route.Patch(singleURL, middleware.Authorization(schema.ActionUpdate), patchSingleFunc)
 	route.Patch(singleURLWithParents, middleware.Authorization(schema.ActionUpdate),
 		func(w http.ResponseWriter, r *http.Request, p martini.Params, identityService middleware.IdentityService, context middleware.Context) {
 			addParamToQuery(r, schema.FormatParentID(s.Parent), p[s.Parent])
-			putSingleFunc(w, r, p, identityService, context)
+			patchSingleFunc(w, r, p, identityService, context)
 		})
 
 	//Custom action support

@@ -335,6 +335,39 @@ func GetSingleResourceInTransaction(context middleware.Context, resourceSchema *
 	return
 }
 
+// CreateOrUpdateResource updates resource if it existed and otherwise creates it and returns true.
+func CreateOrUpdateResource(
+	context middleware.Context,
+	dataStore db.DB, identityService middleware.IdentityService,
+	resourceSchema *schema.Schema,
+	resourceID string, dataMap map[string]interface{},
+) (bool, error) {
+	auth := context["auth"].(schema.Authorization)
+
+	//LoadPolicy
+	policy, err := loadPolicy(context, "update", strings.Replace(resourceSchema.GetSingleURL(), ":id", resourceID, 1), auth)
+	if err != nil {
+		return false, err
+	}
+
+	preTransaction, err := dataStore.Begin()
+	if err != nil {
+		return false, fmt.Errorf("cannot create transaction: %v", err)
+	}
+	_, fetchErr := preTransaction.Fetch(resourceSchema, resourceID, policy.GetTenantIDFilter(schema.ActionUpdate, auth.TenantID()))
+	preTransaction.Close()
+
+	if fetchErr != nil {
+		dataMap["id"] = resourceID
+		if err := CreateResource(context, dataStore, identityService, resourceSchema, dataMap); err != nil {
+			return false, err
+		}
+		return true, err
+	}
+	
+	return false, UpdateResource(context, dataStore, identityService, resourceSchema, resourceID, dataMap)
+}
+
 // CreateResource creates the resource specified by the schema and dataMap
 func CreateResource(
 	context middleware.Context,
