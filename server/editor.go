@@ -122,6 +122,11 @@ func setupEditor(server *Server) {
 				if existingSchema != nil {
 					return fmt.Errorf("ID has been taken")
 				}
+				newSchema := context["resource"].(map[string]interface{})
+				_, err := schema.NewSchemaFromObj(newSchema)
+				if err != nil {
+					return err
+				}
 				schemasInFile["schemas"] = append(updatedSchemas, context["resource"].(map[string]interface{}))
 				context["response"] = map[string]interface{}{
 					"schema": context["resource"],
@@ -137,6 +142,10 @@ func setupEditor(server *Server) {
 				}
 				for key, value := range context["resource"].(map[string]interface{}) {
 					existingSchema[key] = value
+				}
+				_, err := schema.NewSchemaFromObj(existingSchema)
+				if err != nil {
+					return err
 				}
 				schemasInFile["schemas"] = append(updatedSchemas, existingSchema)
 				context["response"] = map[string]interface{}{
