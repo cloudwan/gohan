@@ -927,6 +927,92 @@ var _ = Describe("Resource manager", func() {
 			fakeIdentity = &middleware.FakeIdentity{}
 		})
 
+		Context("When there is a parent resource", func() {
+			var (
+				parentPath                            string
+				parentContext                         middleware.Context
+				parentResourceData, childResourceData map[string]interface{}
+				parentSchema                          *schema.Schema
+				parentExtensions                      []*schema.Extension
+				parentEnv                             extension.Environment
+			)
+
+			BeforeEach(func() {
+				schemaID = "subnet"
+				parentResourceData = map[string]interface{}{
+					"id": resourceID1,
+					"tenant_id": adminTenantID,
+				}
+				childResourceData = map[string]interface{}{
+					"id": resourceID2,
+					"tenant_id": adminTenantID,
+					"network_id": resourceID1,
+					"cidr": "10.0.0.0/24",
+				}
+				parentContext = middleware.Context{}
+			})
+
+			JustBeforeEach(func() {
+				var ok bool
+				parentSchemaID := "network"
+				parentSchema, ok = manager.Schema(parentSchemaID)
+				Expect(ok).To(BeTrue())
+
+				parentPath = parentSchema.GetPluralURL()
+				policy, role := manager.PolicyValidate(action, parentPath, auth)
+				Expect(policy).NotTo(BeNil())
+				parentContext["policy"] = policy
+				parentContext["role"] = role
+				parentContext["tenant_id"] = auth.TenantID()
+				parentContext["tenant_name"] = auth.TenantName()
+				parentContext["auth_token"] = auth.AuthToken()
+				parentContext["catalog"] = auth.Catalog()
+				parentContext["auth"] = auth
+
+				parentEnv = otto.NewEnvironment("resource_management_test",
+					testDB, &middleware.FakeIdentity{}, timelimit)
+				parentExtensions = []*schema.Extension{}
+				Expect(parentEnv.LoadExtensionsForPath(parentExtensions, parentPath)).To(Succeed())
+				environmentManager.RegisterEnvironment(parentSchemaID, parentEnv)
+
+				err := resources.CreateResource(
+					parentContext,
+					testDB,
+					fakeIdentity,
+					parentSchema,
+					parentResourceData,
+				)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should not create child with different tenant_id", func() {
+				// This is a hardcoded value different than adminTenantID
+				childResourceData["tenant_id"] = "fc394f2ab2df4114bde39905f800dc56"
+				err := resources.CreateResource(
+					context,
+					testDB,
+					fakeIdentity,
+					currentSchema,
+					childResourceData,
+				)
+				Expect(err).To(HaveOccurred())
+				resErr, ok := err.(resources.ResourceError)
+				Expect(ok).To(Equal(true))
+				Expect(resErr.Message).To(Equal("Different tenant_ids in child and parent"))
+			})
+
+			It("should create child with same tenant_id", func() {
+				err := resources.CreateResource(
+					context,
+					testDB,
+					fakeIdentity,
+					currentSchema,
+					childResourceData,
+				)
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+
 		Describe("When there are no resources in the database", func() {
 			Context("As an admin", func() {
 				It("Should create own resource", func() {
@@ -1120,6 +1206,86 @@ var _ = Describe("Resource manager", func() {
 				"test_bool":   false,
 			}
 			fakeIdentity = &middleware.FakeIdentity{}
+		})
+
+		Context("When there is a parent resource", func() {
+			var (
+				parentPath                            string
+				parentContext                         middleware.Context
+				parentResourceData, childResourceData map[string]interface{}
+				parentSchema                          *schema.Schema
+				parentExtensions                      []*schema.Extension
+				parentEnv                             extension.Environment
+			)
+
+			BeforeEach(func() {
+				schemaID = "subnet"
+				parentResourceData = map[string]interface{}{
+					"id": resourceID1,
+					"tenant_id": adminTenantID,
+				}
+				childResourceData = map[string]interface{}{
+					"id": resourceID2,
+					"tenant_id": adminTenantID,
+					"network_id": resourceID1,
+					"name": "subnet 0",
+					"cidr": "10.0.0.0/24",
+				}
+				parentContext = middleware.Context{}
+			})
+
+			JustBeforeEach(func() {
+				var ok bool
+				parentSchemaID := "network"
+				parentSchema, ok = manager.Schema(parentSchemaID)
+				Expect(ok).To(BeTrue())
+
+				parentPath = parentSchema.GetPluralURL()
+				policy, role := manager.PolicyValidate(action, parentPath, auth)
+				Expect(policy).NotTo(BeNil())
+				parentContext["policy"] = policy
+				parentContext["role"] = role
+				parentContext["tenant_id"] = auth.TenantID()
+				parentContext["tenant_name"] = auth.TenantName()
+				parentContext["auth_token"] = auth.AuthToken()
+				parentContext["catalog"] = auth.Catalog()
+				parentContext["auth"] = auth
+
+				parentEnv = otto.NewEnvironment("resource_management_test",
+					testDB, &middleware.FakeIdentity{}, timelimit)
+				parentExtensions = []*schema.Extension{}
+				Expect(parentEnv.LoadExtensionsForPath(parentExtensions, parentPath)).To(Succeed())
+				environmentManager.RegisterEnvironment(parentSchemaID, parentEnv)
+
+				err := resources.CreateResource(
+					parentContext,
+					testDB,
+					fakeIdentity,
+					parentSchema,
+					parentResourceData,
+				)
+				Expect(err).NotTo(HaveOccurred())
+				err = resources.CreateResource(
+					context,
+					testDB,
+					fakeIdentity,
+					currentSchema,
+					childResourceData,
+				)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should update child with same tenant_id", func() {
+				err := resources.UpdateResource(
+					context,
+					testDB,
+					fakeIdentity,
+					currentSchema,
+					resourceID2,
+					map[string]interface{}{"name": "subnet 1"},
+				)
+				Expect(err).NotTo(HaveOccurred())
+			})
 		})
 
 		Describe("When there are no resources in the database", func() {

@@ -316,7 +316,7 @@ var _ = Describe("Server package test", func() {
 			delete(subnet, "network_id")
 
 			var result interface{}
-			testURL("POST", subnetPluralURL, adminTokenID, subnet, http.StatusBadRequest)
+			testURL("POST", subnetPluralURL, adminTokenID, subnet, http.StatusUnauthorized)
 			result = testURL("POST", getSubnetFullPluralURL("red"), adminTokenID, subnet, http.StatusCreated)
 
 			subnet["network_id"] = "networkred"

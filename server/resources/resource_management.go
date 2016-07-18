@@ -368,6 +368,70 @@ func CreateOrUpdateResource(
 	return false, UpdateResource(context, dataStore, identityService, resourceSchema, resourceID, dataMap)
 }
 
+func hasProperty(s *schema.Schema, propertyID string) bool {
+	for _, property := range s.Properties {
+		if property.ID == propertyID {
+			return true
+		}
+	}
+	return false
+}
+
+func tenantIDRelationCheck(
+	dataStore db.DB,
+	resourceSchema *schema.Schema,
+	resourceID string,
+	data map[string]interface{},
+	tenantFilter []string,
+) error {
+	if resourceSchema.Parent != "" &&
+	   hasProperty(resourceSchema, "tenant_id") &&
+	   hasProperty(resourceSchema.ParentSchema, "tenant_id") {
+		tx, err := dataStore.Begin()
+		if err != nil {
+			return err
+		}
+		defer tx.Close()
+
+		parentID, ok1 := data[resourceSchema.Parent+"_id"]
+		childTenantID, ok2 := data["tenant_id"]
+		if !ok1 || !ok2 {
+			childRes, err := tx.Fetch(
+				resourceSchema,
+				resourceID,
+				tenantFilter,
+			)
+			if err != nil {
+				return err
+			}
+
+			parentID = childRes.ParentID()
+			if ok2 && childTenantID != childRes.Get("tenant_id") {
+				// tenant_id is being updated,
+				// there is no point performing this check
+				return nil
+			}
+			childTenantID = childRes.Get("tenant_id")
+		}
+
+		parentRes, err := tx.Fetch(
+			resourceSchema.ParentSchema,
+			parentID.(string),
+			tenantFilter,
+		)
+		if err != nil {
+			return err
+		}
+
+		parentTenantID := parentRes.Get("tenant_id")
+		if parentTenantID != childTenantID {
+			return fmt.Errorf("Different tenant_ids in child and parent")
+		}
+	}
+
+	return nil
+}
+
 // CreateResource creates the resource specified by the schema and dataMap
 func CreateResource(
 	context middleware.Context,
@@ -402,6 +466,12 @@ func CreateResource(
 		if err != nil {
 			return ResourceError{err, err.Error(), Unauthorized}
 		}
+	}
+
+	err = tenantIDRelationCheck(dataStore, resourceSchema, "", dataMap,
+		policy.GetTenantIDFilter(schema.ActionCreate, auth.TenantID()))
+	if err != nil {
+		return ResourceError{err, err.Error(), Unauthorized}
 	}
 
 	//Apply policy for api input
@@ -530,6 +600,12 @@ func UpdateResource(
 	if tenantID, ok := dataMap["tenant_id"]; ok && tenantID != nil {
 		dataMap["tenant_name"], err = identityService.GetTenantName(tenantID.(string))
 	}
+	if err != nil {
+		return ResourceError{err, err.Error(), Unauthorized}
+	}
+
+	err = tenantIDRelationCheck(dataStore, resourceSchema, resourceID, dataMap,
+		policy.GetTenantIDFilter(schema.ActionUpdate, auth.TenantID()))
 	if err != nil {
 		return ResourceError{err, err.Error(), Unauthorized}
 	}
