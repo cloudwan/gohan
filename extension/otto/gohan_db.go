@@ -18,7 +18,7 @@ package otto
 import (
 	"fmt"
 
-	"github.com/dop251/otto"
+	"github.com/robertkrimen/otto"
 
 	"github.com/cloudwan/gohan/db/pagination"
 	"github.com/cloudwan/gohan/db/sql"

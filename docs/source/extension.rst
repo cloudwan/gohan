@@ -303,7 +303,8 @@ close ssh session
 
 - require(module)
 
-Dynamically load modules
+Dynamically load modules loaded in source code or
+installed via npm in node_modules at working directory
 
 - gohan_file_list(dir)
 

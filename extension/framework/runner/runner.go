@@ -24,7 +24,7 @@ import (
 
 	"github.com/cloudwan/gohan/extension/framework/buflog"
 
-	"github.com/dop251/otto"
+	"github.com/robertkrimen/otto"
 	"github.com/robertkrimen/otto/ast"
 	"github.com/robertkrimen/otto/parser"
 )

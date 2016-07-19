@@ -16,12 +16,15 @@
 package otto
 
 import (
-	"github.com/dop251/otto"
-
 	"github.com/cloudwan/gohan/schema"
 	"github.com/op/go-logging"
+	"github.com/robertkrimen/otto"
 
 	l "github.com/cloudwan/gohan/log"
+	"github.com/ddliu/motto"
+	"io/ioutil"
+	"strings"
+	"github.com/cloudwan/gohan/util"
 )
 
 var log = logging.MustGetLogger(l.GetModuleName())
@@ -36,7 +39,10 @@ func init() {
 				if err != nil {
 					ThrowOttoException(&call, err.Error())
 				}
-				value, _ := vm.ToValue(RequireModule(moduleName))
+				value, err := vm.Require(moduleName, "")
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
 				return value
 			},
 			"gohan_schemas": func(call otto.FunctionCall) otto.Value {
@@ -78,6 +84,8 @@ func init() {
 		for name, object := range builtins {
 			vm.Set(name, object)
 		}
+
+		loadNPMModules()
 
 		err := env.Load("<Gohan built-in exceptions>", `
 		function BaseException() {
@@ -168,4 +176,24 @@ func init() {
 		}
 	}
 	RegisterInit(gohanInit)
+}
+
+func loadNPMModules() {
+	config := util.GetConfig()
+	npmPath := config.GetString("extension/npm_path", ".")
+	files, _ := ioutil.ReadDir(npmPath + "/node_modules/")
+	for _, f := range files {
+		if f.IsDir() && !strings.HasPrefix(f.Name(), ".") {
+			module, err := motto.FindFileModule(f.Name(), npmPath, nil)
+			if err != nil {
+				log.Error("Finding module failed %s in %s", err, f.Name())
+				break
+			}
+			if !strings.HasSuffix(module, ".js") {
+				module = module + "/index.js"
+			}
+			loader := motto.CreateLoaderFromFile(module)
+			motto.AddModule(f.Name(), loader)
+		}
+	}
 }

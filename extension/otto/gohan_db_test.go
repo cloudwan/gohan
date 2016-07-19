@@ -389,7 +389,7 @@ var _ = Describe("GohanDb", func() {
 				context := map[string]interface{}{}
 				err = env.HandleEvent("test_event", context)
 				Expect(err).NotTo(BeNil())
-				Expect(err.Error()).To(MatchRegexp("test_event: Unknown schema 'NOT EXIST'"))
+				Expect(err.Error()).To(MatchRegexp("test_event: Error: Unknown schema 'NOT EXIST'"))
 			})
 		})
 
@@ -455,7 +455,7 @@ var _ = Describe("GohanDb", func() {
 
 				err = env.HandleEvent("test_event", context)
 				Expect(err).NotTo(BeNil())
-				Expect(err.Error()).To(MatchRegexp("test_event: Argument 'not_a_transaction' should be of type 'Transaction'"))
+				Expect(err.Error()).To(MatchRegexp("test_event: Error: Argument 'not_a_transaction' should be of type 'Transaction'"))
 			})
 		})
 
@@ -483,7 +483,7 @@ var _ = Describe("GohanDb", func() {
 				}
 				err = env.HandleEvent("test_event", context)
 				Expect(err).NotTo(BeNil())
-				Expect(err.Error()).To(MatchRegexp("test_event: Unknown schema 'INVALID_SCHEMA_ID'"))
+				Expect(err.Error()).To(MatchRegexp("test_event: Error: Unknown schema 'INVALID_SCHEMA_ID'"))
 			})
 		})
 
@@ -511,7 +511,7 @@ var _ = Describe("GohanDb", func() {
 				}
 				err = env.HandleEvent("test_event", context)
 				Expect(err).NotTo(BeNil())
-				Expect(err.Error()).To(MatchRegexp("test_event: Argument 'THIS IS NOT AN ARRAY' should be of type 'array'"))
+				Expect(err.Error()).To(MatchRegexp("test_event: Error: Argument 'THIS IS NOT AN ARRAY' should be of type 'array'"))
 			})
 		})
 
@@ -546,7 +546,7 @@ var _ = Describe("GohanDb", func() {
 				}
 				err = env.HandleEvent("test_event", context)
 				Expect(err).NotTo(BeNil())
-				Expect(err.Error()).To(MatchRegexp("test_event: Error during gohan_db_query: SOMETHING HAPPEN"))
+				Expect(err.Error()).To(MatchRegexp("test_event: Error: Error during gohan_db_query: SOMETHING HAPPEN"))
 			})
 		})
 

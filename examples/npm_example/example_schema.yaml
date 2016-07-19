@@ -1,0 +1,82 @@
+# Pet Store Schema
+schemas:
+- description: base resource definition
+  id: base
+  plural: bases
+  prefix: /v1.0
+  type: abstract
+  schema:
+    properties:
+      description:
+        description: Description
+        permission:
+        - create
+        - update
+        title: Description
+        type: string
+      id:
+        description: ID
+        permission:
+        - create
+        title: ID
+        type: string
+        view:
+        - detail
+      name:
+        description: Name
+        permission:
+        - create
+        - update
+        title: Name
+        type: string
+      tenant_id:
+        description: Tenant ID
+        permission:
+        - create
+        title: Tenant ID
+        type: string
+        view:
+        - detail
+    propertiesOrder:
+    - id
+    - name
+    - tenant_id
+    - description
+    required: []
+    type: object
+  singular: base
+  title: Base Resource
+- description: pet
+  id: pet
+  plural: pets
+  extends:
+  - base
+  prefix: /v1.0/store
+  schema:
+    properties:
+      status:
+        description: Status
+        permission:
+        - create
+        - update
+        title: Status
+        type: string
+        enum:
+        - available
+        - pending
+        - sold
+    propertiesOrder:
+    - status
+    required: []
+    type: object
+  singular: pet
+  title: Pet
+extensions:
+- id: schema
+  code_type: javascript
+  code: |
+    gohan_register_handler("pre_list", function (context){
+        var underscore = require('underscore');
+        console.log(underscore.min([3,2,1]));
+    });
+  path: /v1.0/store/pets

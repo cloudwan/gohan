@@ -25,10 +25,12 @@ import (
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/server/middleware"
 
-	"github.com/dop251/otto"
+	"github.com/ddliu/motto"
+	"github.com/robertkrimen/otto"
 
 	//Import otto underscore lib
-	_ "github.com/dop251/otto/underscore"
+	_ "github.com/robertkrimen/otto/underscore"
+	"reflect"
 )
 
 var inits = []func(env *Environment){}
@@ -51,7 +53,7 @@ func RequireModule(name string) interface{} {
 //Environment javascript based environment for gohan extension
 type Environment struct {
 	Name      string
-	VM        *otto.Otto
+	VM        *motto.Motto
 	DataStore db.DB
 	timelimit time.Duration
 	Identity  middleware.IdentityService
@@ -59,7 +61,7 @@ type Environment struct {
 
 //NewEnvironment create new gohan extension environment based on context
 func NewEnvironment(name string, dataStore db.DB, identity middleware.IdentityService, timelimit time.Duration) *Environment {
-	vm := otto.New()
+	vm := motto.New()
 	vm.Interrupt = make(chan func(), 1)
 	env := &Environment{
 		Name:      name,
@@ -91,7 +93,8 @@ func (env *Environment) Load(source, code string) error {
 	if err != nil {
 		return err
 	}
-	_, err = vm.Run(script)
+	_, err = vm.Otto.Run(script)
+
 	if err != nil {
 		return err
 	}
@@ -116,7 +119,7 @@ func (env *Environment) LoadExtensionsForPath(extensions []*schema.Extension, pa
 			if err != nil {
 				return err
 			}
-			_, err = env.VM.Run(script)
+			_, err = env.VM.Otto.Run(script)
 			if err != nil {
 				return err
 			}
@@ -218,7 +221,7 @@ func (env *Environment) HandleEvent(event string, context map[string]interface{}
 //Clone makes clone of the environment
 func (env *Environment) Clone() ext.Environment {
 	newEnv := NewEnvironment(env.Name, env.DataStore, env.Identity, env.timelimit)
-	newEnv.VM = env.VM.Copy()
+	newEnv.VM.Otto = env.VM.Copy()
 	return newEnv
 }
 
@@ -311,34 +314,31 @@ func GetBool(value otto.Value) (bool, error) {
 
 //GetList gets []interface{} from otto value
 func GetList(value otto.Value) ([]interface{}, error) {
-	rawSlice, _ := value.Export()
-	result, ok := rawSlice.([]interface{})
-	if !ok {
-		return []interface{}{}, fmt.Errorf(wrongArgumentType, rawSlice, "array")
+	rawSlice, err := value.Export()
+	result := make([]interface{}, 0)
+	if rawSlice == nil || err != nil {
+		return result, err
 	}
-	for i, value := range result {
-		result[i] = ConvertOttoToGo(value)
+	typeOfSlice := reflect.TypeOf(rawSlice)
+	if typeOfSlice.Kind() != reflect.Array && typeOfSlice.Kind() != reflect.Slice {
+		return result, fmt.Errorf(wrongArgumentType, value, "array")
 	}
-	return result, nil
+	list := reflect.ValueOf(rawSlice)
+	for i := 0; i < list.Len(); i++ {
+		result = append(result, ConvertOttoToGo(list.Index(i).Interface()))
+	}
+
+	return result, err
 }
 
 //GetStringList gets []string  from otto value
 func GetStringList(value otto.Value) ([]string, error) {
 	rawSlice, _ := value.Export()
-	errMessage := fmt.Errorf(wrongArgumentType, rawSlice, "array of strings")
-	rawResult, ok := rawSlice.([]interface{})
+	rawResult, ok := rawSlice.([]string)
 	if !ok {
-		return []string{}, errMessage
+		return make([]string, 0), fmt.Errorf(wrongArgumentType, rawSlice, "array of strings")
 	}
-	result := []string{}
-	for _, rawItem := range rawResult {
-		item, ok := rawItem.(string)
-		if !ok {
-			return []string{}, errMessage
-		}
-		result = append(result, item)
-	}
-	return result, nil
+	return rawResult, nil
 }
 
 //GetInt64 gets int64 from otto value
