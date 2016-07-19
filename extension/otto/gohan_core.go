@@ -21,10 +21,10 @@ import (
 	"github.com/robertkrimen/otto"
 
 	l "github.com/cloudwan/gohan/log"
+	"github.com/cloudwan/gohan/util"
 	"github.com/ddliu/motto"
 	"io/ioutil"
 	"strings"
-	"github.com/cloudwan/gohan/util"
 )
 
 var log = logging.MustGetLogger(l.GetModuleName())
