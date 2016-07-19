@@ -66,13 +66,14 @@ func authenticatedClient(options gophercloud.AuthOptions) (*gophercloud.Provider
 }
 
 //GetOpenstackClient makes openstack client
-func GetOpenstackClient(authURL, userName, password, domainName, tenantName, version string) (*gophercloud.ServiceClient, error) {
+func GetOpenstackClient(authURL, userName, password, domainName, tenantName, tenantID, version string) (*gophercloud.ServiceClient, error) {
 	opts := gophercloud.AuthOptions{
 		IdentityEndpoint: authURL,
 		Username:         userName,
 		Password:         password,
 		DomainName:       domainName,
 		TenantName:       tenantName,
+		TenantID:         tenantID,
 		AllowReauth:      true,
 	}
 

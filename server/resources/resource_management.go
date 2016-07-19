@@ -364,7 +364,7 @@ func CreateOrUpdateResource(
 		}
 		return true, err
 	}
-	
+
 	return false, UpdateResource(context, dataStore, identityService, resourceSchema, resourceID, dataMap)
 }
 

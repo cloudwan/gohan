@@ -6,6 +6,8 @@ tasks:
         password: gohan
         version: v3
         domain_name: default
+        tenant_id: ""
+        tenant_name: ""
       register: client
     - openstack_get:
         client: client

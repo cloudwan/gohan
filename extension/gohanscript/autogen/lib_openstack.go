@@ -12,7 +12,7 @@ func init() {
 	gohanscript.RegisterStmtParser("get_openstack_client",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
 			stmtErr := stmt.HasArgs(
-				"auth_url", "user_name", "password", "domain_name", "tenant_name", "version")
+				"auth_url", "user_name", "password", "domain_name", "tenant_name", "tenant_id", "version")
 			if stmtErr != nil {
 				return nil, stmtErr
 			}
@@ -43,6 +43,11 @@ func init() {
 				if itenantName != nil {
 					tenantName = itenantName.(string)
 				}
+				var tenantID string
+				itenantID := stmt.Arg("tenant_id", context)
+				if itenantID != nil {
+					tenantID = itenantID.(string)
+				}
 				var version string
 				iversion := stmt.Arg("version", context)
 				if iversion != nil {
@@ -52,7 +57,7 @@ func init() {
 				result1,
 					err :=
 					lib.GetOpenstackClient(
-						authURL, userName, password, domainName, tenantName, version)
+						authURL, userName, password, domainName, tenantName, tenantID, version)
 
 				return result1, err
 
@@ -66,12 +71,13 @@ func init() {
 			password := args[2].(string)
 			domainName := args[3].(string)
 			tenantName := args[4].(string)
-			version := args[5].(string)
+			tenantID := args[5].(string)
+			version := args[6].(string)
 
 			result1,
 				err :=
 				lib.GetOpenstackClient(
-					authURL, userName, password, domainName, tenantName, version)
+					authURL, userName, password, domainName, tenantName, tenantID, version)
 			return []interface{}{
 				result1,
 				err}
