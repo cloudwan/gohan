@@ -56,7 +56,7 @@ var _ = Describe("Sql", func() {
 		// Insert fixture data
 		fixtureDB, err := db.ConnectDB("json", "test_fixture.json", db.DefaultMaxOpenConn)
 		Expect(err).ToNot(HaveOccurred())
-		db.CopyDBResources(fixtureDB, dbc)
+		db.CopyDBResources(fixtureDB, dbc, true)
 
 		tx, err = dbc.Begin()
 		Expect(err).ToNot(HaveOccurred())

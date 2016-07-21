@@ -287,9 +287,9 @@ var _ = Describe("Database operation test", func() {
 			Expect(err).ToNot(HaveOccurred())
 			defer os.Remove("test_data/conv_verify.yaml")
 
-			Expect(db.CopyDBResources(inDB, outDB)).To(Succeed())
+			Expect(db.CopyDBResources(inDB, outDB, true)).To(Succeed())
 
-			Expect(db.CopyDBResources(outDB, verifyDB)).To(Succeed())
+			Expect(db.CopyDBResources(outDB, verifyDB, true)).To(Succeed())
 
 			inTx, err := inDB.Begin()
 			Expect(err).ToNot(HaveOccurred())
@@ -313,6 +313,51 @@ var _ = Describe("Database operation test", func() {
 					Expect(outResource).To(Equal(inResource))
 				}
 			}
+		})
+
+		It("Should not override existing rows", func() {
+			inDB, err := db.ConnectDB("yaml", "test_data/conv_in.yaml", db.DefaultMaxOpenConn)
+			Expect(err).ToNot(HaveOccurred())
+			defer os.Remove("test_data/conv_in.db")
+
+			db.InitDBWithSchemas("sqlite3", "test_data/conv_out.db", false, false)
+			outDB, err := db.ConnectDB("sqlite3", "test_data/conv_out.db", db.DefaultMaxOpenConn)
+			Expect(err).ToNot(HaveOccurred())
+			defer os.Remove("test_data/conv_out.db")
+
+			Expect(err).ToNot(HaveOccurred())
+			defer os.Remove("test_data/conv_verify.yaml")
+
+			Expect(db.CopyDBResources(inDB, outDB, false)).To(Succeed())
+			subnetSchema, _ := manager.Schema("subnet")
+
+			// Update some data
+			tx, err := outDB.Begin()
+			Expect(err).ToNot(HaveOccurred())
+			list, _, err := tx.List(subnetSchema, map[string]interface{}{
+				"name": "subnetRedA",
+			}, nil)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(list).To(HaveLen(1))
+			subnet := list[0]
+			subnet.Data()["description"] = "Updated description"
+			err = tx.Update(subnet)
+			Expect(err).ToNot(HaveOccurred())
+			tx.Commit()
+			tx.Close()
+
+			Expect(db.CopyDBResources(inDB, outDB, false)).To(Succeed())
+			// check description of subnetRedA
+			tx, err = outDB.Begin()
+			Expect(err).ToNot(HaveOccurred())
+			list, _, err = tx.List(subnetSchema, map[string]interface{}{
+				"name": "subnetRedA",
+			}, nil)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(list).To(HaveLen(1))
+			subnet = list[0]
+			Expect(subnet.Data()["description"]).To(Equal("Updated description"))
+			tx.Close()
 		})
 	})
 })

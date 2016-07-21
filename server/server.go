@@ -242,7 +242,7 @@ func NewServer(configFile string) (*Server, error) {
 			if err != nil {
 				log.Fatal(err)
 			}
-			db.CopyDBResources(inDB, server.db)
+			db.CopyDBResources(inDB, server.db, false)
 		}
 	}
 
