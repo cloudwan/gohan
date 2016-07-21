@@ -49,7 +49,11 @@ func init() {
 					defaultOpaque, _ := otto.ToValue(false)
 					call.ArgumentList = append(call.ArgumentList, defaultOpaque)
 				}
-				VerifyCallArguments(&call, "gohan_http", 5)
+				if len(call.ArgumentList) == 5 {
+					defaultTimeout, _ := otto.ToValue(0)
+					call.ArgumentList = append(call.ArgumentList, defaultTimeout)
+				}
+				VerifyCallArguments(&call, "gohan_http", 6)
 				method, err := GetString(call.Argument(0))
 				if err != nil {
 					ThrowOttoException(&call, err.Error())
@@ -68,8 +72,12 @@ func init() {
 				if err != nil {
 					ThrowOttoException(&call, err.Error())
 				}
-				log.Debug("gohan_http  [%s] %s %s %s", method, rawHeaders, url, opaque)
-				code, headers, body, err := gohanHTTP(method, url, rawHeaders, data, opaque)
+				timeout, err := GetInt64(call.Argument(5))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+				log.Debug("gohan_http  [%s] %s %s %s %s", method, rawHeaders, url, opaque, timeout)
+				code, headers, body, err := gohanHTTP(method, url, rawHeaders, data, opaque, timeout)
 				log.Debug("response code %d", code)
 				resp := map[string]interface{}{}
 				if err != nil {
@@ -253,9 +261,10 @@ func init() {
 }
 
 func gohanHTTP(method, rawURL string, headers map[string]interface{},
-	postData interface{}, opaque bool) (int, http.Header, string, error) {
+	postData interface{}, opaque bool, timeout int64) (int, http.Header, string, error) {
 
 	client := &http.Client{}
+	client.Timeout = time.Duration(timeout) * time.Millisecond
 	var reader io.Reader
 
 	if postData != nil {
