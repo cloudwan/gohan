@@ -287,7 +287,7 @@ Useful for development purposes.`,
 				util.ExitFatal(err)
 			}
 
-			err = db.CopyDBResources(inDB, outDB)
+			err = db.CopyDBResources(inDB, outDB, true)
 			if err != nil {
 				util.ExitFatal(err)
 			}

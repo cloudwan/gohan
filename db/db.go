@@ -55,7 +55,7 @@ func ConnectDB(dbType, conn string, maxOpenConn int) (DB, error) {
 }
 
 //CopyDBResources copies resources from input database to output database
-func CopyDBResources(input, output DB) error {
+func CopyDBResources(input, output DB, overrideExisting bool) error {
 	schemaManager := schema.GetManager()
 	schemas := schemaManager.OrderedSchemas()
 	if len(schemas) == 0 {
@@ -93,7 +93,7 @@ func CopyDBResources(input, output DB) error {
 				if err != nil {
 					return err
 				}
-			} else {
+			} else if overrideExisting {
 				err := otx.Update(resource)
 				if err != nil {
 					return err
