@@ -37,10 +37,6 @@ if i{{ name.Name }} != nil {
 {% macro gohanscript(package, decl) %}
 gohanscript.RegisterStmtParser("{{ decl.Name.Name | to_under_score_case }}",
     func (stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-       stmtErr := stmt.HasArgs({{ quoted_params(decl) }})
-       if stmtErr != nil {
-           return nil, stmtErr
-       }
        return func(context *gohanscript.Context) (interface{}, error) {
            {{ gohanscript_cast_params(decl) }}
            {% if decl.Type.Results.List | length == 0 %}
@@ -69,7 +65,7 @@ gohanscript.RegisterStmtParser("{{ decl.Name.Name | to_under_score_case }}",
 {% set i = 0 %}
 {%         for param in decl.Type.Params.List %}
 {%             for name in param.Names %}
-                    {{ name.Name }} := args[{{ i }}].({{ param.Type | astType }}){% set i = i + 1 %}
+                    {{ name.Name }}, _ := args[{{ i }}].({{ param.Type | astType }}){% set i = i + 1 %}
 {%             endfor %}
 {%        endfor %}
 {%     endif %}

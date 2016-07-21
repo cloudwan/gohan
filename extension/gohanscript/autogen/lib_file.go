@@ -10,11 +10,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("fetch_content",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"path")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var path string
@@ -35,7 +30,7 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("FetchContent",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			path := args[0].(string)
+			path, _ := args[0].(string)
 
 			result1,
 				err :=
@@ -49,11 +44,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("save_content",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"path", "data")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var path string
@@ -78,8 +68,8 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("SaveContent",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			path := args[0].(string)
-			data := args[0].(interface{})
+			path, _ := args[0].(string)
+			data, _ := args[0].(interface{})
 
 			err :=
 				lib.SaveContent(

@@ -12,10 +12,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("make_map",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs()
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				result1 :=
@@ -37,11 +33,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("map_set",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"m", "key", "value")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var m cmap.ConcurrentMap
@@ -69,9 +60,9 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("MapSet",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			m := args[0].(cmap.ConcurrentMap)
-			key := args[0].(string)
-			value := args[0].(interface{})
+			m, _ := args[0].(cmap.ConcurrentMap)
+			key, _ := args[0].(string)
+			value, _ := args[0].(interface{})
 
 			lib.MapSet(
 				m, key, value)
@@ -81,11 +72,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("map_get",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"m", "key")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var m cmap.ConcurrentMap
@@ -110,8 +96,8 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("MapGet",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			m := args[0].(cmap.ConcurrentMap)
-			key := args[0].(string)
+			m, _ := args[0].(cmap.ConcurrentMap)
+			key, _ := args[0].(string)
 
 			result1 :=
 				lib.MapGet(
@@ -123,11 +109,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("map_has",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"m", "key")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var m cmap.ConcurrentMap
@@ -152,8 +133,8 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("MapHas",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			m := args[0].(cmap.ConcurrentMap)
-			key := args[0].(string)
+			m, _ := args[0].(cmap.ConcurrentMap)
+			key, _ := args[0].(string)
 
 			result1 :=
 				lib.MapHas(
@@ -165,11 +146,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("map_remove",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"m", "key")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var m cmap.ConcurrentMap
@@ -192,8 +168,8 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("MapRemove",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			m := args[0].(cmap.ConcurrentMap)
-			key := args[0].(string)
+			m, _ := args[0].(cmap.ConcurrentMap)
+			key, _ := args[0].(string)
 
 			lib.MapRemove(
 				m, key)
@@ -203,11 +179,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("make_counter",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"value")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var value int
@@ -227,7 +198,7 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("MakeCounter",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			value := args[0].(int)
+			value, _ := args[0].(int)
 
 			result1 :=
 				lib.MakeCounter(
@@ -239,11 +210,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("counter_add",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"counter", "value")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var counter *util.Counter
@@ -266,8 +232,8 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("CounterAdd",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			counter := args[0].(*util.Counter)
-			value := args[0].(int)
+			counter, _ := args[0].(*util.Counter)
+			value, _ := args[0].(int)
 
 			lib.CounterAdd(
 				counter, value)
@@ -277,11 +243,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("counter_value",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"counter")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var counter *util.Counter
@@ -301,7 +262,7 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("CounterValue",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			counter := args[0].(*util.Counter)
+			counter, _ := args[0].(*util.Counter)
 
 			result1 :=
 				lib.CounterValue(

@@ -10,11 +10,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("http_get",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"url", "headers")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var url string
@@ -40,8 +35,8 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("HTTPGet",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			url := args[0].(string)
-			headers := args[0].(map[string]interface{})
+			url, _ := args[0].(string)
+			headers, _ := args[0].(map[string]interface{})
 
 			result1,
 				err :=
@@ -55,11 +50,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("http_post",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"url", "headers", "post_data")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var url string
@@ -90,9 +80,9 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("HTTPPost",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			url := args[0].(string)
-			headers := args[0].(map[string]interface{})
-			postData := args[0].(map[string]interface{})
+			url, _ := args[0].(string)
+			headers, _ := args[0].(map[string]interface{})
+			postData, _ := args[0].(map[string]interface{})
 
 			result1,
 				err :=
@@ -106,11 +96,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("http_put",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"url", "headers", "post_data")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var url string
@@ -141,9 +126,9 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("HTTPPut",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			url := args[0].(string)
-			headers := args[0].(map[string]interface{})
-			postData := args[0].(map[string]interface{})
+			url, _ := args[0].(string)
+			headers, _ := args[0].(map[string]interface{})
+			postData, _ := args[0].(map[string]interface{})
 
 			result1,
 				err :=
@@ -157,11 +142,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("http_patch",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"url", "headers", "post_data")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var url string
@@ -192,9 +172,9 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("HTTPPatch",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			url := args[0].(string)
-			headers := args[0].(map[string]interface{})
-			postData := args[0].(map[string]interface{})
+			url, _ := args[0].(string)
+			headers, _ := args[0].(map[string]interface{})
+			postData, _ := args[0].(map[string]interface{})
 
 			result1,
 				err :=
@@ -208,11 +188,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("http_delete",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"url", "headers")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var url string
@@ -238,8 +213,8 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("HTTPDelete",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			url := args[0].(string)
-			headers := args[0].(map[string]interface{})
+			url, _ := args[0].(string)
+			headers, _ := args[0].(map[string]interface{})
 
 			result1,
 				err :=
@@ -253,11 +228,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("http_request",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"url", "method", "headers", "post_data")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var url string
@@ -293,10 +263,10 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("HTTPRequest",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			url := args[0].(string)
-			method := args[0].(string)
-			headers := args[0].(map[string]interface{})
-			postData := args[0].(map[string]interface{})
+			url, _ := args[0].(string)
+			method, _ := args[0].(string)
+			headers, _ := args[0].(map[string]interface{})
+			postData, _ := args[0].(map[string]interface{})
 
 			result1,
 				err :=

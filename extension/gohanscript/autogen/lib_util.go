@@ -10,10 +10,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("uuid",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs()
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				result1 :=
@@ -35,11 +31,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("format_uuid",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"uuid")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var uuid string
@@ -60,7 +51,7 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("FormatUUID",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			uuid := args[0].(string)
+			uuid, _ := args[0].(string)
 
 			result1,
 				err :=
@@ -74,10 +65,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("env",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs()
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				result1 :=
@@ -99,11 +86,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("normalize_map",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"data")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var data map[string]interface{}
@@ -123,7 +105,7 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("NormalizeMap",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			data := args[0].(map[string]interface{})
+			data, _ := args[0].(map[string]interface{})
 
 			result1 :=
 				lib.NormalizeMap(

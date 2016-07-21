@@ -10,11 +10,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("add_int",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"a", "b")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var a int
@@ -39,8 +34,8 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("AddInt",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			a := args[0].(int)
-			b := args[1].(int)
+			a, _ := args[0].(int)
+			b, _ := args[1].(int)
 
 			result1 :=
 				lib.AddInt(
@@ -52,11 +47,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("sub_int",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"a", "b")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var a int
@@ -81,8 +71,8 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("SubInt",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			a := args[0].(int)
-			b := args[1].(int)
+			a, _ := args[0].(int)
+			b, _ := args[1].(int)
 
 			result1 :=
 				lib.SubInt(
@@ -94,11 +84,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("mul_int",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"a", "b")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var a int
@@ -123,8 +108,8 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("MulInt",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			a := args[0].(int)
-			b := args[1].(int)
+			a, _ := args[0].(int)
+			b, _ := args[1].(int)
 
 			result1 :=
 				lib.MulInt(
@@ -136,11 +121,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("div_int",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"a", "b")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var a int
@@ -165,8 +145,8 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("DivInt",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			a := args[0].(int)
-			b := args[1].(int)
+			a, _ := args[0].(int)
+			b, _ := args[1].(int)
 
 			result1 :=
 				lib.DivInt(

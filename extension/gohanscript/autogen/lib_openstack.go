@@ -11,11 +11,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("get_openstack_client",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"auth_url", "user_name", "password", "domain_name", "tenant_name", "tenant_id", "version")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var authURL string
@@ -66,13 +61,13 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("GetOpenstackClient",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			authURL := args[0].(string)
-			userName := args[1].(string)
-			password := args[2].(string)
-			domainName := args[3].(string)
-			tenantName := args[4].(string)
-			tenantID := args[5].(string)
-			version := args[6].(string)
+			authURL, _ := args[0].(string)
+			userName, _ := args[1].(string)
+			password, _ := args[2].(string)
+			domainName, _ := args[3].(string)
+			tenantName, _ := args[4].(string)
+			tenantID, _ := args[5].(string)
+			version, _ := args[6].(string)
 
 			result1,
 				err :=
@@ -86,11 +81,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("openstack_token",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"client")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var client *gophercloud.ServiceClient
@@ -110,7 +100,7 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("OpenstackToken",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			client := args[0].(*gophercloud.ServiceClient)
+			client, _ := args[0].(*gophercloud.ServiceClient)
 
 			result1 :=
 				lib.OpenstackToken(
@@ -122,11 +112,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("openstack_get",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"client", "url")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var client *gophercloud.ServiceClient
@@ -152,8 +137,8 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("OpenstackGet",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			client := args[0].(*gophercloud.ServiceClient)
-			url := args[0].(string)
+			client, _ := args[0].(*gophercloud.ServiceClient)
+			url, _ := args[0].(string)
 
 			result1,
 				err :=
@@ -167,11 +152,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("openstack_ensure",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"client", "url", "post_url", "data")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var client *gophercloud.ServiceClient
@@ -207,10 +187,10 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("OpenstackEnsure",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			client := args[0].(*gophercloud.ServiceClient)
-			url := args[0].(string)
-			postURL := args[0].(string)
-			data := args[0].(interface{})
+			client, _ := args[0].(*gophercloud.ServiceClient)
+			url, _ := args[0].(string)
+			postURL, _ := args[0].(string)
+			data, _ := args[0].(interface{})
 
 			result1,
 				err :=
@@ -224,11 +204,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("openstack_put",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"client", "url", "data")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var client *gophercloud.ServiceClient
@@ -259,9 +234,9 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("OpenstackPut",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			client := args[0].(*gophercloud.ServiceClient)
-			url := args[0].(string)
-			data := args[0].(interface{})
+			client, _ := args[0].(*gophercloud.ServiceClient)
+			url, _ := args[0].(string)
+			data, _ := args[0].(interface{})
 
 			result1,
 				err :=
@@ -275,11 +250,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("openstack_post",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"client", "url", "data")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var client *gophercloud.ServiceClient
@@ -310,9 +280,9 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("OpenstackPost",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			client := args[0].(*gophercloud.ServiceClient)
-			url := args[0].(string)
-			data := args[0].(interface{})
+			client, _ := args[0].(*gophercloud.ServiceClient)
+			url, _ := args[0].(string)
+			data, _ := args[0].(interface{})
 
 			result1,
 				err :=
@@ -326,11 +296,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("openstack_delete",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"client", "url")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var client *gophercloud.ServiceClient
@@ -356,8 +321,8 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("OpenstackDelete",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			client := args[0].(*gophercloud.ServiceClient)
-			url := args[0].(string)
+			client, _ := args[0].(*gophercloud.ServiceClient)
+			url, _ := args[0].(string)
 
 			result1,
 				err :=
@@ -371,11 +336,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("openstack_endpoint",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"client", "endpoint_type", "name", "region", "availability")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var client *gophercloud.ServiceClient
@@ -416,11 +376,11 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("OpenstackEndpoint",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			client := args[0].(*gophercloud.ServiceClient)
-			endpointType := args[0].(string)
-			name := args[1].(string)
-			region := args[2].(string)
-			availability := args[3].(string)
+			client, _ := args[0].(*gophercloud.ServiceClient)
+			endpointType, _ := args[0].(string)
+			name, _ := args[1].(string)
+			region, _ := args[2].(string)
+			availability, _ := args[3].(string)
 
 			result1,
 				err :=
