@@ -128,15 +128,15 @@ Gohan extension supports some build-in functions.
         gohan_restore_log_module(old_module)
     }
 
-- gohan_http(method, url, headers, data, options)
+- gohan_http(method, url, headers, data, opaque, timeout)
 
 fetch data from url
 method : GET | POST | PUT | DELETE
 url : destination url
 headers : additional headers (eg. AUTH_TOKEN)
 data : post or put data
-options : dictionary of options for http client
-opaque : boolean - whether to parse URL or to treat it as raw
+opaque (optional) : boolean - whether to parse URL or to treat it as raw
+timeout (optional) : int - timeout in milliseconds. Default is no timeout.
 
 - gohan_raw_http(method, url, headers, data)
 
