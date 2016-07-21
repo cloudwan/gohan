@@ -10,11 +10,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("ip_to_int",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"ip")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var ip string
@@ -34,7 +29,7 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("IPToInt",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			ip := args[0].(string)
+			ip, _ := args[0].(string)
 
 			result1 :=
 				lib.IPToInt(
@@ -46,11 +41,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("int_to_ip",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"value")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var value int
@@ -70,7 +60,7 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("IntToIP",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			value := args[0].(int)
+			value, _ := args[0].(int)
 
 			result1 :=
 				lib.IntToIP(
@@ -82,11 +72,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("ip_add",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"ip", "value")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var ip string
@@ -111,8 +96,8 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("IPAdd",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			ip := args[0].(string)
-			value := args[0].(int)
+			ip, _ := args[0].(string)
+			value, _ := args[0].(int)
 
 			result1 :=
 				lib.IPAdd(
@@ -124,11 +109,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("parse_cidr",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"cidr")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var cidr string
@@ -153,7 +133,7 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("ParseCidr",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			cidr := args[0].(string)
+			cidr, _ := args[0].(string)
 
 			result1,
 				result2,
@@ -169,11 +149,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("float_to_int",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"value")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var value float64
@@ -193,7 +168,7 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("FloatToInt",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			value := args[0].(float64)
+			value, _ := args[0].(float64)
 
 			result1 :=
 				lib.FloatToInt(

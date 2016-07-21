@@ -12,11 +12,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("get_test_server_url",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"server")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var server *httptest.Server
@@ -36,7 +31,7 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("GetTestServerURL",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			server := args[0].(*httptest.Server)
+			server, _ := args[0].(*httptest.Server)
 
 			result1 :=
 				lib.GetTestServerURL(
@@ -48,11 +43,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("stop_test_server",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"server")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var server *httptest.Server
@@ -70,7 +60,7 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("StopTestServer",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			server := args[0].(*httptest.Server)
+			server, _ := args[0].(*httptest.Server)
 
 			lib.StopTestServer(
 				server)
@@ -80,11 +70,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("gohan_server",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"config_file", "test")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var configFile string
@@ -110,8 +95,8 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("GohanServer",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			configFile := args[0].(string)
-			test := args[0].(bool)
+			configFile, _ := args[0].(string)
+			test, _ := args[0].(bool)
 
 			result1,
 				err :=
