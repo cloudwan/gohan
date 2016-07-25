@@ -12,11 +12,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("gohan_schema",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"schema_id")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var schemaID string
@@ -37,7 +32,7 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("GohanSchema",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			schemaID := args[0].(string)
+			schemaID, _ := args[0].(string)
 
 			result1,
 				err :=
@@ -51,10 +46,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("gohan_schemas",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs()
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				result1 :=
@@ -76,10 +67,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("gohan_policies",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs()
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				result1 :=
@@ -101,11 +88,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("read_config",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"path")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var path string
@@ -125,7 +107,7 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("ReadConfig",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			path := args[0].(string)
+			path, _ := args[0].(string)
 
 			err :=
 				lib.ReadConfig(
@@ -137,11 +119,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("get_config",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"key", "default_value")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var key string
@@ -166,8 +143,8 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("GetConfig",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			key := args[0].(string)
-			defaultValue := args[0].(interface{})
+			key, _ := args[0].(string)
+			defaultValue, _ := args[0].(interface{})
 
 			result1 :=
 				lib.GetConfig(
@@ -179,11 +156,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("gohan_load_schema",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"src")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var src string
@@ -204,7 +176,7 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("GohanLoadSchema",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			src := args[0].(string)
+			src, _ := args[0].(string)
 
 			result1,
 				err :=
@@ -218,11 +190,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("connect_db",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"db_type", "connection", "max_open_conn")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var dbType string
@@ -253,9 +220,9 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("ConnectDB",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			dbType := args[0].(string)
-			connection := args[0].(string)
-			maxOpenConn := args[0].(int)
+			dbType, _ := args[0].(string)
+			connection, _ := args[0].(string)
+			maxOpenConn, _ := args[0].(int)
 
 			result1,
 				err :=
@@ -269,11 +236,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("init_db",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"db_type", "connection", "drop_on_create", "cascade")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var dbType string
@@ -308,10 +270,10 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("InitDB",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			dbType := args[0].(string)
-			connection := args[0].(string)
-			dropOnCreate := args[0].(bool)
-			cascade := args[0].(bool)
+			dbType, _ := args[0].(string)
+			connection, _ := args[0].(string)
+			dropOnCreate, _ := args[0].(bool)
+			cascade, _ := args[0].(bool)
 
 			err :=
 				lib.InitDB(
@@ -323,11 +285,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("db_begin",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"connection")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var connection db.DB
@@ -348,7 +305,7 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("DBBegin",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			connection := args[0].(db.DB)
+			connection, _ := args[0].(db.DB)
 
 			result1,
 				err :=
@@ -362,11 +319,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("db_commit",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"tx")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var tx transaction.Transaction
@@ -386,7 +338,7 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("DBCommit",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			tx := args[0].(transaction.Transaction)
+			tx, _ := args[0].(transaction.Transaction)
 
 			err :=
 				lib.DBCommit(
@@ -398,11 +350,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("db_close",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"tx")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var tx transaction.Transaction
@@ -422,7 +369,7 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("DBClose",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			tx := args[0].(transaction.Transaction)
+			tx, _ := args[0].(transaction.Transaction)
 
 			err :=
 				lib.DBClose(
@@ -434,11 +381,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("db_get",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"tx", "schema_id", "id", "tenant_id")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var tx transaction.Transaction
@@ -474,10 +416,10 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("DBGet",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			tx := args[0].(transaction.Transaction)
-			schemaID := args[0].(string)
-			id := args[0].(string)
-			tenantID := args[0].(string)
+			tx, _ := args[0].(transaction.Transaction)
+			schemaID, _ := args[0].(string)
+			id, _ := args[0].(string)
+			tenantID, _ := args[0].(string)
 
 			result1,
 				err :=
@@ -491,11 +433,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("db_create",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"tx", "schema_id", "data")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var tx transaction.Transaction
@@ -525,9 +462,9 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("DBCreate",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			tx := args[0].(transaction.Transaction)
-			schemaID := args[0].(string)
-			data := args[0].(map[string]interface{})
+			tx, _ := args[0].(transaction.Transaction)
+			schemaID, _ := args[0].(string)
+			data, _ := args[0].(map[string]interface{})
 
 			err :=
 				lib.DBCreate(
@@ -539,11 +476,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("db_list",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"tx", "schema_id", "filter")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var tx transaction.Transaction
@@ -574,9 +506,9 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("DBList",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			tx := args[0].(transaction.Transaction)
-			schemaID := args[0].(string)
-			filter := args[0].(map[string]interface{})
+			tx, _ := args[0].(transaction.Transaction)
+			schemaID, _ := args[0].(string)
+			filter, _ := args[0].(map[string]interface{})
 
 			result1,
 				err :=
@@ -590,11 +522,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("db_update",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"tx", "schema_id", "data")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var tx transaction.Transaction
@@ -624,9 +551,9 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("DBUpdate",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			tx := args[0].(transaction.Transaction)
-			schemaID := args[0].(string)
-			data := args[0].(map[string]interface{})
+			tx, _ := args[0].(transaction.Transaction)
+			schemaID, _ := args[0].(string)
+			data, _ := args[0].(map[string]interface{})
 
 			err :=
 				lib.DBUpdate(
@@ -638,11 +565,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("db_delete",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"tx", "schema_id", "id")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var tx transaction.Transaction
@@ -672,9 +594,9 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("DBDelete",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			tx := args[0].(transaction.Transaction)
-			schemaID := args[0].(string)
-			id := args[0].(string)
+			tx, _ := args[0].(transaction.Transaction)
+			schemaID, _ := args[0].(string)
+			id, _ := args[0].(string)
 
 			err :=
 				lib.DBDelete(
@@ -686,11 +608,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("db_query",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"tx", "schema_id", "sql", "arguments")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var tx transaction.Transaction
@@ -726,10 +643,10 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("DBQuery",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			tx := args[0].(transaction.Transaction)
-			schemaID := args[0].(string)
-			sql := args[0].(string)
-			arguments := args[0].([]interface{})
+			tx, _ := args[0].(transaction.Transaction)
+			schemaID, _ := args[0].(string)
+			sql, _ := args[0].(string)
+			arguments, _ := args[0].([]interface{})
 
 			result1,
 				err :=
@@ -743,11 +660,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("db_exec",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"tx", "sql", "arguments")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var tx transaction.Transaction
@@ -777,9 +689,9 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("DBExec",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			tx := args[0].(transaction.Transaction)
-			sql := args[0].(string)
-			arguments := args[0].([]interface{})
+			tx, _ := args[0].(transaction.Transaction)
+			sql, _ := args[0].(string)
+			arguments, _ := args[0].([]interface{})
 
 			err :=
 				lib.DBExec(
@@ -791,11 +703,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("db_column",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"schema_id", "join")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var schemaID string
@@ -821,8 +728,8 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("DBColumn",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			schemaID := args[0].(string)
-			join := args[0].(bool)
+			schemaID, _ := args[0].(string)
+			join, _ := args[0].(bool)
 
 			result1,
 				err :=
@@ -836,11 +743,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("error",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"code", "name", "message")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var code int
@@ -870,9 +772,9 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("Error",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			code := args[0].(int)
-			name := args[0].(string)
-			message := args[1].(string)
+			code, _ := args[0].(int)
+			name, _ := args[0].(string)
+			message, _ := args[1].(string)
 
 			err :=
 				lib.Error(

@@ -11,11 +11,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("make_queue",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"workers")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var workers int
@@ -35,7 +30,7 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("MakeQueue",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			workers := args[0].(int)
+			workers, _ := args[0].(int)
 
 			result1 :=
 				lib.MakeQueue(
@@ -47,11 +42,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("wait_queue",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"queue")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var queue *job.Queue
@@ -69,7 +59,7 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("WaitQueue",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			queue := args[0].(*job.Queue)
+			queue, _ := args[0].(*job.Queue)
 
 			lib.WaitQueue(
 				queue)
@@ -79,11 +69,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("stop",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"queue")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var queue *job.Queue
@@ -101,7 +86,7 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("Stop",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			queue := args[0].(*job.Queue)
+			queue, _ := args[0].(*job.Queue)
 
 			lib.Stop(
 				queue)
@@ -111,11 +96,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("force_stop",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"queue")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var queue *job.Queue
@@ -133,7 +113,7 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("ForceStop",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			queue := args[0].(*job.Queue)
+			queue, _ := args[0].(*job.Queue)
 
 			lib.ForceStop(
 				queue)

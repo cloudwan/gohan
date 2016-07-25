@@ -10,11 +10,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("split",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"value", "sep")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var value string
@@ -40,8 +35,8 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("Split",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			value := args[0].(string)
-			sep := args[1].(string)
+			value, _ := args[0].(string)
+			sep, _ := args[1].(string)
 
 			result1,
 				err :=
@@ -55,11 +50,6 @@ func init() {
 
 	gohanscript.RegisterStmtParser("join",
 		func(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
-			stmtErr := stmt.HasArgs(
-				"value", "sep")
-			if stmtErr != nil {
-				return nil, stmtErr
-			}
 			return func(context *gohanscript.Context) (interface{}, error) {
 
 				var value []interface{}
@@ -85,8 +75,8 @@ func init() {
 	gohanscript.RegisterMiniGoFunc("Join",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
-			value := args[0].([]interface{})
-			sep := args[0].(string)
+			value, _ := args[0].([]interface{})
+			sep, _ := args[0].(string)
 
 			result1,
 				err :=
