@@ -29,6 +29,7 @@ import (
 	"github.com/cloudwan/gohan/util"
 	"github.com/drone/routes"
 	"github.com/go-martini/martini"
+	"sync"
 )
 
 func init() {
@@ -63,6 +64,7 @@ func fillInContext(context middleware.Context,
 func httpServer(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}, error), error) {
 	return func(globalContext *gohanscript.Context) (interface{}, error) {
 		m := martini.Classic()
+		var mutex = &sync.Mutex{}
 		history := []interface{}{}
 		server := map[string]interface{}{
 			"history": history,
@@ -104,12 +106,14 @@ func httpServer(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}
 			if reqData != nil {
 				json.Unmarshal(reqData, &data)
 			}
+			mutex.Lock()
 			server["history"] = append(server["history"].([]interface{}),
 				map[string]interface{}{
 					"method": r.Method,
 					"path":   r.URL.String(),
 					"data":   data,
 				})
+			mutex.Unlock()
 		})
 		for path, body := range paths {
 			methods, ok := body.(map[string]interface{})
