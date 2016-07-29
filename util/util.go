@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"sort"
 	"strings"
 	"sync/atomic"
@@ -348,6 +349,14 @@ func MaybeInt(value interface{}) int {
 func LogPanic(log *logging.Logger) {
 	err := recover()
 	if err != nil {
-		log.Error(fmt.Sprintf("Panic %s", err))
+		log.Error(fmt.Sprintf("Panic %s: %s", err, debug.Stack()))
+	}
+}
+
+//LogFatalPanic logs panic and crashes Gohan process
+func LogFatalPanic(log *logging.Logger) {
+	err := recover()
+	if err != nil {
+		log.Fatalf("Panic %s: %s", err, debug.Stack())
 	}
 }
