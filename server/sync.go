@@ -213,7 +213,29 @@ func (server *Server) syncEvent(resource *schema.Resource) error {
 			return err
 		}
 	} else if eventType == "delete" {
-		log.Debug("delete %s", path)
+		log.Debug("delete %s", resourcePath)
+		deletePath := resourcePath
+		resourceSchema := schema.GetSchemaByURLPath(resourcePath)
+		if _, ok := resourceSchema.SyncKeyTemplate(); ok {
+			var data map[string]interface{}
+			err := json.Unmarshal(([]byte)(body), &data)
+			deletePath, err =  resourceSchema.GenerateCustomPath(data)
+			if err != nil {
+				log.Error(fmt.Sprintf("Delete from sync failed %s - generating of custom path failed", err))
+				return err
+			}
+		}
+		log.Debug("deleting %s", statePrefix + deletePath)
+		err = server.sync.Delete(statePrefix + deletePath)
+		if err != nil {
+			log.Error(fmt.Sprintf("Delete from sync failed %s", err))
+		}
+		log.Debug("deleting %s", monitoringPrefix + deletePath)
+		err = server.sync.Delete(monitoringPrefix + deletePath)
+		if err != nil {
+			log.Error(fmt.Sprintf("Delete from sync failed %s", err))
+		}
+		log.Debug("deleting %s", resourcePath)
 		err = server.sync.Delete(path)
 		if err != nil {
 			log.Error(fmt.Sprintf("Delete from sync failed %s", err))
