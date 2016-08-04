@@ -24,7 +24,9 @@ import (
 	"github.com/cloudwan/gohan/extension/framework/buflog"
 	"github.com/cloudwan/gohan/extension/framework/runner"
 	"github.com/codegangsta/cli"
+	gohan_log "github.com/cloudwan/gohan/log"
 	logging "github.com/op/go-logging"
+	"github.com/cloudwan/gohan/util"
 )
 
 var log = logging.MustGetLogger("extest")
@@ -33,9 +35,28 @@ var log = logging.MustGetLogger("extest")
 func TestExtensions(c *cli.Context) {
 	buflog.SetUpDefaultLogging()
 
+	var config *util.Config
+	configFilePath := c.String("config-file")
+
+	if configFilePath != "" && !c.Bool("verbose") {
+		config = util.GetConfig()
+		err := config.ReadConfig(configFilePath)
+		if err != nil {
+			log.Error(fmt.Sprintf("Failed to read config from path %s: %v", configFilePath, err))
+			os.Exit(1)
+		}
+
+		err = gohan_log.SetUpLogging(config)
+		if err != nil {
+			log.Error(fmt.Sprintf("Failed to set up logging: %v", err))
+			os.Exit(1)
+		}
+	}
+
 	testFiles := getTestFiles(c.Args())
 
-	returnCode := RunTests(testFiles, c.Bool("verbose"))
+	//logging from config is a limited printAllLogs option
+	returnCode := RunTests(testFiles, c.Bool("verbose") || config != nil)
 	os.Exit(returnCode)
 }
 
