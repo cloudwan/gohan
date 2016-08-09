@@ -342,18 +342,18 @@ func GohanDbList(transaction transaction.Transaction, schemaID string,
 }
 
 //GohanDbFetch gets resource from database
-func GohanDbFetch(transaction transaction.Transaction, schemaID, ID,
+func GohanDbFetch(tx transaction.Transaction, schemaID, ID,
 	tenantID string) (*schema.Resource, error) {
 
 	schema, err := getSchema(schemaID)
 	if err != nil {
 		return nil, err
 	}
-	var tenantFilter []string
+	filter := transaction.IDFilter(ID)
 	if tenantID != "" {
-		tenantFilter = []string{tenantID}
+		filter["tenant_id"] = tenantID
 	}
-	resp, err := transaction.Fetch(schema, ID, tenantFilter)
+	resp, err := tx.Fetch(schema, filter)
 	if err != nil {
 		return nil, fmt.Errorf("Error during gohan_db_fetch: %s", err.Error())
 	}
@@ -361,18 +361,18 @@ func GohanDbFetch(transaction transaction.Transaction, schemaID, ID,
 }
 
 //GohanDbStateFetch gets resource's state from database
-func GohanDbStateFetch(transaction transaction.Transaction, schemaID, ID,
+func GohanDbStateFetch(tx transaction.Transaction, schemaID, ID,
 	tenantID string) (map[string]interface{}, error) {
 
 	schema, err := getSchema(schemaID)
 	if err != nil {
 		return map[string]interface{}{}, err
 	}
-	var tenantFilter []string
+	filter := transaction.IDFilter(ID)
 	if tenantID != "" {
-		tenantFilter = []string{tenantID}
+		filter["tenant_id"] = tenantID
 	}
-	resp, err := transaction.StateFetch(schema, ID, tenantFilter)
+	resp, err := tx.StateFetch(schema, filter)
 	if err != nil {
 		return map[string]interface{}{}, fmt.Errorf("Error during gohan_db_state_fetch: %s", err.Error())
 	}

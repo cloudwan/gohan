@@ -199,7 +199,7 @@ func (s byPaginator) Less(i, j int) bool {
 }
 
 //List resources in the db
-func (tx *Transaction) List(s *schema.Schema, filter map[string]interface{}, pg *pagination.Paginator) (list []*schema.Resource, total uint64, err error) {
+func (tx *Transaction) List(s *schema.Schema, filter transaction.Filter, pg *pagination.Paginator) (list []*schema.Resource, total uint64, err error) {
 	db := tx.db
 	db.load()
 	table := db.getTable(s)
@@ -265,22 +265,16 @@ func (tx *Transaction) List(s *schema.Schema, filter map[string]interface{}, pg 
 }
 
 //Fetch resources by ID in the db
-func (tx *Transaction) Fetch(s *schema.Schema, ID interface{}, tenantFilter []string) (*schema.Resource, error) {
-	query := map[string]interface{}{
-		"id": ID,
-	}
-	if tenantFilter != nil {
-		query["tenant_id"] = tenantFilter
-	}
-	list, _, err := tx.List(s, query, nil)
+func (tx *Transaction) Fetch(s *schema.Schema, filter transaction.Filter) (*schema.Resource, error) {
+	list, _, err := tx.List(s, filter, nil)
 	if len(list) != 1 {
-		return nil, fmt.Errorf("Failed to fetch %s", ID)
+		return nil, fmt.Errorf("Failed to fetch %s", filter)
 	}
 	return list[0], err
 }
 
 //StateFetch is not supported in file databases
-func (tx *Transaction) StateFetch(s *schema.Schema, ID interface{}, tenantFilter []string) (state transaction.ResourceState, err error) {
+func (tx *Transaction) StateFetch(s *schema.Schema, filter transaction.Filter) (state transaction.ResourceState, err error) {
 	err = fmt.Errorf("StateFetch is not supported for file databases")
 	return
 }

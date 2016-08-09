@@ -211,7 +211,7 @@ var _ = Describe("Database operation test", func() {
 				})
 
 				It("Fetches an existing resource", func() {
-					networkResourceFetched, err := tx.Fetch(networkSchema, networkResource1.ID(), nil)
+					networkResourceFetched, err := tx.Fetch(networkSchema, transaction.IDFilter(networkResource1.ID()))
 					Expect(err).ToNot(HaveOccurred())
 					Expect(networkResourceFetched).To(util.MatchAsJSON(networkResource1))
 					Expect(tx.Commit()).To(Succeed())
@@ -240,7 +240,7 @@ var _ = Describe("Database operation test", func() {
 
 				Context("Using StateFetch", func() {
 					It("Returns the defaults", func() {
-						beforeState, err := tx.StateFetch(networkSchema, networkResource1.ID(), nil)
+						beforeState, err := tx.StateFetch(networkSchema, transaction.IDFilter(networkResource1.ID()))
 						Expect(err).ToNot(HaveOccurred())
 						Expect(tx.Commit()).To(Succeed())
 						Expect(beforeState.ConfigVersion).To(Equal(int64(1)))
@@ -308,7 +308,7 @@ var _ = Describe("Database operation test", func() {
 				resources, _, err := inTx.List(s, nil, nil)
 				Expect(err).ToNot(HaveOccurred())
 				for _, inResource := range resources {
-					outResource, err := verifyTx.Fetch(s, inResource.ID(), nil)
+					outResource, err := verifyTx.Fetch(s, transaction.Filter{"id": inResource.ID()})
 					Expect(err).ToNot(HaveOccurred())
 					Expect(outResource).To(Equal(inResource))
 				}

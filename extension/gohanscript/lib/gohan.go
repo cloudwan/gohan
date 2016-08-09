@@ -145,11 +145,11 @@ func DBGet(tx transaction.Transaction, schemaID string, id string, tenantID stri
 	if !ok {
 		return nil, fmt.Errorf("Schema %s not found", schemaID)
 	}
-	var tenantFilter []string
+	filter := transaction.IDFilter(id)
 	if tenantID != "" {
-		tenantFilter = []string{tenantID}
+		filter["tenant_id"] = tenantID
 	}
-	resp, err := tx.Fetch(schemaObj, id, tenantFilter)
+	resp, err := tx.Fetch(schemaObj, filter)
 	if err != nil {
 		return nil, err
 	}

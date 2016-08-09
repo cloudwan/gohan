@@ -24,6 +24,9 @@ import (
 //Type represents transaction types
 type Type string
 
+//Filter represents db filter
+type Filter map[string]interface{}
+
 const (
 	//ReadUncommited is transaction type for READ UNCOMMITTED
 	//You don't need to use this for most case
@@ -54,9 +57,9 @@ type Transaction interface {
 	SetIsolationLevel(Type) error
 	StateUpdate(*schema.Resource, *ResourceState) error
 	Delete(*schema.Schema, interface{}) error
-	Fetch(*schema.Schema, interface{}, []string) (*schema.Resource, error)
-	StateFetch(*schema.Schema, interface{}, []string) (ResourceState, error)
-	List(*schema.Schema, map[string]interface{}, *pagination.Paginator) ([]*schema.Resource, uint64, error)
+	Fetch(*schema.Schema, Filter) (*schema.Resource, error)
+	StateFetch(*schema.Schema, Filter) (ResourceState, error)
+	List(*schema.Schema, Filter, *pagination.Paginator) ([]*schema.Resource, uint64, error)
 	RawTransaction() *sqlx.Tx
 	Query(*schema.Schema, string, []interface{}) (list []*schema.Resource, err error)
 	Commit() error
@@ -77,4 +80,9 @@ func GetIsolationLevel(s *schema.Schema, action string) Type {
 		}
 	}
 	return level.(Type)
+}
+
+//IDFilter create filter for specific ID
+func IDFilter(ID interface{}) Filter {
+	return Filter{"id": ID}
 }
