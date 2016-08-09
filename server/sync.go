@@ -42,6 +42,9 @@ const (
 
 	eventPollingTime  = 30 * time.Second
 	eventPollingLimit = 10000
+
+	StateUpdateEventName = "state_update"
+	MonitoringUpdateEventName = "monitoring_update"
 )
 
 var transactionCommited chan int
@@ -339,6 +342,10 @@ func StateUpdate(response *gohan_sync.Event, server *Server) error {
 		return err
 	}
 	defer tx.Close()
+	err = tx.SetIsolationLevel(transaction.GetIsolationLevel(curSchema, StateUpdateEventName))
+	if err != nil {
+		return err
+	}
 	curResource, err := tx.Fetch(curSchema, resourceID, nil)
 	if err != nil {
 		return err
@@ -416,6 +423,10 @@ func MonitoringUpdate(response *gohan_sync.Event, server *Server) error {
 		return err
 	}
 	defer tx.Close()
+	err = tx.SetIsolationLevel(transaction.GetIsolationLevel(curSchema, MonitoringUpdateEventName))
+	if err != nil {
+		return err
+	}
 	curResource, err := tx.Fetch(curSchema, resourceID, nil)
 	if err != nil {
 		return err
