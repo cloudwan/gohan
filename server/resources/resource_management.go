@@ -417,7 +417,7 @@ func CreateResource(
 		return ResourceError{err, err.Error(), Unauthorized}
 	}
 	context["resource"] = dataMap
-	if _, ok := dataMap["id"]; !ok {
+	if id, ok := dataMap["id"]; !ok || id == "" {
 		dataMap["id"] = uuid.NewV4().String()
 	}
 	context["id"] = dataMap["id"]
