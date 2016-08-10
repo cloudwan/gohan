@@ -28,6 +28,7 @@ import (
 	"github.com/cloudwan/gohan/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/twinj/uuid"
 )
 
 var _ = Describe("Resource manager", func() {
@@ -977,6 +978,22 @@ var _ = Describe("Resource manager", func() {
 					Expect(ok).To(BeTrue())
 					Expect(theResource).To(HaveKeyWithValue("tenant_id", adminTenantID))
 					Expect(theResource).To(HaveKey("id"))
+				})
+
+				It("Should replace empty id", func() {
+					err := resources.CreateResource(
+						context, testDB, fakeIdentity, currentSchema, map[string]interface{}{
+							"id": "",
+						})
+					Expect(err).NotTo(HaveOccurred())
+					result := context["response"].(map[string]interface{})
+					theResource, ok := result[schemaID]
+					resource := theResource.(map[string]interface{})
+					Expect(ok).To(BeTrue())
+					Expect(resource).To(HaveKeyWithValue("tenant_id", adminTenantID))
+					Expect(resource).To(HaveKey("id"))
+					_, err = uuid.Parse(resource["id"].(string))
+					Expect(err).ToNot(HaveOccurred())
 				})
 			})
 
