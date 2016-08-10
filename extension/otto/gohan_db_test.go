@@ -91,7 +91,7 @@ var _ = Describe("GohanDb", func() {
 				var pagenator *pagination.Paginator
 				var fakeTx = new(mocks.Transaction)
 				fakeTx.On(
-					"List", s, map[string]interface{}{"tenant_id": "tenant0"}, pagenator,
+					"List", s, transaction.Filter{"tenant_id": "tenant0"}, pagenator,
 				).Return(
 					[]*schema.Resource{r0, r1},
 					uint64(2),
@@ -132,7 +132,7 @@ var _ = Describe("GohanDb", func() {
 				var pagenator *pagination.Paginator
 				var fakeTx = new(mocks.Transaction)
 				fakeTx.On(
-					"List", s, map[string]interface{}{"test_bool": true}, pagenator,
+					"List", s, transaction.Filter{"test_bool": true}, pagenator,
 				).Return(
 					[]*schema.Resource{r1},
 					uint64(1),
@@ -179,7 +179,7 @@ var _ = Describe("GohanDb", func() {
 				}
 				var fakeTx = new(mocks.Transaction)
 				fakeTx.On(
-					"List", s, map[string]interface{}{"tenant_id": "tenant0"}, pagenator,
+					"List", s, transaction.Filter{"tenant_id": "tenant0"}, pagenator,
 				).Return(
 					[]*schema.Resource{r0, r1},
 					uint64(2),
@@ -226,7 +226,7 @@ var _ = Describe("GohanDb", func() {
 				}
 				var fakeTx = new(mocks.Transaction)
 				fakeTx.On(
-					"List", s, map[string]interface{}{"tenant_id": "tenant0"}, pagenator,
+					"List", s, transaction.Filter{"tenant_id": "tenant0"}, pagenator,
 				).Return(
 					[]*schema.Resource{r0, r1},
 					uint64(2),
@@ -275,7 +275,7 @@ var _ = Describe("GohanDb", func() {
 				}
 				var fakeTx = new(mocks.Transaction)
 				fakeTx.On(
-					"List", s, map[string]interface{}{"tenant_id": "tenant0"}, pagenator,
+					"List", s, transaction.Filter{"tenant_id": "tenant0"}, pagenator,
 				).Return(
 					[]*schema.Resource{r0, r1},
 					uint64(2),
@@ -319,7 +319,8 @@ var _ = Describe("GohanDb", func() {
 
 				var fakeTx = new(mocks.Transaction)
 				fakeTx.On(
-					"StateFetch", s, "resource_id", []string{"tenant0"},
+					"StateFetch", s,
+					transaction.Filter{"id": "resource_id", "tenant_id": "tenant0"},
 				).Return(
 					transaction.ResourceState{
 						ConfigVersion: 30,

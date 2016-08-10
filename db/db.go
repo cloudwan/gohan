@@ -86,7 +86,7 @@ func CopyDBResources(input, output DB, overrideExisting bool) error {
 
 		for _, resource := range resources {
 			log.Info("Creating resource %s", resource.ID())
-			destResource, _ := otx.Fetch(s, resource.ID(), nil)
+			destResource, _ := otx.Fetch(s, transaction.IDFilter(resource.ID()))
 			if destResource == nil {
 				resource.PopulateDefaults()
 				err := otx.Create(resource)

@@ -319,7 +319,11 @@ func GetSingleResourceInTransaction(context middleware.Context, resourceSchema *
 		}
 		return fmt.Errorf("extension returned invalid JSON: %v", rawResponse)
 	}
-	object, err := mainTransaction.Fetch(resourceSchema, resourceID, tenantIDs)
+	filter := transaction.IDFilter(resourceID)
+	if tenantIDs != nil {
+		filter["tenant_id"] = tenantIDs
+	}
+	object, err := mainTransaction.Fetch(resourceSchema, filter)
 
 	if err != nil || object == nil {
 		return ResourceError{err, "", NotFound}
@@ -354,7 +358,12 @@ func CreateOrUpdateResource(
 	if err != nil {
 		return false, fmt.Errorf("cannot create transaction: %v", err)
 	}
-	_, fetchErr := preTransaction.Fetch(resourceSchema, resourceID, policy.GetTenantIDFilter(schema.ActionUpdate, auth.TenantID()))
+	tenantIDs := policy.GetTenantIDFilter(schema.ActionUpdate, auth.TenantID())
+	filter := transaction.IDFilter(resourceID)
+	if tenantIDs != nil {
+		filter["tenant_id"] = tenantIDs
+	}
+	_, fetchErr := preTransaction.Fetch(resourceSchema, filter)
 	preTransaction.Close()
 
 	if fetchErr != nil {
@@ -583,8 +592,12 @@ func UpdateResourceInTransaction(
 	if !ok {
 		return fmt.Errorf("No environment for schema")
 	}
+	filter := transaction.IDFilter(resourceID)
+	if tenantIDs != nil {
+		filter["tenant_id"] = tenantIDs
+	}
 	resource, err := mainTransaction.Fetch(
-		resourceSchema, resourceID, tenantIDs)
+		resourceSchema, filter)
 	if err != nil {
 		return ResourceError{err, err.Error(), WrongQuery}
 	}
@@ -653,7 +666,12 @@ func DeleteResource(context middleware.Context,
 	if err != nil {
 		return fmt.Errorf("cannot create transaction: %v", err)
 	}
-	resource, fetchErr := preTransaction.Fetch(resourceSchema, resourceID, policy.GetTenantIDFilter(schema.ActionDelete, auth.TenantID()))
+	tenantIDs := policy.GetTenantIDFilter(schema.ActionDelete, auth.TenantID())
+	filter := transaction.IDFilter(resourceID)
+	if tenantIDs != nil {
+		filter["tenant_id"] = tenantIDs
+	}
+	resource, fetchErr := preTransaction.Fetch(resourceSchema, filter)
 	preTransaction.Close()
 
 	if resource != nil {
@@ -692,7 +710,13 @@ func DeleteResourceInTransaction(context middleware.Context, resourceSchema *sch
 
 	auth := context["auth"].(schema.Authorization)
 	policy := context["policy"].(*schema.Policy)
-	resource, err := mainTransaction.Fetch(resourceSchema, resourceID, policy.GetTenantIDFilter(schema.ActionDelete, auth.TenantID()))
+	tenantIDs := policy.GetTenantIDFilter(schema.ActionDelete, auth.TenantID())
+	filter := transaction.IDFilter(resourceID)
+	if tenantIDs != nil {
+		filter["tenant_id"] = tenantIDs
+	}
+	resource, err := mainTransaction.Fetch(resourceSchema, filter)
+	log.Debug("%s %s", resource, err)
 	if err != nil {
 		return err
 	}

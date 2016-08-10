@@ -43,7 +43,7 @@ const (
 	eventPollingTime  = 30 * time.Second
 	eventPollingLimit = 10000
 
-	StateUpdateEventName = "state_update"
+	StateUpdateEventName      = "state_update"
 	MonitoringUpdateEventName = "monitoring_update"
 )
 
@@ -121,7 +121,7 @@ func (tl *transactionEventLogger) Update(resource *schema.Resource) error {
 	if !resource.Schema().StateVersioning() {
 		return tl.logEvent("update", resource, 0)
 	}
-	state, err := tl.StateFetch(resource.Schema(), resource.ID(), nil)
+	state, err := tl.StateFetch(resource.Schema(), transaction.IDFilter(resource.ID()))
 	if err != nil {
 		return err
 	}
@@ -129,13 +129,13 @@ func (tl *transactionEventLogger) Update(resource *schema.Resource) error {
 }
 
 func (tl *transactionEventLogger) Delete(s *schema.Schema, resourceID interface{}) error {
-	resource, err := tl.Fetch(s, resourceID, nil)
+	resource, err := tl.Fetch(s, transaction.IDFilter(resourceID))
 	if err != nil {
 		return err
 	}
 	configVersion := int64(0)
 	if resource.Schema().StateVersioning() {
-		state, err := tl.StateFetch(s, resourceID, nil)
+		state, err := tl.StateFetch(s, transaction.IDFilter(resourceID))
 		if err != nil {
 			return err
 		}
@@ -222,18 +222,18 @@ func (server *Server) syncEvent(resource *schema.Resource) error {
 		if _, ok := resourceSchema.SyncKeyTemplate(); ok {
 			var data map[string]interface{}
 			err := json.Unmarshal(([]byte)(body), &data)
-			deletePath, err =  resourceSchema.GenerateCustomPath(data)
+			deletePath, err = resourceSchema.GenerateCustomPath(data)
 			if err != nil {
 				log.Error(fmt.Sprintf("Delete from sync failed %s - generating of custom path failed", err))
 				return err
 			}
 		}
-		log.Debug("deleting %s", statePrefix + deletePath)
+		log.Debug("deleting %s", statePrefix+deletePath)
 		err = server.sync.Delete(statePrefix + deletePath)
 		if err != nil {
 			log.Error(fmt.Sprintf("Delete from sync failed %s", err))
 		}
-		log.Debug("deleting %s", monitoringPrefix + deletePath)
+		log.Debug("deleting %s", monitoringPrefix+deletePath)
 		err = server.sync.Delete(monitoringPrefix + deletePath)
 		if err != nil {
 			log.Error(fmt.Sprintf("Delete from sync failed %s", err))
@@ -346,11 +346,11 @@ func StateUpdate(response *gohan_sync.Event, server *Server) error {
 	if err != nil {
 		return err
 	}
-	curResource, err := tx.Fetch(curSchema, resourceID, nil)
+	curResource, err := tx.Fetch(curSchema, transaction.IDFilter(resourceID))
 	if err != nil {
 		return err
 	}
-	resourceState, err := tx.StateFetch(curSchema, resourceID, nil)
+	resourceState, err := tx.StateFetch(curSchema, transaction.IDFilter(resourceID))
 	if err != nil {
 		return err
 	}
@@ -427,11 +427,11 @@ func MonitoringUpdate(response *gohan_sync.Event, server *Server) error {
 	if err != nil {
 		return err
 	}
-	curResource, err := tx.Fetch(curSchema, resourceID, nil)
+	curResource, err := tx.Fetch(curSchema, transaction.IDFilter(resourceID))
 	if err != nil {
 		return err
 	}
-	resourceState, err := tx.StateFetch(curSchema, resourceID, nil)
+	resourceState, err := tx.StateFetch(curSchema, transaction.IDFilter(resourceID))
 	if err != nil {
 		return err
 	}
