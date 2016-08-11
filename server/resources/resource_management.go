@@ -76,7 +76,10 @@ func InTransaction(context middleware.Context, dataStore db.DB, level transactio
 		return fmt.Errorf("cannot create transaction: %v", err)
 	}
 	defer aTransaction.Close()
-	aTransaction.SetIsolationLevel(level)
+	err = aTransaction.SetIsolationLevel(level)
+	if (err != nil) {
+		return fmt.Errorf("error when setting isolation level '%s': %s", level, err)
+	}
 	context["transaction"] = aTransaction
 
 	err = f()
