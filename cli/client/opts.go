@@ -58,6 +58,11 @@ var (
 		logging.DEBUG,
 	}
 	defaultLogLevel = logging.WARNING
+
+	commonParams = map[string]struct{}{
+		outputFormatKey: struct{}{},
+		logLevelKey:     struct{}{},
+	}
 )
 
 // GohanClientCLIOpts options for GohanClientCLI

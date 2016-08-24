@@ -102,6 +102,30 @@ func getCastleSchema() map[string]interface{} {
 				"name",
 			},
 		},
+		"actions": map[string]interface{}{
+			"open_gates": map[string]interface{}{
+				"method": "GET",
+				"path": "/:id/open_gates",
+				"input": map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"gate_id": map[string]interface{}{
+							"type": "number",
+						},
+					},
+				},
+				"output": map[string]interface{}{
+					"type": "string",
+				},
+			},
+			"close_gates": map[string]interface{}{
+				"method": "GET",
+				"path": "/close_all_gates",
+				"output": map[string]interface{}{
+					"type": "string",
+				},
+			},
+		},
 	}
 }
 
@@ -234,10 +258,19 @@ func getSchemas() []*schema.Schema {
 }
 
 var (
+	castleID       = "de305d54-75b4-431b-adb2-eb6b9e546013"
 	icyTowerID     = "de305d54-75b4-431b-adb2-eb6b9e546014"
 	icyTowerName   = "Icy Tower"
 	babylonTowerID = "de305d54-75b4-431b-adb2-eb6b9e546015"
 )
+
+func openGates() string {
+	return "gates opened"
+}
+
+func closeGates() string {
+	return "gates closed"
+}
 
 func getIcyTower() map[string]interface{} {
 	return map[string]interface{}{
@@ -280,6 +313,8 @@ func compareSchemas(actual, expected []*schema.Schema) {
 	for i, s := range actual {
 		sortProperties(s)
 		sortProperties(expected[i])
+		sortActions(s)
+		sortActions(expected[i])
 		g.Expect(s).To(g.Equal(expected[i]))
 	}
 }
@@ -293,3 +328,19 @@ func (p properties) Less(i, j int) bool { return p[i].ID < p[j].ID }
 func sortProperties(schema *schema.Schema) {
 	sort.Sort(properties(schema.Properties))
 }
+
+type actions []schema.Action
+
+func (a actions) Len() int           { return len(a) }
+func (a actions) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a actions) Less(i, j int) bool { return a[i].ID < a[j].ID }
+
+func sortActions(schema *schema.Schema) {
+	sort.Sort(actions(schema.Actions))
+}
+
+type ByName []gohanCommand
+
+func (a ByName) Len() int          { return len(a) }
+func (a ByName) Swap(i, j int)     { a[i], a[j] = a[j], a[i] }
+func (a ByName) Less(i, j int) bool { return a[i].Name < a[j].Name }

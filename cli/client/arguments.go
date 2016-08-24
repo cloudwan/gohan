@@ -25,6 +25,45 @@ import (
 	"github.com/cloudwan/gohan/schema"
 )
 
+func (gohanClientCLI *GohanClientCLI) getCustomArgsAsMap(
+	args []string,
+	actionInput string,
+	action schema.Action,
+) (argsMap map[string]interface{}, err error) {
+	argsMap = map[string]interface{}{}
+	if action.InputSchema != nil {
+		var value interface{}
+		inputType, ok := action.InputSchema["type"].(string)
+		if !ok {
+			return nil, fmt.Errorf("Invalid input schema")
+		}
+		switch inputType {
+		case "integer", "number":
+			value, err = strconv.ParseInt(actionInput, 10, 64)
+		case "boolean":
+			value, err = strconv.ParseBool(actionInput)
+		case "array", "object":
+			err = json.Unmarshal([]byte(actionInput), &value)
+		default:
+			value = actionInput
+		}
+		if err != nil {
+			return nil, fmt.Errorf("Error parsing action input %s:", err)
+		}
+		argsMap[action.ID] = value
+	}
+	for i := 0; i < len(args); i += 2 {
+		key := strings.TrimPrefix(args[i], "--")
+		if _, ok := commonParams[key]; !ok {
+			return nil, fmt.Errorf("Error parsing parameter %s", key)
+		}
+		value := args[i+1]
+		argsMap[key] = value
+	}
+	err = gohanClientCLI.handleCommonArguments(argsMap)
+	return
+}
+
 func (gohanClientCLI *GohanClientCLI) handleArguments(args []string, s *schema.Schema) (map[string]interface{}, error) {
 	argsMap, err := getArgsAsMap(args, s)
 	if err != nil {
