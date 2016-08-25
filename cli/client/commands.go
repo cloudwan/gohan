@@ -18,6 +18,7 @@ package client
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"net/http"
 
 	"github.com/rackspace/gophercloud"
@@ -56,6 +57,7 @@ func (gohanClientCLI *GohanClientCLI) getCommands() []gohanCommand {
 			gohanClientCLI.getPutCommand(s),
 			gohanClientCLI.getDeleteCommand(s),
 		)
+		commands = append(commands, gohanClientCLI.getCustomCommands(s)...)
 	}
 	return commands
 }
@@ -165,6 +167,129 @@ func (gohanClientCLI *GohanClientCLI) getDeleteCommand(s *schema.Schema) gohanCo
 			return gohanClientCLI.request("DELETE", url, nil)
 		},
 	}
+}
+
+// Assumes gohan client is called as follows:
+// gohan client [common_params...] [action_input] [resource_id]
+// where common_params are in form '--name value' and 'name' exists in commonParams
+// action_input conforms to action's InputSchema specification
+// resource_id is ID of the resource this action acts upon
+func (gohanClientCLI *GohanClientCLI) getCustomCommands(s *schema.Schema) []gohanCommand {
+	ret := make([]gohanCommand, 0, len(s.Actions))
+	for _, act := range s.Actions {
+		ret = append(ret, gohanCommand{
+			Name: s.ID + " " + act.ID,
+			Action: gohanClientCLI.createActionFunc(act, s),
+		})
+	}
+	return ret
+}
+
+func (gohanClientCLI *GohanClientCLI) createActionFunc(
+	act schema.Action,
+	s   *schema.Schema,
+) (func (args []string) (interface{}, error)) {
+	return func (args []string) (result interface{}, err error) {
+		params, input, id, err := splitArgs(args, &act)
+		if err != nil {
+			return nil, err
+		}
+		if len(id) > 0 {
+			id, err = gohanClientCLI.getResourceID(s, id)
+			if err != nil {
+				return nil, err
+			}
+		}
+		argsMap, err := gohanClientCLI.getCustomArgsAsMap(params, input, act)
+		if err != nil {
+			return
+		}
+		opts := gophercloud.RequestOpts{
+			JSONBody: argsMap,
+			OkCodes: okCodes(act.Method),
+		}
+		url := gohanClientCLI.opts.gohanEndpointURL + s.URL + substituteID(act.Path, id)
+		result, err = gohanClientCLI.request(act.Method, url, &opts)
+		if err != nil {
+			return
+		}
+		result = gohanClientCLI.formatCustomOutput(result)
+		return
+	}
+}
+
+func okCodes(method string) []int {
+	switch {
+	case method == "GET":
+		return []int{200}
+	case method == "POST":
+		return []int{201, 202, 400}
+	case method == "PUT":
+		return []int{200, 201, 202, 400}
+	case method == "PATCH":
+		return []int{200, 204}
+	case method == "DELETE":
+		return []int{202, 204}
+	}
+
+	return []int{}
+}
+
+func (gohanClientCLI *GohanClientCLI) formatCustomOutput(rawOutput interface{}) interface{} {
+	if rawOutput == nil {
+		return rawOutput
+	}
+	switch gohanClientCLI.opts.outputFormat {
+	case outputFormatTable:
+		return map[string]interface{}{
+			"output": rawOutput,
+		}
+	default:
+		// outputFormatJSON
+		return rawOutput
+	}
+}
+
+// Splits command line arguments into id, action input and remaining parameters
+func splitArgs(
+	args []string,
+	action *schema.Action,
+) (remainingArgs []string, input string, id string, err error) {
+	remainingArgs = args
+	re := regexp.MustCompile(`.*/:id(/.*)?$`)
+	match := re.FindString(action.Path)
+	argCount := 0
+	if len(match) != 0 {
+		argCount++
+	}
+	if action.InputSchema != nil {
+		argCount++
+	}
+	if len(args) < argCount {
+		err = fmt.Errorf("Wrong number of arguments")
+		return
+	} else if (len(args)-argCount)%2 != 0 {
+		err = fmt.Errorf("Parameters should be in [--param-name value]... format")
+		return
+	}
+	if len(match) != 0 {
+		id = remainingArgs[len(remainingArgs)-1]
+		remainingArgs = remainingArgs[:len(remainingArgs)-1]
+	}
+	if action.InputSchema != nil {
+		input = remainingArgs[len(remainingArgs)-1]
+		remainingArgs = remainingArgs[:len(remainingArgs)-1]
+	}
+	return
+}
+
+func substituteID(path, id string) string {
+	re := regexp.MustCompile(`(.*/)(:id)(/.*)?$`)
+	match := re.FindStringSubmatch(path)
+	if len(match) == 0 {
+		return path
+	}
+	return match[1]+id+match[3]
 }
 
 func (gohanClientCLI *GohanClientCLI) handleResponse(response *http.Response, err error) (interface{}, error) {

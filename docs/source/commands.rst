@@ -246,3 +246,12 @@ it's name or id could be used:
   gohan client subnet create --network "Network Name"
   gohan client subnet create --network network-id
   gohan client subnet create --network_id network-id
+
+Custom commands
+---------------
+
+Any custom actions specified in schema are also supported as commands by gohan client and should be invoked as follows:
+
+:code:`gohan client schema_id command [common arguments] [command input] [resource identifier]`
+
+Where :code:`common arguments` and :code:`resource identifier` are described aboved and :code:`command input` is passed as JSON value.

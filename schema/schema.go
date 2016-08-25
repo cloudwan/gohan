@@ -489,6 +489,15 @@ MergeAction:
 
 //JSON returns json format of schema
 func (schema *Schema) JSON() map[string]interface{} {
+	actions := map[string]interface{}{}
+	for _, a := range schema.Actions {
+		actions[a.ID] = map[string]interface{}{
+			"method": a.Method,
+			"path": a.Path,
+			"input": a.InputSchema,
+			"output": a.OutputSchema,
+		}
+	}
 	return map[string]interface{}{
 		"id":          schema.ID,
 		"plural":      schema.Plural,
@@ -500,6 +509,7 @@ func (schema *Schema) JSON() map[string]interface{} {
 		"url":         schema.URL,
 		"namespace":   schema.NamespaceID,
 		"schema":      schema.JSONSchema,
+		"actions":     actions,
 		"metadata":    schema.Metadata,
 	}
 }

@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"sort"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -423,6 +424,7 @@ var _ = Describe("CLI functions", func() {
 		Describe("Commands", func() {
 			var towerSchema *schema.Schema
 			var castleSchema *schema.Schema
+			const customCommandsTotal int = 2
 
 			BeforeEach(func() {
 				towerSchema, _ = schema.NewSchemaFromObj(getTowerSchema())
@@ -435,7 +437,7 @@ var _ = Describe("CLI functions", func() {
 					castleSchema,
 				}
 				commands := gohanClientCLI.getCommands()
-				Expect(commands).To(HaveLen(2 * 5))
+				Expect(commands).To(HaveLen(10+customCommandsTotal))
 				Expect(commands[0].Name).To(Equal("tower list"))
 				Expect(commands[1].Name).To(Equal("tower show"))
 				Expect(commands[2].Name).To(Equal("tower create"))
@@ -447,6 +449,9 @@ var _ = Describe("CLI functions", func() {
 				Expect(commands[7].Name).To(Equal("castle create"))
 				Expect(commands[8].Name).To(Equal("castle set"))
 				Expect(commands[9].Name).To(Equal("castle delete"))
+				sort.Sort(ByName(commands[10:10+customCommandsTotal]))
+				Expect(commands[10].Name).To(Equal("castle close_gates"))
+				Expect(commands[11].Name).To(Equal("castle open_gates"))
 			})
 
 			Describe("Execute command", func() {
@@ -1145,6 +1150,125 @@ var _ = Describe("CLI functions", func() {
 					Expect(result).To(BeNil())
 					Expect(err).To(MatchError("Unexpected response: 500 Internal Server Error"))
 				})
+			})
+
+			Describe("Custom commands", func() {
+				var customCommands []gohanCommand
+				const openGatesInput string = `{ "gate_id": 42 }`
+
+				BeforeEach(func() {
+					customCommands = gohanClientCLI.getCustomCommands(castleSchema)
+					sort.Sort(ByName(customCommands))
+					server.AppendHandlers(
+						ghttp.CombineHandlers(
+							ghttp.VerifyRequest(
+								"GET",
+								"/v2.0/castles/"+castleID,
+							),
+							ghttp.RespondWithJSONEncoded(
+								200,
+								map[string]interface{}{
+									"id": castleID,
+									"name": "Camelot",
+								},
+							),
+						),
+					)
+				})
+
+				It("Should create proper number of custom commands with proper names", func() {
+					Expect(len(customCommands)).To(Equal(customCommandsTotal))
+					Expect(customCommands[0].Name).To(Equal("castle close_gates"))
+					Expect(customCommands[1].Name).To(Equal("castle open_gates"))
+				})
+
+				It("Should 'open gates' successfully", func() {
+					server.AppendHandlers(
+						ghttp.CombineHandlers(
+							ghttp.VerifyRequest(
+								"GET",
+								"/v2.0/castles/"+castleID+"/open_gates",
+							),
+							ghttp.RespondWithJSONEncoded(200, openGates()),
+						),
+					)
+					Expect(customCommands[1].Name).To(Equal("castle open_gates"))
+					result, err := customCommands[1].Action([]string{
+						`{ "gate_id": 42 }`,
+						castleID,
+					})
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result).To(Equal(openGates()))
+				})
+
+				It("Should 'close gates' successfully", func() {
+					server.SetHandler(1,
+						ghttp.CombineHandlers(
+							ghttp.VerifyRequest(
+								"GET",
+								"/v2.0/castles/close_all_gates",
+							),
+							ghttp.RespondWithJSONEncoded(200, closeGates()),
+						),
+					)
+					Expect(customCommands[0].Name).To(Equal("castle close_gates"))
+					result, err := customCommands[0].Action([]string{})
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result).To(Equal(closeGates()))
+				})
+
+				It("Should show error - wrong number of arguments", func() {
+					server.AppendHandlers(
+						ghttp.CombineHandlers(
+							ghttp.VerifyRequest(
+								"GET",
+								"/v2.0/castles/"+castleID+"/open_gates",
+							),
+							ghttp.RespondWithJSONEncoded(200, openGates()),
+						),
+					)
+					result, err := customCommands[1].Action([]string{castleID})
+					Expect(result).To(BeNil())
+					Expect(err).To(MatchError("Wrong number of arguments"))
+				})
+
+				It("Should show error - error parsing arguments", func() {
+					server.AppendHandlers(
+						ghttp.CombineHandlers(
+							ghttp.VerifyRequest(
+								"GET",
+								"/v2.0/castles/"+castleID+"/open_gates",
+							),
+							ghttp.RespondWithJSONEncoded(200, closeGates()),
+						),
+					)
+					result, err := customCommands[1].Action([]string{
+						"--opt", "yes",
+						openGatesInput,
+						castleID,
+					})
+					Expect(result).To(BeNil())
+					Expect(err).To(MatchError(HavePrefix("Error parsing parameter")))
+				})
+
+				It("Should show error - resource not found", func() {
+					server.SetHandler(1, ghttp.RespondWith(404, nil))
+					server.AppendHandlers(ghttp.RespondWith(404, nil))
+					result, err := customCommands[1].Action([]string{
+						openGatesInput,
+						"wrongID",
+					})
+					Expect(result).To(BeNil())
+					Expect(err).To(MatchError("Resource not found"))
+				})
+
+				It("Should show error - unexpected response", func() {
+					server.SetHandler(1, ghttp.RespondWith(500, nil))
+					result, err := customCommands[0].Action([]string{})
+					Expect(result).To(BeNil())
+					Expect(err).To(MatchError("Unexpected response: 500 Internal Server Error"))
+				})
+				// TODO more?
 			})
 		})
 
