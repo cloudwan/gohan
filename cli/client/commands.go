@@ -18,8 +18,8 @@ package client
 import (
 	"encoding/json"
 	"fmt"
-	"regexp"
 	"net/http"
+	"regexp"
 
 	"github.com/rackspace/gophercloud"
 
@@ -178,7 +178,7 @@ func (gohanClientCLI *GohanClientCLI) getCustomCommands(s *schema.Schema) []goha
 	ret := make([]gohanCommand, 0, len(s.Actions))
 	for _, act := range s.Actions {
 		ret = append(ret, gohanCommand{
-			Name: s.ID + " " + act.ID,
+			Name:   s.ID + " " + act.ID,
 			Action: gohanClientCLI.createActionFunc(act, s),
 		})
 	}
@@ -187,9 +187,9 @@ func (gohanClientCLI *GohanClientCLI) getCustomCommands(s *schema.Schema) []goha
 
 func (gohanClientCLI *GohanClientCLI) createActionFunc(
 	act schema.Action,
-	s   *schema.Schema,
-) (func (args []string) (interface{}, error)) {
-	return func (args []string) (result interface{}, err error) {
+s *schema.Schema,
+) func(args []string) (interface{}, error) {
+	return func(args []string) (result interface{}, err error) {
 		params, input, id, err := splitArgs(args, &act)
 		if err != nil {
 			return nil, err
@@ -206,7 +206,7 @@ func (gohanClientCLI *GohanClientCLI) createActionFunc(
 		}
 		opts := gophercloud.RequestOpts{
 			JSONBody: argsMap,
-			OkCodes: okCodes(act.Method),
+			OkCodes:  okCodes(act.Method),
 		}
 		url := gohanClientCLI.opts.gohanEndpointURL + s.URL + substituteID(act.Path, id)
 		result, err = gohanClientCLI.request(act.Method, url, &opts)
@@ -289,7 +289,7 @@ func substituteID(path, id string) string {
 	if len(match) == 0 {
 		return path
 	}
-	return match[1]+id+match[3]
+	return match[1] + id + match[3]
 }
 
 func (gohanClientCLI *GohanClientCLI) handleResponse(response *http.Response, err error) (interface{}, error) {

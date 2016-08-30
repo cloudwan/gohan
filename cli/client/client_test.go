@@ -437,7 +437,7 @@ var _ = Describe("CLI functions", func() {
 					castleSchema,
 				}
 				commands := gohanClientCLI.getCommands()
-				Expect(commands).To(HaveLen(10+customCommandsTotal))
+				Expect(commands).To(HaveLen(10 + customCommandsTotal))
 				Expect(commands[0].Name).To(Equal("tower list"))
 				Expect(commands[1].Name).To(Equal("tower show"))
 				Expect(commands[2].Name).To(Equal("tower create"))
@@ -449,7 +449,7 @@ var _ = Describe("CLI functions", func() {
 				Expect(commands[7].Name).To(Equal("castle create"))
 				Expect(commands[8].Name).To(Equal("castle set"))
 				Expect(commands[9].Name).To(Equal("castle delete"))
-				sort.Sort(ByName(commands[10:10+customCommandsTotal]))
+				sort.Sort(ByName(commands[10 : 10 + customCommandsTotal]))
 				Expect(commands[10].Name).To(Equal("castle close_gates"))
 				Expect(commands[11].Name).To(Equal("castle open_gates"))
 			})
@@ -1168,7 +1168,7 @@ var _ = Describe("CLI functions", func() {
 							ghttp.RespondWithJSONEncoded(
 								200,
 								map[string]interface{}{
-									"id": castleID,
+									"id":   castleID,
 									"name": "Camelot",
 								},
 							),
