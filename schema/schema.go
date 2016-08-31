@@ -493,8 +493,8 @@ func (schema *Schema) JSON() map[string]interface{} {
 	for _, a := range schema.Actions {
 		actions[a.ID] = map[string]interface{}{
 			"method": a.Method,
-			"path": a.Path,
-			"input": a.InputSchema,
+			"path":   a.Path,
+			"input":  a.InputSchema,
 			"output": a.OutputSchema,
 		}
 	}

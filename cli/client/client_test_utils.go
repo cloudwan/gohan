@@ -105,7 +105,7 @@ func getCastleSchema() map[string]interface{} {
 		"actions": map[string]interface{}{
 			"open_gates": map[string]interface{}{
 				"method": "GET",
-				"path": "/:id/open_gates",
+				"path":   "/:id/open_gates",
 				"input": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -120,7 +120,7 @@ func getCastleSchema() map[string]interface{} {
 			},
 			"close_gates": map[string]interface{}{
 				"method": "GET",
-				"path": "/close_all_gates",
+				"path":   "/close_all_gates",
 				"output": map[string]interface{}{
 					"type": "string",
 				},
@@ -341,6 +341,10 @@ func sortActions(schema *schema.Schema) {
 
 type ByName []gohanCommand
 
-func (a ByName) Len() int          { return len(a) }
-func (a ByName) Swap(i, j int)     { a[i], a[j] = a[j], a[i] }
+func (a ByName) Len() int {
+	return len(a)
+}
+func (a ByName) Swap(i, j int) {
+	a[i], a[j] = a[j], a[i]
+}
 func (a ByName) Less(i, j int) bool { return a[i].Name < a[j].Name }
