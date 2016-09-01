@@ -336,6 +336,7 @@ func StateUpdate(response *gohan_sync.Event, server *Server) error {
 		return nil
 	}
 	resourceID := curSchema.GetResourceIDFromPath(schemaPath)
+	log.Info("Started StateUpdate for %s %s %v", response.Action, response.Key, response.Data)
 
 	tx, err := dataStore.Begin()
 	if err != nil {
@@ -378,7 +379,10 @@ func StateUpdate(response *gohan_sync.Event, server *Server) error {
 	context := map[string]interface{}{}
 
 	if haveEnvironment {
-		serviceAuthorization, _ := server.keystoneIdentity.GetServiceAuthorization()
+		serviceAuthorization, err := server.keystoneIdentity.GetServiceAuthorization()
+		if err != nil {
+			return err
+		}
 
 		context["catalog"] = serviceAuthorization.Catalog()
 		context["auth_token"] = serviceAuthorization.AuthToken()
@@ -417,6 +421,7 @@ func MonitoringUpdate(response *gohan_sync.Event, server *Server) error {
 		return nil
 	}
 	resourceID := curSchema.GetResourceIDFromPath(schemaPath)
+	log.Info("Started MonitoringUpdate for %s %s %v", response.Action, response.Key, response.Data)
 
 	tx, err := dataStore.Begin()
 	if err != nil {
@@ -436,6 +441,8 @@ func MonitoringUpdate(response *gohan_sync.Event, server *Server) error {
 		return err
 	}
 	if resourceState.ConfigVersion != resourceState.StateVersion {
+		log.Debug("Skipping MonitoringUpdate, because config version (%s) != state version (%s)",
+			resourceState.ConfigVersion, resourceState.StateVersion)
 		return nil
 	}
 	var ok bool
@@ -517,10 +524,13 @@ func startStateUpdatingProcess(server *Server) {
 		defer util.LogFatalPanic(log)
 		for server.running {
 			response := <-stateResponseChan
-			err := StateUpdate(response, server)
-			if err != nil {
-				log.Warning(fmt.Sprintf("error during state update: %s", err))
-			}
+			go func() {
+				err := StateUpdate(response, server)
+				if err != nil {
+					log.Warning(fmt.Sprintf("error during state update: %s", err))
+				}
+				log.Info("Completed StateUpdate")
+			}()
 		}
 		stateStopChan <- true
 	}()
@@ -549,10 +559,13 @@ func startStateUpdatingProcess(server *Server) {
 		defer util.LogFatalPanic(log)
 		for server.running {
 			response := <-monitoringResponseChan
-			err := MonitoringUpdate(response, server)
-			if err != nil {
-				log.Warning(fmt.Sprintf("error during state update: %s", err))
-			}
+			go func() {
+				err := MonitoringUpdate(response, server)
+				if err != nil {
+					log.Warning(fmt.Sprintf("error during monitoring update: %s", err))
+				}
+				log.Info("Completed MonitoringUpdate")
+			}()
 		}
 		monitoringStopChan <- true
 	}()
