@@ -233,6 +233,33 @@ var _ = Describe("Otto extension manager", func() {
 				Expect(context).To(HaveKeyWithValue("respondo", "verdo"))
 			})
 		})
+
+		Context("When extension is running too long", func() {
+			It("should be aborted in the middle of extension", func() {
+				timeoutExtension, err := schema.NewExtension(map[string]interface{}{
+					"id": "timeout_extension",
+					"code": `gohan_register_handler("test_event", function(context) {
+						while(true) {
+							// busy loop, but ok for this test
+							var i = 1;
+						};
+					});`,
+					"path": ".*",
+				})
+				Expect(err).ToNot(HaveOccurred())
+				timeoutExtension.URL = "timeout_extension.js"
+
+				extensions := []*schema.Extension{timeoutExtension}
+				env := newEnvironment()
+				env.LoadExtensionsForPath(extensions, "test_path")
+
+				context := map[string]interface{}{
+					"id": "test",
+				}
+				err = env.HandleEvent("test_event", context)
+				Expect(err).To(MatchError(ContainSubstring("exceed timeout for extention execution")))
+			})
+		})
 	})
 
 	Describe("Using gohan_http builtin", func() {
