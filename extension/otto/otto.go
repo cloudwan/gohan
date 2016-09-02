@@ -165,11 +165,14 @@ func (env *Environment) HandleEvent(event string, context map[string]interface{}
 
 	defer func() {
 		if caught := recover(); caught != nil {
-			if caught == halt {
-				log.Error(halt.Error())
-				err = halt
-				return
+			if caughtError, ok := caught.(error); ok {
+				if caughtError.Error() == halt.Error() {
+					log.Error(halt.Error())
+					err = halt
+					return
+				}
 			}
+
 			panic(caught) // Something else happened, repanic!
 		}
 	}()

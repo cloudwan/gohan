@@ -187,7 +187,7 @@ func (gohanClientCLI *GohanClientCLI) getCustomCommands(s *schema.Schema) []goha
 
 func (gohanClientCLI *GohanClientCLI) createActionFunc(
 	act schema.Action,
-s *schema.Schema,
+	s *schema.Schema,
 ) func(args []string) (interface{}, error) {
 	return func(args []string) (result interface{}, err error) {
 		params, input, id, err := splitArgs(args, &act)
