@@ -27,6 +27,7 @@ import (
 )
 
 var (
+	noResponseError             = "No response"
 	multipleResourcesFoundError = "Multiple %s with name '%s' found"
 	resourceNotFoundError       = "Resource not found"
 	unexpectedResponse          = "Unexpected response: %v"
@@ -293,6 +294,9 @@ func substituteID(path, id string) string {
 }
 
 func (gohanClientCLI *GohanClientCLI) handleResponse(response *http.Response, err error) (interface{}, error) {
+	if response == nil {
+		return nil, fmt.Errorf(noResponseError)
+	}
 	defer response.Body.Close()
 	var result interface{}
 	json.NewDecoder(response.Body).Decode(&result)
