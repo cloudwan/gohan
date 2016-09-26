@@ -107,6 +107,7 @@ func startStateWatchProcess(server *Server) {
 						var err error
 						if strings.HasPrefix(resp.Key, statePrefix) {
 							err = StateUpdate(resp, server)
+							AddLongPollNotificationEntry(response.Key, server.sync)
 							log.Info("Completed StateUpdate")
 						} else if strings.HasPrefix(resp.Key, monitoringPrefix) {
 							err = MonitoringUpdate(resp, server)

@@ -1,0 +1,70 @@
+#######################################################
+#  Gohan API Server example configuraion
+######################################################
+
+# database connection configuraion
+database:
+    # yaml, json, sqlite3 and mysql supported
+    # yaml and json db is for schema development purpose
+    type: "sqlite3"
+    # connection string
+    # it is file path for yaml, json and sqlite3 backend
+    connection: "./gohan.db"
+    # maximum connections
+    max_open_conn: 100
+    # please set no_init true in the production env, so that gohan don't initialize table
+    # no_init: true
+
+schemas:
+    - "embed://etc/schema/gohan.json"
+    - "embed://etc/extensions/gohan_extension.yaml"
+    - "./example_schema.yaml"
+
+editable_schema: ./example_schema.yaml
+
+# listen address for gohan
+# address: ":9091"
+tls:
+    # browsers need to add exception as long as we use self-signed certificates
+    # so lets leave it disabled for now
+    enabled: false
+    key_file: ./keys/key.pem
+    cert_file: ./keys/cert.pem
+# document root of gohan API server
+# embedded webui get served if you use "embed" here
+document_root: "embed"
+# list of etcd backend servers
+etcd:
+   - "http://127.0.0.1:4001"
+# keystone configuraion
+keystone:
+    use_keystone: false
+    fake: true
+    # Keystone admin URL
+    auth_url: "http://localhost:9091/v2.0"
+    user_name: "admin"
+    tenant_name: "admin"
+    password: "gohan"
+# CORS (Cross-origin resource sharing (CORS)) configuraion for javascript based client
+# cors: "*"
+
+# Generate webui config
+webui_config:
+    # if true, gohan generates webui config.json
+    enabled: true
+    # you need to set keystone auth url for users
+    # auth_url: "http://localhost:9091/v2.0"
+    tls: false
+    # address: "http://__HOST__:9091"
+# allowed levels  "CRITICAL", "ERROR", "WARNING", "NOTICE", "INFO", "DEBUG",
+logging:
+    stderr:
+        enabled: true
+        level: INFO
+
+extension:
+  default: gohanscript
+  use:
+  - gohanscript
+ # - javascript
+  - go

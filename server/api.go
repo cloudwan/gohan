@@ -212,10 +212,29 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 	getPluralFunc := func(w http.ResponseWriter, r *http.Request, p martini.Params, identityService middleware.IdentityService, context middleware.Context) {
 		addJSONContentTypeHeader(w)
 		fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, server.queue)
-		if err := resources.GetMultipleResources(context, dataStore, s, r.URL.Query()); err != nil {
+
+		var newEtag string
+		var err error
+		if r.Header.Get(LongPollHeader) != "" {
+			oldEtag := r.Header.Get(LongPollHeader)
+			getResource := func(context middleware.Context) error {
+				return resources.GetMultipleResources(context, dataStore, s, r.URL.Query())
+			}
+			newEtag, err = server.longPoll.GetOrWait(r.URL.Path, oldEtag, context, getResource, calculateResponseEtag)
+		} else {
+			err = resources.GetMultipleResources(context, dataStore, s, r.URL.Query())
+			if err == nil {
+				newEtag = calculateResponseEtag(context)
+			}
+		}
+
+		if err != nil {
 			handleError(w, err)
 			return
 		}
+
+		w.Header().Add("Cache-Control", "no-cache")
+		w.Header().Add(LongPollEtag, newEtag)
 		w.Header().Add("X-Total-Count", fmt.Sprint(context["total"]))
 		routes.ServeJson(w, context["response"])
 	}
@@ -230,10 +249,29 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 		addJSONContentTypeHeader(w)
 		fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, server.queue)
 		id := p["id"]
-		if err := resources.GetSingleResource(context, dataStore, s, id); err != nil {
+
+		var newEtag string
+		var err error
+		if r.Header.Get(LongPollHeader) != "" {
+			oldEtag := r.Header.Get(LongPollHeader)
+			getResource := func(context middleware.Context) error {
+				return resources.GetSingleResource(context, dataStore, s, id)
+			}
+			newEtag, err = server.longPoll.GetOrWait(r.URL.Path, oldEtag, context, getResource, calculateResponseEtag)
+		} else {
+			err = resources.GetSingleResource(context, dataStore, s, id)
+			if err == nil {
+				newEtag = calculateResponseEtag(context)
+			}
+		}
+
+		if err != nil {
 			handleError(w, err)
 			return
 		}
+
+		w.Header().Add("Cache-Control", "no-cache, no-store")
+		w.Header().Add(LongPollEtag, newEtag)
 		routes.ServeJson(w, context["response"])
 	}
 	route.Get(singleURL, middleware.Authorization(schema.ActionRead), getSingleFunc)

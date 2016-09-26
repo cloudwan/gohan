@@ -24,7 +24,9 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -67,7 +69,7 @@ var _ = Describe("Server package test", func() {
 			Expect(err).ToNot(HaveOccurred(), "Failed to clear table.")
 		}
 		err = tx.Commit()
-		Expect(err).ToNot(HaveOccurred(), "Failed to commite transaction.")
+		Expect(err).ToNot(HaveOccurred(), "Failed to commit transaction.")
 	})
 
 	Describe("Http request", func() {
@@ -238,7 +240,7 @@ var _ = Describe("Server package test", func() {
 			Expect(networks).To(HaveLen(1))
 			Expect(n0).To(HaveKeyWithValue("id", "networkblue"))
 
-			result, resp := httpRequest("GET", networkPluralURL+"?limit=1&offset=1", adminTokenID, nil)
+			result, resp := httpRequest("GET", networkPluralURL+"?limit=1&offset=1", adminTokenID, nil, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			res = result.(map[string]interface{})
 			networks = res["networks"].([]interface{})
@@ -1115,7 +1117,555 @@ var _ = Describe("Server package test", func() {
 			})
 		})
 	})
+
+	Describe("Message dispatch", func() {
+		It("should work", func(done Done) {
+			test := NewMessageDispatchTest()
+
+			consumerKeys := []string{"/key"}
+
+			test.startConsumers(consumerKeys, forwardingConsumer)
+
+			test.sendMessages(consumerKeys)
+			test.closeMessageDispatch()
+
+			datum := <-test.channelsFromConsumers[0]
+			Expect(datum).To(Equal("/key"))
+
+			close(done)
+		})
+
+		It("should normalize registered key", func(done Done) {
+			test := NewMessageDispatchTest()
+
+			consumerKeys := []string{"///key1//key2///"}
+
+			test.startConsumers(consumerKeys, forwardingConsumer)
+
+			test.sendMessage("/key1/key2")
+			test.closeMessageDispatch()
+
+			datum := <-test.channelsFromConsumers[0]
+			Expect(datum).To(Equal("///key1//key2///"))
+
+			close(done)
+		})
+
+		It("should dispatch by key", func(done Done) {
+			test := NewMessageDispatchTest()
+
+			consumerKeys := []string{"/key1", "/key2"}
+
+			test.startConsumers(consumerKeys, func(key string, id int, dispatch *srv.MessageDispatch, output chan string) {
+				dispatch.Wait(key)
+				output <- "ok"
+			})
+
+			test.sendMessages(consumerKeys)
+			test.closeMessageDispatch()
+
+			for _, ch := range test.channelsFromConsumers {
+				status := <-ch
+				Expect(status).To(Equal("ok"))
+			}
+
+			close(done)
+		})
+
+		It("should dispatch to all listeners of a key", func(done Done) {
+			test := NewMessageDispatchTest()
+
+			consumerKeys := []string{"/key1", "/key1"}
+			consumerIds := []int{0, 1}
+
+			test.startConsumersWithIds(consumerKeys, consumerIds, func(key string, id int, dispatch *srv.MessageDispatch, output chan string) {
+				dispatch.Wait(key)
+				output <- strconv.Itoa(id)
+			})
+
+			test.sendMessage("/key1")
+			test.closeMessageDispatch()
+
+			for i, ch := range test.channelsFromConsumers {
+				id := <-ch
+				Expect(id).To(Equal(strconv.Itoa(i)))
+			}
+
+			close(done)
+		})
+
+		It("should close listener channels on close when no messages send", func(done Done) {
+			test := NewMessageDispatchTest()
+
+			consumerKeys := []string{"/key1"}
+
+			test.startConsumers(consumerKeys, forwardingConsumer)
+
+			test.closeMessageDispatch()
+
+			messageReceived := <-test.channelsFromConsumers[0]
+			Expect(messageReceived).To(Equal("/key1"))
+
+			close(done)
+		})
+
+		It("should notify about child key changes", func(done Done) {
+			test := NewMessageDispatchTest()
+
+			consumerKeys := []string{"/key"}
+
+			test.startConsumers(consumerKeys, forwardingConsumer)
+
+			test.sendMessage("/key/child/key")
+			test.closeMessageDispatch()
+
+			datum := <-test.channelsFromConsumers[0]
+			Expect(datum).To(Equal("/key"))
+
+			close(done)
+		})
+
+		It("should not block when child goroutine dies", func(done Done) {
+			test := NewMessageDispatchTest()
+
+			consumerKeys := []string{"/key1", "/key2"}
+
+			test.startConsumers(consumerKeys, func(key string, id int, dispatch *srv.MessageDispatch, output chan string) {
+				if key == consumerKeys[1] {
+					dispatch.Wait(key)
+					output <- key
+				}
+				// the other consumer never starts waiting
+			})
+
+			test.sendMessages(consumerKeys)
+			test.closeMessageDispatch()
+
+			datum := <-test.channelsFromConsumers[1]
+			Expect(datum).To(Equal(consumerKeys[1]))
+
+			close(done)
+		})
+
+		It("should not wait if hashes differ", func(done Done) {
+			test := NewMessageDispatchTest()
+
+			consumerKeys := []string{"/key"}
+
+			const firstHash = "firstHash"
+			const secondHash = "secondHash"
+			const expectedData = "dummy"
+			getResourceCalled := 0
+			context := middleware.Context{}
+
+			test.startConsumers(consumerKeys, func(key string, id int, dispatch *srv.MessageDispatch, output chan string) {
+				getHash := func(context middleware.Context) string {
+					return secondHash
+				}
+
+				getResource := func(context middleware.Context) error {
+					getResourceCalled++
+					context["response"] = expectedData
+					return nil
+				}
+
+				newHash, _ := dispatch.GetOrWait(key, firstHash, context, getResource, getHash)
+				output <- newHash
+			})
+
+			datum := <-test.channelsFromConsumers[0]
+			Expect(datum).To(Equal("secondHash"))
+			Expect(getResourceCalled).To(Equal(1))
+
+			close(done)
+
+			// ensure no broadcasts sent
+			test.closeMessageDispatch()
+		})
+
+		It("should wait if hash is the same", func(done Done) {
+			test := NewMessageDispatchTest()
+
+			consumerKeys := []string{"/key"}
+
+			const firstHash = "firstHash"
+			const secondHash = "secondHash"
+			const expectedData = "dummy"
+			getResourceCalled := 0
+			getHashCalled := 0
+			context := middleware.Context{}
+
+			test.startConsumers(consumerKeys, func(key string, id int, dispatch *srv.MessageDispatch, output chan string) {
+				getHash := func(context middleware.Context) string {
+					getHashCalled++
+					if getHashCalled == 1 {
+						return firstHash
+					} else {
+						return secondHash
+					}
+				}
+
+				getResource := func(context middleware.Context) error {
+					getResourceCalled++
+					if getResourceCalled == 1 {
+						context["response"] = "old response, should be overwritten"
+					} else {
+						context["response"] = expectedData
+					}
+
+					return nil
+				}
+
+				newHash, _ := dispatch.GetOrWait(key, firstHash, context, getResource, getHash)
+				output <- newHash
+			})
+
+			test.sendMessage("/key")
+
+			hash := <-test.channelsFromConsumers[0]
+			Expect(hash).To(Equal("secondHash"))
+			Expect(context["response"]).To(Equal(expectedData))
+			Expect(getResourceCalled).To(Equal(2))
+			Expect(getHashCalled).To(Equal(2))
+
+			close(done)
+
+			test.closeMessageDispatch()
+		})
+
+		It("should panic when broadcasting after close", func(done Done) {
+			test := NewMessageDispatchTest()
+
+			test.closeMessageDispatch()
+
+			broadcast := func() {
+				test.sendMessage("/key")
+			}
+
+			Expect(broadcast).Should(Panic())
+
+			close(done)
+		})
+
+		It("should panic when waiting after close", func(done Done) {
+			test := NewMessageDispatchTest()
+
+			test.closeMessageDispatch()
+
+			wait := func() {
+				test.messageDispatch.Wait("/key")
+			}
+
+			Expect(wait).Should(Panic())
+
+			close(done)
+		})
+	})
+
+	Describe("Long polling", func() {
+		const (
+			longPollPrefix = "/gohan/long_poll_notifications/"
+		)
+		var (
+			wrappedTestDB       db.DB
+			testSync            gohan_sync.Sync
+			testNetwork         map[string]interface{}
+			testNetworkResource *schema.Resource
+		)
+
+		BeforeEach(func() {
+			manager := schema.GetManager()
+			_, ok := manager.Schema("network")
+			Expect(ok).To(BeTrue())
+			testNetwork = getNetwork("red", "red")
+			var err error
+			testNetworkResource, err = manager.LoadResource("network", testNetwork)
+			Expect(err).ToNot(HaveOccurred())
+
+			tempDB := &srv.DbSyncWrapper{DB: testDB}
+			tx, err := tempDB.Begin()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(tx.Create(testNetworkResource)).To(Succeed())
+			Expect(tx.Commit()).To(Succeed())
+			tx.Close()
+
+			Expect(server.Sync()).To(Succeed())
+
+			testSync = gohan_etcd.NewSync(nil)
+			_, err = testSync.Fetch("config/" + testNetworkResource.Path())
+			Expect(err).ToNot(HaveOccurred())
+
+			wrappedTestDB = &srv.DbLongPollNotifierWrapper{DB: &srv.DbSyncWrapper{DB: testDB}, Sync: testSync}
+
+			tx, err = wrappedTestDB.Begin()
+			Expect(err).ToNot(HaveOccurred(), "Failed to create transaction.")
+			defer tx.Close()
+			for _, schema := range schema.GetManager().Schemas() {
+				if whitelist[schema.ID] {
+					continue
+				}
+				err = clearTable(tx, schema)
+				Expect(err).ToNot(HaveOccurred(), "Failed to clear table.")
+			}
+			err = tx.Commit()
+			Expect(err).ToNot(HaveOccurred(), "Failed to commit transaction.")
+
+			response := testURL("POST", networkPluralURL, adminTokenID, testNetwork, http.StatusCreated)
+			Expect(response).To(HaveKeyWithValue("network", util.MatchAsJSON(testNetwork)))
+		})
+
+		AfterEach(func() {
+			_, err := testSync.Fetch(longPollPrefix + testNetworkResource.Path())
+			if err == nil {
+				err = testSync.Delete(longPollPrefix + testNetworkResource.Path())
+				Expect(err).ToNot(HaveOccurred())
+				_, err = testSync.Fetch(longPollPrefix + testNetworkResource.Path())
+			}
+			Expect(err).To(HaveOccurred())
+		})
+
+		AssertRespondsImmediately := func(getRequestURL, getCurrentResourceVersion func() string) func() {
+			return func() {
+				responseChan := make(chan *http.Response, 1)
+				doneChan := make(chan bool, 1)
+				go asyncLongPoll(getRequestURL(), getCurrentResourceVersion(), doneChan, responseChan)
+
+				Eventually(doneChan, time.Second*10).Should(Receive())
+			}
+		}
+
+		AssertVersionsDifferent := func(getRequestURL, getCurrentResourceVersion func() string) func() {
+			return func() {
+				originalResourceVersion := getCurrentResourceVersion()
+
+				responseChan := make(chan *http.Response, 1)
+				doneChan := make(chan bool, 1)
+				go asyncLongPoll(getRequestURL(), originalResourceVersion, doneChan, responseChan)
+				<-doneChan
+				response := <-responseChan
+				newResourceVersion := getEtag(response)
+				Expect(originalResourceVersion).ToNot(Equal(newResourceVersion))
+			}
+		}
+
+		AssertHangsIfVersionsSameUntilNotified := func(getRequestURL, getCurrentResourceVersion func() string) func() {
+			return func() {
+				responseChan := make(chan *http.Response, 1)
+				doneChan := make(chan bool, 1)
+				go asyncLongPoll(getRequestURL(), getCurrentResourceVersion(), doneChan, responseChan)
+				Consistently(doneChan).ShouldNot(Receive())
+				server.LongPoll().Broadcast(testNetworkResource.Path())
+				Eventually(doneChan, time.Second*10).Should(Receive())
+			}
+		}
+
+		AssertHangsAndRespondsWithNewVersionsIfResourceModified := func(getRequestURL, getCurrentResourceVersion func() string) func() {
+			return func() {
+				originalResourceVersion := getCurrentResourceVersion()
+
+				responseChan := make(chan *http.Response, 1)
+				doneChan := make(chan bool, 1)
+				go asyncLongPoll(getRequestURL(), originalResourceVersion, doneChan, responseChan)
+				Consistently(doneChan).ShouldNot(Receive())
+
+				networkUpdate := map[string]interface{}{
+					"name": "NetworkRed2",
+				}
+				testURL("PUT", getNetworkSingularURL("red"), adminTokenID, networkUpdate, http.StatusOK)
+
+				server.LongPoll().Broadcast(testNetworkResource.Path())
+				Eventually(doneChan, time.Second*10).Should(Receive())
+
+				response := <-responseChan
+				newResourceVersion := getEtag(response)
+				Expect(originalResourceVersion).ToNot(Equal(newResourceVersion))
+			}
+		}
+
+		Context("with requests of single resource", func() {
+			getRequestURL := func() string {
+				return getNetworkSingularURL("red")
+			}
+
+			Context("without or with empty long polling header", func() {
+				getOriginalResourceEtag := func() string {
+					return ""
+				}
+
+				It("should respond immediately", AssertRespondsImmediately(getRequestURL, getOriginalResourceEtag))
+
+				It("should respond new version", AssertVersionsDifferent(getRequestURL, getOriginalResourceEtag))
+			})
+
+			Context("versions are different", func() {
+				getOriginalResourceEtag := func() string {
+					return "some-resource-version"
+				}
+
+				It("should respond immediately", AssertRespondsImmediately(getRequestURL, getOriginalResourceEtag))
+
+				It("should respond new version", AssertVersionsDifferent(getRequestURL, getOriginalResourceEtag))
+			})
+
+			Context("versions are same", func() {
+				getOriginalResourceEtag := func() string {
+					_, response := testLongPollURL("GET", getRequestURL(), adminTokenID, "", http.StatusOK)
+					return getEtag(response)
+				}
+
+				It("should hang if versions are same until notified", AssertHangsIfVersionsSameUntilNotified(getRequestURL, getOriginalResourceEtag))
+
+				It("should hang and respond with new version if resource was modified", AssertHangsAndRespondsWithNewVersionsIfResourceModified(getRequestURL, getOriginalResourceEtag))
+			})
+		})
+
+		Context("with requests of resource list", func() {
+			getRequestURL := func() string {
+				return networkPluralURL
+			}
+
+			Context("list versions are different", func() {
+				getOriginalResourceEtag := func() string {
+					return "some-resource-list-version"
+				}
+
+				It("should respond immediately", AssertRespondsImmediately(getRequestURL, getOriginalResourceEtag))
+
+				It("should respond new version", AssertVersionsDifferent(getRequestURL, getOriginalResourceEtag))
+			})
+
+			Context("versions are same", func() {
+				getOriginalResourceEtag := func() string {
+					_, response := testLongPollURL("GET", getRequestURL(), adminTokenID, "", http.StatusOK)
+					return getEtag(response)
+				}
+
+				It("should hang if versions are same until notified by a change to a child resource", AssertHangsIfVersionsSameUntilNotified(getRequestURL, getOriginalResourceEtag))
+
+				It("should hang and respond with new version if child resource was modified", AssertHangsAndRespondsWithNewVersionsIfResourceModified(getRequestURL, getOriginalResourceEtag))
+			})
+		})
+
+		Context("notifying a path", func() {
+
+			It("should notify all subscibers of resource and subcribers of directories above it (parents+)", func() {
+				pathSubscribers := make(map[string]chan bool)
+
+				pathSubscribers[getNetworkSingularURL("red")] = make(chan bool, 1)
+				pathSubscribers[baseURL+"/v2.0/networks"] = make(chan bool, 1)
+				pathSubscribers[baseURL+"/v2.0/subnets"] = make(chan bool, 1)
+
+				responseChan := make(chan *http.Response, len(pathSubscribers))
+				for subURL, subChan := range pathSubscribers {
+					_, response := testLongPollURL("GET", subURL, adminTokenID, "", http.StatusOK)
+					pathEtag := getEtag(response)
+
+					go func(url string, ch chan bool) {
+						asyncLongPoll(url, pathEtag, ch, responseChan)
+					}(subURL, subChan)
+				}
+
+				time.Sleep(time.Millisecond * 100) // wait for longpolling to start
+
+				var wg sync.WaitGroup
+
+				asyncEventually := func(URL string) {
+					defer GinkgoRecover()
+					defer wg.Done()
+					Eventually(pathSubscribers[URL], time.Second*10).Should(Receive())
+				}
+				asyncConsistently := func(URL string) {
+					defer GinkgoRecover()
+					defer wg.Done()
+					Consistently(pathSubscribers[URL]).ShouldNot(Receive())
+				}
+
+				server.LongPoll().Broadcast(testNetworkResource.Path())
+
+				wg.Add(3)
+				go asyncEventually(getNetworkSingularURL("red"))
+				go asyncEventually(baseURL + "/v2.0/networks")
+				go asyncConsistently(baseURL + "/v2.0/subnets")
+				wg.Wait()
+
+				time.Sleep(time.Millisecond * 200)
+				server.LongPoll().Broadcast("/v2.0/subnets")
+
+				wg.Add(3)
+				go asyncConsistently(getNetworkSingularURL("red"))
+				go asyncConsistently(baseURL + "/v2.0/networks")
+				go asyncEventually(baseURL + "/v2.0/subnets")
+				wg.Wait()
+			})
+		})
+
+		Context("requesting not existing resource", func() {
+
+			It("should not work", func() {
+				_, response := testLongPollURL("GET", getNetworkSingularURL("nonexisting_resource"), adminTokenID, "", http.StatusNotFound)
+				Expect(getEtag(response)).To(Equal(""))
+			})
+		})
+	})
 })
+
+type MessageDispatchTest struct {
+	messageDispatch       *srv.MessageDispatch
+	channelsFromConsumers []chan string
+}
+
+func NewMessageDispatchTest() MessageDispatchTest {
+	test := MessageDispatchTest{srv.NewMessageDispatch(), nil}
+	return test
+}
+
+type ConsumerFunction func(key string, id int, md *srv.MessageDispatch, output chan string)
+
+func (test *MessageDispatchTest) startConsumers(consumerKeys []string, consumer ConsumerFunction) {
+	test.startConsumersWithIds(consumerKeys, make([]int, len(consumerKeys)), consumer)
+}
+
+func (test *MessageDispatchTest) startConsumersWithIds(consumerKeys []string, customerIds []int, consumer ConsumerFunction) {
+	test.channelsFromConsumers = make([]chan string, len(consumerKeys))
+	for i, _ := range test.channelsFromConsumers {
+		test.channelsFromConsumers[i] = make(chan string)
+	}
+
+	consumerGoroutine := func(output chan string, key string, id int, consumer ConsumerFunction) {
+		consumer(key, id, test.messageDispatch, output)
+		close(output)
+	}
+
+	for i, key := range consumerKeys {
+		go consumerGoroutine(test.channelsFromConsumers[i], key, customerIds[i], consumer)
+	}
+
+	time.Sleep(time.Millisecond * 100) // is there any better way to wait until all consumers start waiting on a cond?
+}
+
+func (test *MessageDispatchTest) sendMessages(messages []string) {
+	for _, msg := range messages {
+		test.messageDispatch.Broadcast(msg)
+	}
+}
+
+func (test *MessageDispatchTest) sendMessage(message string) {
+	test.messageDispatch.Broadcast(message)
+}
+
+func (test *MessageDispatchTest) closeMessageDispatch() {
+	test.messageDispatch.Close()
+}
+
+func getEtag(r *http.Response) string {
+	return r.Header.Get(srv.LongPollEtag)
+}
+
+func asyncLongPoll(requestURL, currentResourceVersion string, done chan bool, response chan *http.Response) {
+	_, r := testLongPollURL("GET", requestURL, adminTokenID, currentResourceVersion, http.StatusOK)
+	response <- r
+	done <- true
+}
 
 func BenchmarkPOSTAPI(b *testing.B) {
 	err := initBenchmarkDatabase()
@@ -1131,7 +1681,7 @@ func BenchmarkPOSTAPI(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		network := getNetwork("red"+strconv.Itoa(i), "red")
-		httpRequest("POST", networkPluralURL, adminTokenID, network)
+		httpRequest("POST", networkPluralURL, adminTokenID, nil, network)
 	}
 }
 
@@ -1147,11 +1697,11 @@ func BenchmarkGETAPI(b *testing.B) {
 	}
 
 	network := getNetwork("red", "red")
-	httpRequest("POST", networkPluralURL, adminTokenID, network)
+	httpRequest("POST", networkPluralURL, adminTokenID, nil, network)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		httpRequest("GET", getNetworkSingularURL("red"), adminTokenID, nil)
+		httpRequest("GET", getNetworkSingularURL("red"), adminTokenID, nil, nil)
 	}
 }
 
@@ -1254,13 +1804,23 @@ func getSubnetFullPluralURL(networkColor string) string {
 }
 
 func testURL(method, url, token string, postData interface{}, expectedCode int) interface{} {
-	data, resp := httpRequest(method, url, token, postData)
+	data, resp := httpRequest(method, url, token, nil, postData)
 	jsonData, _ := json.MarshalIndent(data, "", "    ")
 	ExpectWithOffset(1, resp.StatusCode).To(Equal(expectedCode), string(jsonData))
 	return data
 }
 
-func httpRequest(method, url, token string, postData interface{}) (interface{}, *http.Response) {
+func testLongPollURL(method, url, token, longPoll string, expectedCode int) (interface{}, *http.Response) {
+	headers := make(map[string]string)
+	headers[srv.LongPollHeader] = longPoll
+
+	data, resp := httpRequest(method, url, token, headers, nil)
+	jsonData, _ := json.MarshalIndent(data, "", "    ")
+	ExpectWithOffset(1, resp.StatusCode).To(Equal(expectedCode), string(jsonData))
+	return data, resp
+}
+
+func httpRequest(method, url, token string, headers map[string]string, postData interface{}) (interface{}, *http.Response) {
 	client := &http.Client{}
 	var reader io.Reader
 	if postData != nil {
@@ -1270,6 +1830,9 @@ func httpRequest(method, url, token string, postData interface{}) (interface{}, 
 	}
 	request, err := http.NewRequest(method, url, reader)
 	Expect(err).ToNot(HaveOccurred())
+	for k, v := range headers {
+		request.Header.Add(k, v)
+	}
 	request.Header.Set("X-Auth-Token", token)
 	var data interface{}
 	resp, err := client.Do(request)
@@ -1312,4 +1875,9 @@ func clearTable(tx transaction.Transaction, s *schema.Schema) error {
 		}
 	}
 	return nil
+}
+
+func forwardingConsumer(key string, id int, dispatch *srv.MessageDispatch, output chan string) {
+	dispatch.Wait(key)
+	output <- key
 }

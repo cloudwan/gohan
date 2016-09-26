@@ -570,6 +570,30 @@ HTTP Status Code: 200
   }
 ```
 
+## Long polling
+
+Gohan provides ability to perform long polling, which can be applied to List API and Show API. Long polling requests are blocking and the connection is kept alive. This blocking lasts until a modifying operation is performed on queried resource(s) (which includes creation, deletion and modification). 
+
+Long polling List API causes Gohan server to respond when any element of queried list is modified.
+
+Long polling Show API causes Gohan server to respond when that specific resource is modified.
+
+Response to any GET request always contains a HTTP header ``Etag``:
+
+```
+Etag: e74e5c4665adc6e0f046ba9071116c6a
+```
+
+To perform long polling of that resource/list, ``Long-Poll`` header to GET request must be added. It must contain the value of Etag received in the last response.
+
+```
+Long-Poll: e74e5c4665adc6e0f046ba9071116c6a
+```
+
+This operation will block until the queried resource(s) are modified. 
+
+The response will contain a new ``Etag`` value, which can be used to perform new GET request. 
+
 ## CREATE
 
 CREATE Resource REST API

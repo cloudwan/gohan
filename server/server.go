@@ -61,6 +61,7 @@ type Server struct {
 	extensions       []string
 	keystoneIdentity middleware.IdentityService
 	queue            *job.Queue
+	longPoll         *MessageDispatch
 }
 
 func (server *Server) mapRoutes() {
@@ -140,7 +141,7 @@ func (server *Server) connectDB() error {
 	if server.sync == nil {
 		server.db = dbConn
 	} else {
-		server.db = &DbSyncWrapper{dbConn}
+		server.db = &DbLongPollNotifierWrapper{&DbSyncWrapper{dbConn}, server.sync}
 	}
 	return err
 }
@@ -282,6 +283,8 @@ func NewServer(configFile string) (*Server, error) {
 		return nil, fmt.Errorf("invalid base dir: %s", err)
 	}
 
+	server.longPoll = NewMessageDispatch()
+
 	server.addOptionsRoute()
 	cors := config.GetString("cors", "")
 	if cors != "" {
@@ -291,8 +294,8 @@ func NewServer(configFile string) (*Server, error) {
 		}
 		server.martini.Use(func(rw http.ResponseWriter, r *http.Request) {
 			rw.Header().Add("Access-Control-Allow-Origin", cors)
-			rw.Header().Add("Access-Control-Allow-Headers", "X-Auth-Token, Content-Type")
-			rw.Header().Add("Access-Control-Expose-Headers", "X-Total-Count")
+			rw.Header().Add("Access-Control-Allow-Headers", "X-Auth-Token, Content-Type, "+LongPollHeader)
+			rw.Header().Add("Access-Control-Expose-Headers", "X-Total-Count, Cache-Control, "+LongPollEtag)
 			rw.Header().Add("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE")
 		})
 	}
@@ -317,6 +320,7 @@ func NewServer(configFile string) (*Server, error) {
 			authURL = config.GetString("webui_config/auth_url", authURL)
 			webUIConfig := map[string]interface{}{
 				"authUrl": authURL,
+				"polling": config.GetBool("webui_config/polling", false),
 				"gohan": map[string]interface{}{
 					"schema": "/gohan/v0.1/schemas",
 					"url":    baseURL,
@@ -388,12 +392,18 @@ func (server *Server) Stop() {
 	stopSNMPProcess(server)
 	stopCRONProcess(server)
 	manners.Close()
+	server.longPoll.Close()
 	server.queue.Stop()
 }
 
 //Queue returns servers build-in queue
 func (server *Server) Queue() *job.Queue {
 	return server.queue
+}
+
+//LongPoll returns servers build-in long-poll notification dispatcher
+func (server *Server) LongPoll() *MessageDispatch {
+	return server.longPoll
 }
 
 //RunServer runs gohan api server
@@ -430,6 +440,7 @@ func RunServer(configFile string) {
 		startSyncProcess(server)
 		startStateWatchProcess(server)
 		startSyncWatchProcess(server)
+		startLongPollWatchProcess(server)
 	}
 	startAMQPProcess(server)
 	startSNMPProcess(server)
