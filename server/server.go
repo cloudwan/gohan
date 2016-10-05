@@ -378,7 +378,7 @@ func (server *Server) Stop() {
 	server.running = false
 	if server.sync != nil {
 		stopSyncProcess(server)
-		stopStateUpdatingProcess(server)
+		stopStateWatchProcess(server)
 		stopSyncWatchProcess(server)
 	}
 	stopAMQPProcess(server)
@@ -425,7 +425,7 @@ func RunServer(configFile string) {
 
 	if server.sync != nil {
 		startSyncProcess(server)
-		startStateUpdatingProcess(server)
+		startStateWatchProcess(server)
 		startSyncWatchProcess(server)
 	}
 	startAMQPProcess(server)

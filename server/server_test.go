@@ -682,8 +682,8 @@ var _ = Describe("Server package test", func() {
 
 	Describe("Updating the state", func() {
 		const (
-			statePrefix      = "/state"
-			monitoringPrefix = "/monitoring"
+			statePrefix      = "/state_watch/state"
+			monitoringPrefix = "/state_watch/monitoring"
 		)
 		var (
 			networkSchema   *schema.Schema
