@@ -1,0 +1,29 @@
+machine:
+  pre:
+    - curl -o go.tar.gz -sL https://storage.googleapis.com/golang/go1.6.3.linux-amd64.tar.gz
+    - sudo rm -rf /usr/local/go
+    - sudo tar -C /usr/local -xzf go.tar.gz
+    - sudo chmod a+w /usr/local/go/src/
+
+dependencies:
+  override:
+    - curl -L https://github.com/coreos/etcd/releases/download/v2.3.7/etcd-v2.3.7-linux-amd64.tar.gz -o etcd-v2.3.7-linux-amd64.tar.gz
+    - tar xzvf etcd-v2.3.7-linux-amd64.tar.gz
+    - sudo install etcd-v2.3.7-linux-amd64/etcd /usr/bin
+    - go get github.com/mattn/goveralls
+    - make deps
+
+test:
+  pre:
+    - go version
+    - mkdir -p /home/ubuntu/.go_workspace/src/github.com/cloudwan/
+    - ln -s /home/ubuntu/gohan /home/ubuntu/.go_workspace/src/github.com/cloudwan/gohan
+  override:
+    - make format:
+        pwd: ../.go_workspace/src/github.com/cloudwan/gohan
+    - make lint:
+        pwd: ../.go_workspace/src/github.com/cloudwan/gohan
+    - make test:
+        pwd: ../.go_workspace/src/github.com/cloudwan/gohan
+  post:
+    - /home/ubuntu/.go_workspace/bin/goveralls -coverprofile=/home/ubuntu/.go_workspace/src/github.com/cloudwan/gohan/profile.cov -service=circle-ci -repotoken=$COVERALLS_TOKEN
