@@ -23,6 +23,7 @@ _testmain.go
 *.exe
 *.test
 *.db
+*.orig
 test.db
 test.json
 test.yaml
@@ -30,6 +31,8 @@ _workspace
 cover/*
 profile.cov
 coverage.json
+extension/gohanscript/lib/test_tmp.yaml
+examples/go_extension/gohan.log
 
 docs/build/*
 build/*

@@ -39,7 +39,7 @@ func init() {
 				if err != nil {
 					ThrowOttoException(&call, err.Error())
 				}
-				value, err := vm.Require(moduleName, "")
+				value, err := require(moduleName, vm)
 				if err != nil {
 					ThrowOttoException(&call, err.Error())
 				}
@@ -176,6 +176,33 @@ func init() {
 		}
 	}
 	RegisterInit(gohanInit)
+}
+
+func requireFromOtto(moduleName string, vm *otto.Otto) (otto.Value, error){
+	rawModule, errRequire := RequireModule(moduleName)
+	if errRequire != nil {
+		return otto.UndefinedValue(), errRequire
+	}
+
+	module, errConvert := vm.ToValue(rawModule)
+	if errConvert != nil {
+		return otto.UndefinedValue(), errConvert
+	}
+
+	return module, nil
+}
+
+func requireFromMotto(moduleName string, vm *motto.Motto) (otto.Value, error){
+	return vm.Require(moduleName, "")
+}
+
+func require(moduleName string, vm *motto.Motto) (otto.Value, error){
+	value, err := requireFromMotto(moduleName, vm) // NPM
+	if err != nil {
+		value, err = requireFromOtto(moduleName, vm.Otto) // Go extensions
+	}
+
+	return value, err
 }
 
 func loadNPMModules() {

@@ -42,12 +42,13 @@ func RegisterModule(name string, module interface{}) {
 }
 
 //RequireModule returns module
-func RequireModule(name string) interface{} {
-	module, ok := modules[name]
+func RequireModule(name string) (interface{}, error) {
+	v, ok := modules[name]
 	if ok {
-		return module
+		return v, nil
+	} else {
+		return nil, fmt.Errorf("Module %s not found in Otto", name)
 	}
-	return nil
 }
 
 //Environment javascript based environment for gohan extension
