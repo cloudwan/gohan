@@ -4,6 +4,8 @@ machine:
     - sudo rm -rf /usr/local/go
     - sudo tar -C /usr/local -xzf go.tar.gz
     - sudo chmod a+w /usr/local/go/src/
+  services:
+    - docker
 
 dependencies:
   override:
@@ -27,3 +29,11 @@ test:
         pwd: ../.go_workspace/src/github.com/cloudwan/gohan
   post:
     - /home/ubuntu/.go_workspace/bin/goveralls -coverprofile=/home/ubuntu/.go_workspace/src/github.com/cloudwan/gohan/profile.cov -service=circle-ci -repotoken=$COVERALLS_TOKEN
+
+deployment:
+  release:
+    branch: master
+    commands:
+    - go get github.com/karalabe/xgo
+    - ./tools/cross_compile.sh
+    - ghr -t $GITHUB_TOKEN -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME --replace `git describe --tags` dist/
