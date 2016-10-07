@@ -28,7 +28,9 @@ import (
 )
 
 const (
-	StateUpdateEventName      = "state_update"
+	//StateUpdateEventName used in etcd path
+	StateUpdateEventName = "state_update"
+	//MonitoringUpdateEventName used in etcd path
 	MonitoringUpdateEventName = "monitoring_update"
 )
 

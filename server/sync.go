@@ -136,7 +136,7 @@ func (server *Server) syncEvent(resource *schema.Resource) error {
 		resourceSchema := schema.GetSchemaByURLPath(resourcePath)
 		if _, ok := resourceSchema.SyncKeyTemplate(); ok {
 			var data map[string]interface{}
-			err := json.Unmarshal(([]byte)(body), &data)
+			json.Unmarshal(([]byte)(body), &data)
 			deletePath, err = resourceSchema.GenerateCustomPath(data)
 			if err != nil {
 				log.Error(fmt.Sprintf("Delete from sync failed %s - generating of custom path failed", err))
