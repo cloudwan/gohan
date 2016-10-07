@@ -44,12 +44,12 @@ var _ = Describe("Resources", func() {
 		}
 		networkRed, err := NewResource(networkSchema, networkRedObj)
 		Expect(err).ToNot(HaveOccurred())
-		actualRT, ok := networkRed.Data()["route_targets"]
+		_, ok := networkRed.Data()["route_targets"]
 		Expect(ok).To(BeFalse(), "networkRed should not contain route_targets")
 
 		Expect(networkRed.PopulateDefaults()).To(Succeed())
 		expectedRT := []interface{}{}
-		actualRT, ok = networkRed.Data()["route_targets"]
+		actualRT, ok := networkRed.Data()["route_targets"]
 		Expect(ok).To(BeTrue(), "networkRed should contain route_targets")
 		Expect(actualRT).To(Equal(expectedRT))
 	})

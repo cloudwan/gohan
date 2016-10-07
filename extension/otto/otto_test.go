@@ -257,7 +257,7 @@ var _ = Describe("Otto extension manager", func() {
 					"id": "test",
 				}
 				err = env.HandleEvent("test_event", context)
-				Expect(err).To(MatchError(ContainSubstring("exceed timeout for extention execution")))
+				Expect(err).To(MatchError(ContainSubstring("exceed timeout for extension execution")))
 			})
 		})
 	})
@@ -629,6 +629,7 @@ var _ = Describe("Otto extension manager", func() {
 			Context("When given a transaction", func() {
 				It("Correctly handles CRUD operations", func() {
 					tx, err := testDB.Begin()
+					Expect(err).ToNot(HaveOccurred(), "Failed to create transaction.")
 					defer tx.Commit()
 
 					extension, err := schema.NewExtension(map[string]interface{}{
@@ -673,6 +674,7 @@ var _ = Describe("Otto extension manager", func() {
 			Context("When given no transaction", func() {
 				It("Correctly handles CRUD operations", func() {
 					tx, err := testDB.Begin()
+					Expect(err).ToNot(HaveOccurred(), "Failed to create transaction.")
 					defer tx.Commit()
 
 					extension, err := schema.NewExtension(map[string]interface{}{

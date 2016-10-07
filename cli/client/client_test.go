@@ -287,7 +287,7 @@ var _ = Describe("CLI functions", func() {
 				compareSchemas(schemas, getSchemas())
 			})
 
-			It("Should show error - Could not retreive schemas - 404", func() {
+			It("Should show error - Could not retrieve schemas - 404", func() {
 				server.AppendHandlers(
 					ghttp.RespondWith(404, nil),
 				)
@@ -298,7 +298,7 @@ var _ = Describe("CLI functions", func() {
 				Expect(err).To(MatchError(message))
 			})
 
-			It("Should show error - Could not retreive schemas - wrong response JSON", func() {
+			It("Should show error - Could not retrieve schemas - wrong response JSON", func() {
 				server.AppendHandlers(
 					ghttp.RespondWithJSONEncoded(200, map[string]interface{}{}),
 				)
@@ -307,7 +307,7 @@ var _ = Describe("CLI functions", func() {
 				Expect(err).To(MatchError("No 'schemas' key in response JSON"))
 			})
 
-			It("Should show error - Could not retreive schemas - could not parse schema", func() {
+			It("Should show error - Could not retrieve schemas - could not parse schema", func() {
 				wrongSchemas := map[string]interface{}{
 					"schemas": []map[string]interface{}{
 						map[string]interface{}{

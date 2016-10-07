@@ -23,10 +23,10 @@ import (
 
 	"github.com/cloudwan/gohan/extension/framework/buflog"
 	"github.com/cloudwan/gohan/extension/framework/runner"
-	"github.com/codegangsta/cli"
 	gohan_log "github.com/cloudwan/gohan/log"
-	logging "github.com/op/go-logging"
 	"github.com/cloudwan/gohan/util"
+	"github.com/codegangsta/cli"
+	logging "github.com/op/go-logging"
 )
 
 var log = logging.MustGetLogger("extest")
