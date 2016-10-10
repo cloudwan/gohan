@@ -38,4 +38,4 @@ deployment:
     - go get github.com/tcnksm/ghr
     - ./tools/crosscompile.sh:
         timeout: 1800
-    - ghr -t $GITHUB_TOKEN -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME --replace pre-release dist/
+    - ghr -t $GITHUB_TOKEN -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME -replace pre-release dist/
