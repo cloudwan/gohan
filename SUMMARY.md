@@ -1,4 +1,3 @@
-- [Introduction](docs/introduction.md)
 - [Installation](docs/installation.md)
 - [Development](docs/development.md)
 - [Schema](docs/schema.md)
