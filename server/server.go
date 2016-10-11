@@ -246,6 +246,8 @@ func NewServer(configFile string) (*Server, error) {
 		}
 	}
 
+	m.Map(middleware.NewPathWhitelistService(config.GetStringList("path_whitelist", []string{})))
+
 	if config.GetBool("keystone/use_keystone", false) {
 		//TODO remove this
 		if config.GetBool("keystone/fake", false) {

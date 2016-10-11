@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -96,6 +97,33 @@ func filterHeaders(headers http.Header) http.Header {
 	return filtered
 }
 
+type PathWhitelistService interface {
+	VerifyPath(string) bool
+}
+
+type DefaultPathWhitelistService struct {
+	regexes []*regexp.Regexp
+}
+
+func (pws *DefaultPathWhitelistService) VerifyPath(path string) bool {
+	for _, regex := range pws.regexes {
+		if regex.MatchString(path) {
+			return true
+		}
+	}
+	return false
+}
+
+func NewPathWhitelistService(paths []string) PathWhitelistService {
+	var r = make([]*regexp.Regexp, len(paths))
+
+	for i, path := range paths {
+		r[i] = regexp.MustCompile(path)
+	}
+
+	return &DefaultPathWhitelistService{regexes: r}
+}
+
 //IdentityService for user authentication & authorization
 type IdentityService interface {
 	GetTenantID(string) (string, error)
@@ -150,7 +178,7 @@ func HTTPJSONError(res http.ResponseWriter, err string, code int) {
 
 //Authentication authenticates user using keystone
 func Authentication() martini.Handler {
-	return func(res http.ResponseWriter, req *http.Request, identityService IdentityService, c martini.Context) {
+	return func(res http.ResponseWriter, req *http.Request, identityService IdentityService, pathWhitelistService PathWhitelistService, c martini.Context) {
 		if req.Method == "OPTIONS" {
 			c.Next()
 			return
@@ -171,12 +199,21 @@ func Authentication() martini.Handler {
 			return
 		}
 		authToken := req.Header.Get("X-Auth-Token")
-		if authToken == "" {
-			HTTPJSONError(res, "No X-Auth-Token", http.StatusUnauthorized)
-			return
+
+		var is IdentityService
+
+		if pathWhitelistService.VerifyPath(req.URL.Path) {
+			is = &NoIdentityService{}
+		} else {
+			if authToken == "" {
+				HTTPJSONError(res, "No X-Auth-Token", http.StatusUnauthorized)
+				return
+			}
+
+			is = identityService
 		}
 
-		auth, err := identityService.VerifyToken(authToken)
+		auth, err := is.VerifyToken(authToken)
 		if err != nil {
 			HTTPJSONError(res, err.Error(), http.StatusUnauthorized)
 		}
