@@ -17,6 +17,7 @@ package server
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -36,6 +37,8 @@ const (
 
 	bufferSize = 256
 )
+
+var stateWatchTrimmer = regexp.MustCompile("^(" + statePrefix + "|" + monitoringPrefix + ")")
 
 //TODO(nati) integrate with watch process
 func startStateWatchProcess(server *Server) {
@@ -82,8 +85,9 @@ func startStateWatchProcess(server *Server) {
 			bufferMutex.Lock()
 			buffer, ok := buffers[response.Key]
 			if !ok {
+				key := stateWatchTrimmer.ReplaceAllLiteralString(response.Key, "")
 				buffer = make(chan *gohan_sync.Event, bufferSize)
-				buffers[response.Key] = buffer
+				buffers[key] = buffer
 
 				go func(buf chan *gohan_sync.Event, key string) {
 					for {
@@ -103,15 +107,16 @@ func startStateWatchProcess(server *Server) {
 						var err error
 						if strings.HasPrefix(resp.Key, statePrefix) {
 							err = StateUpdate(resp, server)
+							log.Info("Completed StateUpdate")
 						} else if strings.HasPrefix(resp.Key, monitoringPrefix) {
 							err = MonitoringUpdate(resp, server)
+							log.Info("Completed MonitoringUpdate")
 						}
 						if err != nil {
 							log.Warning(fmt.Sprintf("error during state update: %s", err))
 						}
-						log.Info("Completed StateUpdate")
 					}
-				}(buffer, response.Key)
+				}(buffer, key)
 			}
 
 			buffer <- response
