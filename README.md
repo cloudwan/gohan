@@ -16,6 +16,8 @@ see [Pet Store Example] (./etc/example_schema.yaml)
 
 Documentation
 
+[Gitbook](https://nati.gitbooks.io/gohan/content/)
+
 - [Installation](docs/installation.md)
 - [Development](docs/development.md)
 - [Schema](docs/schema.md)
