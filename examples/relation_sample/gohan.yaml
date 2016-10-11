@@ -47,3 +47,11 @@ logging:
         enabled: true
         level: INFO
         filename: ./gohan.log
+
+webui_config:
+    # if true, gohan generates webui config.json
+    enabled: true
+    # you need to set keystone auth url for users
+    # auth_url: "http://localhost:9091/v2.0"
+    tls: false
+    # address: "http://__HOST__:9091"
