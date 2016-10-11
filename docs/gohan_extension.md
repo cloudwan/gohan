@@ -1,4 +1,5 @@
 ## Gohan script extension
+{% raw %}
 
 Note: This function is experimental. Any APIs are subject to change.
 
@@ -137,7 +138,7 @@ You can define variables using "vars".
 ```
 
 Any string including "{{" get considered as django template. so
-you can use variables in their. if string start with "$", it get considered as
+you can use variables in their. if string start with $, it get considered as
 a variable identifier.
 (We are using pongo2 which supports subset of django template..)
 
@@ -492,3 +493,5 @@ please take a look
 
 - extension/gohanscript/lib/tests
 - extension/gohanscript/tests
+
+{% endraw %}
