@@ -516,7 +516,7 @@ var _ = Describe("GohanDb", func() {
 			})
 		})
 
-		Context("When an error occured while processing the query", func() {
+		Context("When an error occurred while processing the query", func() {
 			It("fails and return an error", func() {
 				extension, err := schema.NewExtension(map[string]interface{}{
 					"id": "test_extension",

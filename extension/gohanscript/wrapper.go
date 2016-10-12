@@ -117,7 +117,7 @@ func alwaysWrapper(stmt *Stmt, f func(*Context) (interface{}, error)) (func(*Con
 		return nil, err
 	}
 	return func(context *Context) (value interface{}, err error) {
-		value, err = f(context)
+		f(context)
 		value, err = alwaysRunners(context)
 		return
 	}, nil

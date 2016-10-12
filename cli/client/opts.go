@@ -39,7 +39,7 @@ var (
 	envVariablesNotSetError   = "Environment variable %v or %v needs to be set"
 	incorrectOutputFormat     = "Incorrect output format. Available formats: %v"
 	incorrectVerbosityLevel   = "Incorrect verbosity level. Available level range %d %d"
-	incorrectValueForArgument = "Incorrect value for '%s' enviroment variable, should be %s"
+	incorrectValueForArgument = "Incorrect value for '%s' environment variable, should be %s"
 
 	defaultCachedSchemasPath = "/tmp/.cached-gohan-schemas"
 

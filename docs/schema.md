@@ -1,196 +1,33 @@
-==============
-Gohan Schema
-==============
+# Schema
 
-Gohan server provides REST API based on gohan schema definitions.
-You can write gohan schema using json or YAML format. We will use YAML format in this document because of human reability.
+Developers defines resource model itself, and Gohan derives APIs, CLIs, and Docs from it. It is a so-called model-based development and conceptual difference from OpenAPI where developers define API.
 
-You can take a look example schema definitions in etc/examples/
-
-Here is an example defining network and subnet resource.
-
-.. code-block:: yaml
-
-  schemas:
-  - id: network
-    namespace: neutron
-    plural: networks
-    prefix: /v2.0
-    metadata:
-      template_format: "template/network.yaml"
-    schema:
-      properties:
-        description:
-          default: ""
-          permission:
-          - create
-          - update
-          title: Description
-          type: string
-          unique: false
-        id:
-          format: uuid
-          permission:
-          - create
-          title: ID
-          type: string
-          unique: false
-        name:
-          permission:
-          - create
-          - update
-          title: Name
-          type: string
-          unique: false
-        providor_networks:
-          default: {}
-          permission:
-          - create
-          - update
-          properties:
-            segmentaion_type:
-              enum:
-              - vlan
-              - vxlan
-              - gre
-              type: string
-            segmentation_id:
-              minimum: 0
-              type: integer
-          title: Provider Networks
-          type: object
-          unique: false
-        route_targets:
-          default: []
-          items:
-            type: string
-          permission:
-          - create
-          - update
-          title: RouteTargets
-          type: array
-          unique: false
-        tenant_id:
-          format: uuid
-          permission:
-          - create
-          title: Tenant
-          type: string
-          unique: false
-      propertiesOrder:
-      - id
-      - name
-      - description
-      - providor_networks
-      - route_targets
-      - tenant_id
-      type: object
-    singular: network
-    title: Network
-  - id: subnet
-    parent: network
-    plural: subnets
-    prefix: /v2.0/neutron
-    schema:
-      properties:
-        cidr:
-          permission:
-          - create
-          title: Cidr
-          type: string
-          unique: false
-        description:
-          default: ""
-          permission:
-          - create
-          - update
-          title: Description
-          type: string
-          unique: false
-        id:
-          format: uuid
-          permission:
-          - create
-          type: string
-          unique: false
-        name:
-          permission:
-          - create
-          - update
-          title: Name
-          type: string
-          unique: false
-        tenant_id:
-          format: uuid
-          permission:
-          - create
-          title: TenantID
-          type: string
-          unique: false
-      propertiesOrder:
-      - id
-      - name
-      - description
-      - cidr
-      - tenant_id
-      type: object
-    singular: subnet
-    title: subnet
-
-
-Schemas
------------------------
-
-
-We will have a list of schemas to define a setup resources.
+We will have a list of schemas to define a resource model.
 Each schema will have following properties.
 
-- id          -- resource id (unique)
-- singular    -- singular form of the schema name
-- plural      -- plural form of schema name
-- title       -- use visible label of resource title
+- id          -- resource id (must be unique)
+- singular    -- a singular form of the schema name
+- plural      -- plural form of the schema name
+- title       -- use the visible label of resource title
 - description -- a description of the schema
-- schema      -- json schema
+- schema      -- JSON schema (see Spec on http://json-schema.org/)
 
 Schemas might also have any of the following optional properties.
 
 - parent    -- the id of the parent schema
 - on_parent_delete_cascade -- cascading delete when parent resource deleted
-- namespace -- resource namespace
+- namespace -- resource namespace for grouping
 - prefix    -- resource path prefix
 - metadata  -- application specific schema metadata (object)
-- type      -- can be abstract or empty string (see more in schema inheritance)
+- type      -- can be an abstract or empty string (see more in schema inheritance)
 - extends   -- list of base schemas
 
-You need these information to define REST API.
-Please see json schema specification http://json-schema.org/
+## Schema Inheritance
 
-Note that each resource must have unique "id" attribute for identity for the
-each resources. You should also define "tenant_id" attribute if you want to
-use owner-based access control described in policy section later. In case
-no tenant_id is specified and owner-based access control is not enabled,
-tenant_id will be assigned based on the authentication token used.
+Gohan supports mix-in of multiple schemas.
+Developers can make a schema as abstract schema specifying type=abstract. The developer can mix-in abstract schema.
 
-"singular" and "plural" attributes are used for wrapping returned resources
-in additional dictionary during show and list calls respectively.
-"plural" is also used during access URL constructions.
-
-Namespace is an optional parameter that can be used to group schemas. If
-a namespace has been specified, full namespace prefix will be prepended to the
-schema prefix- see :ref:`namespace section <section-namespace>` for details.
-
-You can use following properties in json schema.
-
-Schema Inheritance
--------------------------------
-
-You can define an abstract schema by setting type="abstract".
-Schemas can be derived from an abstract schema by using the keyword "extends".
-JSON schema, metadata and action will be merged when a schema is extended.
-prefix value and parent value will be set if not specified.
-
-.. code-block:: yaml
-
+```
   schemas:
   - description: base
     type: abstract
@@ -293,34 +130,26 @@ prefix value and parent value will be set if not specified.
       type: object
     singular: network
     title: Network
+```
 
-
-
-Metadata
--------------------------------
-
-- type (string)
-
-  you can specify schema type. For example, gohan-webui will use
-  this value to determine wheather we show this schema link in the side menu
+## Metadata
 
 - nosync (boolean)
 
-  if nosync is true, we don't sync this resource for sync backend.
+We don't sync this resource for sync backend when this option is true.
 
 - state_versioning (boolean)
 
-  whether to support :ref:`state versioning <subsection-state-update>`, defaults to false.
+  whether to support state versioning <subsection-state-update>, defaults to false.
 
 - sync_key_template (string)
 
   configurable sync key path for schemas based on properties, for example: /v1.0/devices/{{device_id}}/virtual_machine/{{id}},
   it must contain '{{id}}'
 
-Properties
--------------------------------
+## Properties
 
-We need to define properties of resource using following parameters.
+We need to define properties of a resource using following parameters.
 
 - title
 
@@ -328,19 +157,17 @@ We need to define properties of resource using following parameters.
 
 - format
 
-  Additional validation hint for this property
+  Additional validation hints for this property
   you can use defined attribute on http://json-schema.org/latest/json-schema-validation.html#anchor107
 
 - type
 
-  properties type.
-  you can select from (string, number, integer, boolean, array and object)
-  Note that schema itself should be object type.
-  This can also be a two element list in case, attribute can be specified as null, e.g. ["string", "null"]
+ Gohan supports standard JSON schema types including string, number, integer, boolean, array, object and combinations such as ["string", "null"]
+  The Schema itself should be the object type.
 
 - default
 
-  defualt value of the property
+  the default value of the property
 
 - enum
 
@@ -351,39 +178,31 @@ We need to define properties of resource using following parameters.
   List of required attributes to specified during creation
 
 
-Following properties are extended from json schema v4.
+Following properties are extended from JSON schema v4.
 
 - permission
 
-  permission is a list of allow actions for this property.
-  valid values contrains "create", "update".
-  Gohan generates json schema for craete API and update API based on this value.
+  permission is a list of allowing actions for this property.
+  valid values contains "create", "update".
+  Gohan generates JSON schema for creating API and update API based on this value.
   Note that we can use this property for only first level properties.
 
 - unique boolean (unique key constraint)
 
-- detail (array)
+## type string
 
-  This parameter will be used in user side. Possible values are strings including read, create, delete, list, update.
-
-
-type string
--------------------------------
-
-type string is for defining string.
-You can use following parameters for string.
+type string is for defining a string.
+You can use following parameters for a string.
 
 - minLength  max length of string
 - maxLength  min length of string
 - pattern    regexp pattern for this string
-- relation  (gohan extened property)  define resource relation
-- relation_property  (gohan extened property) relation resource will be joined in list api requiest for this property name
-- on_delete_cascade  (gohan extened property) cascading delete when related resource get deleted
+- relation  (extended spec by Gohan)  define resource relation
+- relation_property  (extended spec by Gohan) relation resource will be joined in list API request for this property name
+- on_delete_cascade  (extended spec by Gohan) cascading delete when related resource deleted
 
 eg.
-
-.. code-block:: yaml
-
+```
         name:
           permission:
           - create
@@ -391,16 +210,15 @@ eg.
           title: Name
           type: string
           unique: false
+```
 
-type boolean
--------------------------------
+## type boolean
 
 type boolean for boolean value
 
 eg.
 
-.. code-block:: yaml
-
+```
         admin_state:
           permission:
           - create
@@ -408,21 +226,19 @@ eg.
           title: admin_state
           type: boolean
           unique: false
+```
 
+## type integer or type number
 
-type integer or type number
--------------------------------
-
-type integer or type number for numetric properties.
-You can use following parmeters to define valid range
+type integer or type number for numeric properties.
+You can use following parameters to define valid range
 
 - maximum (number) and exclusiveMaximum (boolean)
 - minimum (number) and exclusiveMinimum (boolean)
 
 eg.
 
-.. code-block:: yaml
-
+```
         age:
           permission:
           - create
@@ -430,21 +246,20 @@ eg.
           title: age
           type: number
           unique: false
+```
 
-type array
--------------------------------
+## type array
 
-type array is for defining list of elements
+type array is for a defining list of elements
 
-- items
+### items
 
   Only allowed for array type
   You can define element type on this property.
 
 eg.
 
-.. code-block:: yaml
-
+```
         route_targets:
           default: []
           items:
@@ -455,14 +270,13 @@ eg.
           title: RouteTargets
           type: array
           unique: false
+```
 
+## type object
 
-type object
--------------------------------
-
-Object type is for defining object in the resources.
+Object type is for a defining object in the resources.
 Note that resource itself should be an object.
-following parameters supported in object type.
+Following parameters supported in the object type.
 
 - properties
 
@@ -472,13 +286,11 @@ following parameters supported in object type.
 - propertiesOrder (extended parameter in gohan)
 
   Only allowed for object type
-  JSON has no ordering on object key. This could be problematic if you want to
-  generate UI. so you can define ordering of properties using propertiesOrder
+  You can define an ordering of properties using propertiesOrder for UI / CLI
 
 eg.
 
-.. code-block:: yaml
-
+```
         providor_networks:
           default: {}
           permission:
@@ -500,21 +312,18 @@ eg.
           title: Provider Networks
           type: object
           unique: false
-
-
+```
 
 Parent - child relationship
 -------------------------------
 
-Resources can be a in parent - child relationship. It means that the child resource has a foreign key to its parent.
+Resources can be in a parent-child relationship. It means that the child resource has a foreign key to its parent, and utilized for UI and CLI.
 
-
-Note that there is no need to create <parent>_id property in child schema, it is added automatically when the schema is loaded to gohan.
+Gohan adds <parent>_id property automatically when Gohan loads schemas.
 
 eg.
 
-.. code-block:: yaml
-
+```
         schemas:
         - description: Test Device
           id: test_device
@@ -567,18 +376,15 @@ eg.
                 format: uuid
             type: object
           title: Test Physical Port
+```
 
+## Custom actions schema
 
-Custom actions schema
--------------------------------
-
-Resources can have custom actions, beside CRUD. In order to define them, add actions section and define jsonschema
-of allowed input format
+Resources can have custom actions, besides CRUD. To define them, add "actions" section and define JSON schema of allowed input format
 
 eg.
 
-.. code-block:: yaml
-
+```
         schemas:
         - description: Server
           id: server
@@ -623,66 +429,244 @@ eg.
                   delay:
                     type: string
               output: null
+```
 
 Then, register extension to handle it, e.g.
 
-.. code-block:: javascript
-
+```
   gohan_register_handler("action_reboot", function(context){
     // handle reboot in southbound
   });
+```
 
 In order to query above action, POST to /v1.0/servers/:id/action with
 
-.. code-block:: json
-
+```
   {
     "reboot": {
       "message": "Maintenance",
       "delay": "1h"
     }
   }
+```
 
-Custom Isolation Level
--------------------------
+## Custom Isolation Level
 
-You can specify the transaction isolation level for api requests.
-Currently, this is only supported for mysql.
-The default setting is "read repeatable" for read operations and "serializable" for
-operations that modify the database (create, update, delete) and sync operations
-(state_update, monitoring_update). The default for unspecified action is repeatable read.
+Developers can specify the transaction isolation level for API requests when Gohan is configured to connect MySQL database.
+The default setting is "read repeatable" for read operations and "serializable" for operations that modify the database (create, update, delete) and sync operation. (state_update, monitoring_update). The default for unspecified action is repeatable read.
 
-.. code-block:: yaml
-
+```
     isolation_level:
       read:  REPEATABLE READ
       create:  SERIALIZABLE
       update: SERIALIZABLE
       delete: SERIALIZABLE
+```
 
-OpenAPI / Swagger
-------------------
+## OpenAPI / Swagger
 
-Gohan schema is supposed to define "Data Model", whereus OpenAPI/Swagger
-is supposed to define "API".
+Gohan schema is supposed to define "Data Model," whereas OpenAPI/Swagger is supposed to define API.
 
-You can generate OpenAPI / Swagger file from gohan schema, so that you can
-afford swagger utility tools.
+You can generate OpenAPI / Swagger file from Gohan schema so that you can afford swagger utility tools.
 
-.. code-block:: shell
+```
 
     gohan openapi --config-file etc/gohan.yaml
 
     # or you can customize template file using
 
     gohan openapi --config-file etc/gohan.yaml --template etc/templates/swagger.tmpl
+```
 
 then you will get swagger.json.
 You can use this file for using swagger utility tools.
 
 For example, you can use go-swagger to generate go related code. (see http://goswagger.io/)
 
-.. code-block:: shell
-
+```
     $ swagger validate swagger.json
     The swagger spec at "swagger.json" is valid against swagger specification 2.0
+```
+
+# API
+
+In this section, we show how we generate REST API based on a schema.
+
+"$plural", "$singular", "$prefix" and "$id" are read directly from schema,
+"$namespace_prefix" is computed using namespace information and might be empty if schema has no namespace specified.
+
+Note: An extension computes actual access URL for each resource and substitutes prefix property with it during schema listing calls. User can list resources using this URL and access a single instance of resource by prepending "/$id"
+suffix.
+
+## List REST API
+
+List supports pagination by optional GET query parameters ``sort_key`` and ``sort_order``.
+
+Query Parameter   Style       Type           Default           Description
+sort_key          query       xsd:string     id                Sort key for results
+sort_order        query       xsd:string     asc               Sort order - allowed values are ``asc`` or ``desc``
+limit             query       xsd:int        0                 Specifies maximum number of results.
+                                                               Unlimited for non-positive values
+offset            query       xsd:int        0                 Specifies number of results to be skipped
+<parent>_id       query       xsd:string     N/A               When resources which have a parent are listed,
+                                                               <parent>_id can be specified to show only parent's children.
+<property_id>     query       xsd:string     N/A               filter result by property (exact match). You can use multiple filters.
+
+When specified query parameters are invalid, server will return HTTP Status Code ``400`` (Bad Request)
+with an error message explaining the problem.
+
+To make navigation easier, each ``List`` response contains additional header ``X-Total-Count``
+indicating number of all elements without applying ``limit`` or ``offset``.
+
+Example:
+GET http://$GOHAN/[$namespace_prefix/]$prefix/$plural?sort_key=name&limit=2
+
+Response will be
+
+HTTP Status Code: 200
+
+```
+
+  {
+    "$plural": [
+       {
+         "attr1": XX,
+         "attr2": XX
+       }
+    ]
+  }
+
+```
+
+### Child resources access
+
+Gohan provides two paths for child resources.
+
+Full path
+  To access a child resource in that way, we need to know all it parents.
+
+  e.g. POST http://$GOHAN/[$namespace_prefix/]$prefix/[$ancestor_plural/$ancestor_id/]$plural
+
+Short path
+
+  e.g. POST http://$GOHAN/[$namespace_prefix/]$prefix/$plural?$parent_id=<parent_id>
+
+## GET
+
+Show REST API
+
+GET http://$GOHAN/[$namespace_prefix/]$prefix/$plural/$id
+
+Response will be
+
+HTTP Status Code: 200
+
+```
+  {
+    "$singular": {
+      "attr1": XX,
+      "attr2": XX
+    }
+  }
+```
+
+## CREATE
+
+CREATE Resource REST API
+
+POST http://$GOHAN/[$namespace_prefix/]$prefix/$plural/
+
+Input
+
+Note that input JSON can only contain if you set "create" permission for this
+
+HTTP Status Code: 202
+
+```
+  {
+    "$singular": {
+      "attr1": XX,
+      "attr2": XX
+    }
+  }
+```
+
+Response will be
+
+```
+  {
+    "$singular": {
+      "attr1": XX,
+      "attr2": XX
+    }
+  }
+```
+
+## Update
+
+Update Resource REST API
+
+PUT http://$GOHAN/[$namespace_prefix/]$prefix/$plural/$id
+
+Input
+
+Note that input JSON can only contain if you set "update" permission for this
+
+```
+  {
+    "$singular": {
+      "attr1": XX,
+      "attr2": XX
+    }
+  }
+```
+
+Response will be
+
+HTTP Status Code: 200
+
+```
+  {
+    "$singular": {
+      "attr1": XX,
+      "attr2": XX
+    }
+  }
+```
+
+## DELETE
+
+Delete Resource REST API
+
+HTTP Status Code: 204
+
+DELETE http://$GOHAN/[$namespace_prefix/]$prefix/$plural/$id
+
+
+## Custom Actions
+
+Run custom action on a resource
+
+POST http://$GOHAN/[$namespace_prefix/]$prefix/$plural/$id/$action_path
+
+Input
+
+Input JSON can only contain parameters defined in the input schema definition. It requires "$action" allow policy
+
+```
+  {
+    "parameter1": XX,
+    "parameter2": XX
+  }
+```
+
+Response will be
+
+HTTP Status Code: 200
+
+```
+  {
+    "output1": XX,
+    "output2": XX
+  }
+```

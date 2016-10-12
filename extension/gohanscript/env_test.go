@@ -58,7 +58,7 @@ var _ = Describe("Gohanscript extension manager", func() {
 
 	Describe("Loading an extension", func() {
 		Context("When extension uses code property", func() {
-			It("should run the extention code", func() {
+			It("should run the extension code", func() {
 				extension, err := schema.NewExtension(map[string]interface{}{
 					"id": "test_extension",
 					"code": `tasks:

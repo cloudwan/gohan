@@ -164,8 +164,8 @@ func (server *Server) getDatabaseConfig() (string, string, bool, bool) {
 func NewServer(configFile string) (*Server, error) {
 	manager := schema.GetManager()
 	config := util.GetConfig()
-	err := config.ReadConfig(configFile)
-	err = os.Chdir(path.Dir(configFile))
+	config.ReadConfig(configFile)
+	err := os.Chdir(path.Dir(configFile))
 	if err != nil {
 		return nil, fmt.Errorf("Config load error: %s", err)
 	}

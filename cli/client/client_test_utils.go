@@ -339,6 +339,7 @@ func sortActions(schema *schema.Schema) {
 	sort.Sort(actions(schema.Actions))
 }
 
+//ByName is alias type for handling gohanCommands
 type ByName []gohanCommand
 
 func (a ByName) Len() int {

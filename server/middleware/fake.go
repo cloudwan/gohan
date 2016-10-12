@@ -193,7 +193,7 @@ func (*FakeIdentity) GetTenantName(tenantID string) (string, error) {
 	return "", nil
 }
 
-// GetServiceAuthorization returns the master authorization with full permisions
+// GetServiceAuthorization returns the master authorization with full permission
 func (identity *FakeIdentity) GetServiceAuthorization() (schema.Authorization, error) {
 	return identity.VerifyToken("admin_token")
 }
@@ -206,7 +206,7 @@ func FakeKeystone(martini *martini.ClassicMartini) {
 		if err != nil {
 			http.Error(w, "", http.StatusBadRequest)
 		}
-		tokenKey := ""
+		var tokenKey string
 		username, err := util.GetByJSONPointer(authRequest, "/auth/passwordCredentials/username")
 		if err == nil {
 			tokenKey = fmt.Sprintf("%v_token", username)

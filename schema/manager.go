@@ -303,7 +303,10 @@ func (manager *Manager) LoadSchemaFromFile(filePath string) error {
 		schemaMap[schemaObj.ID] = schemaObj
 		schemaObjList = append(schemaObjList, schemaObj)
 	}
-	schemaOrder, err := reorderSchemas(schemaObjList)
+	_, err = reorderSchemas(schemaObjList)
+	if err != nil {
+		log.Warning("Error in reordering schema %s", err)
+	}
 	for _, schemaObj := range schemaObjList {
 		if schemaObj.IsAbstract() {
 			// Register abstract schema
@@ -322,7 +325,7 @@ func (manager *Manager) LoadSchemaFromFile(filePath string) error {
 		}
 	}
 	// Reorder schema by relation topology
-	schemaOrder, err = reorderSchemas(schemaObjList)
+	schemaOrder, err := reorderSchemas(schemaObjList)
 	if err != nil {
 		log.Warning("Error in reordering schema %s", err)
 	}

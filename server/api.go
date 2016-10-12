@@ -44,7 +44,7 @@ func authorization(w http.ResponseWriter, r *http.Request, action, path string, 
 	}
 	policy, role := manager.PolicyValidate(action, path, auth)
 	if policy == nil {
-		log.Debug("No maching policy: %s %s", action, path)
+		log.Debug("No policy match: %s %s", action, path)
 		return nil, nil
 	}
 	return policy, role

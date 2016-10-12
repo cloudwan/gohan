@@ -28,9 +28,9 @@ import (
 	"github.com/ddliu/motto"
 	"github.com/robertkrimen/otto"
 
+	"reflect"
 	//Import otto underscore lib
 	_ "github.com/robertkrimen/otto/underscore"
-	"reflect"
 )
 
 var inits = []func(env *Environment){}
@@ -162,7 +162,7 @@ func convertNilsToNulls(object interface{}) {
 func (env *Environment) HandleEvent(event string, context map[string]interface{}) (err error) {
 	vm := env.VM
 	context["event_type"] = event
-	var halt = fmt.Errorf("exceed timeout for extention execution")
+	var halt = fmt.Errorf("exceed timeout for extension execution")
 
 	defer func() {
 		if caught := recover(); caught != nil {
@@ -273,7 +273,7 @@ func GetString(value otto.Value) (string, error) {
 	return result, nil
 }
 
-//GetMap gets map[string]interace{} from otto value
+//GetMap gets map[string]interface{} from otto value
 func GetMap(value otto.Value) (map[string]interface{}, error) {
 	rawMap, _ := value.Export()
 	result, ok := rawMap.(map[string]interface{})

@@ -109,9 +109,8 @@ func (code *MiniGo) String() string {
 }
 
 func (code *MiniGo) addIdent(ident string) int {
-	index := 0
-	for index = range code.idents {
-		if code.idents[index] == ident {
+	for index, id := range code.idents {
+		if id == ident {
 			return index
 		}
 	}
@@ -120,9 +119,8 @@ func (code *MiniGo) addIdent(ident string) int {
 }
 
 func (code *MiniGo) addFloat(i float64) int {
-	index := 0
-	for index = range code.floats {
-		if code.floats[index] == i {
+	for index, id := range code.floats {
+		if id == i {
 			return index
 		}
 	}
@@ -131,9 +129,8 @@ func (code *MiniGo) addFloat(i float64) int {
 }
 
 func (code *MiniGo) addImag(i complex128) int {
-	index := 0
-	for index = range code.imags {
-		if code.imags[index] == i {
+	for index, id := range code.imags {
+		if id == i {
 			return index
 		}
 	}
@@ -142,9 +139,8 @@ func (code *MiniGo) addImag(i complex128) int {
 }
 
 func (code *MiniGo) addChar(i rune) int {
-	index := 0
-	for index = range code.chars {
-		if code.chars[index] == i {
+	for index, id := range code.chars {
+		if id == i {
 			return index
 		}
 	}
@@ -153,9 +149,8 @@ func (code *MiniGo) addChar(i rune) int {
 }
 
 func (code *MiniGo) addString(i string) int {
-	index := 0
-	for index = range code.chars {
-		if code.strings[index] == i {
+	for index, id := range code.strings {
+		if id == i {
 			return index
 		}
 	}

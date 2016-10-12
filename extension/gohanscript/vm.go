@@ -35,7 +35,7 @@ func (vm *VM) String() string {
 //NewVM creates a VM
 func NewVM() *VM {
 	vm := &VM{
-		timeoutError: fmt.Errorf("exceed timeout for extention execution"),
+		timeoutError: fmt.Errorf("exceed timeout for extension execution"),
 		StopChan:     make(chan func(), 1),
 		funcs:        []func(*Context) (interface{}, error){},
 	}

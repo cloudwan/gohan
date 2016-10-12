@@ -210,7 +210,7 @@ func getInitDbCommand() cli.Command {
 		Description: `
 Initialize empty database with given schema.
 
-Setting meta-schema option will additionaly populate meta-schema table with schema resources.
+Setting meta-schema option will additionally populate meta-schema table with schema resources.
 Useful for development purposes.`,
 		Flags: []cli.Flag{
 			cli.StringFlag{Name: "database-type, t", Value: "sqlite3", Usage: "Backend datebase type"},
@@ -246,7 +246,7 @@ func getConvertCommand() cli.Command {
 		Description: `
 Gohan convert can be used to migrate Gohan resources between different types of databases.
 
-Setting meta-schema option will additionaly convert meta-schema table with schema resources.
+Setting meta-schema option will additionally convert meta-schema table with schema resources.
 Useful for development purposes.`,
 		Flags: []cli.Flag{
 			cli.StringFlag{Name: "in-type, it", Value: "", Usage: "Input db type (yaml, json, sqlite3, mysql)"},
@@ -475,7 +475,7 @@ type options struct {
 	OptKillOldDelay        int      `long:"kill-old-delay" arg:"seconds" description:"time to suspend to send a signal to the old worker. The default value is\n5 when \"--enable-auto-restart\" is set, 0 otherwise. This can be\noverwritten by environment variable \"KILL_OLD_DELAY\"."`
 	OptRestart             bool     `long:"restart" description:"this is a wrapper command that reads the pid of the start_server process\nfrom --pid-file, sends SIGHUP to the process and waits until the\nserver(s) of the older generation(s) die by monitoring the contents of\nthe --status-file" note:"unimplemented"`
 	OptHelp                bool     `long:"help" description:"prints this help"`
-	OptVersion             bool     `long:"version" description:"printes the version number"`
+	OptVersion             bool     `long:"version" description:"prints the version number"`
 }
 
 func (o options) Args() []string          { return o.OptArgs }

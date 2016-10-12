@@ -51,7 +51,7 @@ func (identity *KeystoneIdentity) GetTenantName(tenantID string) (string, error)
 	return identity.Client.GetTenantName(tenantID)
 }
 
-// GetServiceAuthorization returns the master authorization with full permisions
+// GetServiceAuthorization returns the master authorization with full permissions
 func (identity *KeystoneIdentity) GetServiceAuthorization() (schema.Authorization, error) {
 	return identity.Client.GetServiceAuthorization()
 }
@@ -255,7 +255,7 @@ func (client *keystoneV3Client) GetTenantName(tenantID string) (string, error) {
 	return tenant.Name, nil
 }
 
-// GetServiceAuthorization returns the master authorization with full permisions
+// GetServiceAuthorization returns the master authorization with full permissions
 func (client *keystoneV3Client) GetServiceAuthorization() (schema.Authorization, error) {
 	return client.VerifyToken(client.client.TokenID)
 }
@@ -345,7 +345,7 @@ func (client *keystoneV2Client) GetTenantName(tenantID string) (string, error) {
 	return tenant.Name, nil
 }
 
-// GetServiceAuthorization returns the master authorization with full permisions
+// GetServiceAuthorization returns the master authorization with full permissions
 func (client *keystoneV2Client) GetServiceAuthorization() (schema.Authorization, error) {
 	return client.VerifyToken(client.client.TokenID)
 }

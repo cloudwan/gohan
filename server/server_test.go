@@ -380,14 +380,12 @@ var _ = Describe("Server package test", func() {
 
 	Describe("MemberToken", func() {
 		It("should work", func() {
-			network := getNetwork("red", "red")
-
 			testURL("GET", baseURL, memberTokenID, nil, http.StatusOK)
 			testURL("GET", networkPluralURL, memberTokenID, nil, http.StatusOK)
 			testURL("GET", networkPluralURL, "", nil, http.StatusUnauthorized)
 			testURL("GET", schemaURL, memberTokenID, nil, http.StatusOK)
 
-			network = map[string]interface{}{
+			network := map[string]interface{}{
 				"id":   "networkred",
 				"name": "Networkred",
 			}

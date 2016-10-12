@@ -402,6 +402,12 @@
 			"revisionTime": "2016-03-23T03:03:13Z"
 		},
 		{
+			"checksumSHA1": "XJb1ZBGDw1vSwe+j8w8uGEHNODw=",
+			"path": "github.com/yudai/nmutex",
+			"revision": "771191fb42421828d86100f3525e2d84cb3ace7e",
+			"revisionTime": "2016-09-29T05:19:57Z"
+		},
+		{
 			"checksumSHA1": "HSzEA32rVv/GeWvRLRQXXGXTPTA=",
 			"path": "github.com/ziutek/telnet",
 			"revision": "49d9be70897fe0a7400a152121453075b2835866"
