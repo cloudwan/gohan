@@ -1,0 +1,102 @@
+schemas:
+- description: a definition of a apples
+  id: apple
+  title: Apple
+  singular: apple
+  plural: apples
+  prefix: /v1.0
+  schema:
+    properties:
+      id:
+        description: ID
+        permission:
+        - create
+        title: ID
+        type: string
+        view:
+        - detail
+      color:
+        description: Color of an apple
+        permission:
+        - create
+        - update
+        title: Color
+        type: string
+    propertiesOrder:
+    - id
+    - color
+    required: [ id ]
+    type: object
+- description: a definition of a oranges
+  id: orange
+  title: Orange
+  singular: orange
+  plural: oranges
+  prefix: /v1.0
+  schema:
+    properties:
+      id:
+        description: ID
+        permission:
+        - create
+        title: ID
+        type: string
+        view:
+        - detail
+      size:
+        description: Size of an orange
+        permission:
+        - create
+        - update
+        title: Size
+        type: string
+    propertiesOrder:
+    - id
+    - size
+    required: [ id ]
+    type: object
+policies:
+- action: read
+  effect: allow
+  id: policy1
+  principal: Member
+  resource:
+    path: /gohan/v0.1/schemas*
+- action: read
+  effect: allow
+  id: policy_read
+  principal: Member
+  condition:
+  - is_owner
+  resource:
+    path: /v1.0/store/apples
+- action: create
+  effect: allow
+  id: policy_create
+  principal: Member
+  resource:
+    path: /v1.0/store/apples
+  condition:
+  - type: property
+    action: create
+    match:
+      status: placed
+- action: read
+  effect: allow
+  id: policy_read
+  principal: Member
+  condition:
+  - is_owner
+  resource:
+    path: /v1.0/store/oranges
+- action: create
+  effect: allow
+  id: policy_create
+  principal: Member
+  resource:
+    path: /v1.0/store/oranges
+  condition:
+  - type: property
+    action: create
+    match:
+      status: placed

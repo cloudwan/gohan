@@ -18,7 +18,7 @@ database:
 schemas:
     - "embed://etc/schema/gohan.json"
     - "embed://etc/extensions/gohan_extension.yaml"
-    - "./example_schema.yaml"
+    - "schema.yaml"
 
 editable_schema: ./example_schema.yaml
 
@@ -30,12 +30,15 @@ tls:
     enabled: false
     key_file: ./keys/key.pem
     cert_file: ./keys/cert.pem
+
 # document root of gohan API server
 # embedded webui get served if you use "embed" here
 document_root: "embed"
+
 # list of etcd backend servers
 etcd:
     - "http://127.0.0.1:4001"
+
 # keystone configuraion
 keystone:
     use_keystone: true
@@ -45,11 +48,15 @@ keystone:
     user_name: "admin"
     tenant_name: "admin"
     password: "gohan"
+
 # CORS (Cross-origin resource sharing (CORS)) configuraion for javascript based client
 # cors: "*"
 
-path_whitelist:
-    - "/v1.0/store/p[a-zA-Z0-9]*"
+# Route configuration overrides
+route:
+    # Paths that do not require authorization
+    noauth_paths:
+        - "/v1.0/oran[a-z]*"
 
 # Generate webui config
 webui_config:
@@ -59,15 +66,15 @@ webui_config:
     # auth_url: "http://localhost:9091/v2.0"
     tls: false
     # address: "http://__HOST__:9091"
+
 # allowed levels  "CRITICAL", "ERROR", "WARNING", "NOTICE", "INFO", "DEBUG",
 logging:
     stderr:
         enabled: true
-        level: DEBUG
+        level: INFO
 
 extension:
   default: gohanscript
   use:
   - gohanscript
- # - javascript
   - go

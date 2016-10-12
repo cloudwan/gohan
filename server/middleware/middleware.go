@@ -97,15 +97,15 @@ func filterHeaders(headers http.Header) http.Header {
 	return filtered
 }
 
-type PathWhitelistService interface {
+type RouteService interface {
 	VerifyPath(string) bool
 }
 
-type DefaultPathWhitelistService struct {
+type DefaultRouteService struct {
 	regexes []*regexp.Regexp
 }
 
-func (pws *DefaultPathWhitelistService) VerifyPath(path string) bool {
+func (pws *DefaultRouteService) VerifyPath(path string) bool {
 	for _, regex := range pws.regexes {
 		if regex.MatchString(path) {
 			return true
@@ -114,14 +114,14 @@ func (pws *DefaultPathWhitelistService) VerifyPath(path string) bool {
 	return false
 }
 
-func NewPathWhitelistService(paths []string) PathWhitelistService {
-	var r = make([]*regexp.Regexp, len(paths))
+func NewRouteService(noAuthPaths []string) RouteService {
+	var r = make([]*regexp.Regexp, len(noAuthPaths))
 
-	for i, path := range paths {
+	for i, path := range noAuthPaths {
 		r[i] = regexp.MustCompile(path)
 	}
 
-	return &DefaultPathWhitelistService{regexes: r}
+	return &DefaultRouteService{regexes: r}
 }
 
 //IdentityService for user authentication & authorization
@@ -178,7 +178,7 @@ func HTTPJSONError(res http.ResponseWriter, err string, code int) {
 
 //Authentication authenticates user using keystone
 func Authentication() martini.Handler {
-	return func(res http.ResponseWriter, req *http.Request, identityService IdentityService, pathWhitelistService PathWhitelistService, c martini.Context) {
+	return func(res http.ResponseWriter, req *http.Request, identityService IdentityService, routeService RouteService, c martini.Context) {
 		if req.Method == "OPTIONS" {
 			c.Next()
 			return
@@ -202,7 +202,7 @@ func Authentication() martini.Handler {
 
 		var is IdentityService
 
-		if pathWhitelistService.VerifyPath(req.URL.Path) {
+		if routeService.VerifyPath(req.URL.Path) {
 			is = &NoIdentityService{}
 		} else {
 			if authToken == "" {
