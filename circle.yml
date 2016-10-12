@@ -27,8 +27,6 @@ test:
         pwd: ../.go_workspace/src/github.com/cloudwan/gohan
     - make test:
         pwd: ../.go_workspace/src/github.com/cloudwan/gohan
-  post:
-    - /home/ubuntu/.go_workspace/bin/goveralls -coverprofile=/home/ubuntu/.go_workspace/src/github.com/cloudwan/gohan/profile.cov -service=circle-ci -repotoken=$COVERALLS_TOKEN
 
 deployment:
   release:
