@@ -18,10 +18,11 @@ package schema
 import (
 	"fmt"
 
+	"strings"
+
 	"github.com/cloudwan/gohan/util"
 	"github.com/flosch/pongo2"
 	"github.com/xeipuuv/gojsonschema"
-	"strings"
 )
 
 //Schema type for defining data type
@@ -485,6 +486,15 @@ MergeAction:
 	}
 	schema.Metadata = util.ExtendMap(schema.Metadata, fromSchema.Metadata)
 	return schema.Init()
+}
+
+//Titles returns list of Titles
+func (schema *Schema) Titles() []string {
+	titles := make([]string, 0, len(schema.Properties))
+	for _, property := range schema.Properties {
+		titles = append(titles, property.Title)
+	}
+	return titles
 }
 
 //JSON returns json format of schema

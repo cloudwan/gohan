@@ -16,6 +16,7 @@
 package client
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -35,7 +36,8 @@ var (
 
 type gohanCommand struct {
 	Name   string
-	Action func(args []string) (interface{}, error)
+	Schema *schema.Schema
+	Action func(args []string) (string, error)
 }
 
 func (gohanClientCLI *GohanClientCLI) request(method, url string, opts *gophercloud.RequestOpts) (interface{}, error) {
@@ -65,75 +67,101 @@ func (gohanClientCLI *GohanClientCLI) getCommands() []gohanCommand {
 
 func (gohanClientCLI *GohanClientCLI) getListCommand(s *schema.Schema) gohanCommand {
 	return gohanCommand{
-		Name: fmt.Sprintf("%s list", s.ID),
-		Action: func(args []string) (interface{}, error) {
+		Name:   fmt.Sprintf("%s list", s.ID),
+		Schema: s,
+		Action: func(args []string) (string, error) {
 			_, err := gohanClientCLI.handleArguments(args, s)
 			if err != nil {
-				return nil, err
+				return "", err
 			}
 			url := fmt.Sprintf("%s%s", gohanClientCLI.opts.gohanEndpointURL, s.URL)
-			return gohanClientCLI.request("GET", url, nil)
+			result, err := gohanClientCLI.request("GET", url, nil)
+			return gohanClientCLI.formatOutput(s, result), err
 		},
 	}
 }
 
 func (gohanClientCLI *GohanClientCLI) getGetCommand(s *schema.Schema) gohanCommand {
 	return gohanCommand{
-		Name: fmt.Sprintf("%s show", s.ID),
-		Action: func(args []string) (interface{}, error) {
+		Name:   fmt.Sprintf("%s show", s.ID),
+		Schema: s,
+		Action: func(args []string) (string, error) {
 			if len(args) < 1 {
-				return nil, fmt.Errorf("Wrong number of arguments")
+				return "", fmt.Errorf("Wrong number of arguments")
 			}
 			_, err := gohanClientCLI.handleArguments(args[:len(args)-1], s)
 			if err != nil {
-				return nil, err
+				return "", err
 			}
 			id, err := gohanClientCLI.getResourceID(s, args[len(args)-1])
 			if err != nil {
-				return nil, err
+				return "", err
 			}
 			url := fmt.Sprintf("%s%s/%s", gohanClientCLI.opts.gohanEndpointURL, s.URL, id)
-			return gohanClientCLI.request("GET", url, nil)
+			result, err := gohanClientCLI.request("GET", url, nil)
+			if err != nil {
+				return "", err
+			}
+			buffer := bytes.NewBufferString("")
+			buffer.WriteString(gohanClientCLI.formatOutput(s, result))
+			for _, childSchema := range gohanClientCLI.schemas {
+				if s.ID == childSchema.Parent {
+					buffer.WriteString("\n")
+					buffer.WriteString(childSchema.Title)
+					buffer.WriteString("\n")
+					parentSchemaPropertyID := childSchema.ParentSchemaPropertyID()
+					url := fmt.Sprintf("%s%s?%s=%s", gohanClientCLI.opts.gohanEndpointURL, childSchema.URL, parentSchemaPropertyID, id)
+					result, err := gohanClientCLI.request("GET", url, nil)
+					if err != nil {
+						return "", err
+					}
+					buffer.WriteString(gohanClientCLI.formatOutput(childSchema, result))
+				}
+			}
+			return buffer.String(), nil
 		},
 	}
 }
 
 func (gohanClientCLI *GohanClientCLI) getPostCommand(s *schema.Schema) gohanCommand {
 	return gohanCommand{
-		Name: fmt.Sprintf("%s create", s.ID),
-		Action: func(args []string) (interface{}, error) {
+		Name:   fmt.Sprintf("%s create", s.ID),
+		Schema: s,
+		Action: func(args []string) (string, error) {
 			argsMap, err := gohanClientCLI.handleArguments(args, s)
 			if err != nil {
-				return nil, err
+				return "", err
 			}
 			parsedArgs, err := gohanClientCLI.handleRelationArguments(s, argsMap)
 			if err != nil {
-				return nil, err
+				return "", err
 			}
 			opts := gophercloud.RequestOpts{
 				JSONBody: parsedArgs,
 				OkCodes:  []int{201, 202, 400},
 			}
 			url := fmt.Sprintf("%s%s", gohanClientCLI.opts.gohanEndpointURL, s.URL)
-			return gohanClientCLI.request("POST", url, &opts)
+			result, err := gohanClientCLI.request("POST", url, &opts)
+			return gohanClientCLI.formatOutput(s, result), err
 		},
 	}
 }
 
 func (gohanClientCLI *GohanClientCLI) getPutCommand(s *schema.Schema) gohanCommand {
 	return gohanCommand{
-		Name: fmt.Sprintf("%s set", s.ID),
-		Action: func(args []string) (interface{}, error) {
+		Name:   fmt.Sprintf("%s set", s.ID),
+		Schema: s,
+		Action: func(args []string) (string, error) {
 			if len(args) < 1 {
-				return nil, fmt.Errorf("Wrong number of arguments")
+				return "", fmt.Errorf("Wrong number of arguments")
 			}
 			argsMap, err := gohanClientCLI.handleArguments(args[:len(args)-1], s)
 			if err != nil {
-				return nil, err
+				return "", err
 			}
 			parsedArgs, err := gohanClientCLI.handleRelationArguments(s, argsMap)
 			if err != nil {
-				return nil, err
+				return "", err
 			}
 			opts := gophercloud.RequestOpts{
 				JSONBody: parsedArgs,
@@ -141,31 +169,34 @@ func (gohanClientCLI *GohanClientCLI) getPutCommand(s *schema.Schema) gohanComma
 			}
 			id, err := gohanClientCLI.getResourceID(s, args[len(args)-1])
 			if err != nil {
-				return nil, err
+				return "", err
 			}
 			url := fmt.Sprintf("%s%s/%s", gohanClientCLI.opts.gohanEndpointURL, s.URL, id)
-			return gohanClientCLI.request("PUT", url, &opts)
+			result, err := gohanClientCLI.request("PUT", url, &opts)
+			return gohanClientCLI.formatOutput(s, result), err
 		},
 	}
 }
 
 func (gohanClientCLI *GohanClientCLI) getDeleteCommand(s *schema.Schema) gohanCommand {
 	return gohanCommand{
-		Name: fmt.Sprintf("%s delete", s.ID),
-		Action: func(args []string) (interface{}, error) {
+		Name:   fmt.Sprintf("%s delete", s.ID),
+		Schema: s,
+		Action: func(args []string) (string, error) {
 			if len(args) < 1 {
-				return nil, fmt.Errorf("Wrong number of arguments")
+				return "", fmt.Errorf("Wrong number of arguments")
 			}
 			_, err := gohanClientCLI.handleArguments(args[:len(args)-1], s)
 			if err != nil {
-				return nil, err
+				return "", err
 			}
 			id, err := gohanClientCLI.getResourceID(s, args[len(args)-1])
 			if err != nil {
-				return nil, err
+				return "", err
 			}
 			url := fmt.Sprintf("%s%s/%s", gohanClientCLI.opts.gohanEndpointURL, s.URL, id)
-			return gohanClientCLI.request("DELETE", url, nil)
+			result, err := gohanClientCLI.request("DELETE", url, nil)
+			return gohanClientCLI.formatOutput(s, result), err
 		},
 	}
 }
@@ -180,6 +211,7 @@ func (gohanClientCLI *GohanClientCLI) getCustomCommands(s *schema.Schema) []goha
 	for _, act := range s.Actions {
 		ret = append(ret, gohanCommand{
 			Name:   s.ID + " " + act.ID,
+			Schema: s,
 			Action: gohanClientCLI.createActionFunc(act, s),
 		})
 	}
@@ -189,33 +221,33 @@ func (gohanClientCLI *GohanClientCLI) getCustomCommands(s *schema.Schema) []goha
 func (gohanClientCLI *GohanClientCLI) createActionFunc(
 	act schema.Action,
 	s *schema.Schema,
-) func(args []string) (interface{}, error) {
-	return func(args []string) (result interface{}, err error) {
+) func(args []string) (string, error) {
+	return func(args []string) (string, error) {
 		params, input, id, err := splitArgs(args, &act)
 		if err != nil {
-			return nil, err
+			return "", err
 		}
 		if len(id) > 0 {
 			id, err = gohanClientCLI.getResourceID(s, id)
 			if err != nil {
-				return nil, err
+				return "", err
 			}
 		}
 		argsMap, err := gohanClientCLI.getCustomArgsAsMap(params, input, act)
 		if err != nil {
-			return
+			return "", err
 		}
 		opts := gophercloud.RequestOpts{
 			JSONBody: argsMap,
 			OkCodes:  okCodes(act.Method),
 		}
 		url := gohanClientCLI.opts.gohanEndpointURL + s.URL + substituteID(act.Path, id)
-		result, err = gohanClientCLI.request(act.Method, url, &opts)
+		result, err := gohanClientCLI.request(act.Method, url, &opts)
 		if err != nil {
-			return
+			return "", err
 		}
 		result = gohanClientCLI.formatCustomOutput(result)
-		return
+		return gohanClientCLI.formatOutput(s, result), err
 	}
 }
 
