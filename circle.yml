@@ -33,7 +33,10 @@ deployment:
     branch: master
     commands:
     - go get github.com/karalabe/xgo
-    - go get github.com/tcnksm/ghr
     - ./tools/crosscompile.sh:
         timeout: 1800
-    - ghr -t $GITHUB_TOKEN -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME -replace pre-release dist/
+    - apt-get install -y ghr
+    - curl -L https://github.com/tcnksm/ghr/releases/download/v0.5.0/ghr_v0.5.0_linux_amd64.zip -o ghr_v0.5.0_linux_amd64.zip
+    - unzip ghr_v0.5.0_linux_amd64.zip
+    - chmod 0755 ghr
+    - ./ghr -t $GITHUB_TOKEN -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME -replace pre-release dist/
