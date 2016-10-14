@@ -100,11 +100,7 @@ func setUpLogging(level logging.Level) {
 func (gohanClientCLI *GohanClientCLI) ExecuteCommand(command string, arguments []string) (string, error) {
 	for _, c := range gohanClientCLI.commands {
 		if c.Name == command {
-			result, err := c.Action(arguments)
-			if err != nil {
-				return "", err
-			}
-			return gohanClientCLI.formatOutput(result), nil
+			return c.Action(arguments)
 		}
 	}
 	return gohanClientCLI.outputSubCommands(command)

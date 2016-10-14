@@ -38,6 +38,7 @@ var _ = Describe("CLI functions", func() {
 		provider         *gophercloud.ProviderClient
 		gohanEndpointURL string
 		err              error
+		netSchema        *schema.Schema
 	)
 
 	BeforeEach(func() {
@@ -462,14 +463,14 @@ var _ = Describe("CLI functions", func() {
 				It("Should execute command successfully", func() {
 					command := gohanCommand{
 						Name: "command",
-						Action: func(args []string) (interface{}, error) {
-							return map[string]interface{}{"It is": "ok"}, nil
+						Action: func(args []string) (string, error) {
+							return "ok", nil
 						},
 					}
 					gohanClientCLI.commands = append(gohanClientCLI.commands, command)
 					result, err := gohanClientCLI.ExecuteCommand("command", []string{})
 					Expect(err).ToNot(HaveOccurred())
-					Expect(result).To(MatchJSON(`{"It is": "ok"}`))
+					Expect(result).To(Equal("ok"))
 				})
 
 				It("Should show sub commands - command not found", func() {
@@ -487,8 +488,8 @@ var _ = Describe("CLI functions", func() {
 				It("Should show error - error executing command", func() {
 					command := gohanCommand{
 						Name: "command",
-						Action: func(args []string) (interface{}, error) {
-							return nil, fmt.Errorf("It is not ok :(")
+						Action: func(args []string) (string, error) {
+							return "", fmt.Errorf("It is not ok :(")
 						},
 					}
 					gohanClientCLI.commands = append(gohanClientCLI.commands, command)
@@ -705,26 +706,35 @@ var _ = Describe("CLI functions", func() {
 			Describe("Output Format", func() {
 				Describe("Table output format", func() {
 					BeforeEach(func() {
+						manager := schema.GetManager()
+						schemaPath := "../../tests/test_schema.json"
+						Expect(manager.LoadSchemaFromFile(schemaPath)).To(Succeed())
+						netSchema, _ = manager.Schema("net")
 						gohanClientCLI.opts.outputFormat = outputFormatTable
 					})
 
 					It("Should format single resource successfully", func() {
+
 						rawResult := map[string]interface{}{
 							"resource": map[string]interface{}{
-								"property1": "value1",
-								"property2": "value2",
-								"property3": "value3",
+								"cidr":  "cidr",
+								"mac":   "mac",
+								"id":    "test",
+								"port":  "port",
+								"regex": "regex",
 							},
 						}
-						result := gohanClientCLI.formatOutput(rawResult)
+						result := gohanClientCLI.formatOutput(netSchema, rawResult)
 						Expect(result).To(Equal(
-							`+-----------+--------+
-| PROPERTY  | VALUE  |
-+-----------+--------+
-| property1 | value1 |
-| property2 | value2 |
-| property3 | value3 |
-+-----------+--------+
+							`+----------+-------+
+| PROPERTY | VALUE |
++----------+-------+
+| CIDR     | cidr  |
+| MAC      | mac   |
+| UUID     | test  |
+| port     | port  |
+| regex    | regex |
++----------+-------+
 `))
 					})
 
@@ -732,28 +742,37 @@ var _ = Describe("CLI functions", func() {
 						rawResult := map[string]interface{}{
 							"resources": []interface{}{
 								map[string]interface{}{
-									"property1": "value11",
-									"property2": "value12",
+									"cidr":  "cidr1",
+									"mac":   "mac1",
+									"id":    "test1",
+									"port":  "port1",
+									"regex": "regex1",
 								},
 								map[string]interface{}{
-									"property1": "value21",
-									"property2": "value22",
+									"cidr":  "cidr2",
+									"mac":   "mac2",
+									"id":    "test2",
+									"port":  "port2",
+									"regex": "regex2",
 								},
 								map[string]interface{}{
-									"property1": "value31",
-									"property2": "value32",
+									"cidr":  "cidr3",
+									"mac":   "mac3",
+									"id":    "test3",
+									"port":  "port3",
+									"regex": "regex3",
 								},
 							},
 						}
-						result := gohanClientCLI.formatOutput(rawResult)
+						result := gohanClientCLI.formatOutput(netSchema, rawResult)
 						Expect(result).To(Equal(
-							`+-----------+-----------+
-| PROPERTY1 | PROPERTY2 |
-+-----------+-----------+
-| value11   | value12   |
-| value21   | value22   |
-| value31   | value32   |
-+-----------+-----------+
+							`+-------+------+-------+-------+--------+
+| CIDR  | MAC  | UUID  | PORT  | REGEX  |
++-------+------+-------+-------+--------+
+| cidr1 | mac1 | test1 | port1 | regex1 |
+| cidr2 | mac2 | test2 | port2 | regex2 |
+| cidr3 | mac3 | test3 | port3 | regex3 |
++-------+------+-------+-------+--------+
 `))
 					})
 
@@ -761,30 +780,42 @@ var _ = Describe("CLI functions", func() {
 						rawResult := map[string]interface{}{
 							"resources": []interface{}{
 								map[string]interface{}{
-									"property1": "value11",
+									"cidr":  "cidr1",
+									"mac":   "mac1",
+									"id":    "test1",
+									"port":  "port1",
+									"regex": "regex1",
 								},
 								map[string]interface{}{
-									"property2": "value22",
+									"cidr":  "",
+									"mac":   "mac2",
+									"id":    "",
+									"port":  "port2",
+									"regex": "",
 								},
 								map[string]interface{}{
-									"property2": "value32",
+									"cidr":  "cidr3",
+									"mac":   "",
+									"id":    "test3",
+									"port":  "",
+									"regex": "regex3",
 								},
 							},
 						}
-						result := gohanClientCLI.formatOutput(rawResult)
+						result := gohanClientCLI.formatOutput(netSchema, rawResult)
 						Expect(result).To(Equal(
-							`+-----------+-----------+
-| PROPERTY1 | PROPERTY2 |
-+-----------+-----------+
-| value11   |           |
-|           | value22   |
-|           | value32   |
-+-----------+-----------+
+							`+-------+------+-------+-------+--------+
+| CIDR  | MAC  | UUID  | PORT  | REGEX  |
++-------+------+-------+-------+--------+
+| cidr1 | mac1 | test1 | port1 | regex1 |
+|       | mac2 |       | port2 |        |
+| cidr3 |      | test3 |       | regex3 |
++-------+------+-------+-------+--------+
 `))
 					})
 
 					It("Should format empty output successfully", func() {
-						result := gohanClientCLI.formatOutput(nil)
+						result := gohanClientCLI.formatOutput(netSchema, nil)
 						Expect(result).To(Equal(""))
 					})
 
@@ -792,7 +823,7 @@ var _ = Describe("CLI functions", func() {
 						rawResult := map[string]interface{}{
 							"resources": []interface{}{},
 						}
-						result := gohanClientCLI.formatOutput(rawResult)
+						result := gohanClientCLI.formatOutput(netSchema, rawResult)
 						Expect(result).To(Equal(""))
 					})
 
@@ -800,7 +831,7 @@ var _ = Describe("CLI functions", func() {
 						rawResult := map[string]interface{}{
 							"resource": "Wrong resource",
 						}
-						result := gohanClientCLI.formatOutput(rawResult)
+						result := gohanClientCLI.formatOutput(netSchema, rawResult)
 						Expect(result).To(Equal("Wrong resource"))
 					})
 
@@ -808,7 +839,7 @@ var _ = Describe("CLI functions", func() {
 						rawResult := map[string]interface{}{
 							"error": "Simple string error",
 						}
-						result := gohanClientCLI.formatOutput(rawResult)
+						result := gohanClientCLI.formatOutput(netSchema, rawResult)
 						Expect(result).To(Equal("Simple string error"))
 					})
 
@@ -819,7 +850,7 @@ var _ = Describe("CLI functions", func() {
 								"message": "Error message",
 							},
 						}
-						result := gohanClientCLI.formatOutput(rawResult)
+						result := gohanClientCLI.formatOutput(netSchema, rawResult)
 						Expect(result).To(ContainSubstring("name:Error name"))
 						Expect(result).To(ContainSubstring("message:Error message"))
 					})
@@ -846,21 +877,19 @@ var _ = Describe("CLI functions", func() {
 				It("Should list resources successfully", func() {
 					result, err := listCommand.Action([]string{})
 					Expect(err).ToNot(HaveOccurred())
-					resultJSON, err := json.Marshal(result)
-					Expect(err).ToNot(HaveOccurred())
-					Expect(resultJSON).To(MatchJSON(getTowerListJSONResponse()))
+					Expect(result).To(MatchJSON(getTowerListJSONResponse()))
 				})
 
 				It("Should show error - error parsing arguments", func() {
 					result, err := listCommand.Action([]string{"--isMain", "yes"})
-					Expect(result).To(BeNil())
+					Expect(result).To(Equal(""))
 					Expect(err).To(MatchError(HavePrefix("Error parsing parameter")))
 				})
 
 				It("Should show error - unexpected response", func() {
 					server.SetHandler(1, ghttp.RespondWith(500, nil))
 					result, err := listCommand.Action([]string{})
-					Expect(result).To(BeNil())
+					Expect(result).To(Equal(""))
 					Expect(err).To(MatchError("Unexpected response: 500 Internal Server Error"))
 				})
 			})
@@ -889,7 +918,9 @@ var _ = Describe("CLI functions", func() {
 				It("Should get resource successfully", func() {
 					result, err := getCommand.Action([]string{icyTowerID})
 					Expect(err).ToNot(HaveOccurred())
-					Expect(result).To(Equal(getIcyTower()))
+					var resultJSON interface{}
+					json.Unmarshal([]byte(result), &resultJSON)
+					Expect(resultJSON).To(Equal(getIcyTower()))
 				})
 
 				It("Should get resource by name successfully", func() {
@@ -899,18 +930,20 @@ var _ = Describe("CLI functions", func() {
 					server.AppendHandlers(handler)
 					result, err := getCommand.Action([]string{icyTowerName})
 					Expect(err).ToNot(HaveOccurred())
-					Expect(result).To(Equal(getIcyTower()))
+					var resultJSON interface{}
+					json.Unmarshal([]byte(result), &resultJSON)
+					Expect(resultJSON).To(Equal(getIcyTower()))
 				})
 
 				It("Should show error - wrong number of arguments", func() {
 					result, err := getCommand.Action([]string{})
-					Expect(result).To(BeNil())
+					Expect(result).To(Equal(""))
 					Expect(err).To(MatchError("Wrong number of arguments"))
 				})
 
 				It("Should show error - error parsing arguments", func() {
 					result, err := getCommand.Action([]string{"--isMain", "yes", icyTowerID})
-					Expect(result).To(BeNil())
+					Expect(result).To(Equal(""))
 					Expect(err).To(MatchError(HavePrefix("Error parsing parameter")))
 				})
 
@@ -918,7 +951,7 @@ var _ = Describe("CLI functions", func() {
 					server.SetHandler(1, ghttp.RespondWith(404, nil))
 					server.SetHandler(2, ghttp.RespondWith(404, nil))
 					result, err := getCommand.Action([]string{"wrongId"})
-					Expect(result).To(BeNil())
+					Expect(result).To(Equal(""))
 					Expect(err).To(MatchError("Resource not found"))
 				})
 
@@ -926,7 +959,7 @@ var _ = Describe("CLI functions", func() {
 					server.SetHandler(1, ghttp.RespondWith(200, getTowerListJSONResponse()))
 					server.SetHandler(2, ghttp.RespondWith(500, nil))
 					result, err := getCommand.Action([]string{icyTowerID})
-					Expect(result).To(BeNil())
+					Expect(result).To(Equal(""))
 					Expect(err).To(MatchError("Unexpected response: 500 Internal Server Error"))
 				})
 			})
@@ -954,7 +987,9 @@ var _ = Describe("CLI functions", func() {
 					}
 					result, err := postCommand.Action(args)
 					Expect(err).ToNot(HaveOccurred())
-					Expect(result).To(Equal(getIcyTower()))
+					var resultJSON interface{}
+					json.Unmarshal([]byte(result), &resultJSON)
+					Expect(resultJSON).To(Equal(getIcyTower()))
 				})
 
 				It("Should handle bad request successfully", func() {
@@ -964,26 +999,28 @@ var _ = Describe("CLI functions", func() {
 					server.SetHandler(1, ghttp.RespondWithJSONEncoded(400, response))
 					result, err := postCommand.Action([]string{})
 					Expect(err).ToNot(HaveOccurred())
-					Expect(result).To(Equal(response))
+					var resultJSON interface{}
+					json.Unmarshal([]byte(result), &resultJSON)
+					Expect(resultJSON).To(Equal(response))
 				})
 
 				It("Should show error - error parsing arguments", func() {
 					result, err := postCommand.Action([]string{"--isMain", "yes"})
-					Expect(result).To(BeNil())
+					Expect(result).To(Equal(""))
 					Expect(err).To(MatchError(HavePrefix("Error parsing parameter")))
 				})
 
 				It("Should show error - unexpected response", func() {
 					server.SetHandler(1, ghttp.RespondWith(500, nil))
 					result, err := postCommand.Action([]string{})
-					Expect(result).To(BeNil())
+					Expect(result).To(Equal(""))
 					Expect(err).To(MatchError("Unexpected response: 500 Internal Server Error"))
 				})
 
 				It("Should show error - parent schema not found", func() {
 					server.SetHandler(1, ghttp.RespondWith(404, nil))
 					result, err := postCommand.Action([]string{"--castle", "Malbork"})
-					Expect(result).To(BeNil())
+					Expect(result).To(Equal(""))
 					Expect(err).To(MatchError("Schema with ID 'castle' not found"))
 				})
 			})
@@ -1016,7 +1053,9 @@ var _ = Describe("CLI functions", func() {
 					}
 					result, err := putCommand.Action(args)
 					Expect(err).ToNot(HaveOccurred())
-					Expect(result).To(Equal(getIcyTower()))
+					var resultJSON interface{}
+					json.Unmarshal([]byte(result), &resultJSON)
+					Expect(resultJSON).To(Equal(getIcyTower()))
 				})
 
 				It("Should update resource by name successfully", func() {
@@ -1030,7 +1069,9 @@ var _ = Describe("CLI functions", func() {
 					}
 					result, err := putCommand.Action(args)
 					Expect(err).ToNot(HaveOccurred())
-					Expect(result).To(Equal(getIcyTower()))
+					var resultJSON interface{}
+					json.Unmarshal([]byte(result), &resultJSON)
+					Expect(resultJSON).To(Equal(getIcyTower()))
 				})
 
 				It("Should handle bad request successfully", func() {
@@ -1041,18 +1082,20 @@ var _ = Describe("CLI functions", func() {
 					server.SetHandler(2, ghttp.RespondWithJSONEncoded(400, response))
 					result, err := putCommand.Action([]string{icyTowerID})
 					Expect(err).ToNot(HaveOccurred())
-					Expect(result).To(Equal(response))
+					var resultJSON interface{}
+					json.Unmarshal([]byte(result), &resultJSON)
+					Expect(resultJSON).To(Equal(response))
 				})
 
 				It("Should show error - wrong number of arguments", func() {
 					result, err := putCommand.Action([]string{})
-					Expect(result).To(BeNil())
+					Expect(result).To(Equal(""))
 					Expect(err).To(MatchError("Wrong number of arguments"))
 				})
 
 				It("Should show error - error parsing arguments", func() {
 					result, err := putCommand.Action([]string{"--isMain", "yes", icyTowerID})
-					Expect(result).To(BeNil())
+					Expect(result).To(Equal(""))
 					Expect(err).To(MatchError(HavePrefix("Error parsing parameter")))
 				})
 
@@ -1060,7 +1103,7 @@ var _ = Describe("CLI functions", func() {
 					server.SetHandler(1, ghttp.RespondWith(404, nil))
 					server.SetHandler(2, ghttp.RespondWith(404, nil))
 					result, err := putCommand.Action([]string{"wrongId"})
-					Expect(result).To(BeNil())
+					Expect(result).To(Equal(""))
 					Expect(err).To(MatchError("Resource not found"))
 				})
 
@@ -1068,14 +1111,14 @@ var _ = Describe("CLI functions", func() {
 					server.SetHandler(1, ghttp.RespondWithJSONEncoded(200, getTowerListJSONResponse()))
 					server.SetHandler(2, ghttp.RespondWithJSONEncoded(500, nil))
 					result, err := putCommand.Action([]string{icyTowerID})
-					Expect(result).To(BeNil())
+					Expect(result).To(Equal(""))
 					Expect(err).To(MatchError("Unexpected response: 500 Internal Server Error"))
 				})
 
 				It("Should show error - parent schema not found", func() {
 					server.SetHandler(1, ghttp.RespondWith(404, nil))
 					result, err := putCommand.Action([]string{"--castle", "Malbork", icyTowerID})
-					Expect(result).To(BeNil())
+					Expect(result).To(Equal(""))
 					Expect(err).To(MatchError("Schema with ID 'castle' not found"))
 				})
 			})
@@ -1107,7 +1150,7 @@ var _ = Describe("CLI functions", func() {
 					}
 					result, err := deleteCommand.Action(args)
 					Expect(err).ToNot(HaveOccurred())
-					Expect(result).To(BeNil())
+					Expect(result).To(Equal(""))
 				})
 
 				It("Should delete resource by name successfully", func() {
@@ -1120,12 +1163,12 @@ var _ = Describe("CLI functions", func() {
 					}
 					result, err := deleteCommand.Action(args)
 					Expect(err).ToNot(HaveOccurred())
-					Expect(result).To(BeNil())
+					Expect(result).To(Equal(""))
 				})
 
 				It("Should show error - wrong number of arguments", func() {
 					result, err := deleteCommand.Action([]string{})
-					Expect(result).To(BeNil())
+					Expect(result).To(Equal(""))
 					Expect(err).To(MatchError("Wrong number of arguments"))
 				})
 
@@ -1133,13 +1176,13 @@ var _ = Describe("CLI functions", func() {
 					server.SetHandler(1, ghttp.RespondWith(404, nil))
 					server.SetHandler(2, ghttp.RespondWith(404, nil))
 					result, err := deleteCommand.Action([]string{"wrongId"})
-					Expect(result).To(BeNil())
+					Expect(result).To(Equal(""))
 					Expect(err).To(MatchError("Resource not found"))
 				})
 
 				It("Should show error - error parsing arguments", func() {
 					result, err := deleteCommand.Action([]string{"--isMain", "yes", icyTowerID})
-					Expect(result).To(BeNil())
+					Expect(result).To(Equal(""))
 					Expect(err).To(MatchError(HavePrefix("Error parsing parameter")))
 				})
 
@@ -1147,7 +1190,7 @@ var _ = Describe("CLI functions", func() {
 					server.SetHandler(1, ghttp.RespondWithJSONEncoded(200, getTowerListJSONResponse()))
 					server.SetHandler(2, ghttp.RespondWithJSONEncoded(500, nil))
 					result, err := deleteCommand.Action([]string{icyTowerID})
-					Expect(result).To(BeNil())
+					Expect(result).To(Equal(""))
 					Expect(err).To(MatchError("Unexpected response: 500 Internal Server Error"))
 				})
 			})
@@ -1198,7 +1241,9 @@ var _ = Describe("CLI functions", func() {
 						castleID,
 					})
 					Expect(err).ToNot(HaveOccurred())
-					Expect(result).To(Equal(openGates()))
+					var resultJSON interface{}
+					json.Unmarshal([]byte(result), &resultJSON)
+					Expect(resultJSON).To(Equal(openGates()))
 				})
 
 				It("Should 'close gates' successfully", func() {
@@ -1214,7 +1259,9 @@ var _ = Describe("CLI functions", func() {
 					Expect(customCommands[0].Name).To(Equal("castle close_gates"))
 					result, err := customCommands[0].Action([]string{})
 					Expect(err).ToNot(HaveOccurred())
-					Expect(result).To(Equal(closeGates()))
+					var resultJSON interface{}
+					json.Unmarshal([]byte(result), &resultJSON)
+					Expect(resultJSON).To(Equal(closeGates()))
 				})
 
 				It("Should show error - wrong number of arguments", func() {
@@ -1228,7 +1275,7 @@ var _ = Describe("CLI functions", func() {
 						),
 					)
 					result, err := customCommands[1].Action([]string{castleID})
-					Expect(result).To(BeNil())
+					Expect(result).To(Equal(""))
 					Expect(err).To(MatchError("Wrong number of arguments"))
 				})
 
@@ -1247,7 +1294,7 @@ var _ = Describe("CLI functions", func() {
 						openGatesInput,
 						castleID,
 					})
-					Expect(result).To(BeNil())
+					Expect(result).To(Equal(""))
 					Expect(err).To(MatchError(HavePrefix("Error parsing parameter")))
 				})
 
@@ -1258,14 +1305,14 @@ var _ = Describe("CLI functions", func() {
 						openGatesInput,
 						"wrongID",
 					})
-					Expect(result).To(BeNil())
+					Expect(result).To(Equal(""))
 					Expect(err).To(MatchError("Resource not found"))
 				})
 
 				It("Should show error - unexpected response", func() {
 					server.SetHandler(1, ghttp.RespondWith(500, nil))
 					result, err := customCommands[0].Action([]string{})
-					Expect(result).To(BeNil())
+					Expect(result).To(Equal(""))
 					Expect(err).To(MatchError("Unexpected response: 500 Internal Server Error"))
 				})
 				// TODO more?

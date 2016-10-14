@@ -20,26 +20,26 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/cloudwan/gohan/util"
+	"github.com/cloudwan/gohan/schema"
 	"github.com/olekukonko/tablewriter"
 )
 
 var errorKey = "error"
 
-func (gohanClientCLI *GohanClientCLI) formatOutput(rawResult interface{}) string {
+func (gohanClientCLI *GohanClientCLI) formatOutput(s *schema.Schema, rawResult interface{}) string {
 	if rawResult == nil {
 		return ""
 	}
 	switch gohanClientCLI.opts.outputFormat {
 	case outputFormatTable:
-		return gohanClientCLI.formatOutputTable(rawResult)
+		return gohanClientCLI.formatOutputTable(s, rawResult)
 	default:
 		result, _ := json.MarshalIndent(rawResult, "", "\t")
 		return fmt.Sprintf("%s", result)
 	}
 }
 
-func (gohanClientCLI *GohanClientCLI) formatOutputTable(rawResult interface{}) string {
+func (gohanClientCLI *GohanClientCLI) formatOutputTable(s *schema.Schema, rawResult interface{}) string {
 	buffer := bytes.NewBufferString("")
 	for k, v := range rawResult.(map[string]interface{}) {
 		if k == errorKey {
@@ -47,9 +47,9 @@ func (gohanClientCLI *GohanClientCLI) formatOutputTable(rawResult interface{}) s
 		}
 		switch v.(type) {
 		case []interface{}:
-			gohanClientCLI.createResourcesTable(buffer, v.([]interface{}))
+			gohanClientCLI.createResourcesTable(s, buffer, v.([]interface{}))
 		case map[string]interface{}:
-			gohanClientCLI.createSingleResourceTable(buffer, v.(map[string]interface{}))
+			gohanClientCLI.createSingleResourceTable(s, buffer, v.(map[string]interface{}))
 		default:
 			return fmt.Sprintf("%v", v)
 		}
@@ -57,25 +57,28 @@ func (gohanClientCLI *GohanClientCLI) formatOutputTable(rawResult interface{}) s
 	return buffer.String()
 }
 
-func (gohanClientCLI *GohanClientCLI) createResourcesTable(buffer *bytes.Buffer, resources []interface{}) {
+func (gohanClientCLI *GohanClientCLI) createResourcesTable(s *schema.Schema, buffer *bytes.Buffer, resources []interface{}) {
 	table := tablewriter.NewWriter(buffer)
-	allKeysResource := map[string]interface{}{}
-	for _, resource := range resources {
-		for key := range resource.(map[string]interface{}) {
-			allKeysResource[key] = ""
-		}
-	}
-	keys := util.GetSortedKeys(allKeysResource)
-	if len(keys) == 0 {
+	if len(resources) == 0 {
 		return
 	}
-	table.SetHeader(keys)
-	for _, resource := range resources {
+	table.SetHeader(s.Titles())
+	for _, rawResource := range resources {
 		resourceSlice := []string{}
-		for _, key := range keys {
+		resource := rawResource.(map[string]interface{})
+		for _, property := range s.Properties {
 			v := ""
-			if val, ok := resource.(map[string]interface{})[key]; ok {
-				v = fmt.Sprint(val)
+			if val, ok := resource[property.ID]; ok && val != nil {
+				switch property.Type {
+				case "string":
+					v = fmt.Sprint(val)
+					if property.RelationProperty != "" {
+						relatedResource := resource[property.RelationProperty].(map[string]interface{})
+						v = relatedResource["name"].(string)
+					}
+				default:
+					v = fmt.Sprint(val)
+				}
 			}
 			resourceSlice = append(resourceSlice, v)
 		}
@@ -84,12 +87,11 @@ func (gohanClientCLI *GohanClientCLI) createResourcesTable(buffer *bytes.Buffer,
 	table.Render()
 }
 
-func (gohanClientCLI *GohanClientCLI) createSingleResourceTable(buffer *bytes.Buffer, resource map[string]interface{}) {
+func (gohanClientCLI *GohanClientCLI) createSingleResourceTable(s *schema.Schema, buffer *bytes.Buffer, resource map[string]interface{}) {
 	table := tablewriter.NewWriter(buffer)
 	table.SetHeader([]string{"Property", "Value"})
-	keys := util.GetSortedKeys(resource)
-	for _, key := range keys {
-		table.Append([]string{key, fmt.Sprint(resource[key])})
+	for _, property := range s.Properties {
+		table.Append([]string{property.Title, fmt.Sprint(resource[property.ID])})
 	}
 	table.Render()
 }
