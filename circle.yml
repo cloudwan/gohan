@@ -35,7 +35,7 @@ deployment:
     - go get github.com/karalabe/xgo
     - ./tools/crosscompile.sh:
         timeout: 1800
-    - sudo apt-get install -y ghr
+    - sudo apt-get install -y zip
     - curl -L https://github.com/tcnksm/ghr/releases/download/v0.5.0/ghr_v0.5.0_linux_amd64.zip -o ghr_v0.5.0_linux_amd64.zip
     - unzip ghr_v0.5.0_linux_amd64.zip
     - chmod 0755 ghr
