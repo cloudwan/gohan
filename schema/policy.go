@@ -70,7 +70,7 @@ func (t Tenant) String() string {
 	return fmt.Sprintf("%s (%s)", t.Name.String(), t.ID.String())
 }
 
-//Policy describes policy configuraion for APIs
+//Policy describes policy configuration for APIs
 type Policy struct {
 	ID, Description, Principal, Action, Effect string
 	Condition                                  []interface{}
