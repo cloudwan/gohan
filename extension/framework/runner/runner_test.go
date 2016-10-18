@@ -29,13 +29,18 @@ var _ = Describe("Runner", func() {
 	)
 
 	var (
-		testFile string
-		errors   map[string]error
+		testFile   string
+		testFilter string
+		errors     map[string]error
 	)
 
 	JustBeforeEach(func() {
-		theRunner := runner.NewTestRunner(testFile, true)
+		theRunner := runner.NewTestRunner(testFile, true, testFilter)
 		errors = theRunner.Run()
+	})
+
+	AfterEach(func() {
+		testFilter = ""
 	})
 
 	Describe("With incorrect files", func() {
@@ -160,6 +165,19 @@ var _ = Describe("Runner", func() {
 				Expect(errors).To(HaveLen(2))
 				Expect(errors).To(HaveKeyWithValue("testExtension1Loaded", BeNil()))
 				Expect(errors).To(HaveKeyWithValue("testExtension2NotLoaded", BeNil()))
+			})
+		})
+
+		Context("When using filter", func() {
+			BeforeEach(func() {
+				testFile = "./test_data/extension_loading.js"
+				testFilter = ".*1.*"
+			})
+
+			It("Should skip non-matching tests", func() {
+				Expect(errors).To(HaveLen(1))
+				Expect(errors).To(HaveKeyWithValue("testExtension1Loaded", BeNil()))
+				Expect(errors).NotTo(HaveKey("testExtension2NotLoaded"))
 			})
 		})
 

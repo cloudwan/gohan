@@ -325,7 +325,8 @@ Test files and directories can be supplied as arguments. See Gohan
 documentation for detail information about writing tests.`,
 		Flags: []cli.Flag{
 			cli.BoolFlag{Name: "verbose, v", Usage: "Print logs for passing tests"},
-			cli.StringFlag{Name: "config-file,c", Value: "", Usage: "config file path"},
+			cli.StringFlag{Name: "config-file,c", Value: "", Usage: "Config file path"},
+			cli.StringFlag{Name: "run-test,r", Value: "", Usage: "Run only tests matching specified regex"},
 		},
 		Action: framework.TestExtensions,
 	}

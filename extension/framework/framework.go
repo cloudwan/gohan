@@ -56,15 +56,15 @@ func TestExtensions(c *cli.Context) {
 	testFiles := getTestFiles(c.Args())
 
 	//logging from config is a limited printAllLogs option
-	returnCode := RunTests(testFiles, c.Bool("verbose") || config != nil)
+	returnCode := RunTests(testFiles, c.Bool("verbose") || config != nil, c.String("run-test"))
 	os.Exit(returnCode)
 }
 
 // RunTests runs extension tests for CLI
-func RunTests(testFiles []string, printAllLogs bool) (returnCode int) {
+func RunTests(testFiles []string, printAllLogs bool, testFilter string) (returnCode int) {
 	errors := map[string]map[string]error{}
 	for _, testFile := range testFiles {
-		testRunner := runner.NewTestRunner(testFile, printAllLogs)
+		testRunner := runner.NewTestRunner(testFile, printAllLogs, testFilter)
 		errors[testFile] = testRunner.Run()
 		if err, ok := errors[testFile][runner.GeneralError]; ok {
 			log.Error(fmt.Sprintf("\t ERROR (%s): %v", testFile, err))
