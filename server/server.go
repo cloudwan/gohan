@@ -246,6 +246,8 @@ func NewServer(configFile string) (*Server, error) {
 		}
 	}
 
+	m.Map(middleware.NewRouteService(config.GetStringList("route/noauth_paths", []string{})))
+
 	if config.GetBool("keystone/use_keystone", false) {
 		//TODO remove this
 		if config.GetBool("keystone/fake", false) {

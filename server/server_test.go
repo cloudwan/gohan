@@ -35,6 +35,7 @@ import (
 	gohan_sync "github.com/cloudwan/gohan/sync"
 	gohan_etcd "github.com/cloudwan/gohan/sync/etcd"
 	"github.com/cloudwan/gohan/util"
+	"github.com/cloudwan/gohan/server/middleware"
 )
 
 var (
@@ -1087,6 +1088,29 @@ var _ = Describe("Server package test", func() {
 			}
 			testURL("POST", responderPluralURL+"/r1/dzien_dobry", memberTokenID, unknownAction, http.StatusNotFound)
 			testURL("POST", responderPluralURL+"/r1/dzien_dobry", adminTokenID, unknownAction, http.StatusNotFound)
+		})
+	})
+
+	Describe("Route NoAuth paths", func() {
+		noAuthPaths := []string {
+			"/unk.own",
+			"/test[1-3]*",
+		}
+		var routeService middleware.RouteService
+
+		BeforeEach(func() {
+			routeService = middleware.NewRouteService(noAuthPaths)
+		})
+
+		Context("validate no auth path", func() {
+			It("should not verify", func() {
+				Expect(routeService.VerifyPath("/path")).To(BeFalse())
+			})
+
+			It("should verify", func() {
+				Expect(routeService.VerifyPath("/unknown")).To(BeTrue())
+				Expect(routeService.VerifyPath("/test56")).To(BeTrue())
+			})
 		})
 	})
 })

@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -96,6 +97,33 @@ func filterHeaders(headers http.Header) http.Header {
 	return filtered
 }
 
+type RouteService interface {
+	VerifyPath(string) bool
+}
+
+type DefaultRouteService struct {
+	regexes []*regexp.Regexp
+}
+
+func (pws *DefaultRouteService) VerifyPath(path string) bool {
+	for _, regex := range pws.regexes {
+		if regex.MatchString(path) {
+			return true
+		}
+	}
+	return false
+}
+
+func NewRouteService(noAuthPaths []string) RouteService {
+	var r = make([]*regexp.Regexp, len(noAuthPaths))
+
+	for i, path := range noAuthPaths {
+		r[i] = regexp.MustCompile(path)
+	}
+
+	return &DefaultRouteService{regexes: r}
+}
+
 //IdentityService for user authentication & authorization
 type IdentityService interface {
 	GetTenantID(string) (string, error)
@@ -150,7 +178,7 @@ func HTTPJSONError(res http.ResponseWriter, err string, code int) {
 
 //Authentication authenticates user using keystone
 func Authentication() martini.Handler {
-	return func(res http.ResponseWriter, req *http.Request, identityService IdentityService, c martini.Context) {
+	return func(res http.ResponseWriter, req *http.Request, identityService IdentityService, routeService RouteService, c martini.Context) {
 		if req.Method == "OPTIONS" {
 			c.Next()
 			return
@@ -171,12 +199,21 @@ func Authentication() martini.Handler {
 			return
 		}
 		authToken := req.Header.Get("X-Auth-Token")
-		if authToken == "" {
-			HTTPJSONError(res, "No X-Auth-Token", http.StatusUnauthorized)
-			return
+
+		var is IdentityService
+
+		if routeService.VerifyPath(req.URL.Path) {
+			is = &NoIdentityService{}
+		} else {
+			if authToken == "" {
+				HTTPJSONError(res, "No X-Auth-Token", http.StatusUnauthorized)
+				return
+			}
+
+			is = identityService
 		}
 
-		auth, err := identityService.VerifyToken(authToken)
+		auth, err := is.VerifyToken(authToken)
 		if err != nil {
 			HTTPJSONError(res, err.Error(), http.StatusUnauthorized)
 		}
