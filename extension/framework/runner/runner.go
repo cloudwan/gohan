@@ -38,6 +38,7 @@ const (
 type TestRunner struct {
 	testFileName string
 	printAllLogs bool
+	testFilter   *regexp.Regexp
 
 	setUp    bool
 	tearDown bool
@@ -55,10 +56,11 @@ var tearDownPattern = regexp.MustCompile("^tearDown$")
 var testPattern = regexp.MustCompile("^test.*")
 
 // NewTestRunner creates a new test runner for a given test file
-func NewTestRunner(testFileName string, printAllLogs bool) *TestRunner {
+func NewTestRunner(testFileName string, printAllLogs bool, testFilter string) *TestRunner {
 	return &TestRunner{
 		testFileName: testFileName,
 		printAllLogs: printAllLogs,
+		testFilter: regexp.MustCompile(testFilter),
 	}
 }
 
@@ -82,7 +84,7 @@ func (runner *TestRunner) Run() TestRunnerErrors {
 				runner.setUp = true
 			case tearDownPattern.MatchString(name):
 				runner.tearDown = true
-			case testPattern.MatchString(name):
+			case testPattern.MatchString(name) && runner.testFilter.MatchString(name):
 				tests = append(tests, name)
 			}
 		}
