@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -32,6 +33,7 @@ import (
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
 	srv "github.com/cloudwan/gohan/server"
+	"github.com/cloudwan/gohan/server/middleware"
 	gohan_sync "github.com/cloudwan/gohan/sync"
 	gohan_etcd "github.com/cloudwan/gohan/sync/etcd"
 	"github.com/cloudwan/gohan/util"
@@ -1087,6 +1089,30 @@ var _ = Describe("Server package test", func() {
 			}
 			testURL("POST", responderPluralURL+"/r1/dzien_dobry", memberTokenID, unknownAction, http.StatusNotFound)
 			testURL("POST", responderPluralURL+"/r1/dzien_dobry", adminTokenID, unknownAction, http.StatusNotFound)
+		})
+	})
+
+	Describe("Nobody resource paths", func() {
+		nobodyResourcePathRegexes := []*regexp.Regexp{
+			regexp.MustCompile("/unk.own"),
+			regexp.MustCompile("/test[1-3]*"),
+		}
+
+		var nobodyResourceService middleware.NobodyResourceService
+
+		BeforeEach(func() {
+			nobodyResourceService = middleware.NewNobodyResourceService(nobodyResourcePathRegexes)
+		})
+
+		Context("validate nobody resource path", func() {
+			It("should not verify", func() {
+				Expect(nobodyResourceService.VerifyResourcePath("/path")).To(BeFalse())
+			})
+
+			It("should verify", func() {
+				Expect(nobodyResourceService.VerifyResourcePath("/unknown")).To(BeTrue())
+				Expect(nobodyResourceService.VerifyResourcePath("/test56")).To(BeTrue())
+			})
 		})
 	})
 })

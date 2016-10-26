@@ -28,7 +28,7 @@ Gohan supports several types of conditions
 
 Example policy
 
-```
+``` yaml
   policies:
   - action: '*'
     effect: allow
@@ -81,7 +81,7 @@ Example policy
   if it is a dict, we check if we have a key for this value and, updated value matches it.
   Note that this is only valid for update action.
 
-```
+``` yaml
     policy:
       - action: 'read'
         condition:
@@ -126,3 +126,26 @@ Example policy
         id: member
         principal: Member
 ```
+
+## Resource paths with no authorization (nobody resource paths)
+
+With a special type of policy one can define a resource path that do not require authorization.
+In this policy only 'id', 'principal' and 'resource.path' properties are used. Policy 'principal'
+is always set to 'Nobody'.
+
+``` yaml
+policies:
+- id: no_auth_favicon
+  principal: Nobody
+  resource:
+    path: /favicon.ico
+- id: no_auth_member_resources
+  action: '*'
+  principal: Nobody
+  resource:
+    path: /v0.1/member_resources*
+```
+
+In the above example, the access to favicon is always granted and never requires an authorization.
+This feature is useful for web browsers and it is a good practice to set this policy.
+In the second policy, no-authorization access is granted to all member resources defined by a path wildcard.

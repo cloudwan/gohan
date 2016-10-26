@@ -227,6 +227,7 @@ func NewServer(configFile string) (*Server, error) {
 			return nil, fmt.Errorf("invalid schema: %s", err)
 		}
 	}
+
 	if !config.GetBool("database/no_init", false) {
 		server.initDB()
 	}
@@ -245,6 +246,8 @@ func NewServer(configFile string) (*Server, error) {
 			db.CopyDBResources(inDB, server.db, false)
 		}
 	}
+
+	m.Map(middleware.NewNobodyResourceService(manager.NobodyResourcePaths()))
 
 	if config.GetBool("keystone/use_keystone", false) {
 		//TODO remove this

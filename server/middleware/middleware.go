@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -105,6 +106,28 @@ type IdentityService interface {
 	GetClient() *gophercloud.ServiceClient
 }
 
+//NobodyResourceService contains a definition of nobody resources (that do not require authorization)
+type NobodyResourceService interface {
+	VerifyResourcePath(string) bool
+}
+
+type DefaultNobodyResourceService struct {
+	resourcePathRegexes []*regexp.Regexp
+}
+
+func (nrs *DefaultNobodyResourceService) VerifyResourcePath(resourcePath string) bool {
+	for _, regex := range nrs.resourcePathRegexes {
+		if regex.MatchString(resourcePath) {
+			return true
+		}
+	}
+	return false
+}
+
+func NewNobodyResourceService(nobodyResourcePathRegexes []*regexp.Regexp) NobodyResourceService {
+	return &DefaultNobodyResourceService{resourcePathRegexes: nobodyResourcePathRegexes}
+}
+
 //NoIdentityService for disabled auth
 type NoIdentityService struct {
 }
@@ -134,6 +157,35 @@ func (i *NoIdentityService) GetClient() *gophercloud.ServiceClient {
 	return nil
 }
 
+//NobodyIdentityService for nobody auth
+type NobodyIdentityService struct {
+}
+
+//GetTenantID returns always nobody
+func (i *NobodyIdentityService) GetTenantID(string) (string, error) {
+	return "nobody", nil
+}
+
+//GetTenantName returns always nobody
+func (i *NobodyIdentityService) GetTenantName(string) (string, error) {
+	return "nobody", nil
+}
+
+//VerifyToken returns always authorization for nobody
+func (i *NobodyIdentityService) VerifyToken(string) (schema.Authorization, error) {
+	return schema.NewAuthorization("nobody", "nobody", "nobody_token", []string{"Nobody"}, nil), nil
+}
+
+//GetServiceAuthorization returns always authorization for nobody
+func (i *NobodyIdentityService) GetServiceAuthorization() (schema.Authorization, error) {
+	return schema.NewAuthorization("nobody", "nobody", "nobody_token", []string{"Nobody"}, nil), nil
+}
+
+//GetClient returns always nil
+func (i *NobodyIdentityService) GetClient() *gophercloud.ServiceClient {
+	return nil
+}
+
 //HTTPJSONError helper for returning JSON errors
 func HTTPJSONError(res http.ResponseWriter, err string, code int) {
 	errorMessage := ""
@@ -150,7 +202,7 @@ func HTTPJSONError(res http.ResponseWriter, err string, code int) {
 
 //Authentication authenticates user using keystone
 func Authentication() martini.Handler {
-	return func(res http.ResponseWriter, req *http.Request, identityService IdentityService, c martini.Context) {
+	return func(res http.ResponseWriter, req *http.Request, identityService IdentityService, nobodyResourceService NobodyResourceService, c martini.Context) {
 		if req.Method == "OPTIONS" {
 			c.Next()
 			return
@@ -170,16 +222,29 @@ func Authentication() martini.Handler {
 			c.Next()
 			return
 		}
+
 		authToken := req.Header.Get("X-Auth-Token")
+
+		var targetIdentityService IdentityService
+
 		if authToken == "" {
-			HTTPJSONError(res, "No X-Auth-Token", http.StatusUnauthorized)
+			if nobodyResourceService.VerifyResourcePath(req.URL.Path) {
+				targetIdentityService = &NobodyIdentityService{}
+			} else {
+				HTTPJSONError(res, "No X-Auth-Token", http.StatusUnauthorized)
+				return
+			}
+		} else {
+			targetIdentityService = identityService
+		}
+
+		auth, err := targetIdentityService.VerifyToken(authToken)
+
+		if err != nil {
+			HTTPJSONError(res, err.Error(), http.StatusUnauthorized)
 			return
 		}
 
-		auth, err := identityService.VerifyToken(authToken)
-		if err != nil {
-			HTTPJSONError(res, err.Error(), http.StatusUnauthorized)
-		}
 		c.Map(auth)
 		c.Next()
 	}

@@ -20,12 +20,15 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/xeipuuv/gojsonschema"
 
 	"github.com/cloudwan/gohan/util"
 )
+
+const nobodyPrincipal = "Nobody"
 
 //manager singleton schema manager
 var manager *Manager
@@ -429,4 +432,17 @@ func ClearManager() {
 //PolicyValidate API request using policy statements
 func (manager *Manager) PolicyValidate(action, path string, auth Authorization) (*Policy, *Role) {
 	return PolicyValidate(action, path, auth, manager.policies)
+}
+
+//NoAuthPaths returns a list of paths that do not require authorization
+func (manager *Manager) NobodyResourcePaths() []*regexp.Regexp {
+	nobodyResourcePaths := []*regexp.Regexp{}
+	for _, policy := range manager.policies {
+		if policy.Principal == nobodyPrincipal {
+			log.Debug("Adding nobody resource path: " + policy.Resource.Path.String())
+			nobodyResourcePaths = append(nobodyResourcePaths, policy.Resource.Path)
+		}
+	}
+
+	return nobodyResourcePaths
 }
