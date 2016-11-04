@@ -208,12 +208,19 @@
 {% endif %}{% endfor %}
     },
     "definitions": { {% for schema in schemas %}{% if schema.Metadata.type != "metaschema" %}
+        {% with jsonSchema=schema.JSONSchema | swagger: "        " %}
+        {% if jsonSchema != "null"  %}
         "{{ schema.ID }}" :
-        {{ schema.JSONSchema | swagger: "        " }},
+        {{ jsonSchema }}, {% endif %} {% endwith %}
+        {% with jsonSchemaInput=schema.JSONSchemaOnCreate | swagger: "        " %}
+        {% if jsonSchemaInput != "null" %}
         "{{ schema.ID }}Input" :
-        {{ schema.JSONSchemaOnCreate |  swagger: "        " }},
+        {{ jsonSchemaInput }}, {% endif %}{% endwith %}
+        {% with jsonSchemaUpdate=schema.JSONSchemaOnUpdate | swagger: "        " %}
+        {% if jsonSchemaUpdate != "null"  %}
         "{{ schema.ID }}Update" :
-        {{ schema.JSONSchemaOnUpdate | swagger : "        "}},{% endif %}{% endfor %}
+        {{ jsonSchemaUpdate }}, {% endif %}{% endwith %}
+        {% endif %}{% endfor %}
         "errorModel": {
             "type": "object",
             "properties": {

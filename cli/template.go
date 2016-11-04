@@ -14,34 +14,65 @@ import (
 	"github.com/flosch/pongo2"
 )
 
-func deleteGohanExtendedProperties(property map[string]interface{}) {
-	delete(property, "unique")
-	delete(property, "permission")
-	delete(property, "relation")
-	delete(property, "relation_property")
+func deleteGohanExtendedProperties(node map[string]interface{}) {
+	extendedProperties := [...]string{"unique", "permission", "relation",
+		"relation_property", "view", "detail_view", "propertiesOrder",
+		"on_delete_cascade" }
+
+	for _, extendedProperty := range extendedProperties {
+		delete(node, extendedProperty)
+	}
+}
+
+func fixEnumDefaultValue(node map[string]interface{}) {
+	if defaultValue, ok := node["default"]; ok {
+		if enums, ok := node["enum"]; ok {
+			if defaultValueStr, ok := defaultValue.(string); ok {
+				if enumsArr, ok := enums.([]interface{}); ok {
+					found := false
+					for _, enum := range enumsArr {
+						if enumVal, ok := enum.(string); ok {
+							if defaultValueStr == enumVal {
+								found = true
+							}
+						}
+					}
+					if !found {
+						delete(node, "default")
+					}
+				}
+			}
+		}
+	}
+}
+
+func fixPropertyTree(node map[string]interface{}) {
+	deleteGohanExtendedProperties(node)
+	fixEnumDefaultValue(node)
+
+	if required, ok := node["required"]; ok {
+		switch list := required.(type) {
+		case []interface{}:
+		case []string:
+			if len(list) == 0 {
+				delete(node, "required")
+			}
+		}
+	}
+
+	for _, value := range node {
+		if childs, ok := value.(map[string]interface{}); ok {
+			fixPropertyTree(childs)
+		}
+	}
 }
 
 func toSwagger(in *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
 	i := in.Interface()
 	m := i.(map[string]interface{})
-	switch properties := m["properties"].(type) {
-	case map[string]interface{}:
-		for _, value := range properties {
-			deleteGohanExtendedProperties(value.(map[string]interface{}))
-		}
-		delete(properties, "propertiesOrder")
-	case map[string]map[string]interface{}:
-		for _, value := range properties {
-			deleteGohanExtendedProperties(value)
-		}
-		delete(properties, "propertiesOrder")
-	}
-	if list, ok := m["required"].([]string); ok {
-		if len(list) == 0 {
-			delete(m, "required")
-		}
-	}
-	delete(m, "propertiesOrder")
+
+	fixPropertyTree(m)
+
 	data, _ := json.MarshalIndent(i, param.String(), "    ")
 	return pongo2.AsValue(string(data)), nil
 }
