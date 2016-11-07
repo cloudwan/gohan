@@ -38,8 +38,9 @@ import (
 )
 
 const (
-	pathVar    = "PATH"
-	schemasVar = "SCHEMAS"
+	pathVar           = "PATH"
+	schemasVar        = "SCHEMAS"
+	schemaIncludesVar = "SCHEMA_INCLUDES"
 )
 
 // Environment of a single test runner
@@ -89,11 +90,36 @@ func (env *Environment) InitializeEnvironment() error {
 	}
 
 	env.VM.Otto.Run(script)
-	err = env.loadSchemas()
+
+	err = env.loadSchemaIncludes();
+
 	if err != nil {
 		schema.ClearManager()
-		return fmt.Errorf("Failed to load schema for '%s': %s", env.testFileName, err.Error())
+		return fmt.Errorf("Failed to load schema includes for '%s': %s", env.testFileName, err.Error())
 	}
+
+	err = env.loadSchemas()
+
+	if err != nil {
+		schema.ClearManager()
+		return fmt.Errorf("Failed to load schemas for '%s': %s", env.testFileName, err.Error())
+	}
+
+	err = env.registerEnvironments()
+
+	if err != nil {
+		schema.ClearManager()
+		return fmt.Errorf("Failed to register environments for '%s': %s", env.testFileName, err.Error())
+	}
+
+
+	err = env.loadExtensions()
+
+	if err != nil {
+		schema.ClearManager()
+		return fmt.Errorf("Failed to load extensions for '%s': %s", env.testFileName, err.Error())
+	}
+
 
 	err = db.InitDBWithSchemas("sqlite3", env.dbFile.Name(), true, false)
 	if err != nil {
@@ -315,6 +341,39 @@ func valueSliceToString(input []otto.Value) string {
 	return "[" + strings.Join(values, ", ") + "]"
 }
 
+func (env *Environment) loadSchemaIncludes() error {
+	manager := schema.GetManager()
+	schemaIncludeValue, err := env.VM.Get(schemaIncludesVar)
+	if err != nil {
+		return fmt.Errorf("%s string array not specified", schemaIncludesVar)
+	}
+	schemaIncludesFilenames, err := gohan_otto.GetStringList(schemaIncludeValue)
+	if err != nil {
+		return fmt.Errorf("Bad type of %s - expected an array of strings but the type is %s",
+			schemaIncludesVar, schemaIncludeValue.Class())
+	}
+	for _, schemaIncludes := range schemaIncludesFilenames {
+		var data []byte
+
+		if data, err = ioutil.ReadFile(schemaIncludes); err != nil {
+			return err
+		}
+
+		schemas := strings.Split(string(data), "\n")
+
+		for _, schema := range schemas {
+			if schema == "" || strings.HasPrefix(schema, "#") {
+				continue
+			}
+
+			if err = manager.LoadSchemaFromFile(schema); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func (env *Environment) loadSchemas() error {
 	schemaValue, err := env.VM.Get(schemasVar)
 	if err != nil {
@@ -322,21 +381,32 @@ func (env *Environment) loadSchemas() error {
 	}
 	schemaFilenames, err := gohan_otto.GetStringList(schemaValue)
 	if err != nil {
-		return fmt.Errorf("Bad type of %s - expected an array of strings", schemasVar)
+		return fmt.Errorf("Bad type of %s - expected an array of strings but the type is %s",
+			schemasVar, schemaValue.Class())
 	}
 
 	manager := schema.GetManager()
 	for _, schema := range schemaFilenames {
-		err = manager.LoadSchemaFromFile(schema)
-		if err != nil {
+		if err = manager.LoadSchemaFromFile(schema); err != nil {
 			return err
 		}
 	}
+	return nil
+}
+
+func (env *Environment) registerEnvironments() error {
+	manager := schema.GetManager()
 	environmentManager := extension.GetManager()
 	for schemaID := range manager.Schemas() {
+		// Note: the following code ignores errors related to registration
+		//       of an environment that has already been registered
 		environmentManager.RegisterEnvironment(schemaID, env)
 	}
+	return nil
+}
 
+func (env *Environment) loadExtensions() error {
+	manager := schema.GetManager()
 	pathValue, err := env.VM.Get(pathVar)
 	if err != nil || !pathValue.IsString() {
 		return fmt.Errorf("%s string not specified", pathVar)
