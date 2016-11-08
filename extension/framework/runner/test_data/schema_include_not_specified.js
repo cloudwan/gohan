@@ -13,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-var SCHEMA_INCLUDES = [];
-var SCHEMAS = ["./nonexisting_schema.yaml"];
+/* Intentionally not defined: var SCHEMA_INCLUDES = [];*/
+var SCHEMAS = [];
 var PATH = "/v1.0/networks";
 
 function testSomething() {}

@@ -13,7 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
+var SCHEMA_INCLUDES = [];
+/* Intentionally, not defined: var SCHEMAS = [];*/
 var PATH = "/v1.0/networks";
 
 function testSomething() {}
