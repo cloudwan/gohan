@@ -24,8 +24,9 @@ import (
 
 var _ = Describe("Runner", func() {
 	const (
-		schemasVar = "SCHEMAS"
-		pathVar    = "PATH"
+		schemaIncludesVar = "SCHEMA_INCLUDES"
+		schemasVar        = "SCHEMAS"
+		pathVar           = "PATH"
 	)
 
 	var (
@@ -98,6 +99,40 @@ var _ = Describe("Runner", func() {
 				Expect(errors).To(HaveKeyWithValue(runner.GeneralError, MatchError(ContainSubstring("no such file"))))
 			})
 		})
+
+		Context("When the test schema include is not specified", func() {
+			BeforeEach(func() {
+				testFile = "./test_data/schema_include_not_specified.js"
+			})
+
+			It("Should return the proper errors", func() {
+				Expect(errors).To(HaveLen(1))
+				Expect(errors).To(HaveKeyWithValue(runner.GeneralError, MatchError(ContainSubstring(schemaIncludesVar))))
+			})
+		})
+
+		Context("When the test schema include is not a string", func() {
+			BeforeEach(func() {
+				testFile = "./test_data/schema_include_not_a_string.js"
+			})
+
+			It("Should return the proper errors", func() {
+				Expect(errors).To(HaveLen(1))
+				Expect(errors).To(HaveKeyWithValue(runner.GeneralError, MatchError(ContainSubstring(schemaIncludesVar))))
+			})
+		})
+
+		Context("When the test schema include does not exist", func() {
+			BeforeEach(func() {
+				testFile = "./test_data/nonexisting_schema_include.js"
+			})
+
+			It("Should return the proper errors", func() {
+				Expect(errors).To(HaveLen(1))
+				Expect(errors).To(HaveKeyWithValue(runner.GeneralError, MatchError(ContainSubstring("no such file"))))
+			})
+		})
+
 
 		Context("When the test path is not specified", func() {
 			BeforeEach(func() {

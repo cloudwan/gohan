@@ -13,9 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
+var SCHEMA_INCLUDES = [];
 var SCHEMAS = ["./schema.yaml"];
 var PATH = "/v1.0/networks";
 
+// Intentionally, the following code does not compile
 function xyz() {
-

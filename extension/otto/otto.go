@@ -337,12 +337,24 @@ func GetList(value otto.Value) ([]interface{}, error) {
 
 //GetStringList gets []string  from otto value
 func GetStringList(value otto.Value) ([]string, error) {
-	rawSlice, _ := value.Export()
-	rawResult, ok := rawSlice.([]string)
-	if !ok {
-		return make([]string, 0), fmt.Errorf(wrongArgumentType, rawSlice, "array of strings")
+	var ok bool
+	var rawSlice []interface{}
+	var stringSlice []string
+
+	rawData, _ := value.Export()
+	rawSlice, ok = rawData.([]interface{})
+
+	if ok && len(rawSlice) == 0 {
+		return []string{}, nil
 	}
-	return rawResult, nil
+
+	stringSlice, ok = rawData.([]string)
+
+	if !ok {
+		return make([]string, 0), fmt.Errorf(wrongArgumentType, rawData, "array of strings")
+	}
+
+	return stringSlice, nil
 }
 
 //GetInt64 gets int64 from otto value
