@@ -31,6 +31,10 @@ func startCRONProcess(server *Server) {
 	if jobList == nil {
 		return
 	}
+	if server.sync == nil {
+		log.Fatalf(fmt.Sprintf("Could not start CRON process because of sync backend misconfiguration."))
+		util.LogFatalPanic(log)
+	}
 	log.Info("Started CRON process")
 	c := cron.New()
 	for _, rawJob := range jobList.([]interface{}) {
