@@ -82,10 +82,10 @@ func startStateWatchProcess(server *Server) {
 		for server.running {
 			response := <-stateResponseChan
 
+			key := stateWatchTrimmer.ReplaceAllLiteralString(response.Key, "")
 			bufferMutex.Lock()
-			buffer, ok := buffers[response.Key]
+			buffer, ok := buffers[key]
 			if !ok {
-				key := stateWatchTrimmer.ReplaceAllLiteralString(response.Key, "")
 				buffer = make(chan *gohan_sync.Event, bufferSize)
 				buffers[key] = buffer
 
