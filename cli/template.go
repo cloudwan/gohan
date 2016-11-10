@@ -12,6 +12,7 @@ import (
 	"github.com/codegangsta/cli"
 
 	"github.com/flosch/pongo2"
+	"strings"
 )
 
 func deleteGohanExtendedProperties(node map[string]interface{}) {
@@ -28,43 +29,64 @@ func fixEnumDefaultValue(node map[string]interface{}) {
 	if defaultValue, ok := node["default"]; ok {
 		if enums, ok := node["enum"]; ok {
 			if defaultValueStr, ok := defaultValue.(string); ok {
-				if enumsArr, ok := enums.([]interface{}); ok {
-					found := false
-					for _, enum := range enumsArr {
-						if enumVal, ok := enum.(string); ok {
-							if defaultValueStr == enumVal {
-								found = true
-							}
-						}
-					}
-					if !found {
-						delete(node, "default")
-					}
+				enumsArr := util.MaybeStringList(enums)
+				if !util.ContainsString(enumsArr, defaultValueStr) {
+					delete(node, "default")
 				}
 			}
 		}
 	}
 }
 
-func fixPropertyTree(node map[string]interface{}) {
-	deleteGohanExtendedProperties(node)
-	fixEnumDefaultValue(node)
+func removeEmptyRequiredList(node map[string]interface{}) {
+	const requiredProperty = "required"
 
-	if required, ok := node["required"]; ok {
+	if required, ok := node[requiredProperty]; ok {
 		switch list := required.(type) {
-		case []interface{}:
 		case []string:
 			if len(list) == 0 {
-				delete(node, "required")
+				delete(node, requiredProperty)
+			}
+		case []interface{}:
+			if len(list) == 0 {
+				delete(node, requiredProperty)
+			}
+		}
+	}
+}
+
+func removeNotSupportedFormat(node map[string]interface{}) {
+	const formatProperty string = "format"
+	var allowedFormats = []string { "uri", "uuid", "email", "int32", "int64", "float", "double",
+				        "byte", "binary", "date", "date-time", "password" }
+
+	if format, ok := node[formatProperty]; ok {
+		if format, ok := format.(string); ok {
+			if !util.ContainsString(allowedFormats, format) {
+				delete(node, formatProperty)
+			}
+		}
+	}
+}
+
+func fixPropertyTree(node map[string]interface{}) {
+
+	deleteGohanExtendedProperties(node)
+	fixEnumDefaultValue(node)
+	removeEmptyRequiredList(node)
+	removeNotSupportedFormat(node)
+
+	for _, value := range node {
+		switch childs := value.(type) {
+		case map[string]interface{}:
+			fixPropertyTree(childs)
+		case map[string]map[string]interface{}:
+			for _, value := range childs {
+				fixPropertyTree(value)
 			}
 		}
 	}
 
-	for _, value := range node {
-		if childs, ok := value.(map[string]interface{}); ok {
-			fixPropertyTree(childs)
-		}
-	}
 }
 
 func toSwagger(in *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
@@ -83,9 +105,15 @@ func toSwaggerPath(in *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo
 	return pongo2.AsValue(r.ReplaceAllString(i, "{$1}")), nil
 }
 
+func hasIdParam(in *pongo2.Value, param *pongo2.Value) (*pongo2. Value, *pongo2.Error) {
+	i := in.String()
+	return pongo2.AsValue(strings.Contains(i, ":id")), nil
+}
+
 func init() {
 	pongo2.RegisterFilter("swagger", toSwagger)
 	pongo2.RegisterFilter("swagger_path", toSwaggerPath)
+	pongo2.RegisterFilter("swagger_has_id_param", hasIdParam)
 }
 
 func doTemplate(c *cli.Context) {

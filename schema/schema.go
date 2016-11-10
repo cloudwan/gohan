@@ -250,6 +250,7 @@ func (schema *Schema) GetParentURL() string {
 func filterSchemaByPermission(schema map[string]interface{}, permission string) map[string]interface{} {
 	filteredSchema := map[string]interface{}{"type": "object"}
 	filteredProperties := map[string]map[string]interface{}{}
+	filteredRequirements := []string{}
 	for id, property := range util.MaybeMap(schema["properties"]) {
 		propertyMap := util.MaybeMap(property)
 		allowedList := util.MaybeStringList(propertyMap["permission"])
@@ -259,12 +260,22 @@ func filterSchemaByPermission(schema map[string]interface{}, permission string) 
 			}
 		}
 	}
+
 	filteredSchema["properties"] = filteredProperties
-	filteredSchema["required"] = util.MaybeStringList(schema["required"])
+	requirements := util.MaybeStringList(schema["required"])
+
 	if permission != "create" {
 		// required property is used on only create event
-		filteredSchema["required"] = []string{}
+		requirements = []string{}
 	}
+
+	for _, requirement := range requirements {
+		if _, ok := filteredProperties[requirement]; ok {
+			filteredRequirements = append(filteredRequirements, requirement)
+		}
+	}
+
+	filteredSchema["required"] = filteredRequirements
 	filteredSchema["additionalProperties"] = false
 	return filteredSchema
 }
