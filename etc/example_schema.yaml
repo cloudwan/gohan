@@ -87,6 +87,7 @@ schemas:
         type: string
         relation: pet
         relation_property: pet
+        indexed: true
       status:
         description: Status
         permission:

@@ -189,6 +189,10 @@ Following properties are extended from JSON schema v4.
 
 - unique boolean (unique key constraint)
 
+- indexed boolean
+
+  Specify if index should be created in DB for given column 
+
 ## type string
 
 type string is for defining a string.

@@ -27,13 +27,14 @@ type Property struct {
 	SQLType                string
 	OnDeleteCascade        bool
 	Default                interface{}
+	Indexed		       bool
 }
 
 //PropertyMap is a map of Property
 type PropertyMap map[string]Property
 
 //NewProperty is a constructor for Property type
-func NewProperty(id, title, description, typeID, format, relation, relationProperty, sqlType string, unique, nullable, onDeleteCascade bool, properties map[string]interface{}, defaultValue interface{}) Property {
+func NewProperty(id, title, description, typeID, format, relation, relationProperty, sqlType string, unique, nullable, onDeleteCascade bool, properties map[string]interface{}, defaultValue interface{}, indexed bool) Property {
 	Property := Property{
 		ID:               id,
 		Title:            title,
@@ -48,6 +49,7 @@ func NewProperty(id, title, description, typeID, format, relation, relationPrope
 		Properties:       properties,
 		SQLType:          sqlType,
 		OnDeleteCascade:  onDeleteCascade,
+		Indexed:	  indexed,
 	}
 	return Property
 }
@@ -84,6 +86,9 @@ func NewPropertyFromObj(id string, rawTypeData interface{}, required bool) (*Pro
 		nullable = true
 	}
 	sqlType, _ := typeData["sql"].(string)
-	Property := NewProperty(id, title, description, typeID, format, relation, relationProperty, sqlType, unique, nullable, cascade, properties, defaultValue)
+	indexed, _ := typeData["indexed"].(bool)
+
+	Property := NewProperty(id, title, description, typeID, format, relation, relationProperty, sqlType,
+				unique, nullable, cascade, properties, defaultValue, indexed)
 	return &Property, nil
 }

@@ -361,8 +361,11 @@ func getMigrateCommand() cli.Command {
 			sqlString.WriteString("-- +goose Up\n")
 			sqlString.WriteString("-- SQL in section 'Up' is executed when this migration is applied\n")
 			for _, s := range schemas {
-				sqlString.WriteString(sqlDB.GenTableDef(s, cascade))
-				sqlString.WriteString("\n")
+				createSql, indices := sqlDB.GenTableDef(s, cascade)
+				sqlString.WriteString(createSql + "\n")
+				for _, indexSql := range indices {
+					sqlString.WriteString(indexSql + "\n")
+				}
 			}
 			sqlString.WriteString("\n")
 			sqlString.WriteString("-- +goose Down\n")
