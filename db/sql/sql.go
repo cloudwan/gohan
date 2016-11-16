@@ -299,7 +299,7 @@ func (db *DB) genTableCols(s *schema.Schema, cascade bool, exclude []string) ([]
 //AlterTableDef generates alter table sql
 func (db *DB) AlterTableDef(s *schema.Schema, cascade bool) (string, error) {
 	var existing []string
-	rows, err := db.DB.Query(fmt.Sprintf("select * from `%s`;", s.GetDbTableName()))
+	rows, err := db.DB.Query(fmt.Sprintf("select * from `%s` limit 1;", s.GetDbTableName()))
 	if err == nil {
 		defer rows.Close()
 		existing, err = rows.Columns()
