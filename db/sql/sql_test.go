@@ -133,6 +133,7 @@ var _ = Describe("Sql", func() {
 	Describe("Generate Table", func() {
 		var server *schema.Schema
 		var subnet *schema.Schema
+		var test   *schema.Schema
 
 		BeforeEach(func() {
 			manager := schema.GetManager()
@@ -141,22 +142,62 @@ var _ = Describe("Sql", func() {
 			Expect(ok).To(BeTrue())
 			subnet, ok = manager.Schema("subnet")
 			Expect(ok).To(BeTrue())
+			test, ok = manager.Schema("test")
+			Expect(ok).To(BeTrue())
+		})
+
+		Context("Index in schema", func() {
+			It("Should create index, if schema property should be indexed", func() {
+				_, indices := sqlConn.GenTableDef(test, false)
+				Expect(indices).To(HaveLen(1))
+				Expect(indices[0]).To(ContainSubstring("CREATE INDEX tests_tenant_id_idx ON `tests`(`tenant_id`(255));"))
+			})
+		})
+
+		Context("Relation column name", func() {
+			It("Generate foreign key with default column name when relationColumn not available", func() {
+				table, _ := sqlConn.GenTableDef(server, false)
+				Expect(table).To(ContainSubstring("REFERENCES `networks`(id)"))
+			})
+
+			It("Generate foreign key with given column same as relationColumn from property", func() {
+				server.Properties = append(server.Properties, schema.NewProperty(
+					"test",
+					"test",
+					"",
+					"test",
+					"string",
+					"subnet",
+					"cidr",
+					"",
+					"varchar(255)",
+					false,
+					false,
+					false,
+					nil,
+					nil,
+					false,
+				))
+				table, _, err := sqlConn.AlterTableDef(server, false)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(table).To(ContainSubstring("REFERENCES `subnets`(cidr)"))
+			})
 		})
 
 		Context("With default cascade option", func() {
 			It("Generate proper table with cascade delete", func() {
-				table := sqlConn.GenTableDef(server, true)
+				table, _ := sqlConn.GenTableDef(server, true)
 				Expect(table).To(ContainSubstring("REFERENCES `networks`(id) on delete cascade);"))
-				table = sqlConn.GenTableDef(subnet, true)
+				table, _ = sqlConn.GenTableDef(subnet, true)
 				Expect(table).To(ContainSubstring("REFERENCES `networks`(id) on delete cascade);"))
 			})
 		})
 
 		Context("Without default cascade option", func() {
 			It("Generate proper table with cascade delete", func() {
-				table := sqlConn.GenTableDef(server, false)
+				table, _ := sqlConn.GenTableDef(server, false)
 				Expect(table).To(ContainSubstring("REFERENCES `networks`(id) on delete cascade);"))
-				table = sqlConn.GenTableDef(subnet, false)
+				table, _ = sqlConn.GenTableDef(subnet, false)
 				Expect(table).ToNot(ContainSubstring("REFERENCES `networks`(id) on delete cascade);"))
 			})
 		})
@@ -171,16 +212,42 @@ var _ = Describe("Sql", func() {
 					"string",
 					"",
 					"",
+					"",
 					"varchar(255)",
 					false,
 					false,
 					false,
 					nil,
 					nil,
+					false,
 				))
-				table, err := sqlConn.AlterTableDef(server, true)
+				table, _, err := sqlConn.AlterTableDef(server, true)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(table).To(ContainSubstring("alter table`servers` add (`test`varchar(255));"))
+				Expect(table).To(ContainSubstring("alter table`servers` add (`test` varchar(255));"))
+			})
+
+			It("Create index if property should be indexed", func() {
+				server.Properties = append(server.Properties, schema.NewProperty(
+					"test",
+					"test",
+					"",
+					"test",
+					"string",
+					"",
+					"",
+					"",
+					"varchar(255)",
+					false,
+					false,
+					false,
+					nil,
+					nil,
+					true,
+				))
+				_, indices, err := sqlConn.AlterTableDef(server, true)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(indices).To(HaveLen(1))
+				Expect(indices[0]).To(ContainSubstring("CREATE INDEX servers_test_idx ON `servers`(`test`);"))
 			})
 		})
 	})

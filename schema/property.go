@@ -21,19 +21,21 @@ type Property struct {
 	Type, Format           string
 	Properties             map[string]interface{}
 	Relation               string
+	RelationColumn	       string
 	RelationProperty       string
 	Unique                 bool
 	Nullable               bool
 	SQLType                string
 	OnDeleteCascade        bool
 	Default                interface{}
+	Indexed		       bool
 }
 
 //PropertyMap is a map of Property
 type PropertyMap map[string]Property
 
 //NewProperty is a constructor for Property type
-func NewProperty(id, title, description, typeID, format, relation, relationProperty, sqlType string, unique, nullable, onDeleteCascade bool, properties map[string]interface{}, defaultValue interface{}) Property {
+func NewProperty(id, title, description, typeID, format, relation, relationColumn, relationProperty, sqlType string, unique, nullable, onDeleteCascade bool, properties map[string]interface{}, defaultValue interface{}, indexed bool) Property {
 	Property := Property{
 		ID:               id,
 		Title:            title,
@@ -41,6 +43,7 @@ func NewProperty(id, title, description, typeID, format, relation, relationPrope
 		Description:      description,
 		Type:             typeID,
 		Relation:         relation,
+		RelationColumn:   relationColumn,
 		RelationProperty: relationProperty,
 		Unique:           unique,
 		Nullable:         nullable,
@@ -48,6 +51,7 @@ func NewProperty(id, title, description, typeID, format, relation, relationPrope
 		Properties:       properties,
 		SQLType:          sqlType,
 		OnDeleteCascade:  onDeleteCascade,
+		Indexed:	  indexed,
 	}
 	return Property
 }
@@ -75,6 +79,7 @@ func NewPropertyFromObj(id string, rawTypeData interface{}, required bool) (*Pro
 	}
 	format, _ := typeData["format"].(string)
 	relation, _ := typeData["relation"].(string)
+	relationColumn, _ := typeData["relation_column"].(string)
 	relationProperty, _ := typeData["relation_property"].(string)
 	unique, _ := typeData["unique"].(bool)
 	cascade, _ := typeData["on_delete_cascade"].(bool)
@@ -84,6 +89,9 @@ func NewPropertyFromObj(id string, rawTypeData interface{}, required bool) (*Pro
 		nullable = true
 	}
 	sqlType, _ := typeData["sql"].(string)
-	Property := NewProperty(id, title, description, typeID, format, relation, relationProperty, sqlType, unique, nullable, cascade, properties, defaultValue)
+	indexed, _ := typeData["indexed"].(bool)
+
+	Property := NewProperty(id, title, description, typeID, format, relation, relationColumn, relationProperty,
+		sqlType, unique, nullable, cascade, properties, defaultValue, indexed)
 	return &Property, nil
 }

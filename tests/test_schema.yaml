@@ -292,6 +292,7 @@ schemas:
         title: TenantID
         type: string
         unique: false
+        indexed: true
       test_string:
         default: ""
         description: Test string

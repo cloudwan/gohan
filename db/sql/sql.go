@@ -250,35 +250,37 @@ func (db *DB) Begin() (transaction.Transaction, error) {
 	}, nil
 }
 
-func (db *DB) genTableCols(s *schema.Schema, cascade bool, exclude []string) ([]string, []string) {
+func (db *DB) genTableCols(s *schema.Schema, cascade bool, exclude []string) ([]string, []string, []string) {
 	var cols []string
 	var relations []string
+	var indices []string
 	schemaManager := schema.GetManager()
 	for _, property := range s.Properties {
 		if util.ContainsString(exclude, property.ID) {
 			continue
 		}
 		handler := db.handlers[property.Type]
-		dataType := property.SQLType
+		sqlDataType := property.SQLType
+		sqlDataProperties := ""
 		if db.sqlType == "sqlite3" {
-			dataType = strings.Replace(dataType, "auto_increment", "autoincrement", 1)
+			sqlDataType = strings.Replace(sqlDataType, "auto_increment", "autoincrement", 1)
 		}
-		if dataType == "" {
-			dataType = handler.dataType(&property)
+		if sqlDataType == "" {
+			sqlDataType = handler.dataType(&property)
 			if property.ID == "id" {
-				dataType += " primary key"
+				sqlDataProperties = " primary key"
 			} else {
 				if property.Nullable {
-					dataType += " null"
+					sqlDataProperties = " null"
 				} else {
-					dataType += " not null"
+					sqlDataProperties = " not null"
 				}
 				if property.Unique {
-					dataType += " unique"
+					sqlDataProperties = " unique"
 				}
 			}
 		}
-		sql := "`" + property.ID + "`" + dataType
+		sql := "`" + property.ID + "` " + sqlDataType + sqlDataProperties
 
 		cols = append(cols, sql)
 		if property.Relation != "" {
@@ -288,16 +290,31 @@ func (db *DB) genTableCols(s *schema.Schema, cascade bool, exclude []string) ([]
 				if cascade || property.OnDeleteCascade {
 					cascadeString = "on delete cascade"
 				}
-				relations = append(relations, fmt.Sprintf("foreign key(`%s`) REFERENCES `%s`(id) %s",
-					property.ID, foreignSchema.GetDbTableName(), cascadeString))
+
+				relationColumn := "id"
+				if property.RelationColumn != "" {
+					relationColumn = property.RelationColumn
+				}
+
+				relations = append(relations, fmt.Sprintf("foreign key(`%s`) REFERENCES `%s`(%s) %s",
+					property.ID, foreignSchema.GetDbTableName(), relationColumn, cascadeString))
 			}
 		}
+
+		if property.Indexed {
+			prefix := ""
+			if sqlDataType == "text" {
+				prefix = "(255)"
+			}
+			indices = append(indices, fmt.Sprintf("CREATE INDEX %s_%s_idx ON `%s`(`%s`%s);", s.Plural, property.ID,
+				s.Plural, property.ID, prefix))
+		}
 	}
-	return cols, relations
+	return cols, relations, indices
 }
 
 //AlterTableDef generates alter table sql
-func (db *DB) AlterTableDef(s *schema.Schema, cascade bool) (string, error) {
+func (db *DB) AlterTableDef(s *schema.Schema, cascade bool) (string, []string, error) {
 	var existing []string
 	rows, err := db.DB.Query(fmt.Sprintf("select * from `%s` limit 1;", s.GetDbTableName()))
 	if err == nil {
@@ -306,23 +323,25 @@ func (db *DB) AlterTableDef(s *schema.Schema, cascade bool) (string, error) {
 	}
 
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
-	cols, relations := db.genTableCols(s, cascade, existing)
+	cols, relations, indices := db.genTableCols(s, cascade, existing)
 	cols = append(cols, relations...)
+
 	if len(cols) == 0 {
-		return "", nil
+		return "", nil, nil
 	}
 	alterTable := fmt.Sprintf("alter table`%s` add (%s);\n", s.GetDbTableName(), strings.Join(cols, ","))
 	log.Debug("Altering table: " + alterTable)
-	return alterTable, nil
+	log.Debug("Altering indices: " + strings.Join(indices, ""))
+	return alterTable, indices, nil
 }
 
 //GenTableDef generates create table sql
-func (db *DB) GenTableDef(s *schema.Schema, cascade bool) string {
+func (db *DB) GenTableDef(s *schema.Schema, cascade bool) (string, []string) {
 	schemaManager := schema.GetManager()
-	cols, relations := db.genTableCols(s, cascade, nil)
+	cols, relations, indices := db.genTableCols(s, cascade, nil)
 
 	if s.Parent != "" {
 		foreignSchema, _ := schemaManager.Schema(s.Parent)
@@ -345,7 +364,8 @@ func (db *DB) GenTableDef(s *schema.Schema, cascade bool) string {
 	cols = append(cols, relations...)
 	tableSQL := fmt.Sprintf("create table `%s` (%s);\n", s.GetDbTableName(), strings.Join(cols, ","))
 	log.Debug("Creating table: " + tableSQL)
-	return tableSQL
+	log.Debug("Creating indices: " + strings.Join(indices, ""))
+	return tableSQL, indices
 }
 
 //RegisterTable creates table in the db
@@ -353,14 +373,22 @@ func (db *DB) RegisterTable(s *schema.Schema, cascade bool) error {
 	if s.IsAbstract() {
 		return nil
 	}
-	tableDef, err := db.AlterTableDef(s, cascade)
+	tableDef, indices, err := db.AlterTableDef(s, cascade)
 	if err != nil {
-		tableDef = db.GenTableDef(s, cascade)
+		tableDef, indices = db.GenTableDef(s, cascade)
 	}
 	if tableDef == "" {
 		return nil
 	}
 	_, err = db.DB.Exec(tableDef)
+	if err != nil && indices != nil {
+		for _, indexSql := range indices {
+			_, err = db.DB.Exec(indexSql)
+			if err != nil {
+				return err
+			}
+		}
+	}
 	return err
 }
 
