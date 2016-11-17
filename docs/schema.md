@@ -202,6 +202,7 @@ You can use following parameters for a string.
 - maxLength  min length of string
 - pattern    regexp pattern for this string
 - relation  (extended spec by Gohan)  define resource relation
+- relationColumn (extended spec by Gohan) define which column relation references (default: "id")
 - relation_property  (extended spec by Gohan) relation resource will be joined in list API request for this property name
 - on_delete_cascade  (extended spec by Gohan) cascading delete when related resource deleted
 

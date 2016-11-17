@@ -154,6 +154,36 @@ var _ = Describe("Sql", func() {
 			})
 		})
 
+		Context("Relation column name", func() {
+			It("Generate foreign key with default column name when relationColumn not available", func() {
+				table, _ := sqlConn.GenTableDef(server, false)
+				Expect(table).To(ContainSubstring("REFERENCES `networks`(id)"))
+			})
+
+			It("Generate foreign key with given column same as relationColumn from property", func() {
+				server.Properties = append(server.Properties, schema.NewProperty(
+					"test",
+					"test",
+					"",
+					"test",
+					"string",
+					"subnet",
+					"cidr",
+					"",
+					"varchar(255)",
+					false,
+					false,
+					false,
+					nil,
+					nil,
+					false,
+				))
+				table, _, err := sqlConn.AlterTableDef(server, false)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(table).To(ContainSubstring("REFERENCES `subnets`(cidr)"))
+			})
+		})
+
 		Context("With default cascade option", func() {
 			It("Generate proper table with cascade delete", func() {
 				table, _ := sqlConn.GenTableDef(server, true)
@@ -182,6 +212,7 @@ var _ = Describe("Sql", func() {
 					"string",
 					"",
 					"",
+					"",
 					"varchar(255)",
 					false,
 					false,
@@ -202,6 +233,7 @@ var _ = Describe("Sql", func() {
 					"",
 					"test",
 					"string",
+					"",
 					"",
 					"",
 					"varchar(255)",

@@ -290,8 +290,14 @@ func (db *DB) genTableCols(s *schema.Schema, cascade bool, exclude []string) ([]
 				if cascade || property.OnDeleteCascade {
 					cascadeString = "on delete cascade"
 				}
-				relations = append(relations, fmt.Sprintf("foreign key(`%s`) REFERENCES `%s`(id) %s",
-					property.ID, foreignSchema.GetDbTableName(), cascadeString))
+
+				relationColumn := "id"
+				if property.RelationColumn != "" {
+					relationColumn = property.RelationColumn
+				}
+
+				relations = append(relations, fmt.Sprintf("foreign key(`%s`) REFERENCES `%s`(%s) %s",
+					property.ID, foreignSchema.GetDbTableName(), relationColumn, cascadeString))
 			}
 		}
 
