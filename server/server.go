@@ -321,6 +321,22 @@ func NewServer(configFile string) (*Server, error) {
 					"schema": "/gohan/v0.1/schemas",
 					"url":    baseURL,
 				},
+				"routes": []interface{}{
+					map[string]interface{}{
+						"path":      "",
+						"viewClass": "topView",
+						"name":      "top_view",
+					},
+				},
+				"errorMessages": map[string]interface{}{
+					"tokenExpire": "The token is expired. Please re-login.",
+				},
+				"addingRelationDialog": []interface{}{
+					"Pet",
+				},
+				"pageLimit":           25,
+				"loginRequestTimeout": 30000,
+				"extendTokenTime":     300000,
 			}
 			routes.ServeJson(res, webUIConfig)
 		})

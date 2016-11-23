@@ -60,7 +60,7 @@ func NewTestRunner(testFileName string, printAllLogs bool, testFilter string) *T
 	return &TestRunner{
 		testFileName: testFileName,
 		printAllLogs: printAllLogs,
-		testFilter: regexp.MustCompile(testFilter),
+		testFilter:   regexp.MustCompile(testFilter),
 	}
 }
 
