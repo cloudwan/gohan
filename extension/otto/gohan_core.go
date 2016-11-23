@@ -178,7 +178,7 @@ func init() {
 	RegisterInit(gohanInit)
 }
 
-func requireFromOtto(moduleName string, vm *otto.Otto) (otto.Value, error){
+func requireFromOtto(moduleName string, vm *otto.Otto) (otto.Value, error) {
 	rawModule, errRequire := RequireModule(moduleName)
 	if errRequire != nil {
 		return otto.UndefinedValue(), errRequire
@@ -192,11 +192,11 @@ func requireFromOtto(moduleName string, vm *otto.Otto) (otto.Value, error){
 	return module, nil
 }
 
-func requireFromMotto(moduleName string, vm *motto.Motto) (otto.Value, error){
+func requireFromMotto(moduleName string, vm *motto.Motto) (otto.Value, error) {
 	return vm.Require(moduleName, "")
 }
 
-func require(moduleName string, vm *motto.Motto) (otto.Value, error){
+func require(moduleName string, vm *motto.Motto) (otto.Value, error) {
 	value, err := requireFromMotto(moduleName, vm) // NPM
 	if err != nil {
 		value, err = requireFromOtto(moduleName, vm.Otto) // Go extensions

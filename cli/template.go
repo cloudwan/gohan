@@ -57,8 +57,8 @@ func removeEmptyRequiredList(node map[string]interface{}) {
 
 func removeNotSupportedFormat(node map[string]interface{}) {
 	const formatProperty string = "format"
-	var allowedFormats = []string { "uri", "uuid", "email", "int32", "int64", "float", "double",
-				        "byte", "binary", "date", "date-time", "password" }
+	var allowedFormats = []string{"uri", "uuid", "email", "int32", "int64", "float", "double",
+		"byte", "binary", "date", "date-time", "password"}
 
 	if format, ok := node[formatProperty]; ok {
 		if format, ok := format.(string); ok {
@@ -105,7 +105,7 @@ func toSwaggerPath(in *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo
 	return pongo2.AsValue(r.ReplaceAllString(i, "{$1}")), nil
 }
 
-func hasIdParam(in *pongo2.Value, param *pongo2.Value) (*pongo2. Value, *pongo2.Error) {
+func hasIdParam(in *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
 	i := in.String()
 	return pongo2.AsValue(strings.Contains(i, ":id")), nil
 }

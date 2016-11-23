@@ -91,7 +91,7 @@ func (env *Environment) InitializeEnvironment() error {
 
 	env.VM.Otto.Run(script)
 
-	err = env.loadSchemaIncludes();
+	err = env.loadSchemaIncludes()
 
 	if err != nil {
 		schema.ClearManager()
@@ -112,14 +112,12 @@ func (env *Environment) InitializeEnvironment() error {
 		return fmt.Errorf("Failed to register environments for '%s': %s", env.testFileName, err.Error())
 	}
 
-
 	err = env.loadExtensions()
 
 	if err != nil {
 		schema.ClearManager()
 		return fmt.Errorf("Failed to load extensions for '%s': %s", env.testFileName, err.Error())
 	}
-
 
 	err = db.InitDBWithSchemas("sqlite3", env.dbFile.Name(), true, false)
 	if err != nil {

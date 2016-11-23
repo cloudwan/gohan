@@ -133,7 +133,6 @@ var _ = Describe("Runner", func() {
 			})
 		})
 
-
 		Context("When the test path is not specified", func() {
 			BeforeEach(func() {
 				testFile = "./test_data/path_not_specified.js"
