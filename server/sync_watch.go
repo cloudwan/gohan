@@ -57,7 +57,7 @@ func startSyncWatchProcess(server *Server) {
 		go func(path string) {
 			defer util.LogFatalPanic(log)
 			for server.running {
-				lockKey := lockPath + "watch"
+				lockKey := lockPath + "/watch"
 				err := server.sync.Lock(lockKey, true)
 				if err != nil {
 					log.Warning("Can't start watch process due to lock", err)
@@ -84,6 +84,8 @@ func startSyncWatchProcess(server *Server) {
 					defer util.LogPanic(log)
 					for _, event := range events {
 						//match extensions
+						fmt.Println(response.Key)
+						fmt.Println("/" + event)
 						if strings.HasPrefix(response.Key, "/"+event) {
 							env := extensions[event]
 							runExtensionOnSync(server, response, env.Clone())

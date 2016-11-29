@@ -55,7 +55,7 @@ func startStateWatchProcess(server *Server) {
 		defer util.LogFatalPanic(log)
 
 		for server.running {
-			lockKey := lockPath + "state_watch"
+			lockKey := lockPath + "/state_watch"
 			err := server.sync.Lock(lockKey, true)
 			if err != nil {
 				log.Warning("Can't start state watch process due to lock", err)
@@ -134,7 +134,7 @@ func stopStateWatchProcess(server *Server) {
 //StateUpdate updates the state in the db based on the sync event
 func StateUpdate(response *gohan_sync.Event, server *Server) error {
 	dataStore := server.db
-	schemaPath := "/" + strings.TrimPrefix(response.Key, statePrefix+"/")
+	schemaPath := strings.TrimPrefix(response.Key, statePrefix)
 	var curSchema = schema.GetSchemaByPath(schemaPath)
 	if curSchema == nil || !curSchema.StateVersioning() {
 		log.Debug("State update on unexpected path '%s'", schemaPath)
@@ -219,7 +219,7 @@ func StateUpdate(response *gohan_sync.Event, server *Server) error {
 //MonitoringUpdate updates the state in the db based on the sync event
 func MonitoringUpdate(response *gohan_sync.Event, server *Server) error {
 	dataStore := server.db
-	schemaPath := "/" + strings.TrimPrefix(response.Key, monitoringPrefix+"/")
+	schemaPath := strings.TrimPrefix(response.Key, monitoringPrefix)
 	var curSchema = schema.GetSchemaByPath(schemaPath)
 	if curSchema == nil || !curSchema.StateVersioning() {
 		log.Debug("Monitoring update on unexpected path '%s'", schemaPath)

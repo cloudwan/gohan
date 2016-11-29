@@ -27,7 +27,7 @@ tls:
 
 # list of etcd backend servers
 etcd:
-    - "http://127.0.0.1:4001"
+    - "http://127.0.0.1:2379"
 # keystone configuraion
 keystone:
     use_keystone: true

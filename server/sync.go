@@ -26,10 +26,10 @@ import (
 )
 
 const (
-	syncPath = "gohan/cluster/sync"
-	lockPath = "gohan/cluster/lock"
+	syncPath = "/gohan/cluster/sync"
+	lockPath = "/gohan/cluster/lock"
 
-	configPrefix = "/config/"
+	configPrefix = "/config"
 
 	eventPollingTime  = 30 * time.Second
 	eventPollingLimit = 10000
