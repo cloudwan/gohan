@@ -13,7 +13,7 @@ cron:
       timing: "*/5 * * * * *"
 
 etcd:
-    - http://127.0.0.1:4001
+    - http://127.0.0.1:2379
 ```
 
 In extension, you need to specify path which maches specified in the config file.

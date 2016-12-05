@@ -651,9 +651,9 @@ var _ = Describe("Server package test", func() {
 
 			Expect(server.Sync()).To(Succeed())
 
-			sync := gohan_etcd.NewSync(nil)
+			sync := gohan_etcd.NewSync([]string{"http://127.0.0.1:2379"})
 
-			writtenConfig, err := sync.Fetch("config/" + networkResource.Path())
+			writtenConfig, err := sync.Fetch("/config/" + networkResource.Path())
 			Expect(err).ToNot(HaveOccurred())
 
 			var configContentsRaw interface{}

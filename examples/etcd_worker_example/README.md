@@ -15,7 +15,7 @@ watch:
     worker_count: 4
 
 etcd:
-    - http://127.0.0.1:4001
+    - http://127.0.0.1:2379
 ```
 
 Then you can execute extension using sync:// + event path.

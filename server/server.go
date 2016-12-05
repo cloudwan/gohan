@@ -26,6 +26,7 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/braintree/manners"
 	"github.com/cloudwan/gohan/cloud"
@@ -36,6 +37,7 @@ import (
 	"github.com/cloudwan/gohan/server/middleware"
 	"github.com/cloudwan/gohan/sync"
 	"github.com/cloudwan/gohan/sync/etcd"
+	"github.com/cloudwan/gohan/sync/etcdv3"
 	"github.com/cloudwan/gohan/util"
 	"github.com/drone/routes"
 	"github.com/go-martini/martini"
@@ -210,10 +212,25 @@ func NewServer(configFile string) (*Server, error) {
 		}
 	}
 
-	etcdServers := config.GetStringList("etcd", nil)
-	if etcdServers != nil {
-		log.Info("etcd servers: %s", etcdServers)
-		server.sync = etcd.NewSync(etcdServers)
+	syncType := config.GetString("sync", "etcd")
+	switch syncType {
+	case "etcd":
+		etcdServers := config.GetStringList("etcd", nil)
+		if etcdServers != nil {
+			log.Info("etcd servers: %s", etcdServers)
+			server.sync = etcd.NewSync(etcdServers)
+		}
+	case "etcdv3":
+		etcdServers := config.GetStringList("etcd", nil)
+		if etcdServers != nil {
+			log.Info("etcd servers: %s", etcdServers)
+			server.sync, err = etcdv3.NewSync(etcdServers, time.Second)
+			if err != nil {
+				return nil, fmt.Errorf("failed to connect to etcd servers: %s", err)
+			}
+		}
+	default:
+		return nil, fmt.Errorf("invalid sync type: %s", syncType)
 	}
 
 	server.connectDB()

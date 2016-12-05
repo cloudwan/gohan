@@ -36,7 +36,7 @@ keystone:
 cors: "*"
 
 etcd:
-    - http://127.0.0.1:4001
+    - http://127.0.0.1:2379
 
 # allowed levels  "CRITICAL", "ERROR", "WARNING", "NOTICE", "INFO", "DEBUG",
 logging:

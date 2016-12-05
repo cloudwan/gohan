@@ -9,9 +9,9 @@ machine:
 
 dependencies:
   override:
-    - curl -L https://github.com/coreos/etcd/releases/download/v2.3.7/etcd-v2.3.7-linux-amd64.tar.gz -o etcd-v2.3.7-linux-amd64.tar.gz
-    - tar xzvf etcd-v2.3.7-linux-amd64.tar.gz
-    - sudo install etcd-v2.3.7-linux-amd64/etcd /usr/bin
+    - curl -L https://github.com/coreos/etcd/releases/download/v3.0.15/etcd-v3.0.15-linux-amd64.tar.gz -o etcd-v3.0.15-linux-amd64.tar.gz
+    - tar xzvf etcd-v3.0.15-linux-amd64.tar.gz
+    - sudo install etcd-v3.0.15-linux-amd64/etcd /usr/bin
     - go get github.com/mattn/goveralls
     - make deps
 

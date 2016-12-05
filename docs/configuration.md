@@ -44,7 +44,7 @@ Gohan server configuration uses YAML format.
   document_root: "./etc"
   # list of etcd backend servers
   etcd:
-      - "http://127.0.0.1:4001"
+      - "http://127.0.0.1:2379"
   # keystone configuraion
   keystone:
       use_keystone: false
@@ -305,14 +305,19 @@ You can select extension types you use.
 
   Clients such as WebUI needs gohan-meta-schema file. We will serve the file from configured document_root.
 
+- sync
+
+  Sync type. The default is `etcd`, which means the etcd API version 2.
+  `etcdv3` is available for etcd API version 3.
+
 - etcd
 
   list of etcd backend.
 
 ```
   etcd:
-      - "http://192.0.0.1:4001"
-      - "http://192.0.0.2:4001"
+      - "http://192.0.0.1:2379"
+      - "http://192.0.0.2:2379"
 ```
 
 - run job on an update from etcd
