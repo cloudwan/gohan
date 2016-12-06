@@ -106,6 +106,8 @@ func (server *Server) syncEvent(resource *schema.Resource) error {
 	eventType := resource.Get("type").(string)
 	resourcePath := resource.Get("path").(string)
 	body := resource.Get("body").(string)
+	syncPlain := resource.Get("sync_plain").(bool)
+	syncProperty := resource.Get("sync_property").(string)
 
 	path := generatePath(resourcePath, body)
 
@@ -117,15 +119,47 @@ func (server *Server) syncEvent(resource *schema.Resource) error {
 
 	if eventType == "create" || eventType == "update" {
 		log.Debug("set %s on sync", path)
-		content, err := json.Marshal(map[string]interface{}{
-			"body":    body,
-			"version": version,
-		})
-		if err != nil {
-			log.Error(fmt.Sprintf("When marshalling sync object: %s", err))
-			return err
+
+		content := body
+
+		var data map[string]interface{}
+		if syncProperty != "" {
+			err = json.Unmarshal(([]byte)(body), &data)
+			if err != nil {
+				log.Error(fmt.Sprintf("failed to unmarshal body on sync: %s", err))
+				return err
+			}
+			target, ok := data[syncProperty]
+			if !ok {
+				return fmt.Errorf("could not find property `%s`", syncProperty)
+			}
+			jsonData, err := json.Marshal(target)
+			if err != nil {
+				return err
+			}
+			content = string(jsonData)
 		}
-		err = server.sync.Update(path, string(content))
+
+		if syncPlain {
+			var target interface{}
+			json.Unmarshal([]byte(content), &target)
+			switch target.(type) {
+			case string:
+				content = fmt.Sprintf("%v", target)
+			}
+		} else {
+			data, err := json.Marshal(map[string]interface{}{
+				"body":    content,
+				"version": version,
+			})
+			if err != nil {
+				log.Error(fmt.Sprintf("When marshalling sync object: %s", err))
+				return err
+			}
+			content = string(data)
+		}
+
+		err = server.sync.Update(path, content)
 		if err != nil {
 			log.Error(fmt.Sprintf("%s on sync", err))
 			return err

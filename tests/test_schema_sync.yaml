@@ -1,0 +1,85 @@
+schemas:
+  - id: "with_sync_property"
+    metadata:
+      state_versioning: true
+      sync_property: "p0"
+    title: "with_sync_property"
+    description: "with_sync_property"
+    singular: "with_sync_property"
+    plural: "with_sync_properties"
+    prefix: "/v2.0"
+    schema:
+      properties:
+        id:
+          format: "uuid"
+          permission:
+            - "create"
+          title: "ID"
+          description: "ID"
+          type: "string"
+          unique: false
+        p0:
+          permission:
+            - "create"
+            - "update"
+          title: "property 0"
+          description: "property 0"
+          type: "string"
+          unique: false
+
+  - id: "with_sync_plain"
+    metadata:
+      state_versioning: true
+      sync_plain: true
+    title: "with_sync_plain"
+    description: "with_sync_plain"
+    singular: "with_sync_plain"
+    plural: "with_sync_plains"
+    prefix: "/v2.0"
+    schema:
+      properties:
+        id:
+          format: "uuid"
+          permission:
+            - "create"
+          title: "ID"
+          description: "ID"
+          type: "string"
+          unique: false
+        p0:
+          permission:
+            - "create"
+            - "update"
+          title: "property 0"
+          description: "property 0"
+          type: "string"
+          unique: false
+
+  - id: "with_sync_plain_string"
+    metadata:
+      state_versioning: true
+      sync_plain: true
+      sync_property: "p0"
+    title: "with_sync_plain"
+    description: "with_sync_plain"
+    singular: "with_sync_plain"
+    plural: "with_sync_plains"
+    prefix: "/v2.0"
+    schema:
+      properties:
+        id:
+          format: "uuid"
+          permission:
+            - "create"
+          title: "ID"
+          description: "ID"
+          type: "string"
+          unique: false
+        p0:
+          permission:
+            - "create"
+            - "update"
+          title: "property 0"
+          description: "property 0"
+          type: "string"
+          unique: false

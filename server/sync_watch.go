@@ -84,8 +84,6 @@ func startSyncWatchProcess(server *Server) {
 					defer util.LogPanic(log)
 					for _, event := range events {
 						//match extensions
-						fmt.Println(response.Key)
-						fmt.Println("/" + event)
 						if strings.HasPrefix(response.Key, "/"+event) {
 							env := extensions[event]
 							runExtensionOnSync(server, response, env.Clone())
