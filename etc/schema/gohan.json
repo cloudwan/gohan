@@ -69,14 +69,7 @@
                             "update"
                         ],
                         "title": "Metadata",
-                        "type": "object",
-
-                        "patternProperties": {
-                            "sync_key_template": {
-                                "type": "string",
-                                "format": "sync-key-template"
-                            }
-                        }
+                        "type": "object"
                     },
                     "namespace": {
                         "default": "",
@@ -648,6 +641,22 @@
                         "title": "Event body",
                         "type": "object"
                     },
+                    "sync_plain": {
+                        "description": "sync_plain",
+                        "permission": [
+                            "create"
+                        ],
+                        "title": "Sync without Gohan JSON marshaling",
+                        "type": "boolean"
+                    },
+                    "sync_property": {
+                        "description": "sync_property",
+                        "permission": [
+                            "create"
+                        ],
+                        "title": "Property name to sync",
+                        "type": "string"
+                    },
                     "version": {
                         "description": "The version of the config this event created",
                         "permission": [
@@ -699,6 +708,8 @@
                 },
                 "propertiesOrder": [
                     "id",
+                    "sync_plain",
+                    "sync_property",
                     "type",
                     "path",
                     "timestamp",

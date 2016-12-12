@@ -145,7 +145,17 @@ We don't sync this resource for sync backend when this option is true.
 - sync_key_template (string)
 
   configurable sync key path for schemas based on properties, for example: /v1.0/devices/{{device_id}}/virtual_machine/{{id}},
-  it must contain '{{id}}'
+
+- sync_plain (boolean)
+
+  Write plain data, which is not JSON marshaled in the Gohan format, to the sync backend if true.
+  By default, which is false, Gohan writes sync data in JSON with its own format. The format has `body` and `version` properties, then the value of the resource, which is also JSON object, is stored in the `body` property with escaping (e.g. `{"body": "{\"id\":1,\"property\":\"value\"}", "version": 1}`).
+  However, this format is not always supported by your worker. Therefore you sometimes want Gohan to write sync data in a simpler way. This option allow you to get the body JSON data without encapsulation by Gohan (e.g. `{"id":1,"property":"value"}`).
+  Note that when you use this option with `sync_property`, you can get the value of a specified property. For instance, when you provide `property` to `sync_property`, you will get `value` for the result. In this case, when the type of the value is `string`, Gohan doesn't marshal the value into a JSON string, which means you don't get `"value"` here. When the value is an array or an object, you will get a JSON marshalled string.
+
+- sync_property (string)
+
+  Write only the value of the specified property to the sync backend.
 
 ## Properties
 

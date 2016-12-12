@@ -68,16 +68,38 @@ func (tl *transactionEventLogger) logEvent(eventType string, resource *schema.Re
 		log.Debug("skipping event logging for schema: %s", resource.Schema().ID)
 		return nil
 	}
+
 	body, err := resource.JSONString()
+
+	syncPlain := false
+	syncPlainRaw, ok := resource.Schema().Metadata["sync_plain"]
+	if ok {
+		syncPlainBool, ok := syncPlainRaw.(bool)
+		if ok {
+			syncPlain = syncPlainBool
+		}
+	}
+
+	syncProperty := ""
+	syncPropertyRaw, ok := resource.Schema().Metadata["sync_property"]
+	if ok {
+		syncPropertyStr, ok := syncPropertyRaw.(string)
+		if ok {
+			syncProperty = syncPropertyStr
+		}
+	}
+
 	if err != nil {
 		return fmt.Errorf("Error during event resource deserialisation: %s", err.Error())
 	}
 	eventResource, err := schema.NewResource(eventSchema, map[string]interface{}{
-		"type":      eventType,
-		"path":      resource.Path(),
-		"version":   version,
-		"body":      body,
-		"timestamp": int64(time.Now().Unix()),
+		"type":          eventType,
+		"path":          resource.Path(),
+		"version":       version,
+		"body":          body,
+		"sync_plain":    syncPlain,
+		"sync_property": syncProperty,
+		"timestamp":     int64(time.Now().Unix()),
 	})
 	tl.eventLogged = true
 	return tl.Transaction.Create(eventResource)

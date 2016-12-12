@@ -678,6 +678,131 @@ var _ = Describe("Server package test", func() {
 			_, err = sync.Fetch(networkResource.Path())
 			Expect(err).To(HaveOccurred(), "Failed to sync db resource deletion to sync backend")
 		})
+
+		Context("With sync_property", func() {
+			It("should write only speficied property", func() {
+				manager := schema.GetManager()
+				schema, _ := manager.Schema("with_sync_property")
+				resource, err := manager.LoadResource(
+					"with_sync_property", map[string]interface{}{
+						"id": "r0", "p0": "property0",
+					})
+				Expect(err).ToNot(HaveOccurred())
+				testDB1 := &srv.DbSyncWrapper{DB: testDB}
+				tx, err := testDB1.Begin()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(tx.Create(resource)).To(Succeed())
+				Expect(tx.Commit()).To(Succeed())
+				tx.Close()
+
+				Expect(server.Sync()).To(Succeed())
+
+				sync := gohan_etcd.NewSync([]string{"http://127.0.0.1:2379"})
+
+				writtenConfig, err := sync.Fetch("/config/" + resource.Path())
+				Expect(err).ToNot(HaveOccurred())
+
+				var configContentsRaw interface{}
+				Expect(json.Unmarshal([]byte(writtenConfig.Value), &configContentsRaw)).To(Succeed())
+				configContents, ok := configContentsRaw.(map[string]interface{})
+				Expect(ok).To(BeTrue())
+				Expect(configContents).To(HaveKeyWithValue("version", float64(1)))
+				var p0If interface{}
+				Expect(json.Unmarshal([]byte(configContents["body"].(string)), &p0If)).To(Succeed())
+				p0, ok := p0If.(string)
+				Expect(ok).To(BeTrue())
+				Expect(p0).To(BeEquivalentTo("property0"))
+
+				tx, err = testDB1.Begin()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(tx.Delete(schema, resource.ID())).To(Succeed())
+				Expect(tx.Commit()).To(Succeed())
+				tx.Close()
+
+				Expect(server.Sync()).To(Succeed())
+
+				_, err = sync.Fetch(resource.Path())
+				Expect(err).To(HaveOccurred(), "Failed to sync db resource deletion to sync backend")
+			})
+		})
+
+		Context("With sync_plain", func() {
+			It("should write data without marshaling", func() {
+				manager := schema.GetManager()
+				schema, _ := manager.Schema("with_sync_plain")
+				resource, err := manager.LoadResource(
+					"with_sync_plain", map[string]interface{}{
+						"id": "r0", "p0": "property0",
+					})
+				Expect(err).ToNot(HaveOccurred())
+				testDB1 := &srv.DbSyncWrapper{DB: testDB}
+				tx, err := testDB1.Begin()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(tx.Create(resource)).To(Succeed())
+				Expect(tx.Commit()).To(Succeed())
+				tx.Close()
+
+				Expect(server.Sync()).To(Succeed())
+
+				sync := gohan_etcd.NewSync([]string{"http://127.0.0.1:2379"})
+
+				writtenConfig, err := sync.Fetch("/config/" + resource.Path())
+				Expect(err).ToNot(HaveOccurred())
+
+				var configContentsRaw map[string]interface{}
+				Expect(json.Unmarshal([]byte(writtenConfig.Value), &configContentsRaw)).To(Succeed())
+				Expect(configContentsRaw).To(HaveKeyWithValue("id", "r0"))
+				Expect(configContentsRaw).To(HaveKeyWithValue("p0", "property0"))
+
+				tx, err = testDB1.Begin()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(tx.Delete(schema, resource.ID())).To(Succeed())
+				Expect(tx.Commit()).To(Succeed())
+				tx.Close()
+
+				Expect(server.Sync()).To(Succeed())
+
+				_, err = sync.Fetch(resource.Path())
+				Expect(err).To(HaveOccurred(), "Failed to sync db resource deletion to sync backend")
+			})
+		})
+
+		Context("With sync_plain and sync_property in string", func() {
+			It("should write data without marshaling", func() {
+				manager := schema.GetManager()
+				schema, _ := manager.Schema("with_sync_plain_string")
+				resource, err := manager.LoadResource(
+					"with_sync_plain_string", map[string]interface{}{
+						"id": "r0", "p0": "property0",
+					})
+				Expect(err).ToNot(HaveOccurred())
+				testDB1 := &srv.DbSyncWrapper{DB: testDB}
+				tx, err := testDB1.Begin()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(tx.Create(resource)).To(Succeed())
+				Expect(tx.Commit()).To(Succeed())
+				tx.Close()
+
+				Expect(server.Sync()).To(Succeed())
+
+				sync := gohan_etcd.NewSync([]string{"http://127.0.0.1:2379"})
+
+				writtenConfig, err := sync.Fetch("/config/" + resource.Path())
+				Expect(err).ToNot(HaveOccurred())
+				Expect(writtenConfig.Value).To(BeEquivalentTo("property0"))
+
+				tx, err = testDB1.Begin()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(tx.Delete(schema, resource.ID())).To(Succeed())
+				Expect(tx.Commit()).To(Succeed())
+				tx.Close()
+
+				Expect(server.Sync()).To(Succeed())
+
+				_, err = sync.Fetch(resource.Path())
+				Expect(err).To(HaveOccurred(), "Failed to sync db resource deletion to sync backend")
+			})
+		})
 	})
 
 	Describe("Updating the state", func() {
