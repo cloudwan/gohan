@@ -38,9 +38,9 @@ var _ = Describe("Environment manager", func() {
 
 	BeforeEach(func() {
 		env1 = otto.NewEnvironment("extension_test1",
-			testDB1, &middleware.FakeIdentity{}, time.Second)
+			testDB1, &middleware.FakeIdentity{}, time.Second, testSync)
 		env2 = otto.NewEnvironment("extension_test2",
-			testDB2, &middleware.FakeIdentity{}, time.Second)
+			testDB2, &middleware.FakeIdentity{}, time.Second, testSync)
 	})
 
 	JustBeforeEach(func() {

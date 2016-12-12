@@ -26,6 +26,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/cloudwan/gohan/sync/etcdv3"
+	"time"
 )
 
 const (
@@ -33,6 +35,7 @@ const (
 	configFile        = "./server_test_config.yaml"
 	dbType            = "sqlite3"
 	dbFile            = "./test.db"
+	testSyncEndpoint = "localhost:2379"
 	adminTokenID      = "admin_token"
 	memberTokenID     = "demo_token"
 	powerUserTokenID  = "power_user_token"
@@ -43,6 +46,8 @@ const (
 
 var (
 	testDB    db.DB
+	testSync *etcdv3.Sync
+
 	whitelist = map[string]bool{
 		"schema":    true,
 		"policy":    true,
@@ -87,6 +92,8 @@ var _ = Describe("Suite set up and tear down", func() {
 		Expect(os.Chdir(configDir)).To(Succeed())
 		testDB, err = db.ConnectDB(dbType, dbFile, db.DefaultMaxOpenConn)
 		Expect(err).ToNot(HaveOccurred(), "Failed to connect database.")
+		testSync, err = etcdv3.NewSync([]string{testSyncEndpoint}, time.Second)
+		Expect(err).NotTo(HaveOccurred(), "Failed to connect to etcd")
 		manager := schema.GetManager()
 		config := util.GetConfig()
 		Expect(config.ReadConfig(configFile)).To(Succeed())
@@ -98,6 +105,7 @@ var _ = Describe("Suite set up and tear down", func() {
 
 	var _ = AfterSuite(func() {
 		schema.ClearManager()
+		testSync.Close()
 		os.Remove(dbFile)
 	})
 })

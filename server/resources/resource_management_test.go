@@ -86,7 +86,7 @@ var _ = Describe("Resource manager", func() {
 		context["auth"] = auth
 
 		env = otto.NewEnvironment("resource_management_test",
-			testDB, &middleware.FakeIdentity{}, timelimit)
+			testDB, &middleware.FakeIdentity{}, timelimit, testSync)
 		extensions = []*schema.Extension{}
 		for event, javascript := range events {
 			extension, err := schema.NewExtension(map[string]interface{}{

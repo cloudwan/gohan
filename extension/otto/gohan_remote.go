@@ -106,7 +106,7 @@ func init() {
 			},
 			"gohan_ssh_open": func(call otto.FunctionCall) otto.Value {
 				if len(call.ArgumentList) != 2 {
-					panic("Wrong number of arguments in gohan_netconf_open call.")
+					panic("Wrong number of arguments in gohan_ssh_open call.")
 				}
 				rawHost, _ := call.Argument(0).Export()
 				host, ok := rawHost.(string)
@@ -142,7 +142,7 @@ func init() {
 			},
 			"gohan_ssh_close": func(call otto.FunctionCall) otto.Value {
 				if len(call.ArgumentList) != 1 {
-					panic("Wrong number of arguments in gohan_netconf_close call.")
+					panic("Wrong number of arguments in gohan_ssh_close call.")
 				}
 				rawSession, _ := call.Argument(0).Export()
 				s, ok := rawSession.(*ssh.Session)
@@ -154,7 +154,7 @@ func init() {
 			},
 			"gohan_ssh_exec": func(call otto.FunctionCall) otto.Value {
 				if len(call.ArgumentList) != 2 {
-					panic("Wrong number of arguments in gohan_netconf_exec call.")
+					panic("Wrong number of arguments in gohan_ssh_exec call.")
 				}
 				rawSession, _ := call.Argument(0).Export()
 				s, ok := rawSession.(*ssh.Session)

@@ -24,6 +24,7 @@ import (
 	ext "github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/server/middleware"
+	"github.com/cloudwan/gohan/sync"
 
 	"github.com/ddliu/motto"
 	"github.com/robertkrimen/otto"
@@ -58,10 +59,12 @@ type Environment struct {
 	DataStore db.DB
 	timelimit time.Duration
 	Identity  middleware.IdentityService
+	Sync      sync.Sync
 }
 
 //NewEnvironment create new gohan extension environment based on context
-func NewEnvironment(name string, dataStore db.DB, identity middleware.IdentityService, timelimit time.Duration) *Environment {
+func NewEnvironment(name string, dataStore db.DB, identity middleware.IdentityService,
+                    timelimit time.Duration, sync sync.Sync) *Environment {
 	vm := motto.New()
 	vm.Interrupt = make(chan func(), 1)
 	env := &Environment{
@@ -70,6 +73,7 @@ func NewEnvironment(name string, dataStore db.DB, identity middleware.IdentitySe
 		DataStore: dataStore,
 		Identity:  identity,
 		timelimit: timelimit,
+		Sync:      sync,
 	}
 	env.SetUp()
 	return env
@@ -224,7 +228,7 @@ func (env *Environment) HandleEvent(event string, context map[string]interface{}
 
 //Clone makes clone of the environment
 func (env *Environment) Clone() ext.Environment {
-	newEnv := NewEnvironment(env.Name, env.DataStore, env.Identity, env.timelimit)
+	newEnv := NewEnvironment(env.Name, env.DataStore, env.Identity, env.timelimit, env.Sync)
 	newEnv.VM.Otto = env.VM.Copy()
 	return newEnv
 }
@@ -241,6 +245,10 @@ func (env *Environment) GetOrCreateTransaction(value otto.Value) (transaction.Tr
 		return nil, false, fmt.Errorf("Error creating transaction: %v", err.Error())
 	}
 	return tx, true, nil
+}
+
+func (env *Environment) ClearEnvironment()  {
+	env.Sync.Close()
 }
 
 func throwOtto(call *otto.FunctionCall, exceptionName string, arguments ...interface{}) {

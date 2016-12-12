@@ -29,6 +29,7 @@ import (
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/server/middleware"
+	"github.com/cloudwan/gohan/sync/etcdv3"
 	"github.com/robertkrimen/otto"
 
 	//Import otto underscore lib
@@ -77,10 +78,16 @@ func (env *Environment) InitializeEnvironment() error {
 	if err != nil {
 		return fmt.Errorf("Failed to connect to database: %s", err.Error())
 	}
+	endpoints := []string{"localhost:2379"}
+	etcd, err := etcdv3.NewSync(endpoints, time.Second)
+	if err != nil {
+		return fmt.Errorf("Failed to connect to etcd: %s", err.Error())
+	}
 	envName := strings.TrimSuffix(
 		filepath.Base(env.testFileName),
 		filepath.Ext(env.testFileName))
-	env.Environment = gohan_otto.NewEnvironment(envName, env.dbConnection, &middleware.FakeIdentity{}, 30*time.Second)
+	env.Environment = gohan_otto.NewEnvironment(envName, env.dbConnection,
+							&middleware.FakeIdentity{}, 30 * time.Second, etcd)
 	env.SetUp()
 	env.addTestingAPI()
 
@@ -141,7 +148,9 @@ func (env *Environment) ClearEnvironment() {
 	toDelete := env.dbFile.Name()
 	env.dbFile.Close()
 	os.Remove(toDelete)
+	env.Sync.Close()
 	schema.ClearManager()
+	env.Environment.ClearEnvironment()
 }
 
 // CheckAllMockCallsMade check if all declared mock calls were made

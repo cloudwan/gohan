@@ -89,6 +89,7 @@ func (s *Sync) recursiveFetch(node *etcd.Node) (*sync.Node, error) {
 
 	n := &sync.Node{
 		Key: node.Key,
+		Revision: int64(node.ModifiedIndex),
 	}
 	if node.Dir {
 		n.Children = children
@@ -163,10 +164,8 @@ func eventsFromNode(action string, node *etcd.Node, responseChan chan *sync.Even
 }
 
 //Watch keep watch update under the path
-func (s *Sync) Watch(path string, responseChan chan *sync.Event, stopChan chan bool) error {
-	var etcdResponseChan chan *etcd.Response
-
-	etcdResponseChan = make(chan *etcd.Response)
+func (s *Sync) Watch(path string, responseChan chan *sync.Event, stopChan chan bool, revision int64) error {
+	etcdResponseChan := make(chan *etcd.Response)
 	response, err := s.etcdClient.Get(path, true, true)
 	if err != nil {
 		if etcdError, ok := err.(*etcd.EtcdError); ok {
@@ -186,7 +185,12 @@ func (s *Sync) Watch(path string, responseChan chan *sync.Event, stopChan chan b
 			return err
 		}
 	}
-	lastIndex := response.EtcdIndex + 1
+	var lastIndex uint64
+	if revision == sync.RevisionCurrent {
+		lastIndex = response.EtcdIndex + 1
+	} else {
+		lastIndex = uint64(revision)
+	}
 	eventsFromNode(response.Action, response.Node, responseChan)
 	go func() {
 		_, err = s.etcdClient.Watch(path, lastIndex, true, etcdResponseChan, stopChan)
@@ -217,4 +221,8 @@ func (s *Sync) Watch(path string, responseChan chan *sync.Event, stopChan chan b
 			}
 		}
 	}
+}
+
+func (s *Sync) Close()  {
+	// nothing to do
 }
