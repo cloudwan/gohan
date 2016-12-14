@@ -202,6 +202,18 @@ var _ = Describe("Runner", func() {
 			})
 		})
 
+		Context("When loading extensions from schema includes", func() {
+			BeforeEach(func() {
+				testFile = "./test_data/load_schema_includes.js"
+			})
+
+			It("Should return no errors", func() {
+				Expect(errors).To(HaveLen(2))
+				Expect(errors).To(HaveKeyWithValue("testExtension1Loaded", BeNil()))
+				Expect(errors).To(HaveKeyWithValue("testExtension2NotLoaded", BeNil()))
+			})
+		})
+
 		Context("When using filter", func() {
 			BeforeEach(func() {
 				testFile = "./test_data/extension_loading.js"
