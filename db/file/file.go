@@ -54,6 +54,10 @@ func (db *DB) Connect(format, conn string, maxOpenConn int) error {
 	return nil
 }
 
+func (db *DB) Close() {
+	// nothing to do
+}
+
 //Begin connection starts new transaction
 func (db *DB) Begin() (transaction.Transaction, error) {
 	return &Transaction{
