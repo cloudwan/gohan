@@ -233,6 +233,8 @@ func (env *Environment) addTestingAPI() {
 	env.mockFunction("gohan_raw_http")
 	env.mockFunction("gohan_db_transaction")
 	env.mockFunction("gohan_config")
+	env.mockFunction("gohan_sync_fetch")
+	env.mockFunction("gohan_sync_watch")
 }
 
 func (env *Environment) getTransaction(isNew bool) transaction.Transaction {
