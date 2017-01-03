@@ -21,21 +21,24 @@ import (
 
 	"github.com/cloudwan/gohan/db/pagination"
 	"github.com/cloudwan/gohan/db/transaction"
-	"github.com/cloudwan/gohan/db/transaction/mocks"
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/extension/otto"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/server/middleware"
 
+	"github.com/cloudwan/gohan/db"
+	db_mocks "github.com/cloudwan/gohan/db/mocks"
+	"github.com/cloudwan/gohan/db/transaction/mocks"
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
-func newEnvironmentWithExtension(extension *schema.Extension) (env extension.Environment) {
+func newEnvironmentWithExtension(extension *schema.Extension, db db.DB) (env extension.Environment) {
 	timelimit := time.Duration(1) * time.Second
 	extensions := []*schema.Extension{extension}
 	env = otto.NewEnvironment("db_test",
-		testDB, &middleware.FakeIdentity{}, timelimit, testSync)
+		db, &middleware.FakeIdentity{}, timelimit, testSync)
 	Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
 	return
 }
@@ -48,6 +51,7 @@ var _ = Describe("GohanDb", func() {
 		fakeResources []map[string]interface{}
 		err           error
 		r0, r1        *schema.Resource
+		mockCtrl      *gomock.Controller
 	)
 
 	var ()
@@ -56,6 +60,7 @@ var _ = Describe("GohanDb", func() {
 		manager = schema.GetManager()
 		s, ok = manager.Schema("test")
 		Expect(ok).To(BeTrue())
+		mockCtrl = gomock.NewController(GinkgoT())
 
 		fakeResources = []map[string]interface{}{
 			map[string]interface{}{"tenant_id": "t0", "test_string": "str0", "test_bool": false},
@@ -66,6 +71,68 @@ var _ = Describe("GohanDb", func() {
 		Expect(err).ToNot(HaveOccurred())
 		r1, err = schema.NewResource(s, fakeResources[1])
 		Expect(err).ToNot(HaveOccurred())
+
+	})
+
+	AfterEach(func() {
+		mockCtrl.Finish()
+	})
+
+	Describe("gohan_db_transaction", func() {
+		Context("When no argument is given", func() {
+			It("doesn't run SetIsolationLevel method", func() {
+				ext, err := schema.NewExtension(map[string]interface{}{
+					"id": "test_extension",
+					"code": `
+					  gohan_register_handler("test_event", function(context){
+					    var tx = gohan_db_transaction();
+					    tx.Commit();
+					    tx.Close();
+					  });`,
+					"path": ".*",
+				})
+				Expect(err).ToNot(HaveOccurred())
+				var fakeTx = new(mocks.Transaction)
+				fakeTx.On("Commit").Return(nil)
+				fakeTx.On("Close").Return(nil)
+				mockDB := db_mocks.NewMockDB(mockCtrl)
+				mockDB.EXPECT().Begin().Return(fakeTx, nil)
+				env := newEnvironmentWithExtension(ext, mockDB)
+
+				context := map[string]interface{}{}
+
+				Expect(env.HandleEvent("test_event", context)).To(Succeed())
+				fakeTx.AssertExpectations(GinkgoT())
+			})
+		})
+
+		Context("When proper isolation level argument is given", func() {
+			It("runs SetIsolationLevel method", func() {
+				ext, err := schema.NewExtension(map[string]interface{}{
+					"id": "test_extension",
+					"code": `
+					  gohan_register_handler("test_event", function(context){
+					    var tx = gohan_db_transaction("Serializable");
+					    tx.Commit();
+					    tx.Close();
+					  });`,
+					"path": ".*",
+				})
+				Expect(err).ToNot(HaveOccurred())
+				var fakeTx = new(mocks.Transaction)
+				fakeTx.On("SetIsolationLevel", transaction.Serializable).Return(nil)
+				fakeTx.On("Commit").Return(nil)
+				fakeTx.On("Close").Return(nil)
+				mockDB := db_mocks.NewMockDB(mockCtrl)
+				mockDB.EXPECT().Begin().Return(fakeTx, nil)
+				env := newEnvironmentWithExtension(ext, mockDB)
+
+				context := map[string]interface{}{}
+
+				Expect(env.HandleEvent("test_event", context)).To(Succeed())
+				fakeTx.AssertExpectations(GinkgoT())
+			})
+		})
 
 	})
 
@@ -86,7 +153,7 @@ var _ = Describe("GohanDb", func() {
 					"path": ".*",
 				})
 				Expect(err).ToNot(HaveOccurred())
-				env := newEnvironmentWithExtension(extension)
+				env := newEnvironmentWithExtension(extension, testDB)
 
 				var pagenator *pagination.Paginator
 				var fakeTx = new(mocks.Transaction)
@@ -127,7 +194,7 @@ var _ = Describe("GohanDb", func() {
 					"path": ".*",
 				})
 				Expect(err).ToNot(HaveOccurred())
-				env := newEnvironmentWithExtension(extension)
+				env := newEnvironmentWithExtension(extension, testDB)
 
 				var pagenator *pagination.Paginator
 				var fakeTx = new(mocks.Transaction)
@@ -171,7 +238,7 @@ var _ = Describe("GohanDb", func() {
 					"path": ".*",
 				})
 				Expect(err).ToNot(HaveOccurred())
-				env := newEnvironmentWithExtension(extension)
+				env := newEnvironmentWithExtension(extension, testDB)
 
 				pagenator := &pagination.Paginator{
 					Key:   "test_string",
@@ -217,7 +284,7 @@ var _ = Describe("GohanDb", func() {
 					"path": ".*",
 				})
 				Expect(err).ToNot(HaveOccurred())
-				env := newEnvironmentWithExtension(extension)
+				env := newEnvironmentWithExtension(extension, testDB)
 
 				pagenator := &pagination.Paginator{
 					Key:   "test_string",
@@ -265,7 +332,7 @@ var _ = Describe("GohanDb", func() {
 					"path": ".*",
 				})
 				Expect(err).ToNot(HaveOccurred())
-				env := newEnvironmentWithExtension(extension)
+				env := newEnvironmentWithExtension(extension, testDB)
 
 				pagenator := &pagination.Paginator{
 					Key:    "test_string",
@@ -315,7 +382,7 @@ var _ = Describe("GohanDb", func() {
 					"path": ".*",
 				})
 				Expect(err).ToNot(HaveOccurred())
-				env := newEnvironmentWithExtension(extension)
+				env := newEnvironmentWithExtension(extension, testDB)
 
 				var fakeTx = new(mocks.Transaction)
 				fakeTx.On(
@@ -364,7 +431,7 @@ var _ = Describe("GohanDb", func() {
 					"path": ".*",
 				})
 				Expect(err).ToNot(HaveOccurred())
-				env := newEnvironmentWithExtension(extension)
+				env := newEnvironmentWithExtension(extension, testDB)
 
 				context := map[string]interface{}{}
 				Expect(env.HandleEvent("test_event", context)).To(Succeed())
@@ -385,7 +452,7 @@ var _ = Describe("GohanDb", func() {
 					"path": ".*",
 				})
 				Expect(err).ToNot(HaveOccurred())
-				env := newEnvironmentWithExtension(extension)
+				env := newEnvironmentWithExtension(extension, testDB)
 
 				context := map[string]interface{}{}
 				err = env.HandleEvent("test_event", context)
@@ -414,7 +481,7 @@ var _ = Describe("GohanDb", func() {
 					"path": ".*",
 				})
 				Expect(err).ToNot(HaveOccurred())
-				env := newEnvironmentWithExtension(extension)
+				env := newEnvironmentWithExtension(extension, testDB)
 
 				var fakeTx = new(mocks.Transaction)
 				fakeTx.On(
@@ -448,7 +515,7 @@ var _ = Describe("GohanDb", func() {
 					"path": ".*",
 				})
 				Expect(err).ToNot(HaveOccurred())
-				env := newEnvironmentWithExtension(extension)
+				env := newEnvironmentWithExtension(extension, testDB)
 
 				context := map[string]interface{}{
 					"transaction": "not_a_transaction",
@@ -477,7 +544,7 @@ var _ = Describe("GohanDb", func() {
 					"path": ".*",
 				})
 				Expect(err).ToNot(HaveOccurred())
-				env := newEnvironmentWithExtension(extension)
+				env := newEnvironmentWithExtension(extension, testDB)
 
 				context := map[string]interface{}{
 					"transaction": new(mocks.Transaction),
@@ -505,7 +572,7 @@ var _ = Describe("GohanDb", func() {
 					"path": ".*",
 				})
 				Expect(err).ToNot(HaveOccurred())
-				env := newEnvironmentWithExtension(extension)
+				env := newEnvironmentWithExtension(extension, testDB)
 
 				context := map[string]interface{}{
 					"transaction": new(mocks.Transaction),
@@ -533,7 +600,7 @@ var _ = Describe("GohanDb", func() {
 					"path": ".*",
 				})
 				Expect(err).ToNot(HaveOccurred())
-				env := newEnvironmentWithExtension(extension)
+				env := newEnvironmentWithExtension(extension, testDB)
 
 				var fakeTx = new(mocks.Transaction)
 				fakeTx.On(
