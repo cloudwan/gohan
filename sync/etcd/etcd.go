@@ -155,6 +155,7 @@ func eventsFromNode(action string, node *etcd.Node, responseChan chan *sync.Even
 	event := &sync.Event{
 		Action: action,
 		Key:    node.Key,
+		Revision: int64(node.ModifiedIndex),
 	}
 	json.Unmarshal([]byte(node.Value), &event.Data)
 	responseChan <- event

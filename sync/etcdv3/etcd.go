@@ -229,6 +229,7 @@ func eventsFromNode(action string, kvs []*pb.KeyValue, responseChan chan *sync.E
 		event := &sync.Event{
 			Action: action,
 			Key:    string(kv.Key),
+			Revision: kv.ModRevision,
 		}
 		if kv.Value != nil {
 			err := json.Unmarshal(kv.Value, &event.Data)

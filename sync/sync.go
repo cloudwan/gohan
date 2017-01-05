@@ -31,9 +31,10 @@ type Sync interface {
 
 //Event is a struct for Watch response
 type Event struct {
-	Action string
-	Key    string
-	Data   map[string]interface{}
+	Action   string
+	Key      string
+	Data     map[string]interface{}
+	Revision int64
 }
 
 //Node is a struct for Fetch response

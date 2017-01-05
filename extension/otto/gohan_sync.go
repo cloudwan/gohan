@@ -27,6 +27,7 @@ func convertSyncEvent(event *sync.Event) map[string]interface{} {
  	jsEvent["action"] = event.Action
 	jsEvent["key"] = event.Key
 	jsEvent["data"] = event.Data
+	jsEvent["revision"] = event.Revision
 
 	return jsEvent
 }
