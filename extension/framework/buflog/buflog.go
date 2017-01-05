@@ -44,7 +44,7 @@ func SetUpLogging(output io.Writer) {
 		"%{color}%{time:15:04:05.000}: %{module} %{level} %{color:reset} %{message}")
 	backendFormatter := logging.NewBackendFormatter(backend, format)
 	leveledBackendFormatter := logging.AddModuleLevel(backendFormatter)
-	leveledBackendFormatter.SetLevel(logging.INFO, "")
+	leveledBackendFormatter.SetLevel(logging.DEBUG, "")
 	leveledBackendFormatter.SetLevel(logging.DEBUG, "extest")
 	logging.SetBackend(leveledBackendFormatter)
 }
