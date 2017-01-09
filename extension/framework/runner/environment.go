@@ -375,6 +375,7 @@ func (env *Environment) loadSchemaIncludes() error {
 				continue
 			}
 
+			schema = filepath.Join(filepath.Dir(schemaIncludes), schema)
 			if err = manager.LoadSchemaFromFile(schema); err != nil {
 				return err
 			}
