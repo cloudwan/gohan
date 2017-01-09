@@ -15,6 +15,8 @@
 
 package sync
 
+const RevisionCurrent = -1
+
 //Sync is a interface for sync servers
 type Sync interface {
 	HasLock(path string) bool
@@ -23,19 +25,22 @@ type Sync interface {
 	Fetch(path string) (*Node, error)
 	Update(path, json string) error
 	Delete(path string) error
-	Watch(path string, responseChan chan *Event, stopChan chan bool) error
+	Watch(path string, responseChan chan *Event, stopChan chan bool, revision int64) error
+	Close()
 }
 
 //Event is a struct for Watch response
 type Event struct {
-	Action string
-	Data   map[string]interface{}
-	Key    string
+	Action   string
+	Key      string
+	Data     map[string]interface{}
+	Revision int64
 }
 
-// Node is a struct for Fetch response
+//Node is a struct for Fetch response
 type Node struct {
-	Value    string
 	Key      string
+	Value    string
+	Revision int64
 	Children []*Node
 }
