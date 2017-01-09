@@ -23,11 +23,14 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/cloudwan/gohan/sync/etcdv3"
+	"time"
 )
 
 var (
 	testDB1 db.DB
 	testDB2 db.DB
+	testSync *etcdv3.Sync
 )
 
 func TestExtension(t *testing.T) {
@@ -39,17 +42,21 @@ var _ = Describe("Suite set up and tear down", func() {
 	const (
 		testDBFile1 = "./extensionTest1.db"
 		testDBFile2 = "./extensionTest2.db"
+		testSyncEndpoint = "localhost:2379"
 	)
 
 	var _ = BeforeSuite(func() {
 		var err error
 		testDB1, err = db.ConnectDB("sqlite3", testDBFile1, db.DefaultMaxOpenConn)
-		Expect(err).NotTo(HaveOccurred())
+		Expect(err).ToNot(HaveOccurred(), "Failed to connect database.")
 		testDB2, err = db.ConnectDB("sqlite3", testDBFile2, db.DefaultMaxOpenConn)
-		Expect(err).NotTo(HaveOccurred())
+		Expect(err).ToNot(HaveOccurred(), "Failed to connect database.")
+		testSync, err = etcdv3.NewSync([]string{testSyncEndpoint}, time.Second)
+		Expect(err).ToNot(HaveOccurred(), "Failed to connect to etcd")
 	})
 
 	var _ = AfterSuite(func() {
+		testSync.Close()
 		os.Remove(testDBFile1)
 		os.Remove(testDBFile2)
 	})

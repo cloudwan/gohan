@@ -66,7 +66,8 @@ func startStateWatchProcess(server *Server) {
 				server.sync.Unlock(lockKey)
 			}()
 
-			err = server.sync.Watch(stateWatchPrefix, stateResponseChan, stateStopChan)
+			err = server.sync.Watch(stateWatchPrefix, stateResponseChan, stateStopChan,
+				gohan_sync.RevisionCurrent)
 			if err != nil {
 				log.Error(fmt.Sprintf("sync state watch error: %s", err))
 			}

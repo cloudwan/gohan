@@ -216,7 +216,7 @@ func TestWatch(t *testing.T) {
 	sync.etcdClient.Put(context.Background(), path+"/existing", `{"existing": true}`)
 
 	go func() {
-		err := sync.Watch(path, responseChan, stopChan)
+		err := sync.Watch(path, responseChan, stopChan, gohan_sync.RevisionCurrent)
 		if err != nil {
 			t.Errorf("failed to watch")
 		}

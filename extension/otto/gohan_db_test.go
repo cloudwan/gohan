@@ -35,7 +35,7 @@ func newEnvironmentWithExtension(extension *schema.Extension) (env extension.Env
 	timelimit := time.Duration(1) * time.Second
 	extensions := []*schema.Extension{extension}
 	env = otto.NewEnvironment("db_test",
-		testDB, &middleware.FakeIdentity{}, timelimit)
+		testDB, &middleware.FakeIdentity{}, timelimit, testSync)
 	Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
 	return
 }

@@ -48,7 +48,8 @@ func (server *Server) newEnvironment(name string) extension.Environment {
 	for _, extension := range server.extensions {
 		switch extension {
 		case "javascript":
-			envs = append(envs, otto.NewEnvironment(name, server.db, server.keystoneIdentity, timelimit))
+			envs = append(envs, otto.NewEnvironment(name, server.db,
+					server.keystoneIdentity, timelimit, server.sync))
 		case "gohanscript":
 			envs = append(envs, gohanscript.NewEnvironment(timelimit))
 		case "go":
