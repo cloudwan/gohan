@@ -25,6 +25,7 @@ import (
 	"github.com/ddliu/motto"
 	"io/ioutil"
 	"strings"
+	"fmt"
 )
 
 var log = logging.MustGetLogger(l.GetModuleName())
@@ -179,6 +180,7 @@ func init() {
 }
 
 func requireFromOtto(moduleName string, vm *otto.Otto) (otto.Value, error) {
+	log.Debug(fmt.Sprintf("Loading module %s from otto", moduleName))
 	rawModule, errRequire := RequireModule(moduleName)
 	if errRequire != nil {
 		return otto.UndefinedValue(), errRequire
@@ -193,12 +195,15 @@ func requireFromOtto(moduleName string, vm *otto.Otto) (otto.Value, error) {
 }
 
 func requireFromMotto(moduleName string, vm *motto.Motto) (otto.Value, error) {
+	log.Debug(fmt.Sprintf("Loading module %s from motto", moduleName))
 	return vm.Require(moduleName, "")
 }
 
 func require(moduleName string, vm *motto.Motto) (otto.Value, error) {
 	value, err := requireFromMotto(moduleName, vm) // NPM
 	if err != nil {
+		log.Error(fmt.Sprintf("Loading module %s from motto failed: %s, trying to load from otto",
+			moduleName, err))
 		value, err = requireFromOtto(moduleName, vm.Otto) // Go extensions
 	}
 
