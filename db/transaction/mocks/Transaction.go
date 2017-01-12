@@ -240,8 +240,17 @@ func (_m *Transaction) Closed() bool {
 }
 
 //SetIsolationLevel specify transaction isolation level
-func (_m *Transaction) SetIsolationLevel(level transaction.Type) error {
-	return nil
+func (_m *Transaction) SetIsolationLevel(_a0 transaction.Type) error {
+	ret := _m.Called(_a0)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(_a0 transaction.Type) error); ok {
+		r0 = rf(_a0)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 // Exec executes sql in transaction

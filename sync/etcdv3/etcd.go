@@ -42,6 +42,11 @@ type Sync struct {
 	processID  string
 }
 
+func (s *Sync) withTimeout() context.Context {
+	ctx, _ := context.WithTimeout(context.Background(), s.timeout)
+	return ctx
+}
+
 //NewSync initialize new etcd sync
 func NewSync(etcdServers []string, timeout time.Duration) (*Sync, error) {
 	sync := &Sync{
@@ -113,6 +118,7 @@ func (s *Sync) recursiveFetch(rootKey string, node []*pb.KeyValue, children []*p
 	if len(node) != 0 {
 		rootNode.Key = string(node[0].Key)
 		rootNode.Value = string(node[0].Value)
+		rootNode.Revision = node[0].ModRevision
 	} else {
 		rootNode.Key = rootKey
 	}
@@ -120,8 +126,9 @@ func (s *Sync) recursiveFetch(rootKey string, node []*pb.KeyValue, children []*p
 	for _, kv := range children {
 		key := string(kv.Key)
 		n := &sync.Node{
-			Key:   key,
+			Key: key,
 			Value: string(kv.Value),
+			Revision: kv.ModRevision,
 		}
 		path := strings.TrimPrefix(key, rootKey)
 		steps := strings.Split(path, "/")
@@ -222,6 +229,7 @@ func eventsFromNode(action string, kvs []*pb.KeyValue, responseChan chan *sync.E
 		event := &sync.Event{
 			Action: action,
 			Key:    string(kv.Key),
+			Revision: kv.ModRevision,
 		}
 		if kv.Value != nil {
 			err := json.Unmarshal(kv.Value, &event.Data)
@@ -235,12 +243,16 @@ func eventsFromNode(action string, kvs []*pb.KeyValue, responseChan chan *sync.E
 }
 
 //Watch keep watch update under the path
-func (s *Sync) Watch(path string, responseChan chan *sync.Event, stopChan chan bool) error {
-	node, err := s.etcdClient.Get(s.withTimeout(), path, etcd.WithSort(etcd.SortByKey, etcd.SortAscend))
-	if err != nil {
-		return err
+func (s *Sync) Watch(path string, responseChan chan *sync.Event, stopChan chan bool, revision int64) error {
+	if revision == sync.RevisionCurrent {
+		node, err := s.etcdClient.Get(s.withTimeout(), path, etcd.WithSort(etcd.SortByKey, etcd.SortAscend))
+		if err != nil {
+			return err
+		}
+		eventsFromNode("get", node.Kvs, responseChan)
+
+		revision = node.Header.Revision + 1
 	}
-	eventsFromNode("get", node.Kvs, responseChan)
 
 	dir, err := s.etcdClient.Get(s.withTimeout(), path+"/", etcd.WithPrefix(), etcd.WithSort(etcd.SortByKey, etcd.SortAscend))
 	if err != nil {
@@ -255,7 +267,7 @@ func (s *Sync) Watch(path string, responseChan chan *sync.Event, stopChan chan b
 	go func() {
 		defer wg.Done()
 		err := func() error {
-			rch := s.etcdClient.Watch(ctx, path, etcd.WithRev(node.Header.Revision+1))
+			rch := s.etcdClient.Watch(ctx, path, etcd.WithRev(revision))
 
 			for wresp := range rch {
 				err := wresp.Err()
@@ -283,7 +295,7 @@ func (s *Sync) Watch(path string, responseChan chan *sync.Event, stopChan chan b
 	go func() {
 		defer wg.Done()
 		err := func() error {
-			rch := s.etcdClient.Watch(ctx, path+"/", etcd.WithPrefix(), etcd.WithRev(node.Header.Revision+1))
+			rch := s.etcdClient.Watch(ctx, path+"/", etcd.WithPrefix(), etcd.WithRev(revision))
 
 			for wresp := range rch {
 				err := wresp.Err()
@@ -319,7 +331,6 @@ func (s *Sync) Watch(path string, responseChan chan *sync.Event, stopChan chan b
 	}
 }
 
-func (s *Sync) withTimeout() context.Context {
-	ctx, _ := context.WithTimeout(context.Background(), s.timeout)
-	return ctx
+func (s *Sync) Close()  {
+	s.etcdClient.Close()
 }

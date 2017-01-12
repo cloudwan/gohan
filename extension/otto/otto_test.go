@@ -41,7 +41,7 @@ func newEnvironment() *otto.Environment {
 	timelimit := time.Duration(1) * time.Second
 
 	return otto.NewEnvironment("otto_test",
-		testDB, &middleware.FakeIdentity{}, timelimit)
+		testDB, &middleware.FakeIdentity{}, timelimit, testSync)
 }
 
 var _ = Describe("Otto extension manager", func() {
@@ -1549,6 +1549,86 @@ var _ = Describe("Otto extension manager", func() {
 			})
 		})
 	})
+	Describe("Using gohan_sync_fetch builtin", func() {
+		It("Should fetch sync", func() {
+			extension, err := schema.NewExtension(map[string]interface{}{
+				"id": "test_extension",
+				"code": `
+					gohan_register_handler(
+						"test_event",
+					 	function(context) {
+							context.resp = gohan_sync_fetch("/gohan_sync_fetch_test");
+						}
+					);
+					`,
+				"path": ".*",
+			})
+			Expect(err).ToNot(HaveOccurred())
+			extensions := []*schema.Extension{extension}
+			env := newEnvironment()
+			Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+			context := map[string]interface{}{}
+			env.Sync.Delete("/gohan_sync_fetch_test")
+			env.Sync.Update("/gohan_sync_fetch_test", "{}")
+			Expect(env.HandleEvent("test_event", context)).To(Succeed())
+			Expect(context).To(HaveKeyWithValue("resp", HaveKeyWithValue("value", "{}")))
+		})
+	})
+	Describe("Using gohan_sync_watch builtin", func() {
+		It("Should timeout with no events", func() {
+			extension, err := schema.NewExtension(map[string]interface{}{
+				"id": "test_extension",
+				"code": `
+					gohan_register_handler(
+						"test_event",
+					 	function(context) {
+							context.resp = gohan_sync_watch("/gohan_sync_watch_test", 500, 0);
+						}
+					);
+					`,
+				"path": ".*",
+			})
+			Expect(err).ToNot(HaveOccurred())
+			extensions := []*schema.Extension{extension}
+			env := newEnvironment()
+			Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+
+			context := map[string]interface{}{}
+			env.Sync.Delete("/gohan_sync_watch_test")
+			Expect(env.HandleEvent("test_event", context)).To(Succeed())
+			Expect(context).To(HaveKeyWithValue("resp", HaveLen(0)))
+		})
+
+		It("Should timeout with one event", func() {
+			extension, err := schema.NewExtension(map[string]interface{}{
+				"id": "test_extension",
+				"code": `
+					gohan_register_handler(
+						"test_event",
+					 	function(context) {
+							context.resp = gohan_sync_watch("/gohan_sync_watch_test", 500, 0);
+						}
+					);
+					`,
+				"path": ".*",
+			})
+			Expect(err).ToNot(HaveOccurred())
+			extensions := []*schema.Extension{extension}
+			env := newEnvironment()
+			Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+
+			context := map[string]interface{}{}
+			env.Sync.Delete("/gohan_sync_watch_test")
+			go func() {
+				time.Sleep(time.Duration(200) * time.Millisecond)
+				env.Sync.Update("/gohan_sync_watch_test", "{}")
+			}()
+			Expect(env.HandleEvent("test_event", context)).To(Succeed())
+			Expect(context).To(HaveKeyWithValue("resp", HaveKeyWithValue("action", "set")))
+			Expect(context).To(HaveKeyWithValue("resp", HaveKeyWithValue("key", "/gohan_sync_watch_test")))
+			Expect(context).To(HaveKeyWithValue("resp", HaveKeyWithValue("data", map[string]interface{}{})))
+		})
+	})
 	var _ = Describe("Concurrency race", func() {
 		var (
 			env *otto.Environment
@@ -1639,7 +1719,8 @@ var _ = Describe("Otto extension manager", func() {
 				})
 				Expect(err).ToNot(HaveOccurred())
 				extensions := []*schema.Extension{extension}
-				env := otto.NewEnvironment("otto_test", testDB, &middleware.FakeIdentity{}, time.Duration(100))
+				env := otto.NewEnvironment("otto_test", testDB, &middleware.FakeIdentity{},
+					time.Duration(100), testSync)
 				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
 
 				context := map[string]interface{}{
