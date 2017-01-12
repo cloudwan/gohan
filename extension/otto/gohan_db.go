@@ -31,10 +31,32 @@ func init() {
 		vm := env.VM
 		builtins := map[string]interface{}{
 			"gohan_db_transaction": func(call otto.FunctionCall) otto.Value {
-				VerifyCallArguments(&call, "gohan_db_transaction", 0)
+				maxArgs := 1
+				setTxIsolationLevel := false
+
+				if len(call.ArgumentList) > maxArgs {
+					ThrowOttoException(&call,
+						"Expected no more than %d arguments in %s call, %d arguments given",
+						maxArgs, "gohan_db_transaction", len(call.ArgumentList))
+				}
+				if len(call.ArgumentList) > 0 {
+					setTxIsolationLevel = true
+				}
+
 				tx, err := env.DataStore.Begin()
 				if err != nil {
-					ThrowOttoException(&call, "failed to start a transaction")
+					ThrowOttoException(&call, "failed to start a transaction: %s", err.Error())
+				}
+				if setTxIsolationLevel {
+					strIsolationLevel, err := GetString(call.Argument(0))
+					if err != nil {
+						ThrowOttoException(&call, err.Error())
+					}
+					isolationLevel := transaction.Type(strIsolationLevel)
+					err = tx.SetIsolationLevel(isolationLevel)
+					if err != nil {
+						ThrowOttoException(&call, "failed to set transaction level: %s", err.Error())
+					}
 				}
 				value, _ := vm.ToValue(tx)
 				return value
