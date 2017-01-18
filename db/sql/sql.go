@@ -234,6 +234,10 @@ func (db *DB) Connect(sqlType, conn string, maxOpenConn int) (err error) {
 	return fmt.Errorf("Failed to connect db")
 }
 
+func (db *DB) Close() {
+	db.DB.Close()
+}
+
 //Begin starts new transaction
 func (db *DB) Begin() (transaction.Transaction, error) {
 	transaction, err := db.DB.Beginx()

@@ -393,7 +393,7 @@ func (server *Server) Start() (err error) {
 		l = listeners[0]
 	}
 	if server.tls != nil {
-		config := &tls.Config{}
+		config := &tls.Config{ClientAuth: tls.VerifyClientCertIfGiven}
 		config.Certificates = make([]tls.Certificate, 1)
 		config.Certificates[0], err = tls.LoadX509KeyPair(server.tls.CertFile, server.tls.KeyFile)
 		if err != nil {
