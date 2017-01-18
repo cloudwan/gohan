@@ -34,6 +34,7 @@ const noSchemasInManagerError = "No schemas in Manager. Did you remember to load
 //DB is a common interface for handing db
 type DB interface {
 	Connect(string, string, int) error
+	Close()
 	Begin() (transaction.Transaction, error)
 	RegisterTable(*schema.Schema, bool) error
 	DropTable(*schema.Schema) error
@@ -147,5 +148,6 @@ func InitDBWithSchemas(dbType, dbConnection string, dropOnCreate, cascade bool) 
 			}
 		}
 	}
+	aDb.Close()
 	return nil
 }
