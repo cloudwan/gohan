@@ -18,7 +18,6 @@ package runner
 import (
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -42,6 +41,7 @@ const (
 	pathVar           = "PATH"
 	schemasVar        = "SCHEMAS"
 	schemaIncludesVar = "SCHEMA_INCLUDES"
+	memoryDb          = "file::memory:?cache=shared"
 )
 
 // Environment of a single test runner
@@ -50,7 +50,6 @@ type Environment struct {
 	mockedFunctions []string
 	testFileName    string
 	testSource      []byte
-	dbFile          *os.File
 	dbConnection    db.DB
 	dbTransactions  []transaction.Transaction
 }
@@ -69,12 +68,7 @@ func NewEnvironment(testFileName string, testSource []byte) *Environment {
 func (env *Environment) InitializeEnvironment() error {
 	var err error
 
-	_, file := filepath.Split(env.testFileName)
-	env.dbFile, err = ioutil.TempFile(os.TempDir(), file)
-	if err != nil {
-		return fmt.Errorf("Failed to create a temporary file in %s: %s", os.TempDir(), err.Error())
-	}
-	env.dbConnection, err = newDBConnection(env.dbFile.Name())
+	env.dbConnection, err = newDBConnection(memoryDb)
 	if err != nil {
 		return fmt.Errorf("Failed to connect to database: %s", err.Error())
 	}
@@ -126,7 +120,7 @@ func (env *Environment) InitializeEnvironment() error {
 		return fmt.Errorf("Failed to load extensions for '%s': %s", env.testFileName, err.Error())
 	}
 
-	err = db.InitDBWithSchemas("sqlite3", env.dbFile.Name(), true, false)
+	err = db.InitDBWithSchemas("sqlite3", memoryDb, true, false)
 	if err != nil {
 		schema.ClearManager()
 		return fmt.Errorf("Failed to init DB: %s", err.Error())
@@ -145,12 +139,9 @@ func (env *Environment) ClearEnvironment() {
 	for _, tx := range env.dbTransactions {
 		tx.Close()
 	}
-	toDelete := env.dbFile.Name()
-	env.dbFile.Close()
-	os.Remove(toDelete)
+	env.Environment.ClearEnvironment()
 	env.Sync.Close()
 	schema.ClearManager()
-	env.Environment.ClearEnvironment()
 }
 
 // CheckAllMockCallsMade check if all declared mock calls were made
