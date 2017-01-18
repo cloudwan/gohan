@@ -249,6 +249,7 @@ func (env *Environment) GetOrCreateTransaction(value otto.Value) (transaction.Tr
 
 func (env *Environment) ClearEnvironment()  {
 	env.Sync.Close()
+	env.DataStore.Close()
 }
 
 func throwOtto(call *otto.FunctionCall, exceptionName string, arguments ...interface{}) {

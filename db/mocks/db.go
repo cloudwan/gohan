@@ -85,3 +85,11 @@ func (_m *MockDB) DropTable(_param0 *schema.Schema) error {
 func (_mr *_MockDBRecorder) DropTable(arg0 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "DropTable", arg0)
 }
+
+func (_m *MockDB) Close() {
+	_m.ctrl.Call(_m, "Close")
+}
+
+func (_mr *_MockDBRecorder) Close() *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Close")
+}
