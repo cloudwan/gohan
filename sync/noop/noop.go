@@ -32,8 +32,12 @@ func (sync *Sync) Update(path, json string) error {
 }
 
 //Delete sync update sync
-func (sync *Sync) Delete(path, json string) error {
+func (sync *Sync) Delete(path string) error {
 	return nil
+}
+
+func (sync *Sync) Fetch(path string) (*sync.Node, error) {
+	return nil, nil
 }
 
 //HasLock checks is current process has lock
@@ -52,6 +56,10 @@ func (sync *Sync) Unlock(path string) error {
 }
 
 //Watch keep watch update under the path
-func (sync *Sync) Watch(path string, responseChan chan *sync.Event, stopChan chan bool) error {
+func (sync *Sync) Watch(path string, responseChan chan *sync.Event, stopChan chan bool, revision int64) error {
 	return nil
+}
+
+func (sync *Sync) Close() {
+
 }
