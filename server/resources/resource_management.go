@@ -200,7 +200,7 @@ func FilterFromQueryParameter(resourceSchema *schema.Schema,
 	filter := map[string]interface{}{}
 	for key, value := range queryParameters {
 		if _, err := resourceSchema.GetPropertyByID(key); err != nil {
-			log.Info("Resource %s does not have %s property, ignoring filter.")
+			log.Info("Resource %s does not have %s property, ignoring filter.", resourceSchema, key)
 			continue
 		}
 		filter[key] = value

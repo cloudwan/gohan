@@ -47,11 +47,16 @@ func NewSync(etcdServers []string) *Sync {
 
 //Update sync update sync
 func (s *Sync) Update(key, jsonString string) error {
+	return s.UpdateTTL(key, jsonString, 0)
+}
+
+//UpdateTTL like Update, but allows to specify time to live in seconds
+func (s *Sync) UpdateTTL(key, jsonString string, ttlSec uint64) error {
 	var err error
 	if jsonString == "" {
-		_, err = s.etcdClient.SetDir(key, 0)
+		_, err = s.etcdClient.SetDir(key, ttlSec)
 	} else {
-		_, err = s.etcdClient.Set(key, jsonString, 0)
+		_, err = s.etcdClient.Set(key, jsonString, ttlSec)
 	}
 	if err != nil {
 		log.Error(fmt.Sprintf("failed to sync with backend %s", err))
