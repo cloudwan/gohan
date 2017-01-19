@@ -19,13 +19,13 @@ import (
 	"github.com/cloudwan/gohan/schema"
 	"github.com/op/go-logging"
 	"github.com/robertkrimen/otto"
-
 	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/util"
 	"github.com/ddliu/motto"
 	"io/ioutil"
 	"strings"
 	"fmt"
+	"os"
 )
 
 var log = logging.MustGetLogger(l.GetModuleName())
@@ -196,7 +196,11 @@ func requireFromOtto(moduleName string, vm *otto.Otto) (otto.Value, error) {
 
 func requireFromMotto(moduleName string, vm *motto.Motto) (otto.Value, error) {
 	log.Debug(fmt.Sprintf("Loading module %s from motto", moduleName))
-	return vm.Require(moduleName, "")
+	v, err := vm.Require(moduleName, "")
+	if err != nil {
+		log.Error("Cannot load module %s in Motto, err:%s", moduleName, err.Error())
+	}
+	return v, err
 }
 
 func require(moduleName string, vm *motto.Motto) (otto.Value, error) {
@@ -221,10 +225,23 @@ func loadNPMModules() {
 				log.Error("Finding module failed %s in %s", err, f.Name())
 				break
 			}
-			if !strings.HasSuffix(module, ".js") {
-				module = module + "/index.js"
+
+			var entryPoint string
+			entryPointCandidates := []string {module, module + ".js", module + "/index.js"}
+
+			for _, candidate := range entryPointCandidates {
+				if candidateFile, err := os.Stat(candidate); err == nil && !candidateFile.IsDir() {
+					entryPoint = candidate
+					break
+				}
 			}
-			loader := motto.CreateLoaderFromFile(module)
+
+			if entryPoint == "" {
+				log.Error("Cannot find entry point of %s module", module)
+				break
+			}
+
+			loader := motto.CreateLoaderFromFile(entryPoint)
 			motto.AddModule(f.Name(), loader)
 		}
 	}

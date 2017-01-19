@@ -234,6 +234,10 @@ func (db *DB) Connect(sqlType, conn string, maxOpenConn int) (err error) {
 	return fmt.Errorf("Failed to connect db")
 }
 
+func (db *DB) Close() {
+	db.DB.Close()
+}
+
 //Begin starts new transaction
 func (db *DB) Begin() (transaction.Transaction, error) {
 	transaction, err := db.DB.Beginx()
@@ -287,7 +291,9 @@ func (db *DB) genTableCols(s *schema.Schema, cascade bool, exclude []string) ([]
 			foreignSchema, _ := schemaManager.Schema(property.Relation)
 			if foreignSchema != nil {
 				cascadeString := ""
-				if cascade || property.OnDeleteCascade {
+				if cascade ||
+					property.OnDeleteCascade ||
+					(property.Relation == s.Parent && s.OnParentDeleteCascade) {
 					cascadeString = "on delete cascade"
 				}
 
@@ -340,18 +346,7 @@ func (db *DB) AlterTableDef(s *schema.Schema, cascade bool) (string, []string, e
 
 //GenTableDef generates create table sql
 func (db *DB) GenTableDef(s *schema.Schema, cascade bool) (string, []string) {
-	schemaManager := schema.GetManager()
 	cols, relations, indices := db.genTableCols(s, cascade, nil)
-
-	if s.Parent != "" {
-		foreignSchema, _ := schemaManager.Schema(s.Parent)
-		cascadeString := ""
-		if cascade || s.OnParentDeleteCascade {
-			cascadeString = "on delete cascade"
-		}
-		relations = append(relations, fmt.Sprintf("foreign key(`%s_id`) REFERENCES `%s`(id) %s",
-			s.Parent, foreignSchema.GetDbTableName(), cascadeString))
-	}
 
 	if s.StateVersioning() {
 		cols = append(cols, quote(configVersionColumnName)+"int not null default 1")
