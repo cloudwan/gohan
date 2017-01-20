@@ -28,7 +28,7 @@ import (
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/server/middleware"
-	"github.com/cloudwan/gohan/sync/etcdv3"
+	"github.com/cloudwan/gohan/sync/noop"
 	"github.com/robertkrimen/otto"
 
 	//Import otto underscore lib
@@ -72,16 +72,11 @@ func (env *Environment) InitializeEnvironment() error {
 	if err != nil {
 		return fmt.Errorf("Failed to connect to database: %s", err.Error())
 	}
-	endpoints := []string{"localhost:2379"}
-	etcd, err := etcdv3.NewSync(endpoints, time.Second)
-	if err != nil {
-		return fmt.Errorf("Failed to connect to etcd: %s", err.Error())
-	}
 	envName := strings.TrimSuffix(
 		filepath.Base(env.testFileName),
 		filepath.Ext(env.testFileName))
 	env.Environment = gohan_otto.NewEnvironment(envName, env.dbConnection,
-							&middleware.FakeIdentity{}, 30 * time.Second, etcd)
+							&middleware.FakeIdentity{}, 30 * time.Second, noop.NewSync())
 	env.SetUp()
 	env.addTestingAPI()
 
@@ -140,7 +135,6 @@ func (env *Environment) ClearEnvironment() {
 		tx.Close()
 	}
 	env.Environment.ClearEnvironment()
-	env.Sync.Close()
 	schema.ClearManager()
 }
 
