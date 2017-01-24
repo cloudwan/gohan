@@ -218,6 +218,11 @@ func (schema *Schema) GetActionURL(path string) string {
 	return schema.URL + path
 }
 
+// GetActionURLWithParents returns a URL for access to resources actions with parent suffix
+func (schema *Schema) GetActionURLWithParents(path string) string {
+	return schema.URLWithParents + path
+}
+
 // GetPluralURL returns a URL for access to all schema objects
 func (schema *Schema) GetPluralURL() string {
 	return schema.URL

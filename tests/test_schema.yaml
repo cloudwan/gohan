@@ -336,6 +336,7 @@ schemas:
   singular: admin_only
   title: Admin Only
 - description: Responder
+  parent: responder_parent
   id: responder
   plural: responders
   prefix: /v2.0
@@ -397,6 +398,23 @@ schemas:
       path: /:id/dobranoc
       output:
         type: string
-
+- description: ResponderParent
+  id: responder_parent
+  singular: reponder_parent
+  plural: responder_parents
+  prefix: /v2.0
+  schema:
+    properties:
+      id:
+        description: ID
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: true
+    propertiesOrder:
+    - id
+    type: object
+  title: Responder Parent
 
 subnets: []
