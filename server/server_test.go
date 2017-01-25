@@ -1147,12 +1147,19 @@ var _ = Describe("Server package test", func() {
 
 	Describe("Resource Actions", func() {
 		responderPluralURL := baseURL + "/v2.0/responders"
+		responderParentPluralURL := baseURL + "/v2.0/responder_parents"
 
 		BeforeEach(func() {
+			responderParent := map[string]interface{}{
+				"id": "p1",
+			}
+			testURL("POST", responderParentPluralURL, adminTokenID, responderParent, http.StatusCreated)
+
 			responder := map[string]interface{}{
-				"id":        "r1",
-				"pattern":   "Hello %s!",
-				"tenant_id": memberTenantID,
+				"id":                  "r1",
+				"pattern":             "Hello %s!",
+				"tenant_id":           memberTenantID,
+				"responder_parent_id": "p1",
 			}
 			testURL("POST", responderPluralURL, adminTokenID, responder, http.StatusCreated)
 		})
@@ -1173,6 +1180,17 @@ var _ = Describe("Server package test", func() {
 
 			result = testURL("POST", responderPluralURL+"/r1/hi", adminTokenID, testHiAction, http.StatusOK)
 			Expect(result).To(Equal([]interface{}{"Hi", "Heisenberg", "!"}))
+		})
+
+		It("should work with parent prefix", func() {
+			testHelloAction := map[string]interface{}{
+				"name": "Heisenberg",
+			}
+
+			result := testURL("POST", responderParentPluralURL+"/p1/responders/r1/hello", memberTokenID, testHelloAction, http.StatusOK)
+			Expect(result).To(Equal(map[string]interface{}{
+				"output": "Hello, Heisenberg!",
+			}))
 		})
 
 		It("should work without input shema", func() {
