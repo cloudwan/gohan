@@ -5,9 +5,10 @@
 package motto
 
 import (
-	"github.com/robertkrimen/otto"
 	"path/filepath"
-	// "fmt"
+	"sync"
+
+	"github.com/robertkrimen/otto"
 )
 
 // Globally registered modules
@@ -16,53 +17,59 @@ var globalModules map[string]ModuleLoader = make(map[string]ModuleLoader)
 // Globally registered paths (paths to search for modules)
 var globalPaths []string
 
-// The modular vm environment
+// Globally protects global state
+var globalMu sync.RWMutex
+
+// Motto is modular vm environment
 type Motto struct {
 	// Motto is based on otto
 	*otto.Otto
 
 	// Modules that registered for current vm
-	modules map[string]ModuleLoader
+	modules   map[string]ModuleLoader
+	modulesMu sync.RWMutex
 
 	// Location to search for modules
-	paths []string
+	paths   []string
+	pathsMu sync.RWMutex
 
 	// Onece a module is required by vm, the exported value is cached for further
 	// use.
-	moduleCache map[string]otto.Value
+	moduleCache   map[string]otto.Value
+	moduleCacheMu sync.RWMutex
 }
 
 // Run a module or file
-func (this *Motto) Run(name string) (otto.Value, error) {
+func (m *Motto) Run(name string) (otto.Value, error) {
 	if ok, _ := isFile(name); ok {
 		name, _ = filepath.Abs(name)
 	}
 
-	return this.Require(name, ".")
+	return m.Require(name, ".")
 }
 
 // Require a module with cache
-func (this *Motto) Require(id, pwd string) (otto.Value, error) {
-	if cache, ok := this.moduleCache[id]; ok {
+func (m *Motto) Require(id, pwd string) (otto.Value, error) {
+	if cache, ok := m.cachedModule(id); ok {
 		return cache, nil
 	}
 
-	loader, ok := this.modules[id]
-	if !ok {
-		loader, ok = globalModules[id]
+	loader := m.module(id)
+	if loader == nil {
+		loader = Module(id)
 	}
 
 	if loader != nil {
-		value, err := loader(this)
+		v, err := loader(m)
 		if err != nil {
 			return otto.UndefinedValue(), err
 		}
 
-		this.moduleCache[id] = value
-		return value, nil
+		m.addCachedModule(id, v)
+		return v, nil
 	}
 
-	filename, err := FindFileModule(id, pwd, append(this.paths, globalPaths...))
+	filename, err := FindFileModule(id, pwd, append(m.paths, globalPaths...))
 	if err != nil {
 		return otto.UndefinedValue(), err
 	}
@@ -70,40 +77,73 @@ func (this *Motto) Require(id, pwd string) (otto.Value, error) {
 	// resove id
 	id = filename
 
-	if cache, ok := this.moduleCache[id]; ok {
+	if cache, ok := m.cachedModule(id); ok {
 		return cache, nil
 	}
 
-	v, err := CreateLoaderFromFile(id)(this)
+	v, err := CreateLoaderFromFile(id)(m)
 
 	if err != nil {
 		return otto.UndefinedValue(), err
 	}
 
-	// cache
-	this.moduleCache[id] = v
-
+	m.addCachedModule(id, v)
 	return v, nil
 }
 
-// Register a new module to current vm.
-func (this *Motto) AddModule(id string, loader ModuleLoader) {
-	this.modules[id] = loader
+func (m *Motto) addCachedModule(id string, v otto.Value) {
+	m.moduleCacheMu.Lock()
+	m.moduleCache[id] = v
+	m.moduleCacheMu.Unlock()
 }
 
-// Add paths to search for modules.
-func (this *Motto) AddPath(paths ...string) {
-	this.paths = append(this.paths, paths...)
+func (m *Motto) cachedModule(id string) (otto.Value, bool) {
+	m.moduleCacheMu.RLock()
+	defer m.moduleCacheMu.RUnlock()
+	v, ok := m.moduleCache[id]
+	return v, ok
 }
 
-// Register a global module
+// AddModule registers a new module to current vm.
+func (m *Motto) AddModule(id string, l ModuleLoader) {
+	m.modulesMu.Lock()
+	m.modules[id] = l
+	m.modulesMu.Unlock()
+}
+
+func (m *Motto) module(id string) ModuleLoader {
+	m.modulesMu.RLock()
+	defer m.modulesMu.RUnlock()
+	return m.modules[id]
+}
+
+// AddPath adds paths to search for modules.
+func (m *Motto) AddPath(paths ...string) {
+	m.pathsMu.Lock()
+	m.paths = append(m.paths, paths...)
+	m.pathsMu.Unlock()
+}
+
+// AddModule registers global module
 func AddModule(id string, m ModuleLoader) {
+	globalMu.Lock()
 	globalModules[id] = m
+	globalMu.Unlock()
 }
 
-// Register global path.
+// Module returns ModuleLoader for a given ID.
+func Module(id string) ModuleLoader {
+	globalMu.RLock()
+	defer globalMu.RUnlock()
+
+	return globalModules[id]
+}
+
+// AddPath registers global path.
 func AddPath(paths ...string) {
+	globalMu.Lock()
 	globalPaths = append(globalPaths, paths...)
+	globalMu.Unlock()
 }
 
 // Run module by name in the motto module environment.
@@ -114,7 +154,11 @@ func Run(name string) (*Motto, otto.Value, error) {
 	return vm, v, err
 }
 
-// Create a motto vm instance.
+// New creates a new motto vm instance.
 func New() *Motto {
-	return &Motto{otto.New(), make(map[string]ModuleLoader), nil, make(map[string]otto.Value)}
+	return &Motto{
+		Otto:        otto.New(),
+		modules:     make(map[string]ModuleLoader),
+		moduleCache: make(map[string]otto.Value),
+	}
 }
