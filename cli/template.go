@@ -154,13 +154,35 @@ func doTemplate(c *cli.Context) {
 		util.ExitFatal(err)
 		return
 	}
-	output, err := tpl.Execute(pongo2.Context{"schemas": schemas})
+	policies := manager.Policies()
+	policy := c.String("policy")
+	schemasPolicy := filterSchemasForPolicy(policy, policies, schemas)
+	output, err := tpl.Execute(pongo2.Context{"schemas": schemasPolicy})
 	if err != nil {
 		util.ExitFatal(err)
 		return
 	}
 	os.Chdir(pwd)
 	fmt.Println(output)
+}
+
+func filterSchemasForPolicy(principal string, policies []*schema.Policy, schemas []*schema.Schema) []*schema.Schema {
+	var schemasPolicy []*schema.Schema
+	var matchedPolicies []* schema.Policy
+	for _, policy := range policies {
+		if policy.Principal == principal {
+			matchedPolicies = append(matchedPolicies, policy)
+		}
+	}
+	for _, schema := range schemas {
+		for _, policy := range matchedPolicies {
+			if policy.Resource.Path.MatchString(schema.URL)  {
+				schemasPolicy = append(schemasPolicy, schema)
+				break
+			}
+		}
+	}
+	return schemasPolicy
 }
 
 func getTemplateCommand() cli.Command {
@@ -172,6 +194,7 @@ func getTemplateCommand() cli.Command {
 		Flags: []cli.Flag{
 			cli.StringFlag{Name: "config-file", Value: "gohan.yaml", Usage: "Server config File"},
 			cli.StringFlag{Name: "template, t", Value: "", Usage: "Template File"},
+			cli.StringFlag{Name: "policy", Value: "admin", Usage: "Policy"},
 		},
 		Action: doTemplate,
 	}
@@ -186,6 +209,7 @@ func getOpenAPICommand() cli.Command {
 		Flags: []cli.Flag{
 			cli.StringFlag{Name: "config-file", Value: "gohan.yaml", Usage: "Server config File"},
 			cli.StringFlag{Name: "template, t", Value: "embed://etc/templates/openapi.tmpl", Usage: "Template File"},
+			cli.StringFlag{Name: "policy", Value: "admin", Usage: "Policy"},
 		},
 		Action: doTemplate,
 	}
@@ -200,6 +224,7 @@ func getMarkdownCommand() cli.Command {
 		Flags: []cli.Flag{
 			cli.StringFlag{Name: "config-file", Value: "gohan.yaml", Usage: "Server config File"},
 			cli.StringFlag{Name: "template, t", Value: "embed://etc/templates/markdown.tmpl", Usage: "Template File"},
+			cli.StringFlag{Name: "policy", Value: "admin", Usage: "Policy"},
 		},
 		Action: doTemplate,
 	}
@@ -214,6 +239,7 @@ func getDotCommand() cli.Command {
 		Flags: []cli.Flag{
 			cli.StringFlag{Name: "config-file", Value: "gohan.yaml", Usage: "Server config File"},
 			cli.StringFlag{Name: "template, t", Value: "embed://etc/templates/dot.tmpl", Usage: "Template File"},
+			cli.StringFlag{Name: "policy", Value: "admin", Usage: "Policy"},
 		},
 		Action: doTemplate,
 	}
