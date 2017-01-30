@@ -72,4 +72,48 @@ var _ = Describe("Templates", func() {
 			})
 		})
 	})
+
+	Describe("Filtering schemas for specific resource", func() {
+		Context("With resource set to a", func() {
+			It("should return only a schemas", func() {
+
+				filteredSchemas := filerSchemasByResource("a", schemas)
+
+				Expect(filteredSchemas).To(HaveLen(2))
+				Expect(filteredSchemas[0].URL).To(Equal("/v2.0/nets"))
+				Expect(filteredSchemas[1].URL).To(Equal("/v2.0/networks"))
+			})
+		})
+
+		Context("With resource set to b", func() {
+			It("should return only b schemas", func() {
+
+				filteredSchemas := filerSchemasByResource("b", schemas)
+
+				Expect(filteredSchemas).To(HaveLen(1))
+				Expect(filteredSchemas[0].URL).To(Equal("/v2.0/network/:network/subnets"))
+			})
+		})
+
+		Context("With resource set to c", func() {
+			It("should not return any schemas", func() {
+
+				filteredSchemas := filerSchemasByResource("c", schemas)
+
+				Expect(filteredSchemas).To(BeEmpty())
+			})
+		})
+
+		Context("With schema containg 2 resources", func() {
+			It("should recognize correctly all of them", func() {
+
+				resources := getAllResourcesFromSchemas(schemas)
+
+				Expect(resources).To(HaveLen(2))
+				Expect(resources).To(ContainElement("a"))
+				Expect(resources).To(ContainElement("b"))
+			})
+		})
+
+	})
 })
