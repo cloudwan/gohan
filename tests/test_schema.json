@@ -49,6 +49,7 @@
         {
             "id": "network",
             "metadata": {
+                "resource_group": "a",
                 "state_versioning": true
             },
             "plural": "networks",
@@ -152,6 +153,7 @@
         {
             "id": "subnet",
             "metadata": {
+                "resource_group": "b",
                 "state_versioning": true
             },
             "parent": "network",
@@ -226,6 +228,9 @@
         },
         {
             "id": "net",
+            "metadata": {
+                "resource_group": "a"
+            },
             "plural": "nets",
             "prefix": "/v2.0",
             "schema": {
