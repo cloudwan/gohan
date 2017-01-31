@@ -12,6 +12,7 @@ import (
 	"github.com/codegangsta/cli"
 
 	"github.com/flosch/pongo2"
+	"io/ioutil"
 	"strings"
 )
 
@@ -154,6 +155,10 @@ func doTemplate(c *cli.Context) {
 		util.ExitFatal(err)
 		return
 	}
+	if c.IsSet("split-by-resource-group") {
+		saveAllResources(schemas, tpl)
+		return
+	}
 	policies := manager.Policies()
 	policy := c.String("policy")
 	schemasPolicy := filterSchemasForPolicy(policy, policies, schemas)
@@ -164,6 +169,37 @@ func doTemplate(c *cli.Context) {
 	}
 	os.Chdir(pwd)
 	fmt.Println(output)
+}
+
+func saveAllResources(schemas []*schema.Schema, tpl *pongo2.Template) {
+	for _, resource := range getAllResourcesFromSchemas(schemas) {
+		resourceSchemas := filerSchemasByResource(resource, schemas)
+		output, _ := tpl.Execute(pongo2.Context{"schemas": resourceSchemas})
+		ioutil.WriteFile(resource+".json", []byte(output), 0644)
+	}
+}
+
+func getAllResourcesFromSchemas(schemas []*schema.Schema) []string {
+	resourcesSet := make(map[string]bool)
+	for _, schema := range schemas {
+		metadata, _ := schema.Metadata["resource_group"].(string)
+		resourcesSet[metadata] = true
+	}
+	resources := make([]string, 0, len(resourcesSet))
+	for resource := range resourcesSet {
+		resources = append(resources, resource)
+	}
+	return resources
+}
+
+func filerSchemasByResource(resource string, schemas []*schema.Schema) []*schema.Schema {
+	var filteredSchemas []*schema.Schema
+	for _, schema := range schemas {
+		if schema.Metadata["resource_group"] == resource {
+			filteredSchemas = append(filteredSchemas, schema)
+		}
+	}
+	return filteredSchemas
 }
 
 func filterSchemasForPolicy(principal string, policies []*schema.Policy, schemas []*schema.Schema) []*schema.Schema {
@@ -194,6 +230,7 @@ func getTemplateCommand() cli.Command {
 		Flags: []cli.Flag{
 			cli.StringFlag{Name: "config-file", Value: "gohan.yaml", Usage: "Server config File"},
 			cli.StringFlag{Name: "template, t", Value: "", Usage: "Template File"},
+			cli.StringFlag{Name: "split-by-resource-group", Value: "", Usage: "Group by resource"},
 			cli.StringFlag{Name: "policy", Value: "admin", Usage: "Policy"},
 		},
 		Action: doTemplate,
@@ -209,6 +246,7 @@ func getOpenAPICommand() cli.Command {
 		Flags: []cli.Flag{
 			cli.StringFlag{Name: "config-file", Value: "gohan.yaml", Usage: "Server config File"},
 			cli.StringFlag{Name: "template, t", Value: "embed://etc/templates/openapi.tmpl", Usage: "Template File"},
+			cli.StringFlag{Name: "split-by-resource-group", Value: "", Usage: "Group by resource"},
 			cli.StringFlag{Name: "policy", Value: "admin", Usage: "Policy"},
 		},
 		Action: doTemplate,
@@ -224,6 +262,7 @@ func getMarkdownCommand() cli.Command {
 		Flags: []cli.Flag{
 			cli.StringFlag{Name: "config-file", Value: "gohan.yaml", Usage: "Server config File"},
 			cli.StringFlag{Name: "template, t", Value: "embed://etc/templates/markdown.tmpl", Usage: "Template File"},
+			cli.StringFlag{Name: "split-by-resource-group", Value: "", Usage: "Group by resource"},
 			cli.StringFlag{Name: "policy", Value: "admin", Usage: "Policy"},
 		},
 		Action: doTemplate,
@@ -239,6 +278,7 @@ func getDotCommand() cli.Command {
 		Flags: []cli.Flag{
 			cli.StringFlag{Name: "config-file", Value: "gohan.yaml", Usage: "Server config File"},
 			cli.StringFlag{Name: "template, t", Value: "embed://etc/templates/dot.tmpl", Usage: "Template File"},
+			cli.StringFlag{Name: "split-by-resource-group", Value: "", Usage: "Group by resource"},
 			cli.StringFlag{Name: "policy", Value: "admin", Usage: "Policy"},
 		},
 		Action: doTemplate,
