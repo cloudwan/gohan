@@ -41,13 +41,13 @@ const (
 	pathVar           = "PATH"
 	schemasVar        = "SCHEMAS"
 	schemaIncludesVar = "SCHEMA_INCLUDES"
-	memoryDb          = "file::memory:?cache=shared"
 )
 
 // Environment of a single test runner
 type Environment struct {
 	*gohan_otto.Environment
 	mockedFunctions []string
+	schemaDir       string
 	testFileName    string
 	testSource      []byte
 	dbConnection    db.DB
@@ -58,6 +58,7 @@ type Environment struct {
 func NewEnvironment(testFileName string, testSource []byte) *Environment {
 	env := &Environment{
 		mockedFunctions: []string{},
+		schemaDir:       filepath.Dir(testFileName),
 		testFileName:    testFileName,
 		testSource:      testSource,
 	}
@@ -68,21 +69,20 @@ func NewEnvironment(testFileName string, testSource []byte) *Environment {
 func (env *Environment) InitializeEnvironment() error {
 	var err error
 
-	env.dbConnection, err = newDBConnection(memoryDb)
+	env.dbConnection, err = newDBConnection(env.memoryDbConn())
 	if err != nil {
-		return fmt.Errorf("Failed to connect to database: %s", err.Error())
+		return fmt.Errorf("Failed to connect to database: %s", err)
 	}
 	envName := strings.TrimSuffix(
 		filepath.Base(env.testFileName),
 		filepath.Ext(env.testFileName))
-	env.Environment = gohan_otto.NewEnvironment(envName, env.dbConnection,
-							&middleware.FakeIdentity{}, 30 * time.Second, noop.NewSync())
+	env.Environment = gohan_otto.NewEnvironment(envName, env.dbConnection, &middleware.FakeIdentity{}, 30*time.Second, noop.NewSync())
 	env.SetUp()
 	env.addTestingAPI()
 
 	script, err := env.VM.Otto.Compile(env.testFileName, env.testSource)
 	if err != nil {
-		return fmt.Errorf("Failed to compile the file '%s': %s", env.testFileName, err.Error())
+		return fmt.Errorf("Failed to compile the file '%s': %s", env.testFileName, err)
 	}
 
 	env.VM.Otto.Run(script)
@@ -91,37 +91,41 @@ func (env *Environment) InitializeEnvironment() error {
 
 	if err != nil {
 		schema.ClearManager()
-		return fmt.Errorf("Failed to load schema includes for '%s': %s", env.testFileName, err.Error())
+		return fmt.Errorf("Failed to load schema includes for '%s': %s", env.testFileName, err)
 	}
 
 	err = env.loadSchemas()
 
 	if err != nil {
 		schema.ClearManager()
-		return fmt.Errorf("Failed to load schemas for '%s': %s", env.testFileName, err.Error())
+		return fmt.Errorf("Failed to load schemas for '%s': %s", env.testFileName, err)
 	}
 
 	err = env.registerEnvironments()
 
 	if err != nil {
 		schema.ClearManager()
-		return fmt.Errorf("Failed to register environments for '%s': %s", env.testFileName, err.Error())
+		return fmt.Errorf("Failed to register environments for '%s': %s", env.testFileName, err)
 	}
 
 	err = env.loadExtensions()
 
 	if err != nil {
 		schema.ClearManager()
-		return fmt.Errorf("Failed to load extensions for '%s': %s", env.testFileName, err.Error())
+		return fmt.Errorf("Failed to load extensions for '%s': %s", env.testFileName, err)
 	}
 
-	err = db.InitDBWithSchemas("sqlite3", memoryDb, true, false)
+	err = db.InitDBWithSchemas("sqlite3", env.memoryDbConn(), true, false)
 	if err != nil {
 		schema.ClearManager()
-		return fmt.Errorf("Failed to init DB: %s", err.Error())
+		return fmt.Errorf("Failed to init DB: %s", err)
 	}
 
 	return nil
+}
+
+func (env *Environment) memoryDbConn() string {
+	return fmt.Sprintf("file:%s?mode=memory&cache=shared", env.testFileName)
 }
 
 // ClearEnvironment clears mock calls between tests and rollbacks test transaction
@@ -242,7 +246,7 @@ func (env *Environment) mockFunction(functionName string) {
 
 		err := env.checkSpecified(functionName)
 		if err != nil {
-			call.Otto.Call("Fail", nil, err.Error())
+			call.Otto.Call("Fail", nil, err)
 		}
 
 		readableArguments := valueSliceToString(call.ArgumentList)
@@ -346,22 +350,22 @@ func (env *Environment) loadSchemaIncludes() error {
 		return fmt.Errorf("Bad type of %s - expected an array of strings but the type is %s",
 			schemaIncludesVar, schemaIncludeValue.Class())
 	}
+
 	for _, schemaIncludes := range schemaIncludesFilenames {
 		var data []byte
-
-		if data, err = ioutil.ReadFile(schemaIncludes); err != nil {
+		schemaPath := env.schemaPath(schemaIncludes)
+		if data, err = ioutil.ReadFile(schemaPath); err != nil {
 			return err
 		}
 
 		schemas := strings.Split(string(data), "\n")
-
 		for _, schema := range schemas {
 			if schema == "" || strings.HasPrefix(schema, "#") {
 				continue
 			}
 
-			schema = filepath.Join(filepath.Dir(schemaIncludes), schema)
-			if err = manager.LoadSchemaFromFile(schema); err != nil {
+			schemaPath := env.schemaPath(filepath.Dir(schemaIncludes), schema)
+			if err = manager.LoadSchemaFromFile(schemaPath); err != nil {
 				return err
 			}
 		}
@@ -382,11 +386,17 @@ func (env *Environment) loadSchemas() error {
 
 	manager := schema.GetManager()
 	for _, schema := range schemaFilenames {
-		if err = manager.LoadSchemaFromFile(schema); err != nil {
+		schemaPath := env.schemaPath(schema)
+		if err = manager.LoadSchemaFromFile(schemaPath); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func (env *Environment) schemaPath(s ...string) string {
+	s = append([]string{env.schemaDir}, s...)
+	return filepath.Join(s...)
 }
 
 func (env *Environment) registerEnvironments() error {

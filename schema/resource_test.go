@@ -21,8 +21,12 @@ import (
 )
 
 var _ = Describe("Resources", func() {
+	var (
+		manager *Manager
+	)
+
 	BeforeEach(func() {
-		manager := GetManager()
+		manager = GetManager()
 		gohanSchemaPath := "../etc/schema/core.json"
 		schemaPath := "../tests/test_schema.json"
 		Expect(manager.ValidateSchema(gohanSchemaPath, schemaPath)).To(Succeed())

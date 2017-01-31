@@ -85,10 +85,14 @@ func NewSchema(id, plural, title, description, singular string) *Schema {
 
 //NewSchemaFromObj is a constructor for a schema by obj
 func NewSchemaFromObj(rawTypeData interface{}) (*Schema, error) {
+	metaschema, _ := GetManager().Schema("schema")
+	return newSchemaFromObj(rawTypeData, metaschema)
+}
+
+func newSchemaFromObj(rawTypeData interface{}, metaschema *Schema) (*Schema, error) {
 	typeData := rawTypeData.(map[string]interface{})
 
-	metaschema, ok := GetManager().Schema("schema")
-	if ok {
+	if metaschema != nil {
 		err := metaschema.Validate(metaschema.JSONSchema, typeData)
 		if err != nil {
 			return nil, err

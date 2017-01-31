@@ -17,9 +17,7 @@ package schema
 
 import (
 	"fmt"
-	"net/url"
 	"os"
-	"path/filepath"
 	"regexp"
 
 	"github.com/cloudwan/gohan/util"
@@ -45,19 +43,14 @@ func NewExtension(raw interface{}) (*Extension, error) {
 		extension.CodeType = DefaultExtension
 	}
 	if _, ok := typeData["url"].(string); ok {
-		url, err := url.Parse(typeData["url"].(string))
+		wd, err := os.Getwd()
 		if err != nil {
 			return nil, err
 		}
-		if isURLRelative := url.Scheme == "file" && url.Host == "."; isURLRelative {
-			workingDirectory, err := os.Getwd()
-			if err != nil {
-				return nil, err
-			}
-			url.Host = ""
-			url.Path = filepath.Join(workingDirectory, url.Path)
+		extension.URL, err = fixRelativeURL(typeData["url"].(string), wd)
+		if err != nil {
+			return nil, err
 		}
-		extension.URL = url.String()
 	}
 	extension.Code, _ = typeData["code"].(string)
 

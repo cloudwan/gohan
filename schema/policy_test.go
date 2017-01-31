@@ -25,6 +25,7 @@ import (
 var _ = Describe("Policies", func() {
 	Describe("Policy validation", func() {
 		var (
+			manager            *Manager
 			abstractSchemaPath = "../tests/test_abstract_schema.yaml"
 			schemaPath         = "../tests/test_schema.yaml"
 			adminTenantID      = "12345678aaaaaaaaaaaa123456789012"
@@ -34,7 +35,7 @@ var _ = Describe("Policies", func() {
 		)
 
 		BeforeEach(func() {
-			manager := GetManager()
+			manager = GetManager()
 			Expect(manager.LoadSchemaFromFile(abstractSchemaPath)).To(Succeed())
 			Expect(manager.LoadSchemaFromFile(schemaPath)).To(Succeed())
 
