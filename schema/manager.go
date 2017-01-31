@@ -24,6 +24,7 @@ import (
 	"sync"
 
 	"github.com/cloudwan/gohan/util"
+	"github.com/tylerb/gls"
 	"github.com/xeipuuv/gojsonschema"
 )
 
@@ -469,28 +470,69 @@ func (manager *Manager) ClearExtensions() {
 	manager.mu.Unlock()
 }
 
-//manager is singleton schema manager
-var manager *Manager
+// Scope specifies bean scope, default scope is ScopeSingleton.
+type Scope uint8
 
-//managerMu protects manager
-var managerMu sync.Mutex
+const (
+	// ScopeSingleton is default Scope, with this setting there is a single
+	// bean instance shared by all goroutines.
+	ScopeSingleton Scope = iota
+	// ScopeGLSSingleton is goroutine local storage singleton, with this setting
+	// bean instance is shared by a goroutine tree, child goroutines
+	// share bean instance with parent.
+	ScopeGLSSingleton
+)
+
+var (
+	managerScope Scope = ScopeSingleton
+	manager      *Manager
+	managerMu    sync.Mutex
+
+	gohanFormatsRegistered bool
+)
+
+// SetManagerScope change how GetManager works. Change managerScope only if you
+// know what you are doing.
+func SetManagerScope(s Scope) {
+	managerScope = s
+}
 
 //GetManager get manager
 func GetManager() *Manager {
 	managerMu.Lock()
 	defer managerMu.Unlock()
 
-	if manager == nil {
-		manager = &Manager{
-			schemas:     make(Map),
-			schemaOrder: []string{},
-			namespaces:  map[string]*Namespace{},
-			policies:    []*Policy{},
-			Extensions:  []*Extension{},
-		}
+	if !gohanFormatsRegistered {
 		registerGohanFormats(gojsonschema.FormatCheckers)
+		gohanFormatsRegistered = true
 	}
-	return manager
+
+	switch managerScope {
+	case ScopeSingleton:
+		if manager == nil {
+			manager = newManager()
+		}
+		return manager
+	case ScopeGLSSingleton:
+		m := gls.Get("manager")
+		if m == nil {
+			m = newManager()
+			gls.Set("manager", m)
+		}
+		return m.(*Manager)
+	default:
+		panic("Unknown scope")
+	}
+}
+
+func newManager() *Manager {
+	return &Manager{
+		schemas:     make(Map),
+		schemaOrder: []string{},
+		namespaces:  map[string]*Namespace{},
+		policies:    []*Policy{},
+		Extensions:  []*Extension{},
+	}
 }
 
 //ClearManager clears manager
@@ -498,7 +540,14 @@ func ClearManager() {
 	managerMu.Lock()
 	defer managerMu.Unlock()
 
-	manager = nil
+	switch managerScope {
+	case ScopeSingleton:
+		manager = nil
+	case ScopeGLSSingleton:
+		gls.Set("manager", nil)
+	default:
+		panic("Unknown scope")
+	}
 }
 
 //PolicyValidate API request using policy statements
