@@ -20,10 +20,13 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sync"
+	"sync/atomic"
 
 	"github.com/cloudwan/gohan/extension/framework/buflog"
 	"github.com/cloudwan/gohan/extension/framework/runner"
 	gohan_log "github.com/cloudwan/gohan/log"
+	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
 	"github.com/codegangsta/cli"
 	logging "github.com/op/go-logging"
@@ -56,20 +59,58 @@ func TestExtensions(c *cli.Context) {
 	testFiles := getTestFiles(c.Args())
 
 	//logging from config is a limited printAllLogs option
-	returnCode := RunTests(testFiles, c.Bool("verbose") || config != nil, c.String("run-test"))
+	returnCode := RunTests(testFiles, c.Bool("verbose") || config != nil, c.String("run-test"), c.Int("parallel"))
 	os.Exit(returnCode)
 }
 
-// RunTests runs extension tests for CLI
-func RunTests(testFiles []string, printAllLogs bool, testFilter string) (returnCode int) {
-	errors := map[string]map[string]error{}
-	for _, testFile := range testFiles {
-		testRunner := runner.NewTestRunner(testFile, printAllLogs, testFilter)
-		errors[testFile] = testRunner.Run()
-		if err, ok := errors[testFile][runner.GeneralError]; ok {
-			log.Error(fmt.Sprintf("\t ERROR (%s): %v", testFile, err))
-		}
+// RunTests runs extension tests for CLI.
+func RunTests(testFiles []string, printAllLogs bool, testFilter string, workers int) (returnCode int) {
+	if workers <= 0 {
+		panic("Workers must be greater than 0")
 	}
+
+	if len(testFiles) < workers {
+		workers = len(testFiles)
+	}
+
+	var (
+		maxIdx         = int64(len(testFiles) - 1)
+		idx      int64 = 0
+		errors         = make(map[string]runner.TestRunnerErrors)
+		errorsMu sync.Mutex
+		wg       sync.WaitGroup
+	)
+
+	worker := func() {
+		for {
+			i := atomic.AddInt64(&idx, 1)
+			if i > maxIdx {
+				break
+			}
+
+			fileName := testFiles[i]
+			testErr := runner.NewTestRunner(fileName, printAllLogs, testFilter).Run()
+
+			errorsMu.Lock()
+			errors[fileName] = testErr
+			errorsMu.Unlock()
+
+			if err, ok := testErr[runner.GeneralError]; ok {
+				log.Error(fmt.Sprintf("\t ERROR (%s): %v", fileName, err))
+			}
+		}
+		wg.Done()
+	}
+
+	// force goroutine local manager
+	schema.SetManagerScope(schema.ScopeGLSSingleton)
+
+	for workers > 0 {
+		wg.Add(1)
+		go worker()
+		workers -= 1
+	}
+	wg.Wait()
 
 	summary := makeSummary(errors)
 	printSummary(summary, printAllLogs)
@@ -82,7 +123,7 @@ func RunTests(testFiles []string, printAllLogs bool, testFilter string) (returnC
 	return 0
 }
 
-func makeSummary(errors map[string]map[string]error) (summary map[string]error) {
+func makeSummary(errors map[string]runner.TestRunnerErrors) (summary map[string]error) {
 	summary = map[string]error{}
 	for testFile, errors := range errors {
 		if err, ok := errors[runner.GeneralError]; ok {

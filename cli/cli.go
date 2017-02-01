@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -327,6 +328,7 @@ documentation for detail information about writing tests.`,
 			cli.BoolFlag{Name: "verbose, v", Usage: "Print logs for passing tests"},
 			cli.StringFlag{Name: "config-file,c", Value: "", Usage: "Config file path"},
 			cli.StringFlag{Name: "run-test,r", Value: "", Usage: "Run only tests matching specified regex"},
+			cli.IntFlag{Name: "parallel, p", Value: runtime.NumCPU(), Usage: "Allow parallel execution of test functions"},
 		},
 		Action: framework.TestExtensions,
 	}
