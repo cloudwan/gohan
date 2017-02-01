@@ -18,20 +18,16 @@ package schema
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
-
-	"github.com/xeipuuv/gojsonschema"
+	"sync"
 
 	"github.com/cloudwan/gohan/util"
+	"github.com/xeipuuv/gojsonschema"
 )
 
 const nobodyPrincipal = "Nobody"
-
-//manager singleton schema manager
-var manager *Manager
 
 //Manager manages handling of schemas
 //Manager manages routing with external data
@@ -43,9 +39,13 @@ type Manager struct {
 	policies    []*Policy
 	Extensions  []*Extension
 	namespaces  map[string]*Namespace
+	mu          sync.RWMutex
 }
 
 func (manager *Manager) String() string {
+	manager.mu.RLock()
+	defer manager.mu.RUnlock()
+
 	var str string
 	for key, schema := range manager.schemas {
 		str += fmt.Sprintf("%s\t[%s]: %s\n", key, schema.Plural, schema.Description)
@@ -60,8 +60,8 @@ func (manager *Manager) String() string {
 	return str
 }
 
-//RegisterSchema registers new schema for schema manager
-func (manager *Manager) RegisterSchema(schema *Schema) error {
+//registerSchema registers new schema for schema manager
+func (manager *Manager) registerSchema(schema *Schema) error {
 	if _, ok := manager.schemas[schema.ID]; ok {
 		log.Warning("Overwriting schema %s", schema.ID)
 	}
@@ -69,14 +69,14 @@ func (manager *Manager) RegisterSchema(schema *Schema) error {
 	manager.schemaOrder = append(manager.schemaOrder, schema.ID)
 	baseURL := "/"
 	if schema.Parent != "" {
-		parentSchema, ok := manager.Schema(schema.Parent)
+		parentSchema, ok := manager.schema(schema.Parent)
 		if !ok {
 			return fmt.Errorf("Parent schema %s of %s not found", schema.Parent, schema.ID)
 		}
 		schema.SetParentSchema(parentSchema)
 	}
 	if schema.NamespaceID != "" {
-		namespace, ok := manager.Namespace(schema.NamespaceID)
+		namespace, ok := manager.namespace(schema.NamespaceID)
 		if !ok {
 			return fmt.Errorf("Namespace schema %s of %s not found", schema.NamespaceID, schema.ID)
 		}
@@ -95,10 +95,10 @@ func (manager *Manager) RegisterSchema(schema *Schema) error {
 	return nil
 }
 
-// RegisterNamespace registers a new namespace for schema manager
-func (manager *Manager) RegisterNamespace(namespace *Namespace) error {
+//registerNamespace registers a new namespace for schema manager
+func (manager *Manager) registerNamespace(namespace *Namespace) error {
 	if namespace.Parent != "" {
-		parentNamespace, ok := manager.Namespace(namespace.Parent)
+		parentNamespace, ok := manager.namespace(namespace.Parent)
 		if !ok {
 			return fmt.Errorf("Parent namespace %s of %s not found", namespace.Parent, namespace.ID)
 		}
@@ -112,31 +112,52 @@ func (manager *Manager) RegisterNamespace(namespace *Namespace) error {
 
 //UnRegisterSchema unregister schema
 func (manager *Manager) UnRegisterSchema(schema *Schema) error {
+	manager.mu.Lock()
+	defer manager.mu.Unlock()
+
 	delete(manager.schemas, schema.ID)
 	return nil
 }
 
 //Schema gets schema from manager
-func (manager *Manager) Schema(id string) (schema *Schema, ok bool) {
-	schema, ok = manager.schemas[id]
-	return
+func (manager *Manager) Schema(id string) (*Schema, bool) {
+	manager.mu.RLock()
+	defer manager.mu.RUnlock()
+
+	return manager.schema(id)
+}
+
+func (manager *Manager) schema(id string) (*Schema, bool) {
+	schema, ok := manager.schemas[id]
+	return schema, ok
 }
 
 //Schemas gets schema from manager
 func (manager *Manager) Schemas() Map {
-	return manager.schemas
+	manager.mu.RLock()
+	defer manager.mu.RUnlock()
+
+	m := make(Map, len(manager.schemas))
+	for k, v := range manager.schemas {
+		m[k] = v
+	}
+
+	return m
 }
 
 //OrderedSchemas gets schema from manager ordered
 func (manager *Manager) OrderedSchemas() []*Schema {
-	res := []*Schema{}
+	manager.mu.RLock()
+	defer manager.mu.RUnlock()
+
+	s := []*Schema{}
 	for _, id := range manager.schemaOrder {
-		schema, ok := manager.Schema(id)
+		schema, ok := manager.schema(id)
 		if ok {
-			res = append(res, schema)
+			s = append(s, schema)
 		}
 	}
-	return res
+	return s
 }
 
 //reorderSchema tries reorder schemas using Tarjan's algorithm
@@ -203,23 +224,47 @@ func reorderSchemas(schemas []*Schema) ([]string, error) {
 
 //Policies gets policies from manager
 func (manager *Manager) Policies() []*Policy {
-	return manager.policies
+	manager.mu.RLock()
+	defer manager.mu.RUnlock()
+
+	s := make([]*Policy, len(manager.policies), len(manager.policies))
+	for i, m := range manager.policies {
+		s[i] = m
+	}
+	return s
 }
 
 // Namespace gets namespace from manager
-func (manager *Manager) Namespace(name string) (namespace *Namespace, ok bool) {
-	namespace, ok = manager.namespaces[name]
-	return
+func (manager *Manager) Namespace(name string) (*Namespace, bool) {
+	manager.mu.RLock()
+	defer manager.mu.RUnlock()
+
+	return manager.namespace(name)
+}
+
+func (manager *Manager) namespace(name string) (*Namespace, bool) {
+	namespace, ok := manager.namespaces[name]
+	return namespace, ok
 }
 
 //Namespaces gets namespaces from manager
 func (manager *Manager) Namespaces() map[string]*Namespace {
-	return manager.namespaces
+	manager.mu.RLock()
+	defer manager.mu.RUnlock()
+
+	m := make(map[string]*Namespace)
+	for k, v := range manager.namespaces {
+		m[k] = v
+	}
+	return m
 }
 
 //LoadResource makes resource from datamap
 func (manager *Manager) LoadResource(schemaID string, dataMap map[string]interface{}) (*Resource, error) {
-	if schema, ok := manager.Schema(schemaID); ok {
+	manager.mu.RLock()
+	defer manager.mu.RUnlock()
+
+	if schema, ok := manager.schema(schemaID); ok {
 		return NewResource(schema, dataMap)
 	}
 	return nil, fmt.Errorf("Schema Not Found: %s", schemaID)
@@ -266,22 +311,13 @@ func (manager *Manager) LoadSchemasFromFiles(filePaths ...string) error {
 
 //LoadSchemaFromFile loads schema from json file
 func (manager *Manager) LoadSchemaFromFile(filePath string) error {
+	manager.mu.Lock()
+	defer manager.mu.Unlock()
+
 	log.Info("Loading schema %s ...", filePath)
 	schemas, err := util.LoadMap(filePath)
 	if err != nil {
 		return err
-	}
-
-	if !(strings.HasPrefix(filePath, "http://") || strings.HasPrefix(filePath, "https://") || strings.HasPrefix(filePath, "embed://")) {
-		workingDirectory, err := os.Getwd()
-		if err != nil {
-			return err
-		}
-		err = os.Chdir(filepath.Dir(filePath))
-		if err != nil {
-			return err
-		}
-		defer os.Chdir(workingDirectory)
 	}
 
 	namespaces, _ := schemas["namespaces"].([]interface{})
@@ -290,7 +326,7 @@ func (manager *Manager) LoadSchemaFromFile(filePath string) error {
 		if err != nil {
 			return err
 		}
-		if err = manager.RegisterNamespace(namespace); err != nil {
+		if err = manager.registerNamespace(namespace); err != nil {
 			return err
 		}
 	}
@@ -299,7 +335,8 @@ func (manager *Manager) LoadSchemaFromFile(filePath string) error {
 	schemaMap := map[string]*Schema{}
 	list, _ := schemas["schemas"].([]interface{})
 	for _, schemaData := range list {
-		schemaObj, err := NewSchemaFromObj(schemaData)
+		metaschema, _ := manager.schema("schema")
+		schemaObj, err := newSchemaFromObj(schemaData, metaschema)
 		if err != nil {
 			return err
 		}
@@ -313,10 +350,10 @@ func (manager *Manager) LoadSchemaFromFile(filePath string) error {
 	for _, schemaObj := range schemaObjList {
 		if schemaObj.IsAbstract() {
 			// Register abstract schema
-			manager.RegisterSchema(schemaObj)
+			manager.registerSchema(schemaObj)
 		} else {
 			for _, baseSchemaID := range schemaObj.Extends {
-				baseSchema, ok := manager.Schema(baseSchemaID)
+				baseSchema, ok := manager.schema(baseSchemaID)
 				if !ok {
 					return fmt.Errorf("Base Schema %s not found", baseSchemaID)
 				}
@@ -336,7 +373,7 @@ func (manager *Manager) LoadSchemaFromFile(filePath string) error {
 	for _, id := range schemaOrder {
 		schemaObj := schemaMap[id]
 		if !schemaObj.IsAbstract() {
-			err = manager.RegisterSchema(schemaObj)
+			err = manager.registerSchema(schemaObj)
 			if err != nil {
 				return err
 			}
@@ -354,21 +391,36 @@ func (manager *Manager) LoadSchemaFromFile(filePath string) error {
 		}
 	}
 	extensions, _ := schemas["extensions"].([]interface{})
-	if extensions != nil {
-		for _, extensionData := range extensions {
-			extension, err := NewExtension(extensionData)
+	if extensions == nil {
+		return nil
+	}
+
+	for _, extensionData := range extensions {
+		d := extensionData.(map[string](interface{}))
+		rawurl, ok := d["url"].(string)
+		if ok {
+			d["url"], err = fixRelativeURL(rawurl, filepath.Dir(filePath))
 			if err != nil {
 				return err
 			}
-			extension.File = filePath
-			manager.Extensions = append(manager.Extensions, extension)
 		}
+
+		extension, err := NewExtension(extensionData)
+		if err != nil {
+			return err
+		}
+		extension.File = filePath
+		manager.Extensions = append(manager.Extensions, extension)
 	}
+
 	return nil
 }
 
 //LoadPolicies register policy by db object
 func (manager *Manager) LoadPolicies(policies []*Resource) error {
+	manager.mu.Lock()
+	defer manager.mu.Unlock()
+
 	for _, policyData := range policies {
 		policy, err := NewPolicy(policyData.Data())
 		if err != nil {
@@ -381,6 +433,9 @@ func (manager *Manager) LoadPolicies(policies []*Resource) error {
 
 //LoadExtensions register extension by db object
 func (manager *Manager) LoadExtensions(extensions []*Resource) error {
+	manager.mu.Lock()
+	defer manager.mu.Unlock()
+
 	for _, extensionData := range extensions {
 		extension, err := NewExtension(extensionData.Data())
 		if err != nil {
@@ -393,12 +448,15 @@ func (manager *Manager) LoadExtensions(extensions []*Resource) error {
 
 //LoadNamespaces register namespaces by db object
 func (manager *Manager) LoadNamespaces(namespaces []*Resource) error {
+	manager.mu.Lock()
+	defer manager.mu.Unlock()
+
 	for _, namespaceData := range namespaces {
 		namespace, err := NewNamespace(namespaceData.Data())
 		if err != nil {
 			return err
 		}
-		manager.RegisterNamespace(namespace)
+		manager.registerNamespace(namespace)
 	}
 
 	return nil
@@ -406,11 +464,22 @@ func (manager *Manager) LoadNamespaces(namespaces []*Resource) error {
 
 //ClearExtensions clears extensions
 func (manager *Manager) ClearExtensions() {
-	manager.Extensions = []*Extension{}
+	manager.mu.Lock()
+	manager.Extensions = manager.Extensions[:0]
+	manager.mu.Unlock()
 }
+
+//manager is singleton schema manager
+var manager *Manager
+
+//managerMu protects manager
+var managerMu sync.Mutex
 
 //GetManager get manager
 func GetManager() *Manager {
+	managerMu.Lock()
+	defer managerMu.Unlock()
+
 	if manager == nil {
 		manager = &Manager{
 			schemas:     make(Map),
@@ -426,6 +495,9 @@ func GetManager() *Manager {
 
 //ClearManager clears manager
 func ClearManager() {
+	managerMu.Lock()
+	defer managerMu.Unlock()
+
 	manager = nil
 }
 
@@ -434,8 +506,11 @@ func (manager *Manager) PolicyValidate(action, path string, auth Authorization) 
 	return PolicyValidate(action, path, auth, manager.policies)
 }
 
-//NoAuthPaths returns a list of paths that do not require authorization
+//NobodyResourcePaths returns a list of paths that do not require authorization
 func (manager *Manager) NobodyResourcePaths() []*regexp.Regexp {
+	manager.mu.RLock()
+	defer manager.mu.RUnlock()
+
 	nobodyResourcePaths := []*regexp.Regexp{}
 	for _, policy := range manager.policies {
 		if policy.Principal == nobodyPrincipal {

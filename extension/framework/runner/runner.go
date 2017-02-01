@@ -18,8 +18,6 @@ package runner
 import (
 	"fmt"
 	"io/ioutil"
-	"os"
-	"path/filepath"
 	"regexp"
 
 	"github.com/cloudwan/gohan/extension/framework/buflog"
@@ -91,14 +89,6 @@ func (runner *TestRunner) Run() TestRunnerErrors {
 	}
 
 	env := NewEnvironment(runner.testFileName, src)
-
-	directory, _ := os.Getwd()
-	if err := os.Chdir(filepath.Dir(runner.testFileName)); err != nil {
-		return generalError(fmt.Errorf("Failed to change directory to '%s': %s",
-			filepath.Dir(runner.testFileName),
-			err.Error()))
-	}
-	defer os.Chdir(directory)
 
 	errors := TestRunnerErrors{}
 	for _, test := range tests {
