@@ -68,7 +68,7 @@ func NewDB() *DB {
 	//TODO(nati) dynamic configuration
 	handlers["string"] = &stringHandler{}
 	handlers["number"] = &numberHandler{}
-	handlers["integer"] = &numberHandler{}
+	handlers["integer"] = &integerHandler{}
 	handlers["object"] = &jsonHandler{}
 	handlers["array"] = &jsonHandler{}
 	handlers["boolean"] = &boolHandler{}
@@ -135,10 +135,10 @@ func (handler *boolHandler) decode(property *schema.Property, data interface{}) 
 		err = fmt.Errorf("unknown type %T", t)
 		return
 	case []uint8: // mysql
-		res, err = strconv.ParseUint(string(data.([]uint8)), 10, 64)
-		res = (res.(uint64) != 0)
+		res, err = strconv.ParseUint(string(t), 10, 64)
+		res = res.(uint64) != 0
 	case int64: //apparently also mysql
-		res = (data.(int64) != 0)
+		res = data.(int64) != 0
 	case bool: // sqlite3
 		res = data
 	}
@@ -156,6 +156,35 @@ func (handler *numberHandler) encode(property *schema.Property, data interface{}
 }
 
 func (handler *numberHandler) decode(property *schema.Property, data interface{}) (res interface{}, err error) {
+	if data == nil {
+		return nil, nil
+	}
+	switch t := data.(type) {
+	default:
+		return nil, fmt.Errorf("number: unknown type %T", t)
+
+	case []uint8: // mysql
+		res, _ = strconv.ParseFloat(string(t), 64)
+
+	case float64:  // sqlite3
+		res = float64(t)
+	case uint64:  // sqlite3
+		res = float64(t)
+	}
+	return
+}
+
+func (handler *numberHandler) dataType(property *schema.Property) string {
+	return "real"
+}
+
+type integerHandler struct{}
+
+func (handler *integerHandler) encode(property *schema.Property, data interface{}) (interface{}, error) {
+	return data, nil
+}
+
+func (handler *integerHandler) decode(property *schema.Property, data interface{}) (res interface{}, err error) {
 	// different SQL drivers encode result with different type
 	// so we need to do manual checks
 	if data == nil {
@@ -165,15 +194,15 @@ func (handler *numberHandler) decode(property *schema.Property, data interface{}
 	default:
 		return data, nil
 	case []uint8: // mysql
-		uintValue, _ := strconv.ParseUint(string(t), 10, 64)
-		res = int(uintValue)
+		res, _ = strconv.ParseInt(string(t), 10, 64)
+		res = int(res.(int64))
 	case int64: // sqlite3
 		res = int(t)
 	}
 	return
 }
 
-func (handler *numberHandler) dataType(property *schema.Property) string {
+func (handler *integerHandler) dataType(property *schema.Property) string {
 	return "numeric"
 }
 
@@ -712,7 +741,7 @@ func (tx *Transaction) count(s *schema.Schema, filter transaction.Filter) (res u
 		return
 	}
 	count, _ := result["count"]
-	decoder := &numberHandler{}
+	decoder := &integerHandler{}
 	decoded, decodeErr := decoder.decode(nil, count)
 	if decodeErr != nil {
 		err = fmt.Errorf("SQL List decoding error: %s", decodeErr)
