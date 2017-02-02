@@ -75,7 +75,7 @@ func RunTests(testFiles []string, printAllLogs bool, testFilter string, workers 
 
 	var (
 		maxIdx         = int64(len(testFiles) - 1)
-		idx      int64 = 0
+		idx      int64 = -1
 		errors         = make(map[string]runner.TestRunnerErrors)
 		errorsMu sync.Mutex
 		wg       sync.WaitGroup
