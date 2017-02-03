@@ -43,6 +43,7 @@ import (
 	"github.com/go-martini/martini"
 	"github.com/lestrrat/go-server-starter/listener"
 	"github.com/martini-contrib/staticbin"
+	"regexp"
 )
 
 type tlsConfig struct {
@@ -59,7 +60,6 @@ type Server struct {
 	sync             sync.Sync
 	running          bool
 	martini          *martini.ClassicMartini
-	timelimit        int
 	extensions       []string
 	keystoneIdentity middleware.IdentityService
 	queue            *job.Queue
@@ -196,13 +196,31 @@ func NewServer(configFile string) (*Server, error) {
 
 	setupEditor(server)
 
-	server.timelimit = config.GetInt("extension/timelimit", 30)
 	server.extensions = config.GetStringList("extension/use", []string{
 		"javascript",
 		"gohanscript",
 		"go",
 	})
 	schema.DefaultExtension = config.GetString("extension/default", "javascript")
+
+	manager.TimeLimit = time.Duration(config.GetInt("extension/timelimit", 30)) * time.Second
+
+	if config.GetList("extension/timelimits", nil) != nil {
+		timeLimitList := config.GetList("extension/timelimits", nil)
+		for _, timeLimit := range timeLimitList {
+			cfgRaw := timeLimit.(map[string]interface{})
+			cfgPath := cfgRaw["path"].(string)
+			cfgEvent := cfgRaw["event"].(string)
+			cfgTimeDuration := cfgRaw["timelimit"].(int)
+
+			manager.TimeLimits = append(manager.TimeLimits, &schema.PathEventTimeLimit {
+				PathRegex:    regexp.MustCompile(cfgPath),
+				EventRegex:   regexp.MustCompile(cfgEvent),
+				TimeDuration: time.Second * time.Duration(cfgTimeDuration),
+			})
+		}
+	}
+
 	server.address = config.GetString("address", ":"+port)
 	if config.GetBool("tls/enabled", false) {
 		log.Info("TLS enabled")

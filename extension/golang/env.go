@@ -16,6 +16,8 @@
 package golang
 
 import (
+	"time"
+
 	ext "github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/schema"
 )
@@ -43,7 +45,7 @@ func (env *Environment) Load(source, code string) error {
 }
 
 //LoadExtensionsForPath for returns extensions for specific path
-func (env *Environment) LoadExtensionsForPath(extensions []*schema.Extension, path string) error {
+func (env *Environment) LoadExtensionsForPath(extensions []*schema.Extension, timeLimit time.Duration, timeLimits []*schema.PathEventTimeLimit, path string) error {
 	for _, extension := range extensions {
 		if extension.Match(path) {
 			if extension.CodeType != "go" {
@@ -73,7 +75,7 @@ func (env *Environment) HandleEvent(event string, context map[string]interface{}
 
 //Clone makes clone of the environment
 func (env *Environment) Clone() ext.Environment {
-	newEnv := NewEnvironment()
-	newEnv.goCallbacks = env.goCallbacks
-	return newEnv
+	clone := NewEnvironment()
+	clone.goCallbacks = env.goCallbacks
+	return clone
 }

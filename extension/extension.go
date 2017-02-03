@@ -17,13 +17,14 @@ package extension
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/cloudwan/gohan/schema"
 )
 
 //Environment is a interface for extension environment
 type Environment interface {
-	LoadExtensionsForPath(extensions []*schema.Extension, path string) error
+	LoadExtensionsForPath(extensions []*schema.Extension, timeLimit time.Duration, timeLimits []*schema.PathEventTimeLimit, path string) error
 	HandleEvent(event string, context map[string]interface{}) error
 	Clone() Environment
 }

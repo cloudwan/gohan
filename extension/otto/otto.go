@@ -31,6 +31,8 @@ import (
 
 	"reflect"
 	//Import otto underscore lib
+	"regexp"
+
 	_ "github.com/robertkrimen/otto/underscore"
 )
 
@@ -54,17 +56,17 @@ func RequireModule(name string) (interface{}, error) {
 
 //Environment javascript based environment for gohan extension
 type Environment struct {
-	Name      string
-	VM        *motto.Motto
-	DataStore db.DB
-	timelimit time.Duration
-	Identity  middleware.IdentityService
-	Sync      sync.Sync
+	Name       string
+	VM         *motto.Motto
+	DataStore  db.DB
+	timeLimit  time.Duration
+	timeLimits []*schema.EventTimeLimit
+	Identity   middleware.IdentityService
+	Sync       sync.Sync
 }
 
 //NewEnvironment create new gohan extension environment based on context
-func NewEnvironment(name string, dataStore db.DB, identity middleware.IdentityService,
-                    timelimit time.Duration, sync sync.Sync) *Environment {
+func NewEnvironment(name string, dataStore db.DB, identity middleware.IdentityService, sync sync.Sync) *Environment {
 	vm := motto.New()
 	vm.Interrupt = make(chan func(), 1)
 	env := &Environment{
@@ -72,7 +74,6 @@ func NewEnvironment(name string, dataStore db.DB, identity middleware.IdentitySe
 		VM:        vm,
 		DataStore: dataStore,
 		Identity:  identity,
-		timelimit: timelimit,
 		Sync:      sync,
 	}
 	env.SetUp()
@@ -112,7 +113,7 @@ func (env *Environment) RegisterObject(objectID string, object interface{}) {
 }
 
 //LoadExtensionsForPath loads extensions for specific path
-func (env *Environment) LoadExtensionsForPath(extensions []*schema.Extension, path string) error {
+func (env *Environment) LoadExtensionsForPath(extensions []*schema.Extension, timeLimit time.Duration, timeLimits []*schema.PathEventTimeLimit, path string) error {
 	for _, extension := range extensions {
 		if extension.Match(path) {
 			code := extension.Code
@@ -128,10 +129,15 @@ func (env *Environment) LoadExtensionsForPath(extensions []*schema.Extension, pa
 			if err != nil {
 				return err
 			}
-
 		}
 	}
-
+	// setup time limits for matching extensions
+	env.timeLimit = timeLimit
+	for _, timeLimit := range timeLimits {
+		if timeLimit.Match(path) {
+			env.timeLimits = append(env.timeLimits, schema.NewEventTimeLimit(timeLimit.EventRegex, timeLimit.TimeDuration))
+		}
+	}
 	return nil
 }
 
@@ -181,7 +187,15 @@ func (env *Environment) HandleEvent(event string, context map[string]interface{}
 			panic(caught) // Something else happened, repanic!
 		}
 	}()
-	timer := time.NewTimer(env.timelimit)
+	// take time limit from first passing regex or default
+	selectedTimeLimit := env.timeLimit
+	for _, timeLimit := range env.timeLimits {
+		if timeLimit.Match(event) {
+			selectedTimeLimit = timeLimit.TimeDuration
+			break
+		}
+	}
+	timer := time.NewTimer(selectedTimeLimit)
 	successCh := make(chan bool)
 	go func() {
 		for {
@@ -226,11 +240,18 @@ func (env *Environment) HandleEvent(event string, context map[string]interface{}
 	return err
 }
 
+// SetEventTimeLimit overrides the default time limit for a given event for this environment
+func (env *Environment) SetEventTimeLimit(eventRegex string, timeLimit time.Duration) {
+	env.timeLimits = append(env.timeLimits, schema.NewEventTimeLimit(regexp.MustCompile(eventRegex), timeLimit))
+}
+
 //Clone makes clone of the environment
 func (env *Environment) Clone() ext.Environment {
-	newEnv := NewEnvironment(env.Name, env.DataStore, env.Identity, env.timelimit, env.Sync)
-	newEnv.VM.Otto = env.VM.Copy()
-	return newEnv
+	clone := NewEnvironment(env.Name, env.DataStore, env.Identity, env.Sync)
+	clone.VM.Otto = env.VM.Copy()
+	clone.timeLimit = env.timeLimit
+	clone.timeLimits = env.timeLimits
+	return clone
 }
 
 //GetOrCreateTransaction gets transaction from otto value or creates new is otto value is null
@@ -247,7 +268,7 @@ func (env *Environment) GetOrCreateTransaction(value otto.Value) (transaction.Tr
 	return tx, true, nil
 }
 
-func (env *Environment) ClearEnvironment()  {
+func (env *Environment) ClearEnvironment() {
 	env.Sync.Close()
 	env.DataStore.Close()
 }

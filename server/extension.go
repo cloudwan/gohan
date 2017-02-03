@@ -33,7 +33,6 @@ package server
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/extension/gohanscript"
@@ -44,14 +43,12 @@ import (
 
 func (server *Server) newEnvironment(name string) extension.Environment {
 	envs := []extension.Environment{}
-	timelimit := time.Duration(server.timelimit) * time.Second
 	for _, extension := range server.extensions {
 		switch extension {
 		case "javascript":
-			envs = append(envs, otto.NewEnvironment(name, server.db,
-					server.keystoneIdentity, timelimit, server.sync))
+			envs = append(envs, otto.NewEnvironment(name, server.db, server.keystoneIdentity, server.sync))
 		case "gohanscript":
-			envs = append(envs, gohanscript.NewEnvironment(timelimit))
+			envs = append(envs, gohanscript.NewEnvironment())
 		case "go":
 			envs = append(envs, golang.NewEnvironment())
 		}
@@ -62,9 +59,8 @@ func (server *Server) newEnvironment(name string) extension.Environment {
 // NewEnvironmentForPath creates an extension environment and loads extensions for path
 func (server *Server) NewEnvironmentForPath(name string, path string) (env extension.Environment, err error) {
 	manager := schema.GetManager()
-
 	env = server.newEnvironment(name)
-	err = env.LoadExtensionsForPath(manager.Extensions, path)
+	err = env.LoadExtensionsForPath(manager.Extensions, manager.TimeLimit, manager.TimeLimits, path)
 	if err != nil {
 		err = fmt.Errorf("Extensions parsing error: %v", err)
 	}

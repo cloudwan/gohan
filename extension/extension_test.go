@@ -18,7 +18,6 @@ package extension_test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"time"
 
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/extension/otto"
@@ -37,10 +36,8 @@ var _ = Describe("Environment manager", func() {
 	)
 
 	BeforeEach(func() {
-		env1 = otto.NewEnvironment("extension_test1",
-			testDB1, &middleware.FakeIdentity{}, time.Second, testSync)
-		env2 = otto.NewEnvironment("extension_test2",
-			testDB2, &middleware.FakeIdentity{}, time.Second, testSync)
+		env1 = otto.NewEnvironment("extension_test1", testDB1, &middleware.FakeIdentity{}, testSync)
+		env2 = otto.NewEnvironment("extension_test2", testDB2, &middleware.FakeIdentity{}, testSync)
 	})
 
 	JustBeforeEach(func() {

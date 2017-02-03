@@ -68,3 +68,12 @@ extension:
   - gohanscript
  # - javascript
   - go
+
+  # default time limit in secs for running extension
+  timelimit: 10
+
+  # time limit overrides in secs for running particular extension in path
+  timelimits:
+  - path: /v1.0/store/orders
+    event: pre_*
+    timelimit: 1

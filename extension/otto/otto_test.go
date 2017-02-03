@@ -38,21 +38,24 @@ import (
 )
 
 func newEnvironment() *otto.Environment {
-	timelimit := time.Duration(1) * time.Second
-
-	return otto.NewEnvironment("otto_test",
-		testDB, &middleware.FakeIdentity{}, timelimit, testSync)
+	return otto.NewEnvironment("otto_test", testDB, &middleware.FakeIdentity{}, testSync)
 }
 
 var _ = Describe("Otto extension manager", func() {
 	var (
 		manager            *schema.Manager
 		environmentManager *extension.Manager
+		
+		timeLimit  time.Duration
+		timeLimits []*schema.PathEventTimeLimit
 	)
 
 	BeforeEach(func() {
 		manager = schema.GetManager()
 		environmentManager = extension.GetManager()
+
+		timeLimit = time.Duration(10) * time.Second
+		timeLimits = []*schema.PathEventTimeLimit{}
 	})
 
 	AfterEach(func() {
@@ -67,7 +70,7 @@ var _ = Describe("Otto extension manager", func() {
 			Expect(err).ToNot(HaveOccurred(), "Failed to clear table.")
 		}
 		err = tx.Commit()
-		Expect(err).ToNot(HaveOccurred(), "Failed to commite transaction.")
+		Expect(err).ToNot(HaveOccurred(), "Failed to commit transaction.")
 
 		extension.ClearManager()
 	})
@@ -93,7 +96,7 @@ var _ = Describe("Otto extension manager", func() {
 
 				extensions := []*schema.Extension{goodExtension, badExtension}
 				env := newEnvironment()
-				err = env.LoadExtensionsForPath(extensions, "test_path")
+				err = env.LoadExtensionsForPath(extensions, timeLimit, timeLimits,"test_path")
 				Expect(err).To(HaveOccurred(), "Expected compilation errors.")
 
 				pattern := regexp.MustCompile(`^(?P<file>[^:]+).*Line\s(?P<line>\d+).*`)
@@ -121,7 +124,7 @@ var _ = Describe("Otto extension manager", func() {
 
 				extensions := []*schema.Extension{extension}
 				env := newEnvironment()
-				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+				Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits,"test_path")).To(Succeed())
 
 				context := map[string]interface{}{
 					"id": "test",
@@ -152,7 +155,7 @@ var _ = Describe("Otto extension manager", func() {
 				Expect(err).ToNot(HaveOccurred())
 				extensions := []*schema.Extension{extension}
 				env := newEnvironment()
-				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+				Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits,"test_path")).To(Succeed())
 
 				context := map[string]interface{}{
 					"id": "test",
@@ -188,7 +191,7 @@ var _ = Describe("Otto extension manager", func() {
 
 				extensions := []*schema.Extension{goodExtension, badExtension}
 				env := newEnvironment()
-				err = env.LoadExtensionsForPath(extensions, "test_path")
+				err = env.LoadExtensionsForPath(extensions, timeLimit, timeLimits,"test_path")
 
 				context := map[string]interface{}{
 					"id": "test",
@@ -223,7 +226,7 @@ var _ = Describe("Otto extension manager", func() {
 
 				extensions := []*schema.Extension{goodExtension}
 				env := newEnvironment()
-				env.LoadExtensionsForPath(extensions, "test_path")
+				env.LoadExtensionsForPath(extensions, timeLimit, timeLimits,"test_path")
 
 				context := map[string]interface{}{
 					"id":   "test",
@@ -251,13 +254,86 @@ var _ = Describe("Otto extension manager", func() {
 
 				extensions := []*schema.Extension{timeoutExtension}
 				env := newEnvironment()
-				env.LoadExtensionsForPath(extensions, "test_path")
+				env.LoadExtensionsForPath(extensions, timeLimit, timeLimits,"test_path")
 
 				context := map[string]interface{}{
 					"id": "test",
 				}
 				err = env.HandleEvent("test_event", context)
 				Expect(err).To(MatchError(ContainSubstring("exceed timeout for extension execution")))
+			})
+		})
+
+		Context("When extension is running too long after default timelimit overriden", func() {
+			It("should be aborted in the middle of extension with overriden time limit", func() {
+				timeoutExtension, err := schema.NewExtension(map[string]interface{}{
+					"id": "timeout_extension",
+					"code": `gohan_register_handler("test_event", function(context) {
+						while(true) {
+							// busy loop, but ok for this test
+							var i = 1;
+						};
+					});`,
+					"path": ".*",
+				})
+				Expect(err).ToNot(HaveOccurred())
+				timeoutExtension.URL = "timeout_extension.js"
+
+				extensions := []*schema.Extension{timeoutExtension}
+				env := newEnvironment()
+				env.LoadExtensionsForPath(extensions, timeLimit, timeLimits,"test_path")
+
+				// give the extension only 100 ms to execute
+				env.SetEventTimeLimit("test_*", time.Duration(100) * time.Millisecond)
+
+				context := map[string]interface{}{
+					"id": "test",
+				}
+
+				timeStart := time.Now()
+				err = env.HandleEvent("test_event", context)
+				timeEnd := time.Now()
+				timeDuration := timeEnd.Sub(timeStart)
+				Expect(err).To(MatchError(ContainSubstring("exceed timeout for extension execution")))
+
+				// the extension should have been aborted after about 100 ms
+				// not even close to the default time limit which is 30 secs
+				Expect(timeDuration).Should(BeNumerically("<", time.Millisecond * 200))
+			})
+
+			It("should not be aborted in the middle of extension with overriden time limit if the override is for a different event", func() {
+				timeoutExtension, err := schema.NewExtension(map[string]interface{}{
+					"id": "timeout_extension",
+					"code": `gohan_register_handler("test_event", function(context) {
+						while(true) {
+							// busy loop, but ok for this test
+							var i = 1;
+						};
+					});`,
+					"path": ".*",
+				})
+				Expect(err).ToNot(HaveOccurred())
+				timeoutExtension.URL = "timeout_extension.js"
+
+				extensions := []*schema.Extension{timeoutExtension}
+				env := newEnvironment()
+				env.LoadExtensionsForPath(extensions, timeLimit, timeLimits,"test_path")
+
+				// give the extension only 100 ms to execute
+				env.SetEventTimeLimit("unknown_*", time.Duration(100) * time.Millisecond)
+
+				context := map[string]interface{}{
+					"id": "test",
+				}
+
+				timeStart := time.Now()
+				err = env.HandleEvent("test_event", context)
+				timeEnd := time.Now()
+				timeDuration := timeEnd.Sub(timeStart)
+				Expect(err).To(MatchError(ContainSubstring("exceed timeout for extension execution")))
+
+				// the extension must not be aborted after about 100 ms
+				Expect(timeDuration).Should(BeNumerically(">", time.Millisecond * 200))
 			})
 		})
 	})
@@ -282,7 +358,7 @@ var _ = Describe("Otto extension manager", func() {
 				Expect(err).ToNot(HaveOccurred())
 				extensions := []*schema.Extension{extension}
 				env := newEnvironment()
-				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+				Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
 
 				context := map[string]interface{}{
 					"id": "test",
@@ -307,7 +383,7 @@ var _ = Describe("Otto extension manager", func() {
 				Expect(err).ToNot(HaveOccurred())
 				extensions := []*schema.Extension{extension}
 				env := newEnvironment()
-				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+				Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits,"test_path")).To(Succeed())
 
 				context := map[string]interface{}{
 					"id": "test",
@@ -340,7 +416,7 @@ var _ = Describe("Otto extension manager", func() {
 				Expect(err).ToNot(HaveOccurred())
 				extensions := []*schema.Extension{extension}
 				env := newEnvironment()
-				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+				Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits,"test_path")).To(Succeed())
 
 				context := map[string]interface{}{
 					"id": "test",
@@ -383,7 +459,7 @@ var _ = Describe("Otto extension manager", func() {
 				Expect(err).ToNot(HaveOccurred())
 				extensions := []*schema.Extension{extension}
 				env := newEnvironment()
-				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+				Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits,"test_path")).To(Succeed())
 
 				context := map[string]interface{}{
 					"id": "test",
@@ -424,7 +500,7 @@ var _ = Describe("Otto extension manager", func() {
 				Expect(err).ToNot(HaveOccurred())
 				extensions := []*schema.Extension{extension}
 				env := newEnvironment()
-				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+				Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits,"test_path")).To(Succeed())
 
 				context := map[string]interface{}{
 					"id": "test",
@@ -465,7 +541,7 @@ var _ = Describe("Otto extension manager", func() {
 				Expect(err).ToNot(HaveOccurred())
 				extensions := []*schema.Extension{extension}
 				env := newEnvironment()
-				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+				Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits,"test_path")).To(Succeed())
 
 				context := map[string]interface{}{
 					"id": "test",
@@ -491,7 +567,7 @@ var _ = Describe("Otto extension manager", func() {
 			Expect(err).ToNot(HaveOccurred())
 			extensions := []*schema.Extension{extension}
 			env := newEnvironment()
-			Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
 
 			context := map[string]interface{}{}
 			Expect(env.HandleEvent("test_event", context)).To(Succeed())
@@ -511,7 +587,7 @@ var _ = Describe("Otto extension manager", func() {
 			Expect(err).ToNot(HaveOccurred())
 			extensions := []*schema.Extension{extension}
 			env := newEnvironment()
-			Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits,"test_path")).To(Succeed())
 
 			context := map[string]interface{}{}
 			Expect(env.HandleEvent("test_event", context)).To(Succeed())
@@ -601,7 +677,7 @@ var _ = Describe("Otto extension manager", func() {
 				Expect(err).ToNot(HaveOccurred())
 				extensions = append(extensions, extension)
 			}
-			Expect(env.LoadExtensionsForPath(extensions, path)).To(Succeed())
+			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, path)).To(Succeed())
 		})
 
 		AfterEach(func() {
@@ -617,7 +693,7 @@ var _ = Describe("Otto extension manager", func() {
 				Expect(err).ToNot(HaveOccurred(), "Failed to clear table.")
 			}
 			err = tx.Commit()
-			Expect(err).ToNot(HaveOccurred(), "Failed to commite transaction.")
+			Expect(err).ToNot(HaveOccurred(), "Failed to commit transaction.")
 		})
 
 		Describe("Using gohan_db_* builtins", func() {
@@ -658,7 +734,7 @@ var _ = Describe("Otto extension manager", func() {
 					Expect(err).ToNot(HaveOccurred())
 					extensions := []*schema.Extension{extension}
 					env := newEnvironment()
-					env.LoadExtensionsForPath(extensions, "test_path")
+					env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")
 
 					context := map[string]interface{}{
 						"id":          "test",
@@ -702,7 +778,7 @@ var _ = Describe("Otto extension manager", func() {
 					Expect(err).ToNot(HaveOccurred())
 					extensions := []*schema.Extension{extension}
 					env := newEnvironment()
-					env.LoadExtensionsForPath(extensions, "test_path")
+					env.LoadExtensionsForPath(extensions, timeLimit, timeLimits,"test_path")
 
 					context := map[string]interface{}{
 						"id":          "test",
@@ -750,7 +826,7 @@ var _ = Describe("Otto extension manager", func() {
 					Expect(err).ToNot(HaveOccurred())
 					extensions := []*schema.Extension{extension}
 					env := newEnvironment()
-					env.LoadExtensionsForPath(extensions, "test_path")
+					env.LoadExtensionsForPath(extensions, timeLimit, timeLimits,"test_path")
 
 					context := map[string]interface{}{
 						"id": "test",
@@ -1445,7 +1521,7 @@ var _ = Describe("Otto extension manager", func() {
 						Expect(err).ToNot(HaveOccurred())
 						curExtensions = append(curExtensions, extension)
 					}
-					Expect(subnetEnv.LoadExtensionsForPath(curExtensions, curPath)).To(Succeed())
+					Expect(subnetEnv.LoadExtensionsForPath(curExtensions, timeLimit, timeLimits, curPath)).To(Succeed())
 
 					curAction = "create"
 					curSchemaID = "network"
@@ -1566,7 +1642,7 @@ var _ = Describe("Otto extension manager", func() {
 			Expect(err).ToNot(HaveOccurred())
 			extensions := []*schema.Extension{extension}
 			env := newEnvironment()
-			Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
 			context := map[string]interface{}{}
 			env.Sync.Delete("/gohan_sync_fetch_test")
 			env.Sync.Update("/gohan_sync_fetch_test", "{}")
@@ -1591,7 +1667,7 @@ var _ = Describe("Otto extension manager", func() {
 			Expect(err).ToNot(HaveOccurred())
 			extensions := []*schema.Extension{extension}
 			env := newEnvironment()
-			Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
 
 			context := map[string]interface{}{}
 			env.Sync.Delete("/gohan_sync_watch_test")
@@ -1615,7 +1691,7 @@ var _ = Describe("Otto extension manager", func() {
 			Expect(err).ToNot(HaveOccurred())
 			extensions := []*schema.Extension{extension}
 			env := newEnvironment()
-			Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
 
 			context := map[string]interface{}{}
 			env.Sync.Delete("/gohan_sync_watch_test")
@@ -1719,9 +1795,8 @@ var _ = Describe("Otto extension manager", func() {
 				})
 				Expect(err).ToNot(HaveOccurred())
 				extensions := []*schema.Extension{extension}
-				env := otto.NewEnvironment("otto_test", testDB, &middleware.FakeIdentity{},
-					time.Duration(100), testSync)
-				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+				env := otto.NewEnvironment("otto_test", testDB, &middleware.FakeIdentity{}, testSync)
+				Expect(env.LoadExtensionsForPath(extensions, time.Duration(100), timeLimits, "test_path")).To(Succeed())
 
 				context := map[string]interface{}{
 					"id": "test",
@@ -1731,10 +1806,14 @@ var _ = Describe("Otto extension manager", func() {
 		})
 	})
 })
+
 var _ = Describe("Using gohan_file builtin", func() {
 	var (
 		context map[string]interface{}
 		env     *otto.Environment
+
+		timeLimit  time.Duration
+		timeLimits []*schema.PathEventTimeLimit
 	)
 
 	BeforeEach(func() {
@@ -1742,7 +1821,11 @@ var _ = Describe("Using gohan_file builtin", func() {
 			"id": "test",
 		}
 		env = newEnvironment()
+
+		timeLimit = time.Duration(10) * time.Second
+		timeLimits = []*schema.PathEventTimeLimit{}
 	})
+
 	Context("List files", func() {
 		It("Should work", func() {
 			extension, err := schema.NewExtension(map[string]interface{}{
@@ -1755,7 +1838,7 @@ var _ = Describe("Using gohan_file builtin", func() {
 			})
 			Expect(err).ToNot(HaveOccurred())
 			extensions := []*schema.Extension{extension}
-			Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
 
 			Expect(env.HandleEvent("test_event", context)).To(Succeed())
 			Expect(context).To(HaveKey("list"))
@@ -1772,7 +1855,7 @@ var _ = Describe("Using gohan_file builtin", func() {
 			})
 			Expect(err).ToNot(HaveOccurred())
 			extensions := []*schema.Extension{extension}
-			Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
 
 			Expect(env.HandleEvent("test_event", context)).ToNot(Succeed())
 			Expect(context).ToNot(HaveKey("list"))
@@ -1790,7 +1873,7 @@ var _ = Describe("Using gohan_file builtin", func() {
 			})
 			Expect(err).ToNot(HaveOccurred())
 			extensions := []*schema.Extension{extension}
-			Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
 
 			Expect(env.HandleEvent("test_event", context)).To(Succeed())
 			Expect(context).To(HaveKey("list"))
@@ -1807,7 +1890,7 @@ var _ = Describe("Using gohan_file builtin", func() {
 			})
 			Expect(err).ToNot(HaveOccurred())
 			extensions := []*schema.Extension{extension}
-			Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
 
 			Expect(env.HandleEvent("test_event", context)).ToNot(Succeed())
 			Expect(context).ToNot(HaveKey("list"))
@@ -1825,7 +1908,7 @@ var _ = Describe("Using gohan_file builtin", func() {
 			})
 			Expect(err).ToNot(HaveOccurred())
 			extensions := []*schema.Extension{extension}
-			Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
 
 			Expect(env.HandleEvent("test_event", context)).To(Succeed())
 			Expect(context).To(HaveKeyWithValue("dir", true))
@@ -1841,7 +1924,7 @@ var _ = Describe("Using gohan_file builtin", func() {
 			})
 			Expect(err).ToNot(HaveOccurred())
 			extensions := []*schema.Extension{extension}
-			Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
 
 			Expect(env.HandleEvent("test_event", context)).To(Succeed())
 			Expect(context).To(HaveKeyWithValue("dir", false))
@@ -1857,7 +1940,7 @@ var _ = Describe("Using gohan_file builtin", func() {
 			})
 			Expect(err).ToNot(HaveOccurred())
 			extensions := []*schema.Extension{extension}
-			Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
 
 			Expect(env.HandleEvent("test_event", context)).ToNot(Succeed())
 			Expect(context).ToNot(HaveKey("dir"))

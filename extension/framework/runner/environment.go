@@ -21,7 +21,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
-	"time"
 
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/transaction"
@@ -31,7 +30,6 @@ import (
 	"github.com/cloudwan/gohan/sync/noop"
 	"github.com/robertkrimen/otto"
 
-	//Import otto underscore lib
 	_ "github.com/robertkrimen/otto/underscore"
 
 	gohan_otto "github.com/cloudwan/gohan/extension/otto"
@@ -76,7 +74,7 @@ func (env *Environment) InitializeEnvironment() error {
 	envName := strings.TrimSuffix(
 		filepath.Base(env.testFileName),
 		filepath.Ext(env.testFileName))
-	env.Environment = gohan_otto.NewEnvironment(envName, env.dbConnection, &middleware.FakeIdentity{}, 30*time.Second, noop.NewSync())
+	env.Environment = gohan_otto.NewEnvironment(envName, env.dbConnection, &middleware.FakeIdentity{}, noop.NewSync())
 	env.SetUp()
 	env.addTestingAPI()
 
@@ -418,5 +416,5 @@ func (env *Environment) loadExtensions() error {
 	}
 	pathString, _ := pathValue.ToString()
 
-	return env.LoadExtensionsForPath(manager.Extensions, pathString)
+	return env.LoadExtensionsForPath(manager.Extensions, manager.TimeLimit, manager.TimeLimits, pathString)
 }

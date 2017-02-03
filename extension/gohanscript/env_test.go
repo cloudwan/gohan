@@ -32,11 +32,13 @@ import (
 
 var _ = Describe("Gohanscript extension manager", func() {
 	var (
-		timelimit time.Duration
+		timeLimit  time.Duration
+		timeLimits []*schema.PathEventTimeLimit
 	)
 
 	BeforeEach(func() {
-		timelimit = time.Second
+		timeLimit = time.Duration(10) * time.Second
+		timeLimits = []*schema.PathEventTimeLimit{}
 	})
 
 	AfterEach(func() {
@@ -51,7 +53,7 @@ var _ = Describe("Gohanscript extension manager", func() {
 			Expect(err).ToNot(HaveOccurred(), "Failed to clear table.")
 		}
 		err = tx.Commit()
-		Expect(err).ToNot(HaveOccurred(), "Failed to commite transaction.")
+		Expect(err).ToNot(HaveOccurred(), "Failed to commit transaction.")
 
 		extension.ClearManager()
 	})
@@ -69,8 +71,8 @@ var _ = Describe("Gohanscript extension manager", func() {
 				})
 				Expect(err).ToNot(HaveOccurred())
 				extensions := []*schema.Extension{extension}
-				env := gohanscript.NewEnvironment(timelimit)
-				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+				env := gohanscript.NewEnvironment()
+				Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
 
 				context := map[string]interface{}{
 					"id": "test",
@@ -89,8 +91,8 @@ var _ = Describe("Gohanscript extension manager", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				extensions := []*schema.Extension{extension}
-				env := gohanscript.NewEnvironment(timelimit)
-				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+				env := gohanscript.NewEnvironment()
+				Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
 
 				context := map[string]interface{}{
 					"id": "test",
@@ -118,8 +120,8 @@ var _ = Describe("Gohanscript extension manager", func() {
 				})
 				Expect(err).ToNot(HaveOccurred())
 				extensions := []*schema.Extension{extension}
-				env := gohanscript.NewEnvironment(timelimit)
-				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+				env := gohanscript.NewEnvironment()
+				Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
 
 				context := map[string]interface{}{
 					"id": "test",
@@ -132,7 +134,7 @@ var _ = Describe("Gohanscript extension manager", func() {
 	})
 
 	var _ = Describe("Timeout", func() {
-		Context("stops if execution time exceeds timelimit", func() {
+		Context("stops if execution time exceeds timeLimit", func() {
 			It("Should work", func() {
 				extension, err := schema.NewExtension(map[string]interface{}{
 					"id": "infinite_loop",
@@ -146,8 +148,8 @@ var _ = Describe("Gohanscript extension manager", func() {
 				})
 				Expect(err).ToNot(HaveOccurred())
 				extensions := []*schema.Extension{extension}
-				env := gohanscript.NewEnvironment(time.Duration(100))
-				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+				env := gohanscript.NewEnvironment()
+				Expect(env.LoadExtensionsForPath(extensions, time.Duration(100), timeLimits, "test_path")).To(Succeed())
 				context := map[string]interface{}{
 					"id": "test",
 				}
