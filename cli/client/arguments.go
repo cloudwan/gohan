@@ -133,6 +133,17 @@ func (gohanClientCLI *GohanClientCLI) handleCommonArguments(args map[string]inte
 		setUpLogging(logLevel)
 		return nil
 	}
+
+	if fieldsOpt, ok := args[fieldsKey]; ok {
+		fields, err := findFields(fieldsOpt)
+		if err != nil {
+			return err
+		}
+		delete(args, fieldsKey)
+		gohanClientCLI.opts.fields = fields
+		return nil
+	}
+
 	return nil
 }
 

@@ -610,6 +610,13 @@ var _ = Describe("CLI functions", func() {
 					Expect(argsMap).To(Equal(argsExpected))
 				})
 
+				It("Should parse arguments successfully - handle fields", func() {
+					args = append(args, "--fields", "field1,field2")
+					argsMap, err := gohanClientCLI.handleArguments(args, s)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(argsMap).To(Equal(argsExpected))
+				})
+
 				It("Should show error - wrong arguments format", func() {
 					args = append(args, "--windows")
 					argsMap, err := getArgsAsMap(args, s)
