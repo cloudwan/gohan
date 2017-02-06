@@ -16,8 +16,9 @@
 package job
 
 import (
-	"github.com/cloudwan/gohan/util"
 	"sync"
+
+	l "github.com/cloudwan/gohan/log"
 )
 
 //Job represents job
@@ -27,7 +28,7 @@ type Job struct {
 
 //Run executes one Job
 func (job *Job) Run() {
-	defer util.LogPanic(log)
+	defer l.LogPanic(log)
 	job.task()
 }
 
@@ -55,7 +56,7 @@ func NewWorker(queue *Queue) *Worker {
 //Start consuming task
 func (worker *Worker) Start() {
 	go func() {
-		util.LogPanic(log)
+		l.LogPanic(log)
 		for {
 			select {
 			case job := <-worker.queue.queue:

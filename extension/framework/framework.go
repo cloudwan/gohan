@@ -25,14 +25,13 @@ import (
 
 	"github.com/cloudwan/gohan/extension/framework/buflog"
 	"github.com/cloudwan/gohan/extension/framework/runner"
-	gohan_log "github.com/cloudwan/gohan/log"
+	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
 	"github.com/codegangsta/cli"
-	logging "github.com/op/go-logging"
 )
 
-var log = logging.MustGetLogger("extest")
+var log = l.NewLoggerForModule("extest")
 
 // TestExtensions runs extension tests when invoked from Gohan CLI
 func TestExtensions(c *cli.Context) {
@@ -49,7 +48,7 @@ func TestExtensions(c *cli.Context) {
 			os.Exit(1)
 		}
 
-		err = gohan_log.SetUpLogging(config)
+		err = l.SetUpLogging(config)
 		if err != nil {
 			log.Error(fmt.Sprintf("Failed to set up logging: %v", err))
 			os.Exit(1)

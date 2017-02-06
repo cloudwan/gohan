@@ -16,6 +16,7 @@
 package client
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -23,18 +24,16 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/op/go-logging"
 	"github.com/rackspace/gophercloud"
 	"github.com/rackspace/gophercloud/openstack"
 	"github.com/rackspace/gophercloud/openstack/common/extensions"
 
-	"bytes"
-
+	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/schema"
 )
 
 var (
-	log                 = logging.MustGetLogger("gohan.cli.client")
+	log                 = l.NewLoggerForModule("gohan.cli.client")
 	logOutput io.Writer = os.Stderr
 )
 
@@ -86,14 +85,8 @@ type GohanClientCLI struct {
 	opts     *GohanClientCLIOpts
 }
 
-func setUpLogging(level logging.Level) {
-	backend := logging.NewLogBackend(logOutput, "", 0)
-	format := logging.MustStringFormatter(
-		"%{color}%{message}%{color:reset}")
-	backendFormatter := logging.NewBackendFormatter(backend, format)
-	leveledBackendFormatter := logging.AddModuleLevel(backendFormatter)
-	leveledBackendFormatter.SetLevel(level, "gohan.cli.client")
-	logging.SetBackend(leveledBackendFormatter)
+func setUpLogging(level l.Level) {
+	l.SetUpBasicLogging(logOutput, l.CliFormat, "gohan.cli.client", level)
 }
 
 // ExecuteCommand ...

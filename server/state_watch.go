@@ -25,9 +25,9 @@ import (
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/extension"
 
+	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/schema"
 	gohan_sync "github.com/cloudwan/gohan/sync"
-	"github.com/cloudwan/gohan/util"
 )
 
 const (
@@ -52,7 +52,7 @@ func startStateWatchProcess(server *Server) {
 	}
 
 	go func() {
-		defer util.LogFatalPanic(log)
+		defer l.LogFatalPanic(log)
 
 		for server.running {
 			lockKey := lockPath + "/state_watch"
@@ -75,7 +75,7 @@ func startStateWatchProcess(server *Server) {
 	}()
 
 	go func() {
-		defer util.LogFatalPanic(log)
+		defer l.LogFatalPanic(log)
 
 		var bufferMutex sync.Mutex
 		buffers := make(map[string]chan *gohan_sync.Event)

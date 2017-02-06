@@ -16,31 +16,70 @@
 package log
 
 import (
-	"encoding/json"
-	"fmt"
 	"io"
 	"os"
 	"runtime"
 	"strings"
 
-	logging "github.com/op/go-logging"
+	"github.com/op/go-logging"
 
 	"github.com/cloudwan/gohan/util"
 )
 
-var defaultLoggerName = "unknown"
-var defaultLogLevel = logging.INFO.String()
+// Level defines all available log levels for log messages.
+type Level int
 
-func mustGohanJSONFormatter(componentName string) *gohanJSONFormatter {
-	return &gohanJSONFormatter{componentName: componentName}
+// Level values.
+const (
+	CRITICAL Level = iota
+	ERROR
+	WARNING
+	NOTICE
+	INFO
+	DEBUG
+)
+
+// Logger provides logging capabilities.
+type Logger interface {
+	// Fatal is equivalent to l.Critical(fmt.Sprint()) followed by a call to os.Exit(1).
+	Fatal(args ...interface{})
+	// Fatalf is equivalent to l.Critical followed by a call to os.Exit(1).
+	Fatalf(format string, args ...interface{})
+	// Panic is equivalent to l.Critical(fmt.Sprint()) followed by a call to panic().
+	Panic(args ...interface{})
+	// Panicf is equivalent to l.Critical followed by a call to panic().
+	Panicf(format string, args ...interface{})
+	// Critical logs a message using CRITICAL as log level.
+	Critical(format string, args ...interface{})
+	// Error logs a message using ERROR as log level.
+	Error(format string, args ...interface{})
+	// Warning logs a message using WARNING as log level.
+	Warning(format string, args ...interface{})
+	// Notice logs a message using NOTICE as log level.
+	Notice(format string, args ...interface{})
+	// Info logs a message using INFO as log level.
+	Info(format string, args ...interface{})
+	// Debug logs a message using DEBUG as log level.
+	Debug(format string, args ...interface{})
 }
 
-type gohanJSONFormatter struct {
-	componentName string
+// NewLogger creates new logger for automatically retrieved module name.
+func NewLogger() Logger {
+	return NewLoggerForModule(getModuleName())
 }
 
-// GetModuleName returns module name
-func GetModuleName() string {
+// NewLoggerForModule creates new logger for a given module name.
+func NewLoggerForModule(module string) Logger {
+	return logging.MustGetLogger(module)
+}
+
+var (
+	defaultLoggerName = "unknown"
+	defaultLogLevel   = logging.INFO.String()
+)
+
+// getModuleName returns module name.
+func getModuleName() string {
 	pc, _, _, ok := runtime.Caller(1)
 	if !ok {
 		return defaultLoggerName
@@ -67,26 +106,9 @@ func GetModuleName() string {
 	return componentName[nameStart:nameStop]
 }
 
-//Format formats message to JSON format
-func (f *gohanJSONFormatter) Format(calldepth int, record *logging.Record, output io.Writer) error {
-	result := map[string]interface{}{
-		"timestamp":      record.Time,
-		"log_level":      record.Level.String(),
-		"log_type":       "log",
-		"msg":            record.Message(),
-		"component_name": record.Module,
-	}
-	resultJSON, err := json.Marshal(result)
-	if err != nil {
-		return err
-	}
-	fmt.Fprintf(output, "%s\n", resultJSON)
-	return nil
-}
-
 //SetUpLogging configures logging based on configuration
 func SetUpLogging(config *util.Config) error {
-	var backends = []logging.Backend{}
+	var backends []logging.Backend
 
 	if prefix := "logging/file/"; config.GetBool(prefix+"enabled", false) {
 		logFile, err := os.OpenFile(config.GetString(prefix+"filename", "gohan.log"),
@@ -94,7 +116,7 @@ func SetUpLogging(config *util.Config) error {
 		if err != nil {
 			return err
 		}
-		fileBackendLeveled := getLeveledBackend(logFile, mustGohanJSONFormatter("gohan"))
+		fileBackendLeveled := getLeveledBackend(logFile, &jsonFormatter{componentName: "gohan"})
 		addLevelsToBackend(config, prefix, fileBackendLeveled)
 		backends = append(backends, fileBackendLeveled)
 	}
@@ -132,4 +154,31 @@ func addLevelsToBackend(config *util.Config, prefix string, backend logging.Leve
 		}
 		backend.SetLevel(level, moduleName)
 	}
+}
+
+// Log formats.
+var (
+	DefaultFormat = "%{color}%{time:15:04:05.000}: %{module} %{level} %{color:reset} %{message}"
+	CliFormat     = "%{color}%{message}%{color:reset}"
+)
+
+//SetUpBasicLogging configures logging to output logs to w.
+func SetUpBasicLogging(w io.Writer, format string, modlevs ...interface{}) {
+	if len(modlevs)%2 != 0 {
+		panic("Invalid number of parameters")
+	}
+
+	backendFormatter := logging.NewBackendFormatter(
+		logging.NewLogBackend(w, "", 0),
+		logging.MustStringFormatter(format),
+	)
+	leveledBackendFormatter := logging.AddModuleLevel(backendFormatter)
+
+	for i := 0; i < len(modlevs); i += 2 {
+		m := modlevs[i].(string)
+		l := modlevs[i+1].(Level)
+		leveledBackendFormatter.SetLevel(logging.Level(l), m)
+	}
+
+	logging.SetBackend(leveledBackendFormatter)
 }
