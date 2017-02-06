@@ -17,13 +17,13 @@ package framework
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sync"
 	"sync/atomic"
 
-	"github.com/cloudwan/gohan/extension/framework/buflog"
 	"github.com/cloudwan/gohan/extension/framework/runner"
 	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/schema"
@@ -31,11 +31,14 @@ import (
 	"github.com/codegangsta/cli"
 )
 
-var log = l.NewLoggerForModule("extest")
+var (
+	logWriter io.Writer = os.Stderr
+	log                 = l.NewLoggerForModule("extest")
+)
 
 // TestExtensions runs extension tests when invoked from Gohan CLI
 func TestExtensions(c *cli.Context) {
-	buflog.SetUpDefaultLogging()
+	l.SetUpBasicLogging(logWriter, l.DefaultFormat, "", l.DEBUG)
 
 	var config *util.Config
 	configFilePath := c.String("config-file")
@@ -64,6 +67,10 @@ func TestExtensions(c *cli.Context) {
 
 // RunTests runs extension tests for CLI.
 func RunTests(testFiles []string, printAllLogs bool, testFilter string, workers int) (returnCode int) {
+	if !printAllLogs {
+		l.SetUpBasicLogging(l.BufWritter{}, l.DefaultFormat, "", l.DEBUG)
+	}
+
 	if workers <= 0 {
 		panic("Workers must be greater than 0")
 	}
@@ -145,19 +152,11 @@ func makeSummary(errors map[string]runner.TestRunnerErrors) (summary map[string]
 }
 
 func printSummary(summary map[string]error, printAllLogs bool) {
-	allPassed := true
-
-	if !printAllLogs {
-		buflog.Buf().Activate()
-		defer func() {
-			if !allPassed {
-				buflog.Buf().PrintLogs()
-			}
-			buflog.Buf().Deactivate()
-		}()
-	}
+	l.SetUpBasicLogging(logWriter, l.DefaultFormat, "", l.DEBUG)
 
 	log.Info("Run %d test files.", len(summary))
+
+	allPassed := true
 	for testFile, err := range summary {
 		if err != nil {
 			log.Error(fmt.Sprintf("\tFAIL\t%s: %s", testFile, err.Error()))
@@ -166,7 +165,6 @@ func printSummary(summary map[string]error, printAllLogs bool) {
 			log.Notice("\tOK\t%s", testFile)
 		}
 	}
-
 	if allPassed {
 		log.Notice("All tests have passed.")
 	}
