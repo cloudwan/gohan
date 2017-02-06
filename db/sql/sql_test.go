@@ -16,6 +16,7 @@
 package sql_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -31,9 +32,13 @@ import (
 
 var _ = Describe("Sql", func() {
 
-	var conn string
-	var tx transaction.Transaction
-	var sqlConn *DB
+	const testFixtures = "test_fixture.json"
+
+	var (
+		conn    string
+		tx      transaction.Transaction
+		sqlConn *DB
+	)
 
 	BeforeEach(func() {
 		var dbType string
@@ -54,7 +59,7 @@ var _ = Describe("Sql", func() {
 		db.InitDBWithSchemas(dbType, conn, true, false)
 
 		// Insert fixture data
-		fixtureDB, err := db.ConnectDB("json", "test_fixture.json", db.DefaultMaxOpenConn)
+		fixtureDB, err := db.ConnectDB("json", testFixtures, db.DefaultMaxOpenConn)
 		Expect(err).ToNot(HaveOccurred())
 		db.CopyDBResources(fixtureDB, dbc, true)
 
@@ -63,6 +68,9 @@ var _ = Describe("Sql", func() {
 	})
 
 	AfterEach(func() {
+		tx.Close()
+		sqlConn.Close()
+
 		schema.ClearManager()
 		if os.Getenv("MYSQL_TEST") != "true" {
 			os.Remove(conn)
@@ -70,7 +78,23 @@ var _ = Describe("Sql", func() {
 	})
 
 	Describe("Query", func() {
-		var s *schema.Schema
+		type testRow struct {
+			ID          string  `json:"id"`
+			TenantID    string  `json:"tenant_id"`
+			TestString  string  `json:"test_string"`
+			TestNumber  float64 `json:"test_number"`
+			TestInteger int     `json:"test_integer"`
+			TestBool    bool    `json:"test_bool"`
+		}
+
+		var (
+			s        *schema.Schema
+			expected []*testRow
+		)
+
+		var v map[string][]*testRow
+		readFixtures(testFixtures, &v)
+		expected = v["tests"]
 
 		BeforeEach(func() {
 			manager := schema.GetManager()
@@ -88,11 +112,18 @@ var _ = Describe("Sql", func() {
 				)
 				results, err := tx.Query(s, query, []interface{}{})
 				Expect(err).ToNot(HaveOccurred())
-				Expect(results[0].Get("tenant_id")).To(Equal("tenant0"))
-				Expect(results[0].Get("test_string")).To(Equal("obj0"))
-				Expect(results[2].Get("tenant_id")).To(Equal("tenant1"))
-				Expect(results[2].Get("test_string")).To(Equal("obj2"))
 				Expect(len(results)).To(Equal(4))
+
+				for i, r := range results {
+					Expect(r.Data()).To(Equal(map[string]interface{}{
+						"id":           expected[i].ID,
+						"tenant_id":    expected[i].TenantID,
+						"test_string":  expected[i].TestString,
+						"test_number":  expected[i].TestNumber,
+						"test_integer": expected[i].TestInteger,
+						"test_bool":    expected[i].TestBool,
+					}))
+				}
 			})
 		})
 
@@ -105,12 +136,18 @@ var _ = Describe("Sql", func() {
 				)
 				results, err := tx.Query(s, query, []interface{}{"tenant0"})
 				Expect(err).ToNot(HaveOccurred())
-				Expect(results[0].Get("tenant_id")).To(Equal("tenant0"))
-				Expect(results[0].Get("test_string")).To(Equal("obj0"))
-				Expect(results[1].Get("tenant_id")).To(Equal("tenant0"))
-				Expect(results[1].Get("test_string")).To(Equal("obj1"))
 				Expect(len(results)).To(Equal(2))
 
+				for i, r := range results {
+					Expect(r.Data()).To(Equal(map[string]interface{}{
+						"id":           expected[i].ID,
+						"tenant_id":    expected[i].TenantID,
+						"test_string":  expected[i].TestString,
+						"test_number":  expected[i].TestNumber,
+						"test_integer": expected[i].TestInteger,
+						"test_bool":    expected[i].TestBool,
+					}))
+				}
 			})
 		})
 
@@ -123,9 +160,17 @@ var _ = Describe("Sql", func() {
 				)
 				results, err := tx.Query(s, query, []interface{}{"tenant0", "obj1"})
 				Expect(err).ToNot(HaveOccurred())
-				Expect(results[0].Get("tenant_id")).To(Equal("tenant0"))
-				Expect(results[0].Get("test_string")).To(Equal("obj1"))
 				Expect(len(results)).To(Equal(1))
+
+				Expect(results[0].Data()).To(Equal(map[string]interface{}{
+					"id":           expected[1].ID,
+					"tenant_id":    expected[1].TenantID,
+					"test_string":  expected[1].TestString,
+					"test_number":  expected[1].TestNumber,
+					"test_integer": expected[1].TestInteger,
+					"test_bool":    expected[1].TestBool,
+				}),
+				)
 			})
 		})
 	})
@@ -133,7 +178,7 @@ var _ = Describe("Sql", func() {
 	Describe("Generate Table", func() {
 		var server *schema.Schema
 		var subnet *schema.Schema
-		var test   *schema.Schema
+		var test *schema.Schema
 
 		BeforeEach(func() {
 			manager := schema.GetManager()
@@ -252,3 +297,16 @@ var _ = Describe("Sql", func() {
 		})
 	})
 })
+
+func readFixtures(path string, v interface{}) {
+	f, err := os.Open(path)
+	if err != nil {
+		panic("failed to open test fixtures")
+	}
+	defer f.Close()
+
+	err = json.NewDecoder(f).Decode(&v)
+	if err != nil {
+		panic("failed parse test fixtures")
+	}
+}

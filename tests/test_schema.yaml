@@ -300,7 +300,31 @@ schemas:
         - create
         - update
         title: Test string
-        type: string
+        type:
+        - string
+        - "null"
+        unique: false
+      test_number:
+        default: 0.5
+        description: Test number
+        permission:
+        - create
+        - update
+        title: Test number
+        type:
+        - number
+        - "null"
+        unique: false
+      test_integer:
+        default: 0
+        description: Test integer
+        permission:
+        - create
+        - update
+        title: Test integer
+        type:
+        - integer
+        - "null"
         unique: false
       test_bool:
         default: false
@@ -309,7 +333,9 @@ schemas:
         - create
         - update
         title: Test boolean
-        type: boolean
+        type:
+        - boolean
+        - "null"
         unique: false
     propertiesOrder:
     - id

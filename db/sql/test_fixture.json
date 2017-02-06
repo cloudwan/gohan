@@ -1,8 +1,36 @@
 {
-    "tests": [
-        {"tenant_id": "tenant0", "test_string": "obj0"},
-        {"tenant_id": "tenant0", "test_string": "obj1"},
-        {"tenant_id": "tenant1", "test_string": "obj2"},
-        {"tenant_id": "tenant1", "test_string": "obj3"}
-    ]
+  "tests": [
+    {
+      "id": "0",
+      "tenant_id": "tenant0",
+      "test_string": "obj0",
+      "test_number": 0.0,
+      "test_integer": 0,
+      "test_bool": true
+    },
+    {
+      "id": "1",
+      "tenant_id": "tenant0",
+      "test_string": "obj1",
+      "test_number": -0.1,
+      "test_integer": -1,
+      "test_bool": true
+    },
+    {
+      "id": "2",
+      "tenant_id": "tenant1",
+      "test_string": "obj2",
+      "test_number": 0.2,
+      "test_integer": 2,
+      "test_bool": true
+    },
+    {
+      "id": "3",
+      "tenant_id": "tenant1",
+      "test_string": "obj3",
+      "test_number": -0.3,
+      "test_integer": 3,
+      "test_bool": true
+    }
+  ]
 }
