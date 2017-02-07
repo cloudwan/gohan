@@ -21,11 +21,23 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"time"
+
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/schema"
 )
 
 var _ = Describe("Gohanscript extension manager", func() {
+	var (
+		timeLimit  time.Duration
+		timeLimits []*schema.PathEventTimeLimit
+	)
+
+	BeforeEach(func() {
+		timeLimit = time.Duration(10) * time.Second
+		timeLimits = []*schema.PathEventTimeLimit{}
+	})
+
 	AfterEach(func() {
 		extension.ClearManager()
 	})
@@ -42,7 +54,7 @@ var _ = Describe("Gohanscript extension manager", func() {
 				Expect(err).ToNot(HaveOccurred())
 				extensions := []*schema.Extension{extension}
 				env := golang.NewEnvironment()
-				Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+				Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
 
 				context := map[string]interface{}{
 					"id": "test",

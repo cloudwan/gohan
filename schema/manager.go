@@ -23,6 +23,8 @@ import (
 	"strings"
 	"sync"
 
+	"time"
+
 	"github.com/cloudwan/gohan/util"
 	"github.com/tylerb/gls"
 	"github.com/xeipuuv/gojsonschema"
@@ -39,6 +41,8 @@ type Manager struct {
 	schemaOrder []string
 	policies    []*Policy
 	Extensions  []*Extension
+	TimeLimit   time.Duration         // default time limit for an extension
+	TimeLimits  []*PathEventTimeLimit // a list of exceptions for time limits
 	namespaces  map[string]*Namespace
 	mu          sync.RWMutex
 }

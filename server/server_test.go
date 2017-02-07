@@ -67,7 +67,7 @@ var _ = Describe("Server package test", func() {
 			Expect(err).ToNot(HaveOccurred(), "Failed to clear table.")
 		}
 		err = tx.Commit()
-		Expect(err).ToNot(HaveOccurred(), "Failed to commite transaction.")
+		Expect(err).ToNot(HaveOccurred(), "Failed to commit transaction.")
 	})
 
 	Describe("Http request", func() {

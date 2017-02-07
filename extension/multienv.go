@@ -15,7 +15,11 @@
 
 package extension
 
-import "github.com/cloudwan/gohan/schema"
+import (
+	"time"
+
+	"github.com/cloudwan/gohan/schema"
+)
 
 //MultiEnvironment can handle multiple environment
 type MultiEnvironment struct {
@@ -36,9 +40,9 @@ func (env *MultiEnvironment) SetUp() {
 }
 
 //LoadExtensionsForPath for returns extensions for specific path
-func (env *MultiEnvironment) LoadExtensionsForPath(extensions []*schema.Extension, path string) error {
+func (env *MultiEnvironment) LoadExtensionsForPath(extensions []*schema.Extension, timeLimit time.Duration, timeLimits []*schema.PathEventTimeLimit, path string) error {
 	for _, env := range env.childEnv {
-		err := env.LoadExtensionsForPath(extensions, path)
+		err := env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, path)
 		if err != nil {
 			return err
 		}

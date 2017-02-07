@@ -50,7 +50,8 @@ var _ = Describe("Resource manager", func() {
 		extensions    []*schema.Extension
 		env           extension.Environment
 		events        map[string]string
-		timelimit     time.Duration
+		timeLimit     time.Duration
+		timeLimits    []*schema.PathEventTimeLimit
 	)
 
 	BeforeEach(func() {
@@ -58,12 +59,11 @@ var _ = Describe("Resource manager", func() {
 
 		adminAuth = schema.NewAuthorization(adminTenantID, "admin", adminTokenID, []string{"admin"}, nil)
 		memberAuth = schema.NewAuthorization(memberTenantID, "demo", memberTokenID, []string{"Member"}, nil)
-		timelimit = time.Duration(1) * time.Second
 		auth = adminAuth
-
 		context = middleware.Context{}
-
 		events = map[string]string{}
+		timeLimit = time.Duration(10) * time.Second
+		timeLimits = []*schema.PathEventTimeLimit{}
 	})
 
 	environmentManager := extension.GetManager()
@@ -85,8 +85,7 @@ var _ = Describe("Resource manager", func() {
 		context["catalog"] = auth.Catalog()
 		context["auth"] = auth
 
-		env = otto.NewEnvironment("resource_management_test",
-			testDB, &middleware.FakeIdentity{}, timelimit, testSync)
+		env = otto.NewEnvironment("resource_management_test", testDB, &middleware.FakeIdentity{}, testSync)
 		extensions = []*schema.Extension{}
 		for event, javascript := range events {
 			extension, err := schema.NewExtension(map[string]interface{}{
@@ -97,7 +96,7 @@ var _ = Describe("Resource manager", func() {
 			Expect(err).ToNot(HaveOccurred())
 			extensions = append(extensions, extension)
 		}
-		Expect(env.LoadExtensionsForPath(extensions, path)).To(Succeed())
+		Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, path)).To(Succeed())
 		environmentManager.RegisterEnvironment(schemaID, env)
 	})
 
@@ -114,7 +113,7 @@ var _ = Describe("Resource manager", func() {
 			Expect(err).ToNot(HaveOccurred(), "Failed to clear table.")
 		}
 		err = tx.Commit()
-		Expect(err).ToNot(HaveOccurred(), "Failed to commite transaction.")
+		Expect(err).ToNot(HaveOccurred(), "Failed to commit transaction.")
 	})
 
 	Describe("Getting a schema", func() {

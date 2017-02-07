@@ -35,11 +35,11 @@ import (
 )
 
 func newEnvironmentWithExtension(extension *schema.Extension, db db.DB) (env extension.Environment) {
-	timelimit := time.Duration(1) * time.Second
+	timeLimit := time.Duration(1) * time.Second
+	timeLimits := []*schema.PathEventTimeLimit{}
 	extensions := []*schema.Extension{extension}
-	env = otto.NewEnvironment("db_test",
-		db, &middleware.FakeIdentity{}, timelimit, testSync)
-	Expect(env.LoadExtensionsForPath(extensions, "test_path")).To(Succeed())
+	env = otto.NewEnvironment("db_test", db, &middleware.FakeIdentity{}, testSync)
+	Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
 	return
 }
 

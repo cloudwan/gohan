@@ -24,16 +24,16 @@ import (
 
 //Environment gohan script based environment for gohan extension
 type Environment struct {
-	VM        *VM
-	timelimit time.Duration
+	VM         *VM
+	timeLimit  time.Duration
+	timeLimits []*schema.EventTimeLimit
 }
 
 //NewEnvironment create new gohan extension environment based on context
-func NewEnvironment(timelimit time.Duration) *Environment {
+func NewEnvironment() *Environment {
 	vm := NewVM()
 	env := &Environment{
-		VM:        vm,
-		timelimit: timelimit,
+		VM: vm,
 	}
 	return env
 }
@@ -44,7 +44,7 @@ func (env *Environment) Load(source, code string) error {
 }
 
 //LoadExtensionsForPath for returns extensions for specific path
-func (env *Environment) LoadExtensionsForPath(extensions []*schema.Extension, path string) error {
+func (env *Environment) LoadExtensionsForPath(extensions []*schema.Extension, timeLimit time.Duration, timeLimits []*schema.PathEventTimeLimit, path string) error {
 	var err error
 	for _, extension := range extensions {
 		if extension.Match(path) {
@@ -60,14 +60,19 @@ func (env *Environment) LoadExtensionsForPath(extensions []*schema.Extension, pa
 
 		}
 	}
+	// setup time limits for matching extensions
+	env.timeLimit = timeLimit
+	for _, timeLimit := range timeLimits {
+		if timeLimit.Match(path) {
+			env.timeLimits = append(env.timeLimits, schema.NewEventTimeLimit(timeLimit.EventRegex, timeLimit.TimeDuration))
+		}
+	}
 	return nil
 }
 
 //HandleEvent handles event
 func (env *Environment) HandleEvent(event string, context map[string]interface{}) (err error) {
 	context["event_type"] = event
-
-	successCh := make(chan bool)
 
 	defer func() {
 		if caught := recover(); caught != nil {
@@ -79,8 +84,16 @@ func (env *Environment) HandleEvent(event string, context map[string]interface{}
 			panic(caught) // Something else happened, repanic!
 		}
 	}()
-	timer := time.NewTimer(env.timelimit)
-
+	// take time limit from first passing regex or default
+	selectedTimeLimit := env.timeLimit
+	for _, timeLimit := range env.timeLimits {
+		if timeLimit.Match(event) {
+			selectedTimeLimit = timeLimit.TimeDuration
+			break
+		}
+	}
+	timer := time.NewTimer(selectedTimeLimit)
+	successCh := make(chan bool)
 	go func() {
 		for {
 			select {
@@ -105,8 +118,10 @@ func (env *Environment) HandleEvent(event string, context map[string]interface{}
 
 //Clone makes clone of the environment
 func (env *Environment) Clone() ext.Environment {
-	newEnv := NewEnvironment(env.timelimit)
-	newEnv.VM = env.VM.Clone()
-	newEnv.VM.StopChan = make(chan func(), 1)
-	return newEnv
+	clone := NewEnvironment()
+	clone.VM = env.VM.Clone()
+	clone.VM.StopChan = make(chan func(), 1)
+	clone.timeLimit = env.timeLimit
+	clone.timeLimits = env.timeLimits
+	return clone
 }
