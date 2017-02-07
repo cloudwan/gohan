@@ -17,14 +17,15 @@ package server
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/job"
 
-	gohan_sync "github.com/cloudwan/gohan/sync"
 	l "github.com/cloudwan/gohan/log"
+	gohan_sync "github.com/cloudwan/gohan/sync"
 	"github.com/cloudwan/gohan/util"
 )
 
@@ -33,6 +34,8 @@ const (
 	StateUpdateEventName = "state_update"
 	//MonitoringUpdateEventName used in etcd path
 	MonitoringUpdateEventName = "monitoring_update"
+
+	SyncWatchRevisionPrefix = "/gohan/watch/revision"
 )
 
 //Sync Watch Process
@@ -52,13 +55,15 @@ func startSyncWatchProcess(server *Server) {
 		}
 		extensions[event] = env
 	}
-	responseChan := make(chan *gohan_sync.Event)
+	responseChans := make(map[string]chan *gohan_sync.Event)
 	stopChan := make(chan bool)
 	for _, path := range watch {
+		responseChans[path] = make(chan *gohan_sync.Event)
 		go func(path string) {
 			defer l.LogFatalPanic(log)
+			responseChan := responseChans[path]
 			for server.running {
-				lockKey := lockPath + "/watch"
+				lockKey := lockPath + "/watch" + path
 				err := server.sync.Lock(lockKey, true)
 				if err != nil {
 					log.Warning("Can't start watch process due to lock", err)
@@ -68,7 +73,18 @@ func startSyncWatchProcess(server *Server) {
 				defer func() {
 					server.sync.Unlock(lockKey)
 				}()
-				err = server.sync.Watch(path, responseChan, stopChan, gohan_sync.RevisionCurrent)
+
+				fromRevision := int64(gohan_sync.RevisionCurrent)
+				lastSeen, err := server.sync.Fetch(SyncWatchRevisionPrefix + path)
+				if err == nil {
+					inStore, err := strconv.ParseInt(lastSeen.Value, 10, 64)
+					if err == nil {
+						log.Info("Using last seen revision `%d` for watching path `%s`", inStore, path)
+						fromRevision = inStore
+					}
+				}
+
+				err = server.sync.Watch(path, responseChan, stopChan, fromRevision)
 				if err != nil {
 					log.Error(fmt.Sprintf("sync watch error: %s", err))
 				}
@@ -76,24 +92,32 @@ func startSyncWatchProcess(server *Server) {
 		}(path)
 	}
 	//main response lisnter process
-	go func() {
-		defer l.LogFatalPanic(log)
-		for server.running {
-			response := <-responseChan
-			server.queue.Add(job.NewJob(
-				func() {
-					defer l.LogPanic(log)
-					for _, event := range events {
-						//match extensions
-						if strings.HasPrefix(response.Key, "/"+event) {
-							env := extensions[event]
-							runExtensionOnSync(server, response, env.Clone())
-							return
+	for _, path := range watch {
+		go func(path string) {
+			defer l.LogFatalPanic(log)
+			responseChan := responseChans[path]
+			for server.running {
+				response := <-responseChan
+				err := server.sync.Update(SyncWatchRevisionPrefix+path, strconv.FormatInt(response.Revision, 10))
+				if err != nil {
+					log.Error("Failed to update revision number for watch path `%s` in sync storage", path)
+				}
+				server.queue.Add(job.NewJob(
+					func() {
+						defer l.LogPanic(log)
+						for _, event := range events {
+							//match extensions
+							if strings.HasPrefix(response.Key, "/"+event) {
+								env := extensions[event]
+								runExtensionOnSync(server, response, env.Clone())
+								return
+							}
 						}
-					}
-				}))
-		}
-	}()
+					}),
+				)
+			}
+		}(path)
+	}
 }
 
 //Stop Watch Process
