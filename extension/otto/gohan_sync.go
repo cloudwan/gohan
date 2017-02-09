@@ -89,6 +89,7 @@ func init() {
 				var revision int64
 				var err error
 				var value otto.Value
+				vm := call.Otto
 
 				VerifyCallArguments(&call, "gohan_sync_watch", 3)
 
@@ -108,7 +109,7 @@ func init() {
 				}
 
 				eventChan := make(chan *sync.Event, 32) // non-blocking
-				stopChan := make(chan bool) // blocking
+				stopChan := make(chan bool, 1) // non-blocking
 				errorChan := make(chan error) // blocking
 
 				go func() {
@@ -118,24 +119,23 @@ func init() {
 				}()
 
 				select {
+				case interrupt := <-vm.Interrupt:
+					log.Debug("Received otto interrupt in gohan_sync_watch")
+					stopChan <- true
+					interrupt()
 				case event := <-eventChan:
 					if value, err = vm.ToValue(convertSyncEvent(event)); err == nil {
 						return value
 					}
-
-					return otto.NullValue()
-
 				case <-time.NewTimer(time.Duration(timeoutMsec) * time.Millisecond).C:
+					stopChan <- true
 					if value, err = vm.ToValue(map[string]interface{}{}); err == nil {
 						return value
 					}
-
-					return otto.NullValue()
-
 				case err := <-errorChan:
 					ThrowOttoException(&call, "Sync watch ex failed: " + err.Error())
-					return otto.NullValue()
 				}
+				return otto.NullValue()
 			},
 		}
 		for name, object := range builtins {

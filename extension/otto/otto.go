@@ -17,6 +17,7 @@ package otto
 
 import (
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/cloudwan/gohan/db"
@@ -171,20 +172,28 @@ func convertNilsToNulls(object interface{}) {
 //HandleEvent handles event
 func (env *Environment) HandleEvent(event string, context map[string]interface{}) (err error) {
 	vm := env.VM
+	var closeNotifier http.CloseNotifier
+	var closeNotify <-chan bool
+	if httpResponse, ok := context["http_response"]; ok {
+		if closeNotifier, ok = httpResponse.(http.CloseNotifier); ok {
+			closeNotify = closeNotifier.CloseNotify()
+		}
+	}
 	context["event_type"] = event
-	var halt = fmt.Errorf("exceed timeout for extension execution")
+	var timeout = fmt.Errorf("exceed timeout for extension execution")
+	var disconnected = fmt.Errorf("client disconnected")
 
 	defer func() {
 		if caught := recover(); caught != nil {
 			if caughtError, ok := caught.(error); ok {
-				if caughtError.Error() == halt.Error() {
-					log.Error(halt.Error())
-					err = halt
-					return
+				switch caughtError {
+				case timeout, disconnected:
+					err = caughtError
+					log.Warning(caughtError.Error())
+				default:
+					panic(caught) // Something else happened, repanic!
 				}
 			}
-
-			panic(caught) // Something else happened, repanic!
 		}
 	}()
 	// take time limit from first passing regex or default
@@ -200,9 +209,14 @@ func (env *Environment) HandleEvent(event string, context map[string]interface{}
 	go func() {
 		for {
 			select {
+			case <-closeNotify:
+				vm.Interrupt <- func() {
+					panic(disconnected)
+				}
+				return
 			case <-timer.C:
 				vm.Interrupt <- func() {
-					panic(halt)
+					panic(timeout)
 				}
 				return
 			case <-successCh:
@@ -248,7 +262,9 @@ func (env *Environment) SetEventTimeLimit(eventRegex string, timeLimit time.Dura
 //Clone makes clone of the environment
 func (env *Environment) Clone() ext.Environment {
 	clone := NewEnvironment(env.Name, env.DataStore, env.Identity, env.Sync)
+	interrupt := clone.VM.Otto.Interrupt
 	clone.VM.Otto = env.VM.Copy()
+	clone.VM.Otto.Interrupt = interrupt
 	clone.timeLimit = env.timeLimit
 	clone.timeLimits = env.timeLimits
 	return clone
