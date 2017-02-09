@@ -40,11 +40,9 @@ import (
 	//Import gohan script lib
 	_ "github.com/cloudwan/gohan/extension/gohanscript/autogen"
 	l "github.com/cloudwan/gohan/log"
-
-	"github.com/op/go-logging"
 )
 
-var log = logging.MustGetLogger(l.GetModuleName())
+var log = l.NewLogger()
 
 const defaultConfigFile = "gohan.yaml"
 

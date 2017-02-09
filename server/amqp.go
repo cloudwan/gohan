@@ -24,9 +24,11 @@ import (
 
 	"github.com/cloudwan/gohan/extension"
 
-	"github.com/cloudwan/gohan/util"
 	"github.com/streadway/amqp"
 	"github.com/twinj/uuid"
+
+	l "github.com/cloudwan/gohan/log"
+	"github.com/cloudwan/gohan/util"
 )
 
 const connectionWait = 10 * time.Second
@@ -61,7 +63,7 @@ func listenAMQP(server *Server) {
 
 	for _, queue := range queues {
 		go func(queue string) {
-			defer util.LogFatalPanic(log)
+			defer l.LogFatalPanic(log)
 			for server.running {
 				conn, err := amqp.Dial(connection)
 				if err != nil {

@@ -16,19 +16,20 @@
 package otto
 
 import (
-	"github.com/cloudwan/gohan/schema"
-	"github.com/op/go-logging"
-	"github.com/robertkrimen/otto"
-	l "github.com/cloudwan/gohan/log"
-	"github.com/cloudwan/gohan/util"
-	"github.com/ddliu/motto"
 	"io/ioutil"
 	"strings"
 	"fmt"
 	"os"
+
+	"github.com/ddliu/motto"
+
+	"github.com/cloudwan/gohan/schema"
+	"github.com/robertkrimen/otto"
+	l "github.com/cloudwan/gohan/log"
+	"github.com/cloudwan/gohan/util"
 )
 
-var log = logging.MustGetLogger(l.GetModuleName())
+var log = l.NewLogger()
 
 func init() {
 	gohanInit := func(env *Environment) {
