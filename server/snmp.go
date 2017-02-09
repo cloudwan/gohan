@@ -20,6 +20,8 @@ import (
 	"net"
 
 	"github.com/cdevr/WapSNMP"
+
+	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/util"
 )
 
@@ -51,7 +53,7 @@ func startSNMPProcess(server *Server) {
 
 	buf := make([]byte, 1024)
 	go func() {
-		defer util.LogFatalPanic(log)
+		defer l.LogFatalPanic(log)
 		defer conn.Close()
 		for server.running {
 			rlen, remote, err := conn.ReadFromUDP(buf)

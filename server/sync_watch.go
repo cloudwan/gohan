@@ -24,6 +24,7 @@ import (
 	"github.com/cloudwan/gohan/job"
 
 	gohan_sync "github.com/cloudwan/gohan/sync"
+	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/util"
 )
 
@@ -55,7 +56,7 @@ func startSyncWatchProcess(server *Server) {
 	stopChan := make(chan bool)
 	for _, path := range watch {
 		go func(path string) {
-			defer util.LogFatalPanic(log)
+			defer l.LogFatalPanic(log)
 			for server.running {
 				lockKey := lockPath + "/watch"
 				err := server.sync.Lock(lockKey, true)
@@ -76,12 +77,12 @@ func startSyncWatchProcess(server *Server) {
 	}
 	//main response lisnter process
 	go func() {
-		defer util.LogFatalPanic(log)
+		defer l.LogFatalPanic(log)
 		for server.running {
 			response := <-responseChan
 			server.queue.Add(job.NewJob(
 				func() {
-					defer util.LogPanic(log)
+					defer l.LogPanic(log)
 					for _, event := range events {
 						//match extensions
 						if strings.HasPrefix(response.Key, "/"+event) {

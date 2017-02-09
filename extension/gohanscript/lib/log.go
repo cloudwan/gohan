@@ -16,7 +16,7 @@
 package lib
 
 import (
-	"github.com/op/go-logging"
+	l "github.com/cloudwan/gohan/log"
 )
 
-var log = logging.MustGetLogger("gohanscript")
+var log = l.NewLoggerForModule("gohanscript")

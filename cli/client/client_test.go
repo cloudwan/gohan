@@ -25,10 +25,10 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/ghttp"
-	"github.com/op/go-logging"
 	"github.com/rackspace/gophercloud"
 	"github.com/twinj/uuid"
 
+	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/schema"
 )
 
@@ -266,7 +266,7 @@ var _ = Describe("CLI functions", func() {
 				gohanSchemaURL:   "/gohan/v0.1/schemas",
 				gohanEndpointURL: server.URL(),
 				outputFormat:     "json",
-				logLevel:         logging.CRITICAL,
+				logLevel:         l.CRITICAL,
 			}
 			gohanClientCLI = GohanClientCLI{
 				provider: provider,
@@ -582,7 +582,7 @@ var _ = Describe("CLI functions", func() {
 					args = append(args, "--verbosity", "0")
 					argsMap, err := gohanClientCLI.handleArguments(args, s)
 					Expect(err).ToNot(HaveOccurred())
-					Expect(gohanClientCLI.opts.logLevel).To(Equal(logging.WARNING))
+					Expect(gohanClientCLI.opts.logLevel).To(Equal(l.WARNING))
 					Expect(argsMap).To(Equal(argsExpected))
 				})
 
@@ -590,7 +590,7 @@ var _ = Describe("CLI functions", func() {
 					args = append(args, "--verbosity", "1")
 					argsMap, err := gohanClientCLI.handleArguments(args, s)
 					Expect(err).ToNot(HaveOccurred())
-					Expect(gohanClientCLI.opts.logLevel).To(Equal(logging.NOTICE))
+					Expect(gohanClientCLI.opts.logLevel).To(Equal(l.NOTICE))
 					Expect(argsMap).To(Equal(argsExpected))
 				})
 
@@ -598,7 +598,7 @@ var _ = Describe("CLI functions", func() {
 					args = append(args, "--verbosity", "2")
 					argsMap, err := gohanClientCLI.handleArguments(args, s)
 					Expect(err).ToNot(HaveOccurred())
-					Expect(gohanClientCLI.opts.logLevel).To(Equal(logging.INFO))
+					Expect(gohanClientCLI.opts.logLevel).To(Equal(l.INFO))
 					Expect(argsMap).To(Equal(argsExpected))
 				})
 
@@ -606,7 +606,7 @@ var _ = Describe("CLI functions", func() {
 					args = append(args, "--verbosity", "3")
 					argsMap, err := gohanClientCLI.handleArguments(args, s)
 					Expect(err).ToNot(HaveOccurred())
-					Expect(gohanClientCLI.opts.logLevel).To(Equal(logging.DEBUG))
+					Expect(gohanClientCLI.opts.logLevel).To(Equal(l.DEBUG))
 					Expect(argsMap).To(Equal(argsExpected))
 				})
 

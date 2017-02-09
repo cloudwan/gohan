@@ -1,7 +1,7 @@
 package runner
 
 import (
-	"github.com/op/go-logging"
+	l "github.com/cloudwan/gohan/log"
 )
 
-var log = logging.MustGetLogger("extest")
+var log = l.NewLoggerForModule("extest")
