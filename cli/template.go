@@ -155,14 +155,14 @@ func doTemplate(c *cli.Context) {
 		util.ExitFatal(err)
 		return
 	}
-	if c.IsSet("split-by-resource-group") {
-		saveAllResources(schemas, tpl)
-		return
-	}
 	policies := manager.Policies()
 	policy := c.String("policy")
 	schemasPolicy := filterSchemasForPolicy(policy, policies, schemas)
-	output, err := tpl.Execute(pongo2.Context{"schemas": schemasPolicy})
+	if c.IsSet("split-by-resource-group") {
+		saveAllResources(schemasPolicy, tpl)
+		return
+	}
+	output, err := tpl.Execute(pongo2.Context{"schemas": schemasPolicy, "schemaName": "gohan API"})
 	if err != nil {
 		util.ExitFatal(err)
 		return
@@ -174,7 +174,7 @@ func doTemplate(c *cli.Context) {
 func saveAllResources(schemas []*schema.Schema, tpl *pongo2.Template) {
 	for _, resource := range getAllResourcesFromSchemas(schemas) {
 		resourceSchemas := filerSchemasByResource(resource, schemas)
-		output, _ := tpl.Execute(pongo2.Context{"schemas": resourceSchemas})
+		output, _ := tpl.Execute(pongo2.Context{"schemas": resourceSchemas, "schemaName": resource})
 		ioutil.WriteFile(resource+".json", []byte(output), 0644)
 	}
 }
