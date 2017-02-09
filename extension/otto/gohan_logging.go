@@ -17,10 +17,10 @@ package otto
 
 import (
 	"github.com/robertkrimen/otto"
-
-	logging "github.com/op/go-logging"
 	//Import otto underscore lib
 	_ "github.com/robertkrimen/otto/underscore"
+
+	l "github.com/cloudwan/gohan/log"
 )
 
 const (
@@ -46,13 +46,13 @@ func init() {
 				if err != nil {
 					ThrowOttoException(&call, "Log module: %v", err)
 				}
-				logger := logging.MustGetLogger(module)
+				logger := l.NewLoggerForModule(module)
 
 				intLevel, err := GetInt64(call.Argument(1))
 				if err != nil {
 					ThrowOttoException(&call, "Log level: %v", err)
 				}
-				level := logging.Level(intLevel)
+				level := l.Level(intLevel)
 
 				message, err := GetString(call.Argument(2))
 				if err != nil {
@@ -69,13 +69,13 @@ func init() {
 		}
 
 		// op/go-logging/level.go has levelNames[], but it's unexported
-		logLevels := map[string]logging.Level{
-			"CRITICAL": logging.CRITICAL,
-			"ERROR":    logging.ERROR,
-			"WARNING":  logging.WARNING,
-			"NOTICE":   logging.NOTICE,
-			"INFO":     logging.INFO,
-			"DEBUG":    logging.DEBUG,
+		logLevels := map[string]l.Level{
+			"CRITICAL": l.CRITICAL,
+			"ERROR":    l.ERROR,
+			"WARNING":  l.WARNING,
+			"NOTICE":   l.NOTICE,
+			"INFO":     l.INFO,
+			"DEBUG":    l.DEBUG,
 		}
 		vm.Set("LOG_LEVEL", logLevels)
 
@@ -124,20 +124,20 @@ func init() {
 }
 
 // logGeneral can be replaced with logger.Log(level, format, args) when https://github.com/op/go-logging/issues/80 gets fixed.
-func logGeneral(logger *logging.Logger, level logging.Level, format string, args ...interface{}) {
+func logGeneral(logger l.Logger, level l.Level, format string, args ...interface{}) {
 	var logAction func(format string, args ...interface{})
 	switch level {
-	case logging.CRITICAL:
+	case l.CRITICAL:
 		logAction = logger.Critical
-	case logging.ERROR:
+	case l.ERROR:
 		logAction = logger.Error
-	case logging.WARNING:
+	case l.WARNING:
 		logAction = logger.Warning
-	case logging.NOTICE:
+	case l.NOTICE:
 		logAction = logger.Notice
-	case logging.INFO:
+	case l.INFO:
 		logAction = logger.Info
-	case logging.DEBUG:
+	case l.DEBUG:
 		logAction = logger.Debug
 	}
 

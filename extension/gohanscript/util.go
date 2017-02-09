@@ -22,23 +22,18 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/k0kubun/pp"
 	"github.com/nati/yaml"
-	"github.com/op/go-logging"
 
 	"github.com/cloudwan/gohan/job"
+	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/util"
-	"github.com/k0kubun/pp"
 )
 
-var log = logging.MustGetLogger("gohanscript")
+var log = l.NewLoggerForModule("gohanscript")
 
 func init() {
-	backend := logging.NewLogBackend(os.Stderr, "", 0)
-	var format = logging.MustStringFormatter(
-		`%{color}%{time:15:04:05.000} ▶ %{level:.7s} %{color:reset} %{message}`,
-	)
-	backendFormatter := logging.NewBackendFormatter(backend, format)
-	logging.SetBackend(backendFormatter)
+	l.SetUpBasicLogging(os.Stderr, l.DefaultFormat)
 }
 
 //LoadYAMLFile loads YAML from file

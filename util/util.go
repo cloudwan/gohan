@@ -19,21 +19,21 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/op/go-logging"
-	"golang.org/x/crypto/ssh"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"sort"
 	"strings"
 	"sync/atomic"
 	"text/template"
 	"time"
 
-	"github.com/xeipuuv/gojsonpointer"
+	"golang.org/x/crypto/ssh"
+
 	"gopkg.in/yaml.v2"
+
+	"github.com/xeipuuv/gojsonpointer"
 )
 
 //Counter represents atomic counter
@@ -343,20 +343,4 @@ func MaybeList(value interface{}) []interface{} {
 func MaybeInt(value interface{}) int {
 	res, _ := value.(int)
 	return res
-}
-
-//LogPanic logs panic and prevent crash
-func LogPanic(log *logging.Logger) {
-	err := recover()
-	if err != nil {
-		log.Error(fmt.Sprintf("Panic %s: %s", err, debug.Stack()))
-	}
-}
-
-//LogFatalPanic logs panic and crashes Gohan process
-func LogFatalPanic(log *logging.Logger) {
-	err := recover()
-	if err != nil {
-		log.Fatalf("Panic %s: %s", err, debug.Stack())
-	}
 }

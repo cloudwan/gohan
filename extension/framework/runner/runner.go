@@ -18,13 +18,14 @@ package runner
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"regexp"
-
-	"github.com/cloudwan/gohan/extension/framework/buflog"
 
 	"github.com/robertkrimen/otto"
 	"github.com/robertkrimen/otto/ast"
 	"github.com/robertkrimen/otto/parser"
+
+	l "github.com/cloudwan/gohan/log"
 )
 
 const (
@@ -94,6 +95,14 @@ func (runner *TestRunner) Run() TestRunnerErrors {
 	for _, test := range tests {
 		errors[test] = runner.runTest(test, env)
 
+		if !runner.printAllLogs {
+			w := l.BufWritter{}
+			if errors[test] != nil {
+				w.Dump(os.Stderr)
+			}
+			w.Reset()
+		}
+
 		if _, ok := errors[test].(metaError); ok {
 			return generalError(errors[test])
 		}
@@ -109,16 +118,6 @@ func generalError(err error) TestRunnerErrors {
 }
 
 func (runner *TestRunner) runTest(testName string, env *Environment) (err error) {
-	if !runner.printAllLogs {
-		buflog.Buf().Activate()
-		defer func() {
-			if err != nil {
-				buflog.Buf().PrintLogs()
-			}
-			buflog.Buf().Deactivate()
-		}()
-	}
-
 	defer func() {
 		runner.printTestResult(testName, err)
 	}()

@@ -21,8 +21,8 @@ import (
 	"time"
 
 	"github.com/cloudwan/gohan/db/pagination"
+	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/schema"
-	"github.com/cloudwan/gohan/util"
 )
 
 const (
@@ -40,7 +40,7 @@ func startSyncProcess(server *Server) {
 	pollingTicker := time.Tick(eventPollingTime)
 	committed := transactionCommitInformer()
 	go func() {
-		defer util.LogFatalPanic(log)
+		defer l.LogFatalPanic(log)
 		recentlySynced := false
 		for server.running {
 			select {

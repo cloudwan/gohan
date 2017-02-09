@@ -21,7 +21,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/op/go-logging"
+	l "github.com/cloudwan/gohan/log"
 )
 
 var (
@@ -51,13 +51,13 @@ var (
 
 	logLevelKey    = "verbosity"
 	logLevelEnvKey = "GOHAN_VERBOSITY"
-	logLevels      = []logging.Level{
-		logging.WARNING,
-		logging.NOTICE,
-		logging.INFO,
-		logging.DEBUG,
+	logLevels      = []l.Level{
+		l.WARNING,
+		l.NOTICE,
+		l.INFO,
+		l.DEBUG,
 	}
-	defaultLogLevel = logging.WARNING
+	defaultLogLevel = l.WARNING
 
 	commonParams = map[string]struct{}{
 		outputFormatKey: struct{}{},
@@ -79,7 +79,7 @@ type GohanClientCLIOpts struct {
 	gohanSchemaURL   string
 
 	outputFormat string
-	logLevel     logging.Level
+	logLevel     l.Level
 }
 
 // NewOptsFromEnv creates new Opts for GohanClientCLI using env variables
@@ -172,11 +172,11 @@ func findOutputFormat(formatOpt interface{}) (string, error) {
 	return "", fmt.Errorf(incorrectOutputFormat, outputFormats)
 }
 
-func parseLogLevel(verbosityOpt interface{}) (logging.Level, error) {
+func parseLogLevel(verbosityOpt interface{}) (l.Level, error) {
 	for i, logLevel := range logLevels {
 		if fmt.Sprint(i) == verbosityOpt {
 			return logLevel, nil
 		}
 	}
-	return logging.WARNING, fmt.Errorf(incorrectVerbosityLevel, 0, len(logLevels)-1)
+	return l.WARNING, fmt.Errorf(incorrectVerbosityLevel, 0, len(logLevels)-1)
 }
