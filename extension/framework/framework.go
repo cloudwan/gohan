@@ -38,7 +38,7 @@ var (
 
 // TestExtensions runs extension tests when invoked from Gohan CLI
 func TestExtensions(c *cli.Context) {
-	l.SetUpBasicLogging(logWriter, l.DefaultFormat, "", l.DEBUG)
+	l.SetUpBasicLogging(logWriter, l.DefaultFormat)
 
 	var config *util.Config
 	configFilePath := c.String("config-file")
@@ -68,7 +68,7 @@ func TestExtensions(c *cli.Context) {
 // RunTests runs extension tests for CLI.
 func RunTests(testFiles []string, printAllLogs bool, testFilter string, workers int) (returnCode int) {
 	if !printAllLogs {
-		l.SetUpBasicLogging(l.BufWritter{}, l.DefaultFormat, "", l.DEBUG)
+		l.SetUpBasicLogging(l.BufWritter{}, l.DefaultFormat)
 	}
 
 	if workers <= 0 {
@@ -152,7 +152,7 @@ func makeSummary(errors map[string]runner.TestRunnerErrors) (summary map[string]
 }
 
 func printSummary(summary map[string]error, printAllLogs bool) {
-	l.SetUpBasicLogging(logWriter, l.DefaultFormat, "", l.DEBUG)
+	l.SetUpBasicLogging(logWriter, l.DefaultFormat)
 
 	log.Info("Run %d test files.", len(summary))
 

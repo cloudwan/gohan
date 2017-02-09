@@ -156,28 +156,35 @@ func addLevelsToBackend(config *util.Config, prefix string, backend logging.Leve
 	}
 }
 
+// ModuleLevel holds module name with desired log level.
+type ModuleLevel struct {
+	Module string
+	Level  Level
+}
+
 // Log formats.
 var (
 	DefaultFormat = "%{color}%{time:15:04:05.000}: %{module} %{level} %{color:reset} %{message}"
 	CliFormat     = "%{color}%{message}%{color:reset}"
+
+	DefaultModuleLevel = ModuleLevel{"", DEBUG}
 )
 
-//SetUpBasicLogging configures logging to output logs to w.
-func SetUpBasicLogging(w io.Writer, format string, modlevs ...interface{}) {
-	if len(modlevs)%2 != 0 {
-		panic("Invalid number of parameters")
-	}
-
+// SetUpBasicLogging configures logging to output logs to w, if levels are nil
+// DefaultModuleLevel is used.
+func SetUpBasicLogging(w io.Writer, format string, levels ...ModuleLevel) {
 	backendFormatter := logging.NewBackendFormatter(
 		logging.NewLogBackend(w, "", 0),
 		logging.MustStringFormatter(format),
 	)
 	leveledBackendFormatter := logging.AddModuleLevel(backendFormatter)
 
-	for i := 0; i < len(modlevs); i += 2 {
-		m := modlevs[i].(string)
-		l := modlevs[i+1].(Level)
-		leveledBackendFormatter.SetLevel(logging.Level(l), m)
+	if levels == nil {
+		levels = []ModuleLevel{DefaultModuleLevel}
+	}
+
+	for _, m := range levels {
+		leveledBackendFormatter.SetLevel(logging.Level(m.Level), m.Module)
 	}
 
 	logging.SetBackend(leveledBackendFormatter)

@@ -3,7 +3,6 @@ package log
 import (
 	"bytes"
 	"io"
-	"sync"
 
 	"github.com/tylerb/gls"
 )
@@ -27,12 +26,7 @@ func (w BufWritter) Reset() {
 	buffer().Reset()
 }
 
-var bufferMu sync.Mutex
-
 func buffer() *bytes.Buffer {
-	bufferMu.Lock()
-	defer bufferMu.Unlock()
-
 	b := gls.Get("log_buffer")
 	if b == nil {
 		b = bytes.NewBuffer([]byte{})

@@ -86,7 +86,7 @@ type GohanClientCLI struct {
 }
 
 func setUpLogging(level l.Level) {
-	l.SetUpBasicLogging(logOutput, l.CliFormat, "gohan.cli.client", level)
+	l.SetUpBasicLogging(logOutput, l.CliFormat, l.ModuleLevel{"gohan.cli.client", level})
 }
 
 // ExecuteCommand ...
