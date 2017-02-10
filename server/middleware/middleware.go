@@ -45,6 +45,10 @@ func (rh *responseHijacker) Write(b []byte) (int, error) {
 	return rh.ResponseWriter.Write(b)
 }
 
+func (rh *responseHijacker) CloseNotify() <-chan bool {
+	return rh.ResponseWriter.(http.CloseNotifier).CloseNotify()
+}
+
 //Logging logs requests and responses
 func Logging() martini.Handler {
 	return func(res http.ResponseWriter, req *http.Request, c martini.Context) {
