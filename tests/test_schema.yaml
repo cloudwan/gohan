@@ -340,6 +340,8 @@ schemas:
     propertiesOrder:
     - id
     - tenant_id
+    required:
+    - tenant_id
     type: object
   singular: test
   title: Test

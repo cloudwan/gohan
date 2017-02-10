@@ -712,18 +712,19 @@ var _ = Describe("Otto extension manager", func() {
 						"id": "test_extension",
 						"code": `
 						gohan_register_handler("test_event", function(context){
-						  gohan_db_create(context.transaction,
-						    'network', {
-								'id':'test1',
-								'name': 'name',
-								'description': 'description',
-								'providor_networks': {},
-								'route_targets': [],
-								'shared': false,
-								'tenant_id': 'admin'});
+						  var network = {
+						    'id':'test1',
+						    'name': 'name',
+						    'description': 'description',
+						    'providor_networks': {},
+						    'route_targets': [],
+						    'shared': false,
+						    'tenant_id': 'admin'
+						  };
+						  gohan_db_create(context.transaction, 'network', network);
 						  context.network = gohan_db_fetch(context.transaction, 'network', 'test1', 'admin');
-						  gohan_db_update(context.transaction,
-						    'network', {'id':'test1', 'name': 'name_updated', 'tenant_id': 'admin'});
+						  network.name = "name_updated";
+						  gohan_db_update(context.transaction, 'network', network);
 						  context.networks = gohan_db_list(context.transaction, 'network', {});
 						  context.networks2 = gohan_db_list(context.transaction, 'network', {'shared': false});
 						  gohan_db_delete(context.transaction, 'network', 'test1');
@@ -757,18 +758,19 @@ var _ = Describe("Otto extension manager", func() {
 						"id": "test_extension",
 						"code": `
 						gohan_register_handler("test_event", function(context){
-						  gohan_db_create(context.transaction,
-						    'network', {
-								'id':'test1',
-								'name': 'name',
-								'description': 'description',
-								'providor_networks': {},
-								'route_targets': [],
-								'shared': false,
-								'tenant_id': 'admin'});
+						  var network = {
+						    'id':'test1',
+						    'name': 'name',
+						    'description': 'description',
+						    'providor_networks': {},
+						    'route_targets': [],
+						    'shared': false,
+						    'tenant_id': 'admin'
+						  };
+						  gohan_db_create(context.transaction, 'network', network);
 						  context.network = gohan_db_fetch(context.transaction, 'network', 'test1', 'admin');
-						  gohan_db_update(context.transaction,
-						    'network', {'id':'test1', 'name': 'name_updated', 'tenant_id': 'admin'});
+						  network.name = "name_updated";
+						  gohan_db_update(context.transaction, 'network', network);
 						  context.networks = gohan_db_list(context.transaction, 'network', {});
 						  gohan_db_delete(context.transaction, 'network', 'test1');
 						  context.networks2 = gohan_db_list(context.transaction, 'network', {});
@@ -804,18 +806,18 @@ var _ = Describe("Otto extension manager", func() {
 						"code": `
 						gohan_register_handler("test_event", function(context){
 						  var tx = gohan_db_transaction();
-						  gohan_db_create(tx,
-						    'network', {
-								'id':'test1',
-								'name': 'name',
-								'description': 'description',
-								'providor_networks': {},
-								'route_targets': [],
-								'shared': false,
-								'tenant_id': 'admin'});
+						  var network = {
+						    'id':'test1',
+						    'name': 'name',
+						    'description': 'description',
+						    'providor_networks': {},
+						    'route_targets': [],
+						    'shared': false,
+						    'tenant_id': 'admin'
+						  };
+						  gohan_db_create(tx, 'network', network);
 						  context.network = gohan_db_fetch(tx, 'network', 'test1', 'admin');
-						  gohan_db_update(tx,
-						    'network', {'id':'test1', 'name': 'name_updated', 'tenant_id': 'admin'});
+						  gohan_db_update(tx, 'network', network);
 						  context.networks = gohan_db_list(tx, 'network', {});
 						  gohan_db_delete(tx, 'network', 'test1');
 						  context.networks2 = gohan_db_list(tx, 'network', {});
