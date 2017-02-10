@@ -1,0 +1,791 @@
+//Auto generated code. DO NOT EDIT
+package gen 
+
+import (
+	"os"
+	"time"
+	"fmt"
+	"log"
+	"strconv"
+	"strings"
+	"regexp"
+	"encoding/json"
+	"database/sql"
+	"net/http"
+	null "gopkg.in/nullbio/null.v6"
+
+	"github.com/satori/go.uuid"
+	"github.com/vattle/sqlboiler/types"
+	"github.com/vattle/sqlboiler/queries/qm"
+
+	"github.com/cloudwan/gohan/util"
+	"github.com/labstack/echo"
+	"github.com/labstack/echo/middleware"
+	"github.com/vattle/sqlboiler/boil"
+
+	fflib "github.com/pquerna/ffjson/fflib/v1"
+)
+
+//NotFound is a handler for error message
+func NotFound(c echo.Context) error {
+	return c.JSON(http.StatusNotFound, map[string]interface{}{"message": "Not Found"})
+}
+
+//Conflict is a handler for resource conflict error
+func Conflict(c echo.Context) error {
+	return c.JSON(http.StatusConflict, map[string]interface{}{"message": "Data conflict"})
+}
+
+//InternalServerError is a handler for internal server error
+func InternalServerError(c echo.Context, err error) error {
+	c.Logger().Print(err)
+	return c.JSON(http.StatusInternalServerError, map[string]interface{}{"message": "Internal Server Error"})
+}
+
+//BadRequest is a handler for badrequest
+func BadRequest(c echo.Context, err error) error {
+	return c.JSON(http.StatusBadRequest, map[string]interface{}{"message": err.Error()})
+}
+
+//AddPagenationQuery is a handler for badrequest
+func AddPagenationQuery(c echo.Context, mods []qm.QueryMod) []qm.QueryMod {
+	if limit := c.QueryParam("limit"); limit != "" {
+		if l, err := strconv.Atoi(limit); err == nil {
+			mods = append(mods, qm.Limit(l))
+		}
+	}
+	if offset := c.QueryParam("offset"); offset != "" {
+		if o, err := strconv.Atoi(offset); err == nil {
+			mods = append(mods, qm.Offset(o))
+		}
+	}
+	if sortKey := c.QueryParam("sort_key"); sortKey != "" {
+		sortOrder := c.QueryParam("sort_order")
+		sortOrder = strings.ToUpper(sortOrder)
+		if sortOrder != "DESC" {
+			sortOrder = "ASC"
+		}
+		mods = append(mods, qm.OrderBy(fmt.Sprintf("%s %s", sortKey, sortOrder)))
+	}
+	return mods
+}
+
+func fatalError(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func warnError(err error) {
+	if err != nil {
+		log.Println(err)
+	}
+}
+
+const retryDB = 50
+const retryDBWait = 10
+const defaultMaxOpenConn = 100
+
+//RunServer run's application
+func RunServer(configFile string, controller ControllerInterface) {
+	config := util.GetConfig()
+	config.ReadConfig(configFile)
+	if controller == nil {
+		controller = MakeController()
+	}
+	port := os.Getenv("PORT")
+
+	if port == "" {
+		port = "9091"
+	}
+	address := config.GetString("address", ":"+port)
+
+	e := echo.New()
+
+	e.Use(middleware.Recover())
+	e.Use(middleware.Logger())
+	cors := config.GetString("cors", "")
+
+	if cors != "" {
+		log.Printf("Enabling CORS for %s", cors)
+		if cors == "*" {
+			log.Printf("cors for * have security issue")
+		}
+		e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+			AllowOrigins:  []string{cors},
+			AllowMethods:  []string{echo.GET, echo.PUT, echo.POST, echo.DELETE},
+			AllowHeaders:  []string{"X-Auth-Token", "Content-Type"},
+			ExposeHeaders: []string{"X-Total-Count"},
+		}))
+	}
+
+	databaseType := config.GetString("database/type", "sqlite3")
+	databaseConnection := config.GetString("database/connection", "")
+	maxConn := config.GetInt("database/max_open_conn", defaultMaxOpenConn)
+	if databaseConnection == "" {
+		fatalError(
+			fmt.Errorf("no database connection specified in the configuraion file"))
+	}
+	db, err := sql.Open(databaseType, databaseConnection)
+	fatalError(err)
+	defer db.Close()
+	db.SetMaxOpenConns(maxConn)
+	db.SetMaxIdleConns(maxConn)
+
+	if databaseType == "sqlite3" {
+		db.Exec("PRAGMA foreign_keys = ON;")
+	}
+	for i := 0; i < retryDB; i++ {
+		err = db.Ping()
+		if err == nil {
+			break
+		}
+		time.Sleep(retryDBWait * time.Second)
+		log.Printf("Retrying db connection... (%s)", err)
+	}
+
+	boil.DebugMode = true
+	// Setup Routes
+	e.Static("/", "public/webui")
+	controller.SetDB(db)
+	routes := controller.Routes()
+
+	e.GET("/gohan/v0.1/schemas", func(c echo.Context) error {
+		b, _ := Asset("etc/schema.json")
+		return c.JSONBlob(http.StatusOK, b)
+	})
+
+	for path, handler := range routes {
+		if handler.POST != nil {
+			e.POST(path, handler.POST)
+		}
+		if handler.GET != nil {
+			e.GET(path, handler.GET)
+		}
+		if handler.PUT != nil {
+			e.PUT(path, handler.PUT)
+		}
+		if handler.DELETE != nil {
+			e.DELETE(path, handler.DELETE)
+		}
+	}
+	tlsEnabled := config.GetBool("tls/enabled", false)
+	var keyFile, certFile string
+	if tlsEnabled {
+		keyFile = config.GetString("tls/key_file", "./etc/key.pem")
+		certFile = config.GetString("tls/cert_file", "./etc/cert.pem")
+		e.Logger.Fatal(e.StartTLS(address, certFile, keyFile))
+	} else {
+		e.Logger.Fatal(e.Start(address))
+	}
+}
+
+type ControllerInterface interface {
+	SetDB(db *sql.DB)
+	Routes() map[string]*Handler
+}
+
+type BaseController struct {
+	DB *sql.DB
+}
+
+//BindUpdate binds update query
+func (controller *BaseController) BindUpdate(c echo.Context) (map[string]interface{}, error) {	
+	modelUpdate := map[string]interface{}{}
+	if err := c.Bind(&modelUpdate); err != nil {
+		return nil, BadRequest(c, err)
+	}
+	return modelUpdate, nil
+}
+
+func getParam(c echo.Context, properties map[string]bool, data map[string]string, resource, key string) string {
+	if properties != nil && properties[key] != true {
+		return ""
+	}
+	if value, ok := data[key]; ok {
+		return value
+	}
+	if value := c.QueryParam(key); value != "" {
+		return value
+	}
+	return ""
+}
+
+type PolicyRule struct{
+	Overwrite map[string]interface{}
+	Filter    map[string]string
+	Properties map[string]bool
+}
+
+type Policy map[string]*PolicyRule
+
+func (policy Policy) Get(key string) *PolicyRule {
+	rule, ok := policy[key]
+	if !ok {
+		return &PolicyRule{
+			Overwrite: map[string]interface{}{},
+			Filter: map[string]string{},
+			Properties: map[string]bool{},
+		}
+	}
+	return rule
+}
+
+{% for schema in schemas %}{% if schema.Metadata.type != "metaschema" && schema.Type != "abstract" %}
+
+//MarshalJSON marshal {{ schema.ID | snake_to_camel }} to JSON bytes
+func (mj *{{ schema.ID | snake_to_camel }}) MarshalJSON() ([]byte, error) {
+	var buf fflib.Buffer
+	if mj == nil {
+		buf.WriteString("null")
+		return buf.Bytes(), nil
+	}
+	err := mj.MarshalJSONBuf(&buf)
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+//MarshalJSONBuf writes json buffer
+func (mj *{{ schema.ID | snake_to_camel }}) MarshalJSONBuf(buf fflib.EncodingBuffer) error {
+	if mj == nil {
+		buf.WriteString("null")
+		return nil
+	}
+	var err error
+	var obj []byte
+	_ = obj
+	_ = err
+	{% for property in schema.Properties %}
+		{% if forloop.First %}
+			buf.WriteString(`{"{{ property.ID }}":`)
+		{% else %}
+			buf.WriteString(`,"{{ property.ID }}":`)
+		{% endif %}
+		{% if property.ID != "id" and property.Nullable %}
+			obj, err = mj.{{ property.ID | snake_to_camel }}.MarshalJSON()
+			if err != nil {
+				return err
+			}
+			fflib.WriteJsonString(buf, string(obj))
+		{% elif property.Type == "string" %}
+			fflib.WriteJsonString(buf, string(mj.{{ property.ID | snake_to_camel }}))
+			{% if property.Relation != "" and property.RelationProperty != ""%}
+				{% if forloop.First %}
+					buf.WriteString(`{"{{ property.RelationProperty }}":`)
+				{% else %}
+					buf.WriteString(`,"{{ property.RelationProperty }}":`)
+				{% endif %}
+				mj.R.{{ property.Relation | snake_to_camel }}.MarshalJSONBuf(buf)
+			{% endif %}
+        {% elif property.Type == "integer" or property.Type == "number" or property.Type == "boolean" %}
+			buf.WriteString(string(mj.{{ property.ID | snake_to_camel }}))
+		{% endif %}
+		{% if forloop.Last %}
+			buf.WriteByte('}')
+		{% endif %}
+	{% endfor %}
+	return nil
+}
+
+//MarshalJSONBufWithProperties writes json buffer
+func (mj *{{ schema.ID | snake_to_camel }}) MarshalJSONBufWithPolicy(buf fflib.EncodingBuffer, policy Policy) error {
+	if mj == nil {
+		buf.WriteString("null")
+		return nil
+	}
+	var err error
+	var obj []byte
+	_ = obj
+	_ = err
+	first := false
+	rule := policy.Get("{{ schema.ID }}")
+	for property, ok := range rule.Properties {
+		if !ok {
+			continue
+		}
+		if first {
+			buf.WriteString(`{"`)
+			buf.WriteString(property)
+			buf.WriteString(`":`)
+			first = false
+		}else{
+			buf.WriteString(`,"`)
+			buf.WriteString(property)
+			buf.WriteString(`":`)
+		}
+		switch(property){
+		{% for property in schema.Properties %}
+		case "{{ property.ID }}":
+			{% if property.ID != "id" and property.Nullable %}
+				obj, err = mj.{{ property.ID | snake_to_camel }}.MarshalJSON()
+				if err != nil {
+					return err
+				}
+				fflib.WriteJsonString(buf, string(obj))
+			{% elif property.Type == "string" %}
+				fflib.WriteJsonString(buf, string(mj.{{ property.ID | snake_to_camel }}))
+				{% if property.Relation != "" and property.RelationProperty != ""%}
+					{% if forloop.First %}
+						buf.WriteString(`{"{{ property.RelationProperty }}":`)
+					{% else %}
+						buf.WriteString(`,"{{ property.RelationProperty }}":`)
+					{% endif %}
+					mj.R.{{ property.Relation | snake_to_camel }}.MarshalJSONBufWithPolicy(buf, policy)
+				{% endif %}
+			{% elif property.Type == "integer" or property.Type == "number" or property.Type == "boolean" %}
+				buf.WriteString(string(mj.{{ property.ID | snake_to_camel }}))
+			{% endif %}
+		{% endfor %}
+		}
+	}
+	buf.WriteByte('}')
+	return nil
+}
+
+//Marshal{{ schema.ID | snake_to_camel }} marshal {{ schema.ID | snake_to_camel }} to JSON bytes
+func Marshal{{ schema.ID | snake_to_camel }}(model *{{ schema.ID | snake_to_camel }}, policy Policy ) []byte {
+	var buf fflib.Buffer
+	err := model.MarshalJSONBufWithPolicy(&buf, policy)
+	if err != nil {
+		return []byte("[]")
+	}
+	return buf.Bytes()
+}
+
+//Marshal{{ schema.ID | snake_to_camel }}List marshal {{ schema.ID | snake_to_camel }} to JSON bytes
+func Marshal{{ schema.ID | snake_to_camel }}List(list []*{{ schema.ID | snake_to_camel }}, policy Policy ) []byte {
+	var buf fflib.Buffer
+	buf.WriteByte('[')
+	for idx, data := range list {
+		if idx == 0 {
+			buf.WriteByte(',')
+		}
+		err := data.MarshalJSONBufWithPolicy(&buf, policy)
+		if err != nil {
+			return []byte("[]")
+		}
+	}
+	buf.WriteByte(']')
+	return buf.Bytes()
+}
+
+//Build{{ schema.ID | snake_to_camel }} makes filter query
+func (controller *BaseController) Build{{ schema.ID | snake_to_camel }}Filter(c echo.Context) []qm.QueryMod {
+	mods := []qm.QueryMod{}
+	policy, _ := c.Get("policy").(Policy)
+	var properties map[string]bool
+	var filter map[string]string
+	if policy != nil {
+		rule := policy.Get("{{ schema.ID }}")
+		properties = rule.Properties
+		filter = rule.Filter
+	}
+	{% for property in schema.Properties %}
+		{% if property.Type == "string" %}
+			if filter{{ property.ID | snake_to_camel }} := getParam(c, properties, filter, "{{schema.ID}}", "{{ property.ID }}"); filter{{ property.ID | snake_to_camel }} != "" {
+				mods = append(mods, qm.Where("{{ property.ID | snake_to_camel }} = ?", filter{{ property.ID | snake_to_camel }}))
+			}
+			{% if property.Relation != "" %}
+				mods = append(mods, qm.Load("{{ property.Relation | snake_to_camel }}"))
+			{% endif %}
+		{% endif %}
+	{% endfor %}
+	{% if schema.Parent %}
+	if filterParent := c.Param("{{ schema.Parent }}"); filterParent != "" {
+		mods = append(mods, qm.Where("{{ schema.Parent }}_id = ?", filterParent))
+	}
+	{% endif %}
+	return mods
+}
+
+//List{{ schema.ID | snake_to_camel }}DB lists {{ schema.ID | snake_to_camel }} resources from DB
+func (controller *BaseController) List{{ schema.ID | snake_to_camel }}DB(c echo.Context) ([]*{{ schema.ID | snake_to_camel }},error) {
+	tx, err := controller.DB.Begin()
+	if err != nil {
+		return nil, InternalServerError(c, err)
+	}
+	mods := controller.Build{{ schema.ID | snake_to_camel }}Filter(c)
+	count, _ := {{ schema.ID | snake_to_camel }}s(tx, mods...).Count()
+	c.Response().Header().Add("X-Total-Count", strconv.FormatInt(count, 10))
+	if count == 0 {
+		return []*{{ schema.ID | snake_to_camel }}{}, nil
+	}
+	mods = AddPagenationQuery(c, mods)
+	models, err := {{ schema.ID | snake_to_camel }}s(tx, mods...).All()
+	if err != nil {
+		return nil, err
+	}
+	tx.Commit()
+	return models, nil
+}
+
+//List{{ schema.ID | snake_to_camel }} lists {{ schema.ID | snake_to_camel }} resources
+func (controller *BaseController) List{{ schema.ID | snake_to_camel }}(c echo.Context) error {
+	models, err := controller.List{{ schema.ID | snake_to_camel }}DB(c)
+	if err != nil {
+		return err
+	}
+	policy, _ := c.Get("policy").(Policy)
+	if policy != nil {
+		return c.JSONBlob(http.StatusOK, Marshal{{ schema.ID | snake_to_camel }}List(models, policy))
+	}
+	return c.JSON(http.StatusOK, models)
+}
+
+//Show{{ schema.ID | snake_to_camel }}DB get a {{ schema.ID | snake_to_camel }}resource from DB
+func (controller *BaseController) Show{{ schema.ID | snake_to_camel }}DB(c echo.Context) (*{{ schema.ID | snake_to_camel }}, error) {
+	id := c.Param("id")
+	tx, err := controller.DB.Begin()
+	if err != nil {
+		return nil, InternalServerError(c, err)
+	}
+    model, err := Find{{ schema.ID | snake_to_camel }}(tx, id)
+	if err != nil {
+		tx.Rollback()
+		return nil, NotFound(c)
+	}
+	tx.Commit()
+	return model, nil
+}
+
+//Show{{ schema.ID | snake_to_camel }} get a {{ schema.ID | snake_to_camel }}resource
+func (controller *BaseController) Show{{ schema.ID | snake_to_camel }}(c echo.Context) error {
+	model, err := controller.Show{{ schema.ID | snake_to_camel }}DB(c)
+	if err != nil {
+		return err
+	}
+	policy, _ := c.Get("policy").(Policy)
+	if policy != nil {
+		return c.JSONBlob(http.StatusOK, Marshal{{ schema.ID | snake_to_camel }}(model, policy))
+	}
+	return c.JSON(http.StatusOK, model)
+}
+
+//Bind{{ schema.ID | snake_to_camel }} bind a {{ schema.ID | snake_to_camel }} from a request
+func (controller *BaseController) Bind{{ schema.ID | snake_to_camel }}(c echo.Context) (*{{ schema.ID | snake_to_camel }}, error) {
+	model := controller.Make{{ schema.ID | snake_to_camel }}Model()
+	if err := c.Bind(model); err != nil {
+		return nil, BadRequest(c, err)
+	}
+	{% if schema.Parent %}
+	if parentID := c.Param("{{ schema.Parent }}"); parentID != "" {
+		model.{{ schema.Parent | snake_to_camel }}ID = parentID
+	}
+	{% endif %}
+	if err := controller.Validate{{ schema.ID | snake_to_camel }}(model); err != nil {
+		return nil, BadRequest(c, err)
+	}
+	policy, _ := c.Get("policy").(*Policy)
+	if policy != nil {
+		rule := policy.Get("{{ schema.ID }}")
+		controller.Update{{ schema.ID | snake_to_camel }}Property(model, rule.Overwrite)
+	}
+	return model, nil
+}
+
+//Create{{ schema.ID | snake_to_camel }}DB creates a {{ schema.ID | snake_to_camel }} resource in DB
+func (controller *BaseController) Create{{ schema.ID | snake_to_camel }}DB(c echo.Context, model *{{ schema.ID | snake_to_camel }}) error {
+	tx, err := controller.DB.Begin()
+	if err != nil {
+		return InternalServerError(c, err)
+	}
+	if model.ID == "" {
+		model.ID = uuid.NewV4().String()
+	}
+	existingModel, _ := Find{{ schema.ID | snake_to_camel }}(tx, model.ID)
+    if existingModel != nil {
+		tx.Rollback()
+        return Conflict(c)
+    }
+	err = model.Insert(tx)
+	if err != nil {
+		tx.Rollback()
+		return InternalServerError(c, err)
+	}
+	tx.Commit()
+	return nil
+}
+
+//Create{{ schema.ID | snake_to_camel }} creates a {{ schema.ID | snake_to_camel }} resource
+func (controller *BaseController) Create{{ schema.ID | snake_to_camel }}(c echo.Context) error {
+	model, err := controller.Bind{{ schema.ID | snake_to_camel }}(c)
+	if err != nil {
+		return err
+	}
+	err = controller.Create{{ schema.ID | snake_to_camel }}DB(c, model)
+	if err != nil {
+		return err
+	}
+	policy, _ := c.Get("policy").(Policy)
+	if policy != nil {
+		return c.JSONBlob(http.StatusOK, Marshal{{ schema.ID | snake_to_camel }}(model, policy))
+	}
+	return c.JSON(http.StatusCreated, model)
+}
+
+//Validate{{ schema.ID | snake_to_camel }} validates {{ schema.ID | snake_to_camel }} model
+func (controller *BaseController) Validate{{ schema.ID | snake_to_camel }}(model *{{ schema.ID | snake_to_camel }}) error {
+	{% for id, property in schema.JSONSchema.properties %}
+		{% if property.type == "string" %}
+			{% if property.minLength %}
+				if len(model.{{ id | snake_to_camel }}) < {{ property.minLength }} {
+					return fmt.Errorf(" {{ id }} must be longer than {{ property.minLength }}")
+				}
+			{% endif %}
+			{% if property.maxLength %}
+				if len(model.{{ id | snake_to_camel }}) > {{ property.maxLength }} {
+					return fmt.Errorf(" {{ id }} must be shorter than {{ property.maxLength }}")
+				}
+			{% endif %}
+			{% if property.pattern %}
+				reg{{ id | snake_to_camel }}Pattern := regexp.MustCompile(`{{ property.pattern }}`)
+				if  !reg{{ id | snake_to_camel }}Pattern.MatchString(model.{{ id | snake_to_camel }}) {
+					return fmt.Errorf(" {{ id }} must be match with {{ property.pattern }}")
+				}
+			{% endif %}
+			{% if property.enum %}
+				if {% for e in property.enum %} model.{{ id | snake_to_camel }} != "{{ e }}" {% if not forloop.Last %} && {% endif%}{% endfor %} {
+					return fmt.Errorf("{{ id }} property must be {% for e in property.enum %}{% if not forloop.First %}{% if forloop.Last %} or {% else %}, {% endif%}{% endif%}{{ e }}{% endfor %}")
+				}
+			{% endif %}
+		{% endif %}
+		{% if property.type == "integer" or property.type == "number" %}
+			{% if property.maximum %}
+				if model.{{ id | snake_to_camel }} > {{ property.maximum }} {
+					return fmt.Errorf(" {{ id }} must be less than or equals to {{ property.maximum }} ")
+				}
+			{% endif %}
+			{% if property.exclusiveMaximum %}
+				if model.{{ id | snake_to_camel }} >= {{ property.exclusiveMaximum }} {
+					return fmt.Errorf(" {{ id }} must be less than {{ property.exclusiveMaximum }} ")
+				}
+			{% endif %}
+			{% if property.minimum %}
+				if model.{{ id | snake_to_camel }} < {{ property.minimum }} {
+					return fmt.Errorf(" {{ id }} must be greater than or equals to {{ property.minimum }} ")
+				}
+			{% endif %}
+			{% if property.exclusiveMinimum %}
+				if model.{{ id | snake_to_camel }} <= {{ property.exclusiveMinimum }} {
+					return fmt.Errorf(" {{ id }} must be greater than {{ property.exclusiveMinimum }} ")
+				}
+			{% endif %}
+		{% endif %}
+	{% endfor %}
+	return nil
+}
+
+//Make makes a default model
+func (controller *BaseController) Make{{ schema.ID | snake_to_camel }}Model() *{{ schema.ID | snake_to_camel }} {
+	model := &{{ schema.ID | snake_to_camel }}{
+	{% for property in schema.Properties %}
+		{% if property.Default != nil %}
+			{% if property.Type == "string" %}
+				{% if property.Nullable %}
+					{{ property.ID | snake_to_camel }}: null.NewString("{{ property.Default }}", true),
+				{% else %}
+					{{ property.ID | snake_to_camel }}: "{{ property.Default }}",
+				{% endif %}
+			{% endif %}
+			{% if property.Type == "integer" %}
+				{% if property.Nullable %}
+					{{ property.ID | snake_to_camel }}: null.NewInt({{ property.Default }}, true),
+				{% else %}
+					{{ property.ID | snake_to_camel }}: {{ property.Default }},
+				{% endif %}
+			{% endif %}
+			{% if property.Type == "number" %}
+				{% if property.Nullable %}
+					{{ property.ID | snake_to_camel }}: null.Float64({{ property.Default }}, true),
+				{% else %}
+					{{ property.ID | snake_to_camel }}: {{ property.Default }},
+				{% endif %}
+			{% endif %}
+			{% if property.Type == "boolean" %}
+				{% if property.Nullable %}
+					{{ property.ID | snake_to_camel }}: null.NewBool({{ property.Default }}, true),
+				{% else %}
+					{{ property.ID | snake_to_camel }}: {% if property.Default %}true{% else %}false{% endif %},
+				{% endif %}
+			{% endif %}
+		{% endif %}
+		{% if property.Type == "object" || property.Type == "array" %}
+			{{ property.ID | snake_to_camel }}: nullJSON,
+		{% endif %}
+	{% endfor %}
+	}
+	return model
+}
+
+//Update{{ schema.ID | snake_to_camel }}Property updates a model by map
+func (controller *BaseController) Update{{ schema.ID | snake_to_camel }}Property(model *{{ schema.ID | snake_to_camel }}, update map[string]interface{}) {
+	{% for property in schema.Properties %}{% if "update" in schema.Permission || (schema.Permission == null && property.ID != "id") %}
+	if value, ok := update["{{ property.ID }}"]; ok {
+	{% if property.Type == "string" %}
+	{% if property.Nullable %}
+		model.{{ property.ID | snake_to_camel }} = null.NewString(value.(string), true)
+	{% else %}
+		model.{{ property.ID | snake_to_camel }} = value.(string)
+	{% endif %}
+	{% endif %}
+	{% if property.Type == "integer" %}
+	{% if property.Nullable %}
+		model.{{ property.ID | snake_to_camel }} = null.NewInt(value.(int), true)
+	{% else %}
+		model.{{ property.ID | snake_to_camel }} = value.(int)
+	{% endif %}
+	{% endif %}
+	{% if property.Type == "number" %}
+	{% if property.Nullable %}
+		model.{{ property.ID | snake_to_camel }} = null.Float64(value.(float64), true)
+	{% else %}
+		model.{{ property.ID | snake_to_camel }} = value.(float64)
+	{% endif %}
+	{% endif %}
+	{% if property.Type == "boolean" %}
+	{% if property.Nullable %}
+		model.{{ property.ID | snake_to_camel }} = null.NewBool(value.(bool), true)
+	{% else %}
+		model.{{ property.ID | snake_to_camel }} = value.(bool)
+	{% endif %}
+	{% endif %}
+	{% if property.Type == "object" ||  property.Type == "array" %}
+		if b, err := json.Marshal(value); err == nil {
+			model.{{ property.ID | snake_to_camel }} = types.JSON(b)
+		}
+	{% endif %}
+	}
+	{% endif %}{% endfor %}
+}
+
+//Update{{ schema.ID | snake_to_camel }}DB updates a {{ schema.ID | snake_to_camel }} resource in DB
+func (controller *BaseController) Update{{ schema.ID | snake_to_camel }}DB(c echo.Context, id string, modelUpdate map[string]interface{}) (*{{ schema.ID | snake_to_camel }}, error) {	
+	tx, err := controller.DB.Begin()
+	if err != nil {
+		return nil, InternalServerError(c, err)
+	}
+	model, err := Find{{ schema.ID | snake_to_camel }}(tx, id)
+	if err != nil {
+		tx.Rollback()
+		return nil, NotFound(c)
+	}
+    controller.Update{{ schema.ID | snake_to_camel }}Property(model, modelUpdate)
+
+	policy, _ := c.Get("policy").(*Policy)
+	if policy != nil {
+		rule := policy.Get("{{ schema.ID }}")
+		controller.Update{{ schema.ID | snake_to_camel }}Property(model, rule.Overwrite)
+	}
+
+	if err := controller.Validate{{ schema.ID | snake_to_camel }}(model); err != nil {
+		return nil, BadRequest(c, err)
+	}
+	err = model.Update(tx)
+	if err != nil {
+		tx.Rollback()
+		return nil, InternalServerError(c, err)
+	}
+	tx.Commit()
+	return model, nil
+}
+
+//Update{{ schema.ID | snake_to_camel }} updates a {{ schema.ID | snake_to_camel }} resource
+func (controller *BaseController) Update{{ schema.ID | snake_to_camel }}(c echo.Context) error {	
+	id := c.Param("id")
+	modelUpdate, err := controller.BindUpdate(c)
+	if err != nil {
+		return err
+	}
+	model, err := controller.Update{{ schema.ID | snake_to_camel }}DB(c, id, modelUpdate)
+	if err != nil {
+		return err
+	}
+	policy, _ := c.Get("policy").(Policy)
+	if policy != nil {
+		return c.JSONBlob(http.StatusOK, Marshal{{ schema.ID | snake_to_camel }}(model, policy))
+	}
+	return c.JSON(http.StatusOK, model)
+}
+
+//Delete{{ schema.ID | snake_to_camel }}DB deletes {{ schema.ID | snake_to_camel }} in DB
+func (controller *BaseController) Delete{{ schema.ID | snake_to_camel }}DB(c echo.Context) (*{{ schema.ID | snake_to_camel }}, error) {
+	id := c.Param("id")
+	tx, err := controller.DB.Begin()
+	if err != nil {
+		tx.Rollback()
+		return nil, InternalServerError(c, err)
+	}
+	model, err := Find{{ schema.ID | snake_to_camel }}(tx, id)
+	if err != nil {
+		tx.Rollback()
+		return nil, InternalServerError(c, err)
+	}
+	if model == nil {
+		tx.Rollback()
+		return nil, NotFound(c)
+	}
+	err = model.Delete(tx)
+	if err != nil {
+		tx.Rollback()
+		return nil, InternalServerError(c, err)
+	}
+	tx.Commit()
+	return model, nil
+}
+
+//Delete{{ schema.ID | snake_to_camel }} deletes a {{ schema.ID | snake_to_camel }} resource from DB
+func (controller *BaseController) Delete{{ schema.ID | snake_to_camel }}(c echo.Context) error {
+	_, err := controller.Delete{{ schema.ID | snake_to_camel }}DB(c)
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusNoContent, nil)
+}
+
+{% endif %}{% endfor %}
+
+//MakeController makes Controller
+func MakeController() *BaseController {
+	return &BaseController{}
+}
+
+func (controller *BaseController) SetDB(db *sql.DB){
+	controller.DB = db
+}
+
+type Handler struct {
+	GET echo.HandlerFunc
+	POST echo.HandlerFunc
+	PUT echo.HandlerFunc
+	DELETE echo.HandlerFunc
+}
+
+//DefaultRoutes generates routes for default logic
+func (controller *BaseController) Routes() map[string]*Handler {
+	return map[string]*Handler{
+{% for schema in schemas %}{% if schema.Metadata.type != "metaschema" && schema.Type != "abstract" %}
+		"{{schema.GetPluralURL() }}": &Handler{
+			GET: controller.List{{ schema.ID | snake_to_camel }},
+			POST: controller.Create{{ schema.ID | snake_to_camel }},
+		},
+		"{{schema.GetSingleURL() }}": &Handler{
+			GET: controller.Show{{ schema.ID | snake_to_camel }},
+			PUT: controller.Update{{ schema.ID | snake_to_camel }},
+			DELETE: controller.Delete{{ schema.ID | snake_to_camel }},
+		},
+		{% if schema.Parent != "" %}
+		"{{schema.GetPluralURLWithParents() }}": &Handler{
+			GET: controller.List{{ schema.ID | snake_to_camel }},
+			POST: controller.Create{{ schema.ID | snake_to_camel }},
+		},
+		"{{schema.GetSingleURLWithParents() }}": &Handler{
+			GET: controller.Show{{ schema.ID | snake_to_camel }},
+			PUT: controller.Update{{ schema.ID | snake_to_camel }},
+			DELETE: controller.Delete{{ schema.ID | snake_to_camel }},
+		},
+		{% endif %}
+{% endif %}{% endfor %}
+	}
+}

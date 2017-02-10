@@ -555,6 +555,9 @@ func (schema *Schema) Extend(fromSchema *Schema) error {
 		util.MaybeStringList(fromSchema.JSONSchema["propertiesOrder"]),
 		util.MaybeStringList(schema.JSONSchema["propertiesOrder"]))
 
+	schema.JSONSchema["required"] = util.ExtendStringList(
+		util.MaybeStringList(fromSchema.JSONSchema["required"]),
+		util.MaybeStringList(schema.JSONSchema["required"]))
 MergeAction:
 	for _, action := range fromSchema.Actions {
 		for _, existingAction := range schema.Actions {
