@@ -1,6 +1,6 @@
 machine:
   pre:
-    - curl -o go.tar.gz -sL https://storage.googleapis.com/golang/go1.6.3.linux-amd64.tar.gz
+    - curl -o go.tar.gz -sL https://storage.googleapis.com/golang/go1.7.4.linux-amd64.tar.gz
     - sudo rm -rf /usr/local/go
     - sudo tar -C /usr/local -xzf go.tar.gz
     - sudo chmod a+w /usr/local/go/src/

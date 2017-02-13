@@ -25,6 +25,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -35,7 +36,7 @@ import (
 	srv "github.com/cloudwan/gohan/server"
 	"github.com/cloudwan/gohan/server/middleware"
 	gohan_sync "github.com/cloudwan/gohan/sync"
-	gohan_etcd "github.com/cloudwan/gohan/sync/etcd"
+	gohan_etcd "github.com/cloudwan/gohan/sync/etcdv3"
 	"github.com/cloudwan/gohan/util"
 )
 
@@ -651,9 +652,10 @@ var _ = Describe("Server package test", func() {
 
 			Expect(server.Sync()).To(Succeed())
 
-			sync := gohan_etcd.NewSync([]string{"http://127.0.0.1:2379"})
+			sync, err := gohan_etcd.NewSync([]string{"http://127.0.0.1:2379"}, time.Second)
+			Expect(err).ToNot(HaveOccurred())
 
-			writtenConfig, err := sync.Fetch("/config/" + networkResource.Path())
+			writtenConfig, err := sync.Fetch("/config" + networkResource.Path())
 			Expect(err).ToNot(HaveOccurred())
 
 			var configContentsRaw interface{}
@@ -697,9 +699,10 @@ var _ = Describe("Server package test", func() {
 
 				Expect(server.Sync()).To(Succeed())
 
-				sync := gohan_etcd.NewSync([]string{"http://127.0.0.1:2379"})
+				sync, err := gohan_etcd.NewSync([]string{"http://127.0.0.1:2379"}, time.Second)
+				Expect(err).ToNot(HaveOccurred())
 
-				writtenConfig, err := sync.Fetch("/config/" + resource.Path())
+				writtenConfig, err := sync.Fetch("/config" + resource.Path())
 				Expect(err).ToNot(HaveOccurred())
 
 				var configContentsRaw interface{}
@@ -744,9 +747,10 @@ var _ = Describe("Server package test", func() {
 
 				Expect(server.Sync()).To(Succeed())
 
-				sync := gohan_etcd.NewSync([]string{"http://127.0.0.1:2379"})
+				sync, err := gohan_etcd.NewSync([]string{"http://127.0.0.1:2379"}, time.Second)
+				Expect(err).ToNot(HaveOccurred())
 
-				writtenConfig, err := sync.Fetch("/config/" + resource.Path())
+				writtenConfig, err := sync.Fetch("/config" + resource.Path())
 				Expect(err).ToNot(HaveOccurred())
 
 				var configContentsRaw map[string]interface{}
@@ -785,9 +789,10 @@ var _ = Describe("Server package test", func() {
 
 				Expect(server.Sync()).To(Succeed())
 
-				sync := gohan_etcd.NewSync([]string{"http://127.0.0.1:2379"})
+				sync, err := gohan_etcd.NewSync([]string{"http://127.0.0.1:2379"}, time.Second)
+				Expect(err).ToNot(HaveOccurred())
 
-				writtenConfig, err := sync.Fetch("/config/" + resource.Path())
+				writtenConfig, err := sync.Fetch("/config" + resource.Path())
 				Expect(err).ToNot(HaveOccurred())
 				Expect(writtenConfig.Value).To(BeEquivalentTo("property0"))
 

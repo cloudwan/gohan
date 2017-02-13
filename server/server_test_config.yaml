@@ -9,6 +9,7 @@ schemas:
     - "../tests/test_two_same_relations_schema.yaml"
 address: ":19090"
 document_root: "embed"
+sync: etcdv3
 etcd:
     - "http://127.0.0.1:2379"
 keystone:

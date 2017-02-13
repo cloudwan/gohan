@@ -126,8 +126,8 @@ func (s *Sync) recursiveFetch(rootKey string, node []*pb.KeyValue, children []*p
 	for _, kv := range children {
 		key := string(kv.Key)
 		n := &sync.Node{
-			Key: key,
-			Value: string(kv.Value),
+			Key:      key,
+			Value:    string(kv.Value),
 			Revision: kv.ModRevision,
 		}
 		path := strings.TrimPrefix(key, rootKey)
@@ -227,8 +227,8 @@ func (s *Sync) Unlock(path string) error {
 func eventsFromNode(action string, kvs []*pb.KeyValue, responseChan chan *sync.Event) {
 	for _, kv := range kvs {
 		event := &sync.Event{
-			Action: action,
-			Key:    string(kv.Key),
+			Action:   action,
+			Key:      string(kv.Key),
 			Revision: kv.ModRevision,
 		}
 		if kv.Value != nil {
@@ -244,21 +244,16 @@ func eventsFromNode(action string, kvs []*pb.KeyValue, responseChan chan *sync.E
 
 //Watch keep watch update under the path
 func (s *Sync) Watch(path string, responseChan chan *sync.Event, stopChan chan bool, revision int64) error {
-	if revision == sync.RevisionCurrent {
-		node, err := s.etcdClient.Get(s.withTimeout(), path, etcd.WithSort(etcd.SortByKey, etcd.SortAscend))
-		if err != nil {
-			return err
-		}
-		eventsFromNode("get", node.Kvs, responseChan)
-
-		revision = node.Header.Revision + 1
+	options := []etcd.OpOption{etcd.WithPrefix(), etcd.WithSort(etcd.SortByModRevision, etcd.SortAscend)}
+	if revision != sync.RevisionCurrent {
+		options = append(options, etcd.WithMinModRev(revision+1))
 	}
-
-	dir, err := s.etcdClient.Get(s.withTimeout(), path+"/", etcd.WithPrefix(), etcd.WithSort(etcd.SortByKey, etcd.SortAscend))
+	node, err := s.etcdClient.Get(s.withTimeout(), path+"/", options...)
 	if err != nil {
 		return err
 	}
-	eventsFromNode("get", dir.Kvs, responseChan)
+	eventsFromNode("get", node.Kvs, responseChan)
+	revision = node.Header.Revision + 1
 
 	ctx, cancel := context.WithCancel(context.Background())
 	errors := make(chan error, 2)
@@ -331,6 +326,6 @@ func (s *Sync) Watch(path string, responseChan chan *sync.Event, stopChan chan b
 	}
 }
 
-func (s *Sync) Close()  {
+func (s *Sync) Close() {
 	s.etcdClient.Close()
 }
