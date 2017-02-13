@@ -16,15 +16,15 @@
 package otto
 
 import (
-	"github.com/robertkrimen/otto"
 	"github.com/cloudwan/gohan/sync"
+	"github.com/robertkrimen/otto"
 	"time"
 )
 
 func convertSyncEvent(event *sync.Event) map[string]interface{} {
 	jsEvent := map[string]interface{}{}
 
- 	jsEvent["action"] = event.Action
+	jsEvent["action"] = event.Action
 	jsEvent["key"] = event.Key
 	jsEvent["data"] = event.Data
 	jsEvent["revision"] = event.Revision
@@ -72,8 +72,21 @@ func init() {
 					return otto.NullValue()
 				}
 
-				if node, err = env.Sync.Fetch(path); err != nil {
-					ThrowOttoException(&call, "Failed to fetch sync: " + err.Error())
+				done := make(chan struct{})
+				go func() {
+					node, err = env.Sync.Fetch(path)
+					close(done)
+				}()
+
+				select {
+				case interrupt := <-call.Otto.Interrupt:
+					log.Debug("Received otto interrupt in gohan_http")
+					interrupt()
+				case <-done:
+				}
+
+				if err != nil {
+					ThrowOttoException(&call, "Failed to fetch sync: "+err.Error())
 					return otto.NullValue()
 				}
 
@@ -89,7 +102,6 @@ func init() {
 				var revision int64
 				var err error
 				var value otto.Value
-				vm := call.Otto
 
 				VerifyCallArguments(&call, "gohan_sync_watch", 3)
 
@@ -109,8 +121,8 @@ func init() {
 				}
 
 				eventChan := make(chan *sync.Event, 32) // non-blocking
-				stopChan := make(chan bool, 1) // non-blocking
-				errorChan := make(chan error) // blocking
+				stopChan := make(chan bool, 1)          // non-blocking
+				errorChan := make(chan error)           // blocking
 
 				go func() {
 					if err := env.Sync.Watch(path, eventChan, stopChan, revision); err != nil {
@@ -119,7 +131,7 @@ func init() {
 				}()
 
 				select {
-				case interrupt := <-vm.Interrupt:
+				case interrupt := <-call.Otto.Interrupt:
 					log.Debug("Received otto interrupt in gohan_sync_watch")
 					stopChan <- true
 					interrupt()
@@ -133,7 +145,7 @@ func init() {
 						return value
 					}
 				case err := <-errorChan:
-					ThrowOttoException(&call, "Sync watch ex failed: " + err.Error())
+					ThrowOttoException(&call, "Sync watch ex failed: "+err.Error())
 				}
 				return otto.NullValue()
 			},
