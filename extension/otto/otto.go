@@ -262,9 +262,8 @@ func (env *Environment) SetEventTimeLimit(eventRegex string, timeLimit time.Dura
 //Clone makes clone of the environment
 func (env *Environment) Clone() ext.Environment {
 	clone := NewEnvironment(env.Name, env.DataStore, env.Identity, env.Sync)
-	interrupt := clone.VM.Otto.Interrupt
 	clone.VM.Otto = env.VM.Copy()
-	clone.VM.Otto.Interrupt = interrupt
+	clone.VM.Otto.Interrupt = make(chan func(), 1)
 	clone.timeLimit = env.timeLimit
 	clone.timeLimits = env.timeLimits
 	return clone
