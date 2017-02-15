@@ -23,6 +23,7 @@ import (
 
 	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/util"
+	"errors"
 )
 
 //CRON Process
@@ -53,21 +54,35 @@ func startCRONProcess(server *Server) {
 		if err != nil {
 			log.Fatal(err.Error())
 		}
-		c.AddFunc(timing, func() {
+
+		takeLock := func() error {
 			select {
 			case <- jobLocks[lockKey]:
-				log.Debug("Took lock: %s", lockKey)
+				err := server.sync.Lock(lockKey, false)
+				if err != nil {
+					log.Debug("Failed to take ETCD lock")
+					jobLocks[lockKey] <- 1
+				}
+				return err
 			default:
 				log.Debug("Failed to take lock: %s", lockKey)
+				return errors.New("Another cron job is running")
+			}
+		}
+
+		c.AddFunc(timing, func() {
+			err := takeLock()
+			if err != nil {
+				log.Info("Failed to schedule cron job, err: %s", err.Error())
 				return
 			}
-
 			defer func() {
 				if r := recover(); r != nil {
 					log.Error("Cron job '%s' panicked: %s", path, r)
 				}
 				log.Debug("Unlocking %s", lockKey)
 				jobLocks[lockKey] <- 1
+				server.sync.Unlock(lockKey)
 			}()
 
 			context := map[string]interface{}{
