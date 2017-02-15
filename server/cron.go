@@ -63,6 +63,9 @@ func startCRONProcess(server *Server) {
 			}
 
 			defer func() {
+				if r := recover(); r != nil {
+					log.Error("Cron job '%s' panicked: %s", path, r)
+				}
 				log.Debug("Unlocking %s", lockKey)
 				jobLocks[lockKey] <- 1
 			}()
@@ -74,7 +77,8 @@ func startCRONProcess(server *Server) {
 				log.Warning(fmt.Sprintf("extension error: %s", err))
 				return
 			}
-			if err := env.HandleEvent("notification", context); err != nil {
+			clone := env.Clone()
+			if err := clone.HandleEvent("notification", context); err != nil {
 				log.Warning(fmt.Sprintf("extension error: %s", err))
 				return
 			}
