@@ -38,25 +38,35 @@ func startCRONProcess(server *Server) {
 	}
 	log.Info("Started CRON process")
 	c := cron.New()
+	var jobLocks = map[string](chan int){}
+
 	for _, rawJob := range jobList.([]interface{}) {
 		job := rawJob.(map[string]interface{})
 		path := job["path"].(string)
 		timing := job["timing"].(string)
 		name := strings.TrimPrefix(path, "cron://")
+		log.Info("New job for %s / %s", path, timing)
+		lockKey := lockPath + "/" + name
+		jobLocks[lockKey] = make(chan int, 1)
+		jobLocks[lockKey] <- 1
 		env, err := server.NewEnvironmentForPath(name, path)
 		if err != nil {
 			log.Fatal(err.Error())
 		}
-		log.Info("New job for %s / %s", path, timing)
 		c.AddFunc(timing, func() {
-			lockKey := lockPath + "/" + path
-			err := server.sync.Lock(lockKey, false)
-			if err != nil {
+			select {
+			case <- jobLocks[lockKey]:
+				log.Debug("Took lock: %s", lockKey)
+			default:
+				log.Debug("Failed to take lock: %s", lockKey)
 				return
 			}
+
 			defer func() {
-				server.sync.Unlock(lockKey)
+				log.Debug("Unlocking %s", lockKey)
+				jobLocks[lockKey] <- 1
 			}()
+
 			context := map[string]interface{}{
 				"path": path,
 			}
