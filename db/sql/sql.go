@@ -393,11 +393,16 @@ func (db *DB) GenTableDef(s *schema.Schema, cascade bool) (string, []string) {
 }
 
 //RegisterTable creates table in the db
-func (db *DB) RegisterTable(s *schema.Schema, cascade bool) error {
+func (db *DB) RegisterTable(s *schema.Schema, cascade, migrate bool) error {
 	if s.IsAbstract() {
 		return nil
 	}
 	tableDef, indices, err := db.AlterTableDef(s, cascade)
+	if !migrate {
+		if tableDef != "" || (indices != nil && len(indices) > 0) {
+			return fmt.Errorf("needs migration, run \"gohan migrate\"")
+		}
+	}
 	if err != nil {
 		tableDef, indices = db.GenTableDef(s, cascade)
 	}

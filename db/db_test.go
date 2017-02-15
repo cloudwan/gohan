@@ -122,7 +122,7 @@ var _ = Describe("Database operation test", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			for _, s := range manager.Schemas() {
-				Expect(dataStore.RegisterTable(s, false)).To(Succeed())
+				Expect(dataStore.RegisterTable(s, false, true)).To(Succeed())
 			}
 
 			tx, err = dataStore.Begin()
@@ -263,7 +263,7 @@ var _ = Describe("Database operation test", func() {
 		})
 
 		It("Should initialize the database without error", func() {
-			Expect(db.InitDBWithSchemas(dbType, conn, false, false)).To(Succeed())
+			Expect(db.InitDBWithSchemas(dbType, conn, false, false, true)).To(Succeed())
 		})
 	})
 
@@ -277,12 +277,12 @@ var _ = Describe("Database operation test", func() {
 			Expect(err).ToNot(HaveOccurred())
 			defer os.Remove("test_data/conv_in.db")
 
-			db.InitDBWithSchemas("sqlite3", "test_data/conv_out.db", false, false)
+			db.InitDBWithSchemas("sqlite3", "test_data/conv_out.db", false, false, true)
 			outDB, err := db.ConnectDB("sqlite3", "test_data/conv_out.db", db.DefaultMaxOpenConn)
 			Expect(err).ToNot(HaveOccurred())
 			defer os.Remove("test_data/conv_out.db")
 
-			db.InitDBWithSchemas("yaml", "test_data/conv_verify.yaml", false, false)
+			db.InitDBWithSchemas("yaml", "test_data/conv_verify.yaml", false, false, true)
 			verifyDB, err := db.ConnectDB("yaml", "test_data/conv_verify.yaml", db.DefaultMaxOpenConn)
 			Expect(err).ToNot(HaveOccurred())
 			defer os.Remove("test_data/conv_verify.yaml")
@@ -320,7 +320,7 @@ var _ = Describe("Database operation test", func() {
 			Expect(err).ToNot(HaveOccurred())
 			defer os.Remove("test_data/conv_in.db")
 
-			db.InitDBWithSchemas("sqlite3", "test_data/conv_out.db", false, false)
+			db.InitDBWithSchemas("sqlite3", "test_data/conv_out.db", false, false, true)
 			outDB, err := db.ConnectDB("sqlite3", "test_data/conv_out.db", db.DefaultMaxOpenConn)
 			Expect(err).ToNot(HaveOccurred())
 			defer os.Remove("test_data/conv_out.db")
