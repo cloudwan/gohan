@@ -16,17 +16,17 @@
 package otto
 
 import (
-	"io/ioutil"
-	"strings"
 	"fmt"
+	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/ddliu/motto"
 
-	"github.com/cloudwan/gohan/schema"
-	"github.com/robertkrimen/otto"
 	l "github.com/cloudwan/gohan/log"
+	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
+	"github.com/robertkrimen/otto"
 )
 
 var log = l.NewLogger()
@@ -228,7 +228,7 @@ func loadNPMModules() {
 			}
 
 			var entryPoint string
-			entryPointCandidates := []string {module, module + ".js", module + "/index.js"}
+			entryPointCandidates := []string{module, module + ".js", module + "/index.js"}
 
 			for _, candidate := range entryPointCandidates {
 				if candidateFile, err := os.Stat(candidate); err == nil && !candidateFile.IsDir() {
