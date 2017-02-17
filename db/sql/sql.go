@@ -667,13 +667,12 @@ func decodeState(data map[string]interface{}, state *transaction.ResourceState) 
 	return nil
 }
 
-//List resources in the db
-func (tx *Transaction) List(s *schema.Schema, filter transaction.Filter, pg *pagination.Paginator) (list []*schema.Resource, total uint64, err error) {
+func buildSelect(s *schema.Schema, filter transaction.Filter, pg *pagination.Paginator) (string, []interface{}, error) {
 	cols := MakeColumns(s, s.GetDbTableName(), true)
 	q := sq.Select(cols...).From(quote(s.GetDbTableName()))
-	q, err = addFilterToQuery(s, q, filter, true)
+	q, err := addFilterToQuery(s, q, filter, true)
 	if err != nil {
-		return nil, 0, err
+		return "", nil, err
 	}
 	if pg != nil {
 		property, err := s.GetPropertyByID(pg.Key)
@@ -688,11 +687,10 @@ func (tx *Transaction) List(s *schema.Schema, filter transaction.Filter, pg *pag
 		}
 	}
 	q = makeJoin(s, s.GetDbTableName(), q)
+	return q.ToSql()
+}
 
-	sql, args, err := q.ToSql()
-	if err != nil {
-		return
-	}
+func executeSelect(s *schema.Schema, filter transaction.Filter, sql string, args []interface{}, tx *Transaction) (list []*schema.Resource, total uint64, err error) {
 	logQuery(sql, args...)
 	rows, err := tx.transaction.Queryx(sql, args...)
 	if err != nil {
@@ -705,6 +703,30 @@ func (tx *Transaction) List(s *schema.Schema, filter transaction.Filter, pg *pag
 	}
 	total, err = tx.count(s, filter)
 	return
+}
+
+//List resources in the db
+func (tx *Transaction) List(s *schema.Schema, filter transaction.Filter, pg *pagination.Paginator) (list []*schema.Resource, total uint64, err error) {
+	sql, args, err := buildSelect(s, filter, pg)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return executeSelect(s, filter, sql, args, tx)
+}
+
+//Lock resources in the db
+func (tx *Transaction) LockList(s *schema.Schema, filter transaction.Filter, pg *pagination.Paginator) (list []*schema.Resource, total uint64, err error) {
+	sql, args, err := buildSelect(s, filter, pg)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	if tx.db.sqlType == "mysql" {
+		sql += " FOR UPDATE"
+	}
+
+	return executeSelect(s, filter, sql, args, tx)
 }
 
 // Query with raw sql string
@@ -771,6 +793,15 @@ func (tx *Transaction) Fetch(s *schema.Schema, filter transaction.Filter) (*sche
 	list, _, err := tx.List(s, filter, nil)
 	if len(list) < 1 {
 		return nil, fmt.Errorf("Failed to fetch %s", filter)
+	}
+	return list[0], err
+}
+
+//Fetch & lock a resource
+func (tx *Transaction) LockFetch(s *schema.Schema, filter transaction.Filter) (*schema.Resource, error) {
+	list, _, err := tx.LockList(s, filter, nil)
+	if len(list) < 1 {
+		return nil, fmt.Errorf("Failed to fetch and lock %s", filter)
 	}
 	return list[0], err
 }

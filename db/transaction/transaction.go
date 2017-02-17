@@ -58,8 +58,10 @@ type Transaction interface {
 	StateUpdate(*schema.Resource, *ResourceState) error
 	Delete(*schema.Schema, interface{}) error
 	Fetch(*schema.Schema, Filter) (*schema.Resource, error)
+	LockFetch(*schema.Schema, Filter) (*schema.Resource, error)
 	StateFetch(*schema.Schema, Filter) (ResourceState, error)
 	List(*schema.Schema, Filter, *pagination.Paginator) ([]*schema.Resource, uint64, error)
+	LockList(*schema.Schema, Filter, *pagination.Paginator) ([]*schema.Resource, uint64, error)
 	RawTransaction() *sqlx.Tx
 	Query(*schema.Schema, string, []interface{}) (list []*schema.Resource, err error)
 	Commit() error

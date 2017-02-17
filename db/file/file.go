@@ -268,6 +268,11 @@ func (tx *Transaction) List(s *schema.Schema, filter transaction.Filter, pg *pag
 	return
 }
 
+//Lock resources in the db. Not supported in file db
+func (tx *Transaction) LockList(s *schema.Schema, filter transaction.Filter, pg *pagination.Paginator) (list []*schema.Resource, total uint64, err error) {
+	return tx.List(s, filter, pg)
+}
+
 //Fetch resources by ID in the db
 func (tx *Transaction) Fetch(s *schema.Schema, filter transaction.Filter) (*schema.Resource, error) {
 	list, _, err := tx.List(s, filter, nil)
@@ -275,6 +280,11 @@ func (tx *Transaction) Fetch(s *schema.Schema, filter transaction.Filter) (*sche
 		return nil, fmt.Errorf("Failed to fetch %s", filter)
 	}
 	return list[0], err
+}
+
+//Fetch & lock a resource. Not supported in file db
+func (tx *Transaction) LockFetch(s *schema.Schema, filter transaction.Filter) (*schema.Resource, error) {
+	return tx.Fetch(s, filter)
 }
 
 //StateFetch is not supported in file databases
