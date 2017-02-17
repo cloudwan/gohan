@@ -213,7 +213,7 @@ func NewServer(configFile string) (*Server, error) {
 			cfgEvent := cfgRaw["event"].(string)
 			cfgTimeDuration := cfgRaw["timelimit"].(int)
 
-			manager.TimeLimits = append(manager.TimeLimits, &schema.PathEventTimeLimit {
+			manager.TimeLimits = append(manager.TimeLimits, &schema.PathEventTimeLimit{
 				PathRegex:    regexp.MustCompile(cfgPath),
 				EventRegex:   regexp.MustCompile(cfgEvent),
 				TimeDuration: time.Second * time.Duration(cfgTimeDuration),

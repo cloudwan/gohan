@@ -21,9 +21,9 @@ import (
 
 	"github.com/robfig/cron"
 
+	"errors"
 	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/util"
-	"errors"
 )
 
 //CRON Process
@@ -57,7 +57,7 @@ func startCRONProcess(server *Server) {
 
 		takeLock := func() error {
 			select {
-			case <- jobLocks[lockKey]:
+			case <-jobLocks[lockKey]:
 				err := server.sync.Lock(lockKey, false)
 				if err != nil {
 					log.Debug("Failed to take ETCD lock")

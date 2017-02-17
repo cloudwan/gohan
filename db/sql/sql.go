@@ -166,9 +166,9 @@ func (handler *numberHandler) decode(property *schema.Property, data interface{}
 	case []uint8: // mysql
 		res, _ = strconv.ParseFloat(string(t), 64)
 
-	case float64:  // sqlite3
+	case float64: // sqlite3
 		res = float64(t)
-	case uint64:  // sqlite3
+	case uint64: // sqlite3
 		res = float64(t)
 	}
 	return

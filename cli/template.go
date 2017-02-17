@@ -19,7 +19,7 @@ import (
 func deleteGohanExtendedProperties(node map[string]interface{}) {
 	extendedProperties := [...]string{"unique", "permission", "relation",
 		"relation_property", "view", "detail_view", "propertiesOrder",
-		"on_delete_cascade", "indexed", "relationColumn" }
+		"on_delete_cascade", "indexed", "relationColumn"}
 
 	for _, extendedProperty := range extendedProperties {
 		delete(node, extendedProperty)
@@ -204,7 +204,7 @@ func filerSchemasByResource(resource string, schemas []*schema.Schema) []*schema
 
 func filterSchemasForPolicy(principal string, policies []*schema.Policy, schemas []*schema.Schema) []*schema.Schema {
 	var schemasPolicy []*schema.Schema
-	var matchedPolicies []* schema.Policy
+	var matchedPolicies []*schema.Policy
 	for _, policy := range policies {
 		if policy.Principal == principal {
 			matchedPolicies = append(matchedPolicies, policy)
@@ -212,7 +212,7 @@ func filterSchemasForPolicy(principal string, policies []*schema.Policy, schemas
 	}
 	for _, schema := range schemas {
 		for _, policy := range matchedPolicies {
-			if policy.Resource.Path.MatchString(schema.URL)  {
+			if policy.Resource.Path.MatchString(schema.URL) {
 				schemasPolicy = append(schemasPolicy, schema)
 				break
 			}

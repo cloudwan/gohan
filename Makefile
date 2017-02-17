@@ -3,7 +3,7 @@ OK_COLOR=\033[32;01m
 ERROR_COLOR=\033[31;01m
 WARN_COLOR=\033[33;01m
 
-all: format lint build test
+all: gen lint build test
 
 deps:
 	@echo "$(OK_COLOR)==> Installing dependencies$(NO_COLOR)"
@@ -11,8 +11,16 @@ deps:
 
 format:
 	@echo "$(OK_COLOR)==> Formatting$(NO_COLOR)"
-	go-bindata -pkg util -o util/go-bindata.go etc/schema/... etc/extensions/... etc/templates/... public/...
-	go fmt ./...
+
+	govendor fmt +local
+
+gen:
+	@echo "$(OK_COLOR)==> Generating files$(NO_COLOR)"
+	go-bindata -pkg util -o util/bindata.go \
+	etc/schema/... \
+	etc/extensions/... \
+	etc/templates/... \
+	public/...
 
 test:
 	@echo "$(OK_COLOR)==> Testing$(NO_COLOR)"
