@@ -44,4 +44,3 @@ node_modules
 .idea
 etc/gohan.log
 etc/gohan.db
-util/bindata.go
