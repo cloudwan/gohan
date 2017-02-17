@@ -23,6 +23,7 @@ import (
 
 	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/util"
+	"errors"
 )
 
 //CRON Process
@@ -38,25 +39,52 @@ func startCRONProcess(server *Server) {
 	}
 	log.Info("Started CRON process")
 	c := cron.New()
+	var jobLocks = map[string](chan int){}
+
 	for _, rawJob := range jobList.([]interface{}) {
 		job := rawJob.(map[string]interface{})
 		path := job["path"].(string)
 		timing := job["timing"].(string)
 		name := strings.TrimPrefix(path, "cron://")
+		log.Info("New job for %s / %s", path, timing)
+		lockKey := lockPath + "/" + name
+		jobLocks[lockKey] = make(chan int, 1)
+		jobLocks[lockKey] <- 1
 		env, err := server.NewEnvironmentForPath(name, path)
 		if err != nil {
 			log.Fatal(err.Error())
 		}
-		log.Info("New job for %s / %s", path, timing)
+
+		takeLock := func() error {
+			select {
+			case <- jobLocks[lockKey]:
+				err := server.sync.Lock(lockKey, false)
+				if err != nil {
+					log.Debug("Failed to take ETCD lock")
+					jobLocks[lockKey] <- 1
+				}
+				return err
+			default:
+				log.Debug("Failed to take lock: %s", lockKey)
+				return errors.New("Another cron job is running")
+			}
+		}
+
 		c.AddFunc(timing, func() {
-			lockKey := lockPath + "/" + path
-			err := server.sync.Lock(lockKey, false)
+			err := takeLock()
 			if err != nil {
+				log.Info("Failed to schedule cron job, err: %s", err.Error())
 				return
 			}
 			defer func() {
+				if r := recover(); r != nil {
+					log.Error("Cron job '%s' panicked: %s", path, r)
+				}
+				log.Debug("Unlocking %s", lockKey)
+				jobLocks[lockKey] <- 1
 				server.sync.Unlock(lockKey)
 			}()
+
 			context := map[string]interface{}{
 				"path": path,
 			}
@@ -64,7 +92,8 @@ func startCRONProcess(server *Server) {
 				log.Warning(fmt.Sprintf("extension error: %s", err))
 				return
 			}
-			if err := env.HandleEvent("notification", context); err != nil {
+			clone := env.Clone()
+			if err := clone.HandleEvent("notification", context); err != nil {
 				log.Warning(fmt.Sprintf("extension error: %s", err))
 				return
 			}
