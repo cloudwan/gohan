@@ -18,28 +18,30 @@ package cli
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
 
-	"github.com/cloudwan/gohan/schema"
-	"github.com/cloudwan/gohan/util"
-	"github.com/lestrrat/go-server-starter"
-
 	"github.com/cloudwan/gohan/cli/client"
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/sql"
 	"github.com/cloudwan/gohan/extension/framework"
-	"github.com/cloudwan/gohan/server"
-	"github.com/codegangsta/cli"
-
 	"github.com/cloudwan/gohan/extension/gohanscript"
+	"github.com/cloudwan/gohan/schema"
+	"github.com/cloudwan/gohan/server"
+	"github.com/cloudwan/gohan/util"
 	//Import gohan script lib
+	"github.com/cloudwan/gohan/db/backup"
 	_ "github.com/cloudwan/gohan/extension/gohanscript/autogen"
 	l "github.com/cloudwan/gohan/log"
+
+	"github.com/codegangsta/cli"
+	"github.com/lestrrat/go-server-starter"
 )
 
 var log = l.NewLogger()
@@ -59,6 +61,7 @@ func Run(name, usage, version string) {
 	app.Commands = []cli.Command{
 		getGohanClientCommand(),
 		getValidateCommand(),
+		getBackupDbCommand(),
 		getInitDbCommand(),
 		getConvertCommand(),
 		getServerCommand(),
@@ -197,6 +200,52 @@ It's especially useful to validate schema files against gohan meta-schema.`,
 				}
 			}
 			fmt.Println("Schema is valid")
+		},
+	}
+}
+
+func getBackupDbCommand() cli.Command {
+	return cli.Command{
+		Name:      "backup-db",
+		ShortName: "bup",
+		Usage:     "Backup DB backend",
+		Description: `
+Backup database to file, available only for mysql.`,
+		Flags: []cli.Flag{
+			cli.StringFlag{Name: "config-file", Value: defaultConfigFile, Usage: "Server config File"},
+			cli.StringFlag{Name: "output-file, o", Value: "", Usage: "Wrire backup to this file, if not set backup will be pritned to stdout"},
+		},
+		Action: func(c *cli.Context) {
+			configFile := c.String("config-file")
+			if configFile == "" {
+				util.ExitFatal("Missing config-file")
+			}
+			config := util.GetConfig()
+			config.ReadConfig(configFile)
+			err := os.Chdir(path.Dir(configFile))
+			if err != nil {
+				util.ExitFatal(fmt.Errorf("Config load error: %s", err))
+			}
+			dbType := config.GetString("database/type", "")
+			if dbType == "" {
+				util.ExitFatal("No database type specified in the configuraion file")
+			}
+			dbConnStr := config.GetString("database/connection", "")
+			if dbConnStr == "" {
+				util.ExitFatal("No database connection specified in the configuraion file")
+			}
+
+			var w io.Writer = os.Stdout
+
+			outputFile := c.String("output-file")
+			if outputFile != "" {
+				f, err := os.Create(outputFile)
+				util.ExitFatal(fmt.Errorf("Could not open output file %q: %s", outputFile, err))
+				defer f.Close()
+				w = f
+			}
+
+			backup.Backup(dbType, dbConnStr, w)
 		},
 	}
 }
