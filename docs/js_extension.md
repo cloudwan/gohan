@@ -377,7 +377,7 @@ following API:
 ## Example
 A sample test may look like this:
 
-```
+```yaml
   // Schema file containing extensions to be tested
   var SCHEMA = "../test_schema.yaml";
 

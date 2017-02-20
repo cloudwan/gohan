@@ -188,7 +188,7 @@ In addition to resource related commands, some formatting commands are available
 
   - `json`, e.g:
 
-```
+```json
       {
         "name": "Resource name",
         "description": "Resource very long and meaningful description",
@@ -275,7 +275,7 @@ in GET requests, together with additional information about the state.
 
 For example say a simplistic resource with the following schema is created:
 
-```
+```yaml
     - description: Just a named object
       id: named_object
       parent: ""
@@ -313,7 +313,7 @@ and the ``name`` is set to ``Alice``. Then Gohan, through the standard event syn
 writes the following JSON object to the backend under the key
 ``config/v1.0/named_object/someGeneratedUuid``:
 
-```
+```json
     {
       "body": {
         "id": "someGeneratedUuid",
@@ -327,7 +327,7 @@ A worker program might now read this information, create a corresponding
 southbound resource and write the following to the backend under the key
 ``state/v1.0/named_object/someGeneratedUuid``:
 
-```
+```json
     {
       "version": 1,
       "error": "",
@@ -352,7 +352,7 @@ in the southbound a worker program might monitor its status and then write
 the result of this monitoring under the key
 ``monitoring/v1.0/named_object/someGeneratedUuid`` as the following JSON:
 
-```
+```json
     {
       "version": 1,
       "monitoring": "Alice is well"
