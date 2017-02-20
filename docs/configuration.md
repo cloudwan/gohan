@@ -26,6 +26,8 @@ Gohan server configuration uses YAML format.
       # connection string
       # it is file path for yaml, json and sqlite3 backend
       connection: "./etc/test.db"
+      # should database be altered if schema was updated, default true
+      # auto_migrate: true
       # please set no_init true in the production env, so that gohan don't initialize table
       # no_init: true
       initial_data:
@@ -91,22 +93,12 @@ your environment key.
 We are using Golang text template package, so please take a
 look more at https://golang.org/pkg/text/template/
 
-Database
---------------------
+## Database
 
 This section is for backend database configuration.
-You can select from sqlite3 and MySQL.
+You can select from MySQL, sqlite3 and YAML.
 
-a sample database configuraion for sqlite3.
-
-```yaml
-  # database connection configuraion
-  database:
-      type: "sqlite3"
-      connection: "./sqlite3.db"
-```
-
-a sample database configuraion for sqlite3.
+Sample database configuration for MySQL.
 
 ```yaml
   # database connection configuraion
@@ -115,7 +107,16 @@ a sample database configuraion for sqlite3.
       connection: "root:gohan@127.0.0.1/gohan"
 ```
 
-a sample database configuration for YAML backend.
+Sample database configuration for sqlite3.
+
+```yaml
+  # database connection configuraion
+  database:
+      type: "sqlite3"
+      connection: "./sqlite3.db"
+```
+
+Sample database configuration for YAML backend.
 
 ```yaml
   database:
@@ -126,13 +127,31 @@ a sample database configuration for YAML backend.
             connection: "./etc/examples/initial_datayaml"
 ```
 
-Cascade deletion, i.e. creating FOREIGN KEYs with CASCADE ON DELETE,  can be activated with cascade switch.
+Cascade deletion, i.e. creating FOREIGN KEYs with CASCADE ON DELETE, can be activated with `cascade` switch.
 
 ```yaml
   database:
       type: "mysql"
       connection: "root:gohan@127.0.0.1/gohan"
       cascade: true
+```
+
+Disable database initialisation, set `no_init: true` in production env, so that gohan don't initialize table.
+
+```yaml
+  database:
+      type: "mysql"
+      connection: "root:gohan@127.0.0.1/gohan"
+      no_init: true
+```
+
+Disable auto migrations, set `auto_migrate: false` so that gohan don't alter database tables, it can, however, add new tables. 
+
+```yaml
+  database:
+      type: "mysql"
+      connection: "root:gohan@127.0.0.1/gohan"
+      auto_migrate: false
 ```
 
 ## Schema
