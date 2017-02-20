@@ -235,6 +235,15 @@ func quote(str string) string {
 	return fmt.Sprintf("`%s`", str)
 }
 
+func foreignKeyName(fromTable, fromProperty, toTable, toProperty string) string {
+	name := fmt.Sprintf("%s_%s_%s_%s", fromTable, fromProperty, toTable, toProperty)
+	if len(name) > 64 {
+		diff := len(name) - 64
+		return name[diff:]
+	}
+	return name
+}
+
 //Connect connec to the db
 func (db *DB) Connect(sqlType, conn string, maxOpenConn int) (err error) {
 	db.sqlType = sqlType
@@ -331,7 +340,8 @@ func (db *DB) genTableCols(s *schema.Schema, cascade bool, exclude []string) ([]
 					relationColumn = property.RelationColumn
 				}
 
-				relations = append(relations, fmt.Sprintf("foreign key(`%s`) REFERENCES `%s`(%s) %s",
+				relations = append(relations, fmt.Sprintf("constraint %s foreign key(`%s`) REFERENCES `%s`(%s) %s",
+					quote(foreignKeyName(s.GetDbTableName(), property.ID, foreignSchema.GetDbTableName(), relationColumn)),
 					property.ID, foreignSchema.GetDbTableName(), relationColumn, cascadeString))
 			}
 		}
