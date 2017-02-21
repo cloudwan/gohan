@@ -667,10 +667,10 @@ func decodeState(data map[string]interface{}, state *transaction.ResourceState) 
 	return nil
 }
 
-func buildSelect(s *schema.Schema, filter transaction.Filter, pg *pagination.Paginator) (string, []interface{}, error) {
-	cols := MakeColumns(s, s.GetDbTableName(), true)
+func buildSelect(s *schema.Schema, filter transaction.Filter, pg *pagination.Paginator, join bool) (string, []interface{}, error) {
+	cols := MakeColumns(s, s.GetDbTableName(), join)
 	q := sq.Select(cols...).From(quote(s.GetDbTableName()))
-	q, err := addFilterToQuery(s, q, filter, true)
+	q, err := addFilterToQuery(s, q, filter, join)
 	if err != nil {
 		return "", nil, err
 	}
@@ -686,7 +686,9 @@ func buildSelect(s *schema.Schema, filter transaction.Filter, pg *pagination.Pag
 			}
 		}
 	}
-	q = makeJoin(s, s.GetDbTableName(), q)
+	if join {
+		q = makeJoin(s, s.GetDbTableName(), q)
+	}
 	return q.ToSql()
 }
 
@@ -707,7 +709,7 @@ func executeSelect(s *schema.Schema, filter transaction.Filter, sql string, args
 
 //List resources in the db
 func (tx *Transaction) List(s *schema.Schema, filter transaction.Filter, pg *pagination.Paginator) (list []*schema.Resource, total uint64, err error) {
-	sql, args, err := buildSelect(s, filter, pg)
+	sql, args, err := buildSelect(s, filter, pg, true)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -715,9 +717,21 @@ func (tx *Transaction) List(s *schema.Schema, filter transaction.Filter, pg *pag
 	return executeSelect(s, filter, sql, args, tx)
 }
 
+func shouldJoin(policy transaction.LockPolicy) bool {
+	switch policy {
+	case transaction.LockRelatedResources:
+		return true
+	case transaction.SkipRelatedResources:
+		return false
+	default:
+		log.Fatalf("Unknown lock policy %+v", policy)
+		panic("Unexpected locking policy")
+	}
+}
+
 //Lock resources in the db
-func (tx *Transaction) LockList(s *schema.Schema, filter transaction.Filter, pg *pagination.Paginator) (list []*schema.Resource, total uint64, err error) {
-	sql, args, err := buildSelect(s, filter, pg)
+func (tx *Transaction) LockList(s *schema.Schema, filter transaction.Filter, pg *pagination.Paginator, lockPolicy transaction.LockPolicy) (list []*schema.Resource, total uint64, err error) {
+	sql, args, err := buildSelect(s, filter, pg, shouldJoin(lockPolicy))
 	if err != nil {
 		return nil, 0, err
 	}
@@ -798,8 +812,8 @@ func (tx *Transaction) Fetch(s *schema.Schema, filter transaction.Filter) (*sche
 }
 
 //Fetch & lock a resource
-func (tx *Transaction) LockFetch(s *schema.Schema, filter transaction.Filter) (*schema.Resource, error) {
-	list, _, err := tx.LockList(s, filter, nil)
+func (tx *Transaction) LockFetch(s *schema.Schema, filter transaction.Filter, lockPolicy transaction.LockPolicy) (*schema.Resource, error) {
+	list, _, err := tx.LockList(s, filter, nil, lockPolicy)
 	if len(list) < 1 {
 		return nil, fmt.Errorf("Failed to fetch and lock %s", filter)
 	}

@@ -134,14 +134,18 @@ func init() {
 					defaultOffset, _ := otto.ToValue(0) // no offset
 					call.ArgumentList = append(call.ArgumentList, defaultOffset)
 				}
-				VerifyCallArguments(&call, "gohan_db_lock_list", 6)
+				if len(call.ArgumentList) < 7 {
+					defaultLockPolicy, _ := otto.ToValue(transaction.LockRelatedResources)
+					call.ArgumentList = append(call.ArgumentList, defaultLockPolicy)
+				}
+				VerifyCallArguments(&call, "gohan_db_lock_list", 7)
 
-				transaction, needCommit, err := env.GetOrCreateTransaction(call.Argument(0))
+				tx, needCommit, err := env.GetOrCreateTransaction(call.Argument(0))
 				if err != nil {
 					ThrowOttoException(&call, err.Error())
 				}
 				if needCommit {
-					defer transaction.Close()
+					defer tx.Close()
 				}
 				schemaID, err := GetString(call.Argument(1))
 				if err != nil {
@@ -165,8 +169,13 @@ func init() {
 					ThrowOttoException(&call, err.Error())
 				}
 				offset := uint64(rawOffset)
+				rawLockPolicy, err := GetInt64(call.Argument(6))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+				lockPolicy := transaction.LockPolicy(rawLockPolicy)
 
-				resp, err := GohanDbLockList(transaction, schemaID, filter, orderKey, limit, offset)
+				resp, err := GohanDbLockList(tx, schemaID, filter, orderKey, limit, offset, lockPolicy)
 				if err != nil {
 					ThrowOttoException(&call, err.Error())
 				}
@@ -208,13 +217,13 @@ func init() {
 				return value
 			},
 			"gohan_db_lock_fetch": func(call otto.FunctionCall) otto.Value {
-				VerifyCallArguments(&call, "gohan_db_lock_fetch", 4)
-				transaction, needCommit, err := env.GetOrCreateTransaction(call.Argument(0))
+				VerifyCallArguments(&call, "gohan_db_lock_fetch", 5)
+				tx, needCommit, err := env.GetOrCreateTransaction(call.Argument(0))
 				if err != nil {
 					ThrowOttoException(&call, err.Error())
 				}
 				if needCommit {
-					defer transaction.Close()
+					defer tx.Close()
 				}
 				schemaID, err := GetString(call.Argument(1))
 				if err != nil {
@@ -228,8 +237,13 @@ func init() {
 				if err != nil {
 					ThrowOttoException(&call, err.Error())
 				}
+				rawLockPolicy, err := GetInt64(call.Argument(4))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+				lockPolicy := transaction.LockPolicy(rawLockPolicy)
 
-				resp, err := GohanDbLockFetch(transaction, schemaID, ID, tenantID)
+				resp, err := GohanDbLockFetch(tx, schemaID, ID, tenantID, lockPolicy)
 				if err != nil {
 					ThrowOttoException(&call, err.Error())
 				}
@@ -468,17 +482,17 @@ func GohanDbList(transaction transaction.Transaction, schemaID string,
 }
 
 //GohanDbLockList locks resources in database filtered by filter and paginator
-func GohanDbLockList(transaction transaction.Transaction, schemaID string,
-	filter map[string]interface{}, key string, limit uint64, offset uint64) ([]map[string]interface{}, error) {
+func GohanDbLockList(tx transaction.Transaction, schemaID string,
+	filter map[string]interface{}, key string, limit uint64, offset uint64, policy transaction.LockPolicy) ([]map[string]interface{}, error) {
 
 	schema, paginator, err := prepareListResources(schemaID, key, limit, offset)
 	if err != nil {
 		return []map[string]interface{}{}, err
 	}
 
-	resources, _, err := transaction.LockList(schema, filter, paginator)
+	resources, _, err := tx.LockList(schema, filter, paginator, policy)
 	if err != nil {
-		return []map[string]interface{}{}, fmt.Errorf("Error during gohan_db_list: %s", err.Error())
+		return []map[string]interface{}{}, fmt.Errorf("Error during gohan_db_lock_list: %s", err.Error())
 	}
 
 	return parseListResults(resources), nil
@@ -504,7 +518,7 @@ func GohanDbFetch(tx transaction.Transaction, schemaID, ID,
 }
 
 //GohanDbLockFetch gets resource from database
-func GohanDbLockFetch(tx transaction.Transaction, schemaID, ID, tenantID string) (*schema.Resource, error) {
+func GohanDbLockFetch(tx transaction.Transaction, schemaID, ID, tenantID string, policy transaction.LockPolicy) (*schema.Resource, error) {
 	schema, err := getSchema(schemaID)
 	if err != nil {
 		return nil, err
@@ -513,7 +527,7 @@ func GohanDbLockFetch(tx transaction.Transaction, schemaID, ID, tenantID string)
 	if tenantID != "" {
 		filter["tenant_id"] = tenantID
 	}
-	resp, err := tx.LockFetch(schema, filter)
+	resp, err := tx.LockFetch(schema, filter, policy)
 	if err != nil {
 		return nil, fmt.Errorf("Error during gohan_db_lock_fetch: %s", err.Error())
 	}

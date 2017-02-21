@@ -34,6 +34,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/mock"
+	"strings"
 )
 
 func newEnvironmentWithExtension(extension *schema.Extension, db db.DB) (env extension.Environment) {
@@ -139,6 +141,14 @@ var _ = Describe("GohanDb", func() {
 	})
 
 	Describe("gohan_db_(lock)list", func() {
+		var setExpect = func(tx *mocks.Transaction, methodName string, s *schema.Schema, filter transaction.Filter, paginator *pagination.Paginator) *mock.Call {
+			if strings.Contains(methodName, "Lock") {
+				return tx.On(methodName, s, filter, paginator, transaction.LockRelatedResources)
+			} else {
+				return tx.On(methodName, s, filter, paginator)
+			}
+		}
+
 		Context("When valid minimum parameters are given", func() {
 			DescribeTable("returns the list ordered by id",
 				func(function, methodName string) {
@@ -160,9 +170,7 @@ var _ = Describe("GohanDb", func() {
 
 					var paginator *pagination.Paginator
 					var fakeTx = new(mocks.Transaction)
-					fakeTx.On(
-						methodName, s, transaction.Filter{"tenant_id": "tenant0"}, paginator,
-					).Return(
+					setExpect(fakeTx, methodName, s, transaction.Filter{"tenant_id": "tenant0"}, paginator).Return(
 						[]*schema.Resource{r0, r1},
 						uint64(2),
 						nil,
@@ -205,9 +213,7 @@ var _ = Describe("GohanDb", func() {
 
 					var paginator *pagination.Paginator
 					var fakeTx = new(mocks.Transaction)
-					fakeTx.On(
-						methodName, s, transaction.Filter{"test_bool": true}, paginator,
-					).Return(
+					setExpect(fakeTx, methodName, s, transaction.Filter{"test_bool": true}, paginator).Return(
 						[]*schema.Resource{r1},
 						uint64(1),
 						nil,
@@ -256,9 +262,7 @@ var _ = Describe("GohanDb", func() {
 						Order: pagination.ASC,
 					}
 					var fakeTx = new(mocks.Transaction)
-					fakeTx.On(
-						methodName, s, transaction.Filter{"tenant_id": "tenant0"}, paginator,
-					).Return(
+					setExpect(fakeTx, methodName, s, transaction.Filter{"tenant_id": "tenant0"}, paginator).Return(
 						[]*schema.Resource{r0, r1},
 						uint64(2),
 						nil,
@@ -307,9 +311,7 @@ var _ = Describe("GohanDb", func() {
 						Limit: 100,
 					}
 					var fakeTx = new(mocks.Transaction)
-					fakeTx.On(
-						methodName, s, transaction.Filter{"tenant_id": "tenant0"}, paginator,
-					).Return(
+					setExpect(fakeTx, methodName, s, transaction.Filter{"tenant_id": "tenant0"}, paginator).Return(
 						[]*schema.Resource{r0, r1},
 						uint64(2),
 						nil,
@@ -360,9 +362,7 @@ var _ = Describe("GohanDb", func() {
 						Offset: 10,
 					}
 					var fakeTx = new(mocks.Transaction)
-					fakeTx.On(
-						methodName, s, transaction.Filter{"tenant_id": "tenant0"}, paginator,
-					).Return(
+					setExpect(fakeTx, methodName, s, transaction.Filter{"tenant_id": "tenant0"}, paginator).Return(
 						[]*schema.Resource{r0, r1},
 						uint64(2),
 						nil,

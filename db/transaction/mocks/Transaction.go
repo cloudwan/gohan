@@ -107,13 +107,13 @@ func (_m *Transaction) Fetch(_a0 *schema.Schema, _a1 transaction.Filter) (*schem
 	return r0, r1
 }
 
-// LockFetch mock
-func (_m *Transaction) LockFetch(_a0 *schema.Schema, _a1 transaction.Filter) (*schema.Resource, error) {
-	ret := _m.Called(_a0, _a1)
+// LockFetch provides a mock function with given fields: _a0, _a1, _a2
+func (_m *Transaction) LockFetch(_a0 *schema.Schema, _a1 transaction.Filter, _a2 transaction.LockPolicy) (*schema.Resource, error) {
+	ret := _m.Called(_a0, _a1, _a2)
 
 	var r0 *schema.Resource
-	if rf, ok := ret.Get(0).(func(*schema.Schema, transaction.Filter) *schema.Resource); ok {
-		r0 = rf(_a0, _a1)
+	if rf, ok := ret.Get(0).(func(*schema.Schema, transaction.Filter, transaction.LockPolicy) *schema.Resource); ok {
+		r0 = rf(_a0, _a1, _a2)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*schema.Resource)
@@ -121,8 +121,8 @@ func (_m *Transaction) LockFetch(_a0 *schema.Schema, _a1 transaction.Filter) (*s
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(*schema.Schema, transaction.Filter) error); ok {
-		r1 = rf(_a0, _a1)
+	if rf, ok := ret.Get(1).(func(*schema.Schema, transaction.Filter, transaction.LockPolicy) error); ok {
+		r1 = rf(_a0, _a1, _a2)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -181,13 +181,13 @@ func (_m *Transaction) List(_a0 *schema.Schema, _a1 transaction.Filter, _a2 *pag
 	return r0, r1, r2
 }
 
-// Lock mock
-func (_m *Transaction) LockList(_a0 *schema.Schema, _a1 transaction.Filter, _a2 *pagination.Paginator) ([]*schema.Resource, uint64, error) {
-	ret := _m.Called(_a0, _a1, _a2)
+// LockList provides a mock function with given fields: _a0, _a1, _a2, _a3
+func (_m *Transaction) LockList(_a0 *schema.Schema, _a1 transaction.Filter, _a2 *pagination.Paginator, _a3 transaction.LockPolicy) ([]*schema.Resource, uint64, error) {
+	ret := _m.Called(_a0, _a1, _a2, _a3)
 
 	var r0 []*schema.Resource
-	if rf, ok := ret.Get(0).(func(*schema.Schema, transaction.Filter, *pagination.Paginator) []*schema.Resource); ok {
-		r0 = rf(_a0, _a1, _a2)
+	if rf, ok := ret.Get(0).(func(*schema.Schema, transaction.Filter, *pagination.Paginator, transaction.LockPolicy) []*schema.Resource); ok {
+		r0 = rf(_a0, _a1, _a2, _a3)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*schema.Resource)
@@ -195,15 +195,15 @@ func (_m *Transaction) LockList(_a0 *schema.Schema, _a1 transaction.Filter, _a2 
 	}
 
 	var r1 uint64
-	if rf, ok := ret.Get(1).(func(*schema.Schema, transaction.Filter, *pagination.Paginator) uint64); ok {
-		r1 = rf(_a0, _a1, _a2)
+	if rf, ok := ret.Get(1).(func(*schema.Schema, transaction.Filter, *pagination.Paginator, transaction.LockPolicy) uint64); ok {
+		r1 = rf(_a0, _a1, _a2, _a3)
 	} else {
 		r1 = ret.Get(1).(uint64)
 	}
 
 	var r2 error
-	if rf, ok := ret.Get(2).(func(*schema.Schema, transaction.Filter, *pagination.Paginator) error); ok {
-		r2 = rf(_a0, _a1, _a2)
+	if rf, ok := ret.Get(2).(func(*schema.Schema, transaction.Filter, *pagination.Paginator, transaction.LockPolicy) error); ok {
+		r2 = rf(_a0, _a1, _a2, _a3)
 	} else {
 		r2 = ret.Error(2)
 	}
