@@ -28,7 +28,7 @@
             }
         },
         {
-            "action": "*",
+            "action": "create",
             "condition": [
                 "is_owner"
             ],
@@ -37,6 +37,23 @@
             "principal": "Member",
             "resource": {
                 "path": "/v2.0/networks/?$",
+                "properties": [
+                    "id",
+                    "description",
+                    "name"
+                ]
+            }
+        },
+        {
+            "action": "read",
+            "condition": [
+                "is_owner"
+            ],
+            "effect": "allow",
+            "id": "member_statement3",
+            "principal": "Member",
+            "resource": {
+                "path": "/v2.0/nets/?$",
                 "properties": [
                     "id",
                     "description",
