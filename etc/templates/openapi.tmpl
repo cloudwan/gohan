@@ -38,6 +38,114 @@
                         }
                     }
                 }
+            }
+        },
+        "{{ schema.URL }}/{id}": {
+            "get": {
+                "description" : "Show a {{ schema.ID}} resources",
+                "produces": [
+                    "application/json"
+                ],
+                "parameters": [
+                {
+                    "name": "id",
+                    "in": "path",
+                    "description": "ID of {{ schema.ID }} to fetch",
+                    "required": true,
+                    "type": "string"
+                }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{{ schema.description }}",
+                        "schema": {
+                            "$ref": "#/definitions/{{ schema.ID }}"
+                        }
+                    },
+                    "default": {
+                        "description": "unexpected error",
+                        "schema": {
+                        "$ref": "#/definitions/errorModel"
+                        }
+                    }
+                }
+            }
+        }{% for action in schema.Actions %},
+        "{{ schema.GetPluralURL() }}{{ action.Path | swagger_path }}": {
+            "{{ action.Method|lower }}" : {
+                "description": "{% if action.Description | length == 0 %}Action {{ action.ID}}{% else %}{{ action.Description }}{% endif %}",
+                "produces": [
+                    "application/json"
+                ],
+                {% with has_id=action.Path | swagger_has_id_param put_or_post=action.Method | lower == "post" or action.Method | lower == "put" %}
+                {% with has_params_in_get=action.Method | lower == "get" and action.InputSchema | length != 0 %}
+                "parameters": [ {% if has_id %}
+                {
+                    "name": "id",
+                    "in": "path",
+                    "description": "ID of {{ schema.ID }} to fetch",
+                    "required": true,
+                    "type": "string"
+                }{% endif %}{% if has_id and (has_params_in_get or put_or_post) %}, {% endif %} {% if has_params_in_get %}
+                {% for key, value in action.InputSchema %}
+                {
+                    "name": "{{ key }}",
+                    "in": "query",
+                    "type": "{{ value.type }}",
+                    "required": {{ value.required | lower }},
+                    "description": "{{ value.description }}"
+                }{% if not forloop.Last %},{% endif %}{% endfor %}{% endif %}{% endwith %} {% if has_params_in_get and put_or_post %}, {% endif %}{% if put_or_post %}
+                {
+                    "name": "{{ action.ID }} request object",
+                    "in": "body",
+                    "description": "{{ action.ID }} request object",
+                    "required": true,
+                    "schema":
+                    {% with schema=action.InputSchema | swagger: "                    " %}
+                    {% if schema == "null" %}
+                    {} {% else %} {{schema}} {% endif %}{% endwith %}
+                }{% endif %} {% endwith %}
+                ],
+                "responses": {
+                    "200": {
+                        "description": "action {{ schema.ID }} response",
+                        "schema":
+                        {{ action.OutputSchema | swagger: "                        "}}
+                    },
+                    "default": {
+                        "description": "unexpected error",
+                        "schema": {
+                        "$ref": "#/definitions/errorModel"
+                        }
+                    }
+                }
+            }
+        }{% endfor %}{% if not (forloop.Last && len(schemasCRUD) == 0) %},{% endif %}
+{% endif %}{% endfor %}
+    {% for schema in schemasCRUD %}{% if schema.Metadata.type != "metaschema" && schema.Type != "abstract" %}
+        "{{ schema.GetPluralURL() }}": {
+            "get": {
+                "description" : "Get list of {{ schema.ID}} resources",
+                "produces": [
+                    "application/json"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{{ schema.description }}",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/{{ schema.ID }}"
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "unexpected error",
+                        "schema": {
+                        "$ref": "#/definitions/errorModel"
+                        }
+                    }
+                }
             },
             "post": {
                 "description" : "Create new {{ schema.ID }} resource",
@@ -169,11 +277,12 @@
         }{% for action in schema.Actions %},
         "{{ schema.GetPluralURL() }}{{ action.Path | swagger_path }}": {
             "{{ action.Method|lower }}" : {
-                "description": "Action {{ action.ID}}",
+                "description": "{% if action.Description | length == 0 %}Action {{ action.ID}}{% else %}{{ action.Description }}{% endif %}",
                 "produces": [
                     "application/json"
                 ],
                 {% with has_id=action.Path | swagger_has_id_param put_or_post=action.Method | lower == "post" or action.Method | lower == "put" %}
+                {% with has_params_in_get=action.Method | lower == "get" and action.InputSchema | length != 0 %}
                 "parameters": [ {% if has_id %}
                 {
                     "name": "id",
@@ -181,7 +290,15 @@
                     "description": "ID of {{ schema.ID }} to fetch",
                     "required": true,
                     "type": "string"
-                }{% endif %}{% if has_id and put_or_post %}, {% endif %} {% if put_or_post %}
+                }{% endif %}{% if has_id and (has_params_in_get or put_or_post) %}, {% endif %} {% if has_params_in_get %}
+                {% for key, value in action.InputSchema %}
+                {
+                    "name": "{{ key }}",
+                    "in": "query",
+                    "type": "{{ value.type }}",
+                    "required": {{ value.required | lower }},
+                    "description": "{{ value.description }}"
+                }{% if not forloop.Last %},{% endif %}{% endfor %}{% endif %}{% endwith %} {% if has_params_in_get and put_or_post %}, {% endif %}{% if put_or_post %}
                 {
                     "name": "{{ action.ID }} request object",
                     "in": "body",
@@ -211,6 +328,19 @@
 {% endif %}{% endfor %}
     },
     "definitions": { {% for schema in schemas %}{% if schema.Metadata.type != "metaschema" %}
+        {% with jsonSchema=schema.JSONSchema | swagger: "        " %}
+        {% if jsonSchema != "null"  %}
+        "{{ schema.ID }}" :
+        {{ jsonSchema }}, {% endif %} {% endwith %}
+        {% with jsonSchemaInput=schema.JSONSchemaOnCreate | swagger: "        " %}
+        {% if jsonSchemaInput != "null" %}
+        "{{ schema.ID }}Input" :
+        {{ jsonSchemaInput }}, {% endif %}{% endwith %}
+        {% with jsonSchemaUpdate=schema.JSONSchemaOnUpdate | swagger: "        " %}
+        {% if jsonSchemaUpdate != "null"  %}
+        "{{ schema.ID }}Update" :
+        {{ jsonSchemaUpdate }}, {% endif %}{% endwith %}
+        {% endif %}{% endfor %}{% for schema in schemasCRUD %}{% if schema.Metadata.type != "metaschema" %}
         {% with jsonSchema=schema.JSONSchema | swagger: "        " %}
         {% if jsonSchema != "null"  %}
         "{{ schema.ID }}" :

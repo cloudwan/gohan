@@ -54,7 +54,7 @@ var _ = Describe("Otto extension manager", func() {
 		manager = schema.GetManager()
 		environmentManager = extension.GetManager()
 
-		timeLimit = time.Duration(10) * time.Second
+		timeLimit = time.Duration(1) * time.Second
 		timeLimits = []*schema.PathEventTimeLimit{}
 	})
 
@@ -238,10 +238,13 @@ var _ = Describe("Otto extension manager", func() {
 		})
 
 		Context("When extension is running too long", func() {
-			It("should be aborted in the middle of extension", func() {
+			It("should be aborted in the middle of extension and cleaned up", func() {
 				timeoutExtension, err := schema.NewExtension(map[string]interface{}{
 					"id": "timeout_extension",
-					"code": `gohan_register_handler("test_event", function(context) {
+					"code": `
+					var unclosedTx;
+					gohan_register_handler("test_event", function(context) {
+						unclosedTx = gohan_db_transaction();
 						while(true) {
 							// busy loop, but ok for this test
 							var i = 1;
@@ -255,12 +258,30 @@ var _ = Describe("Otto extension manager", func() {
 				extensions := []*schema.Extension{timeoutExtension}
 				env := newEnvironment()
 				env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")
+				cloned := env.Clone().(*otto.Environment)
 
 				context := map[string]interface{}{
 					"id": "test",
 				}
+
 				err = env.HandleEvent("test_event", context)
 				Expect(err).To(MatchError(ContainSubstring("exceed timeout for extension execution")))
+				txValue1, err := env.VM.Get("unclosedTx")
+				Expect(err).ToNot(HaveOccurred())
+				tx1, err := otto.GetTransaction(txValue1)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(tx1.Closed()).To(BeTrue())
+
+				err = cloned.HandleEvent("test_event", context)
+				Expect(err).To(MatchError(ContainSubstring("exceed timeout for extension execution")))
+				txValue2, err := cloned.VM.Get("unclosedTx")
+				Expect(err).ToNot(HaveOccurred())
+				tx2, err := otto.GetTransaction(txValue2)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(tx1.Closed()).To(BeTrue())
+
+				Expect(tx1).NotTo(BeIdenticalTo(tx2))
+
 			})
 		})
 

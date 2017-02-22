@@ -44,8 +44,9 @@ var _ = Describe("Templates", func() {
 		Context("With policy set to admin", func() {
 			It("should return only admin's schemas", func() {
 
-				filteredSchemas := filterSchemasForPolicy("admin", policies, schemas)
+				filteredSchemasRead, filteredSchemas := filterSchemasForPolicy("admin", policies, schemas)
 
+				Expect(filteredSchemasRead).To(BeEmpty())
 				Expect(filteredSchemas).To(HaveLen(3))
 				Expect(filteredSchemas[0].URL).To(Equal("/v2.0/nets"))
 				Expect(filteredSchemas[1].URL).To(Equal("/v2.0/networks"))
@@ -56,8 +57,10 @@ var _ = Describe("Templates", func() {
 		Context("With policy set to member", func() {
 			It("should return only member's schemas", func() {
 
-				filteredSchemas := filterSchemasForPolicy("Member", policies, schemas)
+				filteredSchemasRead, filteredSchemas := filterSchemasForPolicy("Member", policies, schemas)
 
+				Expect(filteredSchemasRead).To(HaveLen(1))
+				Expect(filteredSchemasRead[0].URL).To(Equal("/v2.0/nets"))
 				Expect(filteredSchemas).To(HaveLen(1))
 				Expect(filteredSchemas[0].URL).To(Equal("/v2.0/networks"))
 			})
@@ -66,8 +69,9 @@ var _ = Describe("Templates", func() {
 		Context("With policy set to nobody", func() {
 			It("should return only nobody's schemas", func() {
 
-				filteredSchemas := filterSchemasForPolicy("Nobody", policies, schemas)
+				filteredSchemasRead, filteredSchemas := filterSchemasForPolicy("Nobody", policies, schemas)
 
+				Expect(filteredSchemasRead).To(BeEmpty())
 				Expect(filteredSchemas).To(BeEmpty())
 			})
 		})
