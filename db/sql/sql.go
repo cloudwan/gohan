@@ -268,7 +268,7 @@ func (db *DB) Close() {
 }
 
 //Begin starts new transaction
-func (db *DB) Begin() (transaction.Transaction, error) {
+func (db *DB) Begin() (tx transaction.Transaction, err error) {
 	transaction, err := db.DB.Beginx()
 	if err != nil {
 		return nil, err
@@ -276,11 +276,13 @@ func (db *DB) Begin() (transaction.Transaction, error) {
 	if db.sqlType == "sqlite3" {
 		transaction.Exec("PRAGMA foreign_keys = ON;")
 	}
-	return &Transaction{
+	tx = &Transaction{
 		db:          db,
 		transaction: transaction,
 		closed:      false,
-	}, nil
+	}
+	log.Debug("Created transaction %#v", transaction)
+	return
 }
 
 func (db *DB) genTableCols(s *schema.Schema, cascade bool, exclude []string) ([]string, []string, []string) {
@@ -809,6 +811,7 @@ func (tx *Transaction) RawTransaction() *sqlx.Tx {
 
 //SetIsolationLevel specify transaction isolation level
 func (tx *Transaction) SetIsolationLevel(level transaction.Type) error {
+	log.Debug("Setting isolation level for transaction %#v %s", tx, level)
 	if tx.db.sqlType == "mysql" {
 		err := tx.Exec(fmt.Sprintf("set session transaction isolation level %s", level))
 		return err
@@ -818,6 +821,7 @@ func (tx *Transaction) SetIsolationLevel(level transaction.Type) error {
 
 //Commit commits transaction
 func (tx *Transaction) Commit() error {
+	log.Debug("Committing transaction %#v", tx)
 	err := tx.transaction.Commit()
 	if err != nil {
 		return err
@@ -829,6 +833,7 @@ func (tx *Transaction) Commit() error {
 //Close closes connection
 func (tx *Transaction) Close() error {
 	//Rollback if it isn't committed yet
+	log.Debug("Closing transaction %#v", tx)
 	var err error
 	if !tx.closed {
 		err = tx.transaction.Rollback()
