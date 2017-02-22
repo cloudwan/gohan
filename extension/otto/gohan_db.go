@@ -47,6 +47,13 @@ func init() {
 				if err != nil {
 					ThrowOttoException(&call, "failed to start a transaction: %s", err.Error())
 				}
+
+				if err = addCloser(call.Otto, tx); err != nil {
+					tx.Close()
+					ThrowOttoException(&call, fmt.Errorf(
+						"Cannot register closer for gohan_db_transaction: %s", err).Error())
+				}
+
 				if setTxIsolationLevel {
 					strIsolationLevel, err := GetString(call.Argument(0))
 					if err != nil {

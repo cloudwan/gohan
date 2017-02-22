@@ -17,6 +17,7 @@ package otto
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -81,6 +82,7 @@ func init() {
 				value, _ := vm.ToValue(response)
 				return value
 			},
+			"gohan_closers": []io.Closer{},
 		}
 
 		for name, object := range builtins {
