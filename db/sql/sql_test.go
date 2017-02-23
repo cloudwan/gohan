@@ -77,6 +77,31 @@ var _ = Describe("Sql", func() {
 		}
 	})
 
+	Describe("MakeColumns", func() {
+		var s *schema.Schema
+
+		BeforeEach(func() {
+			manager := schema.GetManager()
+			var ok bool
+			s, ok = manager.Schema("test")
+			Expect(ok).To(BeTrue())
+		})
+
+		Context("Without fields", func() {
+			It("Returns all colums", func() {
+				cols := MakeColumns(s, s.GetDbTableName(), nil, false)
+				Expect(cols).To(HaveLen(6))
+			})
+		})
+
+		Context("With fields", func() {
+			It("Returns selected colums", func() {
+				cols := MakeColumns(s, s.GetDbTableName(), []string{"test.id", "test.tenant_id"}, false)
+				Expect(cols).To(HaveLen(2))
+			})
+		})
+	})
+
 	Describe("Query", func() {
 		type testRow struct {
 			ID          string  `json:"id"`
@@ -107,7 +132,7 @@ var _ = Describe("Sql", func() {
 			It("Returns resources", func() {
 				query := fmt.Sprintf(
 					"SELECT %s FROM %s",
-					strings.Join(MakeColumns(s, s.GetDbTableName(), false), ", "),
+					strings.Join(MakeColumns(s, s.GetDbTableName(), nil, false), ", "),
 					s.GetDbTableName(),
 				)
 				results, err := tx.Query(s, query, []interface{}{})
@@ -131,7 +156,7 @@ var _ = Describe("Sql", func() {
 			It("Replace the place holder and returns resources", func() {
 				query := fmt.Sprintf(
 					"SELECT %s FROM %s WHERE tenant_id = ?",
-					strings.Join(MakeColumns(s, s.GetDbTableName(), false), ", "),
+					strings.Join(MakeColumns(s, s.GetDbTableName(), nil, false), ", "),
 					s.GetDbTableName(),
 				)
 				results, err := tx.Query(s, query, []interface{}{"tenant0"})
@@ -155,7 +180,7 @@ var _ = Describe("Sql", func() {
 			It("Replace the place holders and returns resources", func() {
 				query := fmt.Sprintf(
 					"SELECT %s FROM %s WHERE tenant_id = ? AND test_string = ?",
-					strings.Join(MakeColumns(s, s.GetDbTableName(), false), ", "),
+					strings.Join(MakeColumns(s, s.GetDbTableName(), nil, false), ", "),
 					s.GetDbTableName(),
 				)
 				results, err := tx.Query(s, query, []interface{}{"tenant0", "obj1"})

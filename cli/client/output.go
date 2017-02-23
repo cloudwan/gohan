@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/cloudwan/gohan/schema"
 	"github.com/olekukonko/tablewriter"
@@ -62,11 +63,26 @@ func (gohanClientCLI *GohanClientCLI) createResourcesTable(s *schema.Schema, buf
 	if len(resources) == 0 {
 		return
 	}
-	table.SetHeader(s.Titles())
+
+	include := gohanClientCLI.fieldFilter(s)
+	titles := make([]string, 0, len(s.Properties))
+	for _, property := range s.Properties {
+		if include != nil && !include[normField(property.ID, s.ID)] {
+			continue
+		}
+
+		titles = append(titles, property.Title)
+	}
+	table.SetHeader(titles)
+
 	for _, rawResource := range resources {
 		resourceSlice := []string{}
 		resource := rawResource.(map[string]interface{})
 		for _, property := range s.Properties {
+			if include != nil && !include[normField(property.ID, s.ID)] {
+				continue
+			}
+
 			v := ""
 			if val, ok := resource[property.ID]; ok && val != nil {
 				switch property.Type {
@@ -88,10 +104,37 @@ func (gohanClientCLI *GohanClientCLI) createResourcesTable(s *schema.Schema, buf
 }
 
 func (gohanClientCLI *GohanClientCLI) createSingleResourceTable(s *schema.Schema, buffer *bytes.Buffer, resource map[string]interface{}) {
+	include := gohanClientCLI.fieldFilter(s)
 	table := tablewriter.NewWriter(buffer)
 	table.SetHeader([]string{"Property", "Value"})
 	for _, property := range s.Properties {
+		if include != nil && !include[normField(property.ID, s.ID)] {
+			continue
+		}
+
 		table.Append([]string{property.Title, fmt.Sprint(resource[property.ID])})
 	}
 	table.Render()
+}
+
+//fieldFilter returns opts filters as string to boolean map with normalised keys.
+func (gohanClientCLI *GohanClientCLI) fieldFilter(s *schema.Schema) map[string]bool {
+	var include map[string]bool
+	if gohanClientCLI.opts.fields != nil {
+		include = make(map[string]bool)
+		for _, f := range gohanClientCLI.opts.fields {
+			include[normField(f, s.ID)] = true
+		}
+	}
+
+	return include
+}
+
+//normField returns field prefixed with schema ID.
+func normField(field, schemaID string) string {
+	if strings.Contains(field, ".") {
+		return field
+	}
+
+	return fmt.Sprintf("%s.%s", schemaID, field)
 }

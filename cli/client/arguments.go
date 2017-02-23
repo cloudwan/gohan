@@ -120,7 +120,6 @@ func (gohanClientCLI *GohanClientCLI) handleCommonArguments(args map[string]inte
 		}
 		delete(args, outputFormatKey)
 		gohanClientCLI.opts.outputFormat = outputFormat
-		return nil
 	}
 
 	if verbosity, ok := args[logLevelKey]; ok {
@@ -131,7 +130,6 @@ func (gohanClientCLI *GohanClientCLI) handleCommonArguments(args map[string]inte
 		delete(args, logLevelKey)
 		gohanClientCLI.opts.logLevel = logLevel
 		setUpLogging(logLevel)
-		return nil
 	}
 
 	if fieldsOpt, ok := args[fieldsKey]; ok {
@@ -141,7 +139,6 @@ func (gohanClientCLI *GohanClientCLI) handleCommonArguments(args map[string]inte
 		}
 		delete(args, fieldsKey)
 		gohanClientCLI.opts.fields = fields
-		return nil
 	}
 
 	return nil
