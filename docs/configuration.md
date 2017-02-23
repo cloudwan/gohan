@@ -13,7 +13,8 @@ Note that there are some example configurations in the etc directory.
 Gohan server configuration uses YAML format.
 (For YAML specification, see http://yaml.org/)
 
-```  #######################################################
+```yaml
+  #######################################################
   #  Gohan API Server example configuraion
   ######################################################
 
@@ -25,6 +26,8 @@ Gohan server configuration uses YAML format.
       # connection string
       # it is file path for yaml, json and sqlite3 backend
       connection: "./etc/test.db"
+      # should database be altered if schema was updated, default true
+      # auto_migrate: true
       # please set no_init true in the production env, so that gohan don't initialize table
       # no_init: true
       initial_data:
@@ -81,7 +84,7 @@ Note that overwrapped configuration will be overridden by configuration loaded l
 
 You can use Environment value in the configuration.
 
-```
+```yaml
   address: {{ .GOHAN_IP}}:{{ .GOHAN_PORT}}
 ```
 
@@ -90,33 +93,32 @@ your environment key.
 We are using Golang text template package, so please take a
 look more at https://golang.org/pkg/text/template/
 
-Database
---------------------
+## Database
 
 This section is for backend database configuration.
-You can select from sqlite3 and MySQL.
+You can select from MySQL, sqlite3 and YAML.
 
-a sample database configuraion for sqlite3.
+Sample database configuration for MySQL.
 
-```
-  # database connection configuraion
-  database:
-      type: "sqlite3"
-      connection: "./sqlite3.db"
-```
-
-a sample database configuraion for sqlite3.
-
-```
+```yaml
   # database connection configuraion
   database:
       type: "mysql"
       connection: "root:gohan@127.0.0.1/gohan"
 ```
 
-a sample database configuration for YAML backend.
+Sample database configuration for sqlite3.
 
+```yaml
+  # database connection configuraion
+  database:
+      type: "sqlite3"
+      connection: "./sqlite3.db"
 ```
+
+Sample database configuration for YAML backend.
+
+```yaml
   database:
       type: "yaml"
       connection: "./etc/example.yaml"
@@ -125,13 +127,31 @@ a sample database configuration for YAML backend.
             connection: "./etc/examples/initial_datayaml"
 ```
 
-Cascade deletion, i.e. creating FOREIGN KEYs with CASCADE ON DELETE,  can be activated with cascade switch.
+Cascade deletion, i.e. creating FOREIGN KEYs with CASCADE ON DELETE, can be activated with `cascade` switch.
 
-```
+```yaml
   database:
       type: "mysql"
       connection: "root:gohan@127.0.0.1/gohan"
       cascade: true
+```
+
+Disable database initialisation, set `no_init: true` in production env, so that gohan don't initialize table.
+
+```yaml
+  database:
+      type: "mysql"
+      connection: "root:gohan@127.0.0.1/gohan"
+      no_init: true
+```
+
+Disable auto migrations, set `auto_migrate: false` so that gohan don't alter database tables, it can, however, add new tables. 
+
+```yaml
+  database:
+      type: "mysql"
+      connection: "root:gohan@127.0.0.1/gohan"
+      auto_migrate: false
 ```
 
 ## Schema
@@ -139,7 +159,7 @@ Cascade deletion, i.e. creating FOREIGN KEYs with CASCADE ON DELETE,  can be act
 Gohan works based on schema definitions.
 Developers should specify a list of schema file in the configuration.
 
-```
+```yaml
 schemas:
     - "embed://etc/schema/gohan.json"
     - "embed://etc/extensions/gohan_extension.yaml"
@@ -186,7 +206,7 @@ Gohan supports OpenStack Keystone authentication backend.
 
   v2.0 or v3 is supported
 
-```
+```yaml
   keystone:
       use_keystone: false
       fake: true
@@ -203,7 +223,7 @@ javascript WebUI without a proxy server.
 You need to specify allowed domain pattern in CORS parameter.
 Note: DO NOT USE * configuraion in production deployment.
 
-```
+```yaml
   cors: "*"
 ```
 
@@ -215,7 +235,7 @@ Developers can specify Logging level per log and per module in log. If a module 
 
 Allowed log levels: "CRITICAL", "ERROR", "WARNING", "NOTICE", "INFO", "DEBUG",
 
-```
+```yaml
   logging:
       stderr:
           enabled: true
@@ -248,7 +268,7 @@ Allowed log levels: "CRITICAL", "ERROR", "WARNING", "NOTICE", "INFO", "DEBUG",
   Location of the key file is matching with a certificate.
   e.g. ``"./etc/key.pem"``
 
-```
+```yaml
   tls:
     enabled: true
     cert_file: "./etc/cert.pem"
@@ -267,7 +287,7 @@ Files stored under "etc/schema" and "etc/extensions".
 
 You can select extension types you use.
 
-```
+```yaml
   extension:
     default: javascript
     use:
@@ -280,7 +300,7 @@ You can select extension types you use.
 
   You can make timelimit for extension execution. Default is 30 sec
 
-```
+```yaml
   extension:
     timelimit: 30
 ```
@@ -289,7 +309,7 @@ You can select extension types you use.
 
   You can set npm_path for extensions. It should point to a directory of node_modules. The default is the current working directory.
 
-```
+```yaml
   extension:
     npm_path: .
 ```
@@ -314,7 +334,7 @@ You can select extension types you use.
 
   list of etcd backend.
 
-```
+```yaml
   etcd:
       - "http://192.0.0.1:2379"
       - "http://192.0.0.2:2379"
@@ -331,7 +351,7 @@ a sample configuration.
 - events list of an event we invokes an extension
 - worker_count: number of concurrent execution tasks
 
-```
+```yaml
   watch:
       keys:
         - v2.0
@@ -350,7 +370,7 @@ WARNING: The value of watched etcd keys must be a JSON dictionary.
   You can also run extension for amqp based event specifying path for
   amqp://{{event_type}}.
 
-```
+```yaml
   amqp:
       connection: amqp://guest:guest@172.16.25.130:5672/
       queues:
@@ -365,7 +385,7 @@ WARNING: The value of watched etcd keys must be a JSON dictionary.
  You can listen to snmp trap, and execute extension for that trap.
  An extension path should be snmp://
 
-```
+```yaml
   snmp:
     address: "localhost:8888"
 ```
@@ -374,7 +394,7 @@ WARNING: The value of watched etcd keys must be a JSON dictionary.
 
   You can periodically execute CRON job using configuration.
 
-```
+```yaml
   cron:
       - path: cron://cron_job_sample
         timing: "*/5 * * * * *"
@@ -385,7 +405,7 @@ WARNING: The value of watched etcd keys must be a JSON dictionary.
   Gohan uses background job queue & workers.
   You can decide how many worker can run concurrently.
 
-```
+```yaml
    workers: 100
 ```
 
@@ -395,7 +415,7 @@ WARNING: The value of watched etcd keys must be a JSON dictionary.
   Gohan updates this file based on schema REST API call.
 
 
-```
+```yaml
    editable_schema: ./example_schema.yaml
 ```
 

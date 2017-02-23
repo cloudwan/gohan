@@ -66,14 +66,14 @@ func (_mr *_MockDBRecorder) Begin() *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "Begin")
 }
 
-func (_m *MockDB) RegisterTable(_param0 *schema.Schema, _param1 bool) error {
-	ret := _m.ctrl.Call(_m, "RegisterTable", _param0, _param1)
+func (_m *MockDB) RegisterTable(s *schema.Schema, cascade bool, migrate bool) error {
+	ret := _m.ctrl.Call(_m, "RegisterTable", s, cascade, migrate)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-func (_mr *_MockDBRecorder) RegisterTable(arg0, arg1 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "RegisterTable", arg0, arg1)
+func (_mr *_MockDBRecorder) RegisterTable(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "RegisterTable", arg0, arg1, arg2)
 }
 
 func (_m *MockDB) DropTable(_param0 *schema.Schema) error {

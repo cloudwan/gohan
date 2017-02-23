@@ -122,7 +122,7 @@ var _ = Describe("Database operation test", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			for _, s := range manager.Schemas() {
-				Expect(dataStore.RegisterTable(s, false)).To(Succeed())
+				Expect(dataStore.RegisterTable(s, false, true)).To(Succeed())
 			}
 
 			tx, err = dataStore.Begin()
@@ -181,6 +181,16 @@ var _ = Describe("Database operation test", func() {
 					Expect(tx.Commit()).To(Succeed())
 				})
 
+				It("Locks the expected list", func() {
+					list, num, err := tx.LockList(networkSchema, nil, nil, transaction.LockRelatedResources)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(num).To(Equal(uint64(2)))
+					Expect(list).To(HaveLen(2))
+					Expect(list[0]).To(util.MatchAsJSON(networkResource1))
+					Expect(list[1]).To(util.MatchAsJSON(networkResource2))
+					Expect(tx.Commit()).To(Succeed())
+				})
+
 				It("Returns the expected list with filter", func() {
 					filter := map[string]interface{}{
 						"tenant_id": []string{"red"},
@@ -193,11 +203,31 @@ var _ = Describe("Database operation test", func() {
 					Expect(tx.Commit()).To(Succeed())
 				})
 
-				It("Returns the error with invalid filter", func() {
+				It("Locks the expected list with filter", func() {
+					filter := map[string]interface{}{
+						"tenant_id": []string{"red"},
+					}
+					list, num, err := tx.LockList(networkSchema, filter, nil, transaction.LockRelatedResources)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(num).To(Equal(uint64(1)))
+					Expect(list).To(HaveLen(1))
+					Expect(list[0]).To(util.MatchAsJSON(networkResource1))
+					Expect(tx.Commit()).To(Succeed())
+				})
+
+				It("Returns the error with invalid filter in List", func() {
 					filter := map[string]interface{}{
 						"bad_filter": []string{"red"},
 					}
 					_, _, err := tx.List(networkSchema, filter, nil)
+					Expect(err).To(HaveOccurred())
+				})
+
+				It("Returns the error with invalid filter in LockList", func() {
+					filter := map[string]interface{}{
+						"bad_filter": []string{"red"},
+					}
+					_, _, err := tx.LockList(networkSchema, filter, nil, transaction.LockRelatedResources)
 					Expect(err).To(HaveOccurred())
 				})
 
@@ -210,10 +240,49 @@ var _ = Describe("Database operation test", func() {
 					Expect(tx.Commit()).To(Succeed())
 				})
 
+				It("Locks related resources when requested", func() {
+					list, num, err := tx.LockList(serverSchema, nil, nil, transaction.LockRelatedResources)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(num).To(Equal(uint64(1)))
+					Expect(list).To(HaveLen(1))
+					Expect(list[0].Data()).To(HaveKeyWithValue("network", HaveKeyWithValue("name", networkResource1.Data()["name"])))
+					Expect(tx.Commit()).To(Succeed())
+				})
+
+				It("Doesn't lock related resources when requested", func() {
+					list, num, err := tx.LockList(serverSchema, nil, nil, transaction.SkipRelatedResources)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(num).To(Equal(uint64(1)))
+					Expect(list).To(HaveLen(1))
+					Expect(list[0].Data()).To(HaveKeyWithValue("network", HaveKeyWithValue("name", BeNil())))
+					Expect(tx.Commit()).To(Succeed())
+				})
+
 				It("Fetches an existing resource", func() {
 					networkResourceFetched, err := tx.Fetch(networkSchema, transaction.IDFilter(networkResource1.ID()))
 					Expect(err).ToNot(HaveOccurred())
 					Expect(networkResourceFetched).To(util.MatchAsJSON(networkResource1))
+					Expect(tx.Commit()).To(Succeed())
+				})
+
+				It("Fetches and locks an existing resource", func() {
+					networkResourceFetched, err := tx.LockFetch(networkSchema, transaction.IDFilter(networkResource1.ID()), transaction.LockRelatedResources)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(networkResourceFetched).To(util.MatchAsJSON(networkResource1))
+					Expect(tx.Commit()).To(Succeed())
+				})
+
+				It("Fetches and locks related resources when requested", func() {
+					networkResourceFetched, err := tx.LockFetch(serverSchema, nil, transaction.LockRelatedResources)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(networkResourceFetched.Data()).To(HaveKeyWithValue("network", HaveKeyWithValue("name", networkResource1.Data()["name"])))
+					Expect(tx.Commit()).To(Succeed())
+				})
+
+				It("Fetches and doesn't lock related resources when requested", func() {
+					networkResourceFetched, err := tx.LockFetch(serverSchema, nil, transaction.SkipRelatedResources)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(networkResourceFetched.Data()).To(HaveKeyWithValue("network", HaveKeyWithValue("name", BeNil())))
 					Expect(tx.Commit()).To(Succeed())
 				})
 
@@ -263,7 +332,7 @@ var _ = Describe("Database operation test", func() {
 		})
 
 		It("Should initialize the database without error", func() {
-			Expect(db.InitDBWithSchemas(dbType, conn, false, false)).To(Succeed())
+			Expect(db.InitDBWithSchemas(dbType, conn, false, false, true)).To(Succeed())
 		})
 	})
 
@@ -277,12 +346,12 @@ var _ = Describe("Database operation test", func() {
 			Expect(err).ToNot(HaveOccurred())
 			defer os.Remove("test_data/conv_in.db")
 
-			db.InitDBWithSchemas("sqlite3", "test_data/conv_out.db", false, false)
+			db.InitDBWithSchemas("sqlite3", "test_data/conv_out.db", false, false, true)
 			outDB, err := db.ConnectDB("sqlite3", "test_data/conv_out.db", db.DefaultMaxOpenConn)
 			Expect(err).ToNot(HaveOccurred())
 			defer os.Remove("test_data/conv_out.db")
 
-			db.InitDBWithSchemas("yaml", "test_data/conv_verify.yaml", false, false)
+			db.InitDBWithSchemas("yaml", "test_data/conv_verify.yaml", false, false, true)
 			verifyDB, err := db.ConnectDB("yaml", "test_data/conv_verify.yaml", db.DefaultMaxOpenConn)
 			Expect(err).ToNot(HaveOccurred())
 			defer os.Remove("test_data/conv_verify.yaml")
@@ -320,7 +389,7 @@ var _ = Describe("Database operation test", func() {
 			Expect(err).ToNot(HaveOccurred())
 			defer os.Remove("test_data/conv_in.db")
 
-			db.InitDBWithSchemas("sqlite3", "test_data/conv_out.db", false, false)
+			db.InitDBWithSchemas("sqlite3", "test_data/conv_out.db", false, false, true)
 			outDB, err := db.ConnectDB("sqlite3", "test_data/conv_out.db", db.DefaultMaxOpenConn)
 			Expect(err).ToNot(HaveOccurred())
 			defer os.Remove("test_data/conv_out.db")
