@@ -119,7 +119,7 @@ func ConnectDB(dbType string, connection string, maxOpenConn int) (db.DB, error)
 
 //InitDB initializes database using schema.
 func InitDB(dbType string, connection string, dropOnCreate bool, cascade bool) error {
-	err := db.InitDBWithSchemas(dbType, connection, dropOnCreate, cascade)
+	err := db.InitDBWithSchemas(dbType, connection, dropOnCreate, cascade, false)
 	return err
 }
 

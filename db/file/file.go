@@ -76,7 +76,7 @@ func (tx *Transaction) Closed() bool {
 }
 
 //RegisterTable register table definition
-func (db *DB) RegisterTable(s *schema.Schema, cascade bool) error {
+func (db *DB) RegisterTable(s *schema.Schema, cascade, migrate bool) error {
 	return nil
 }
 
