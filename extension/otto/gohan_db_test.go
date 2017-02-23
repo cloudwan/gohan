@@ -26,12 +26,16 @@ import (
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/server/middleware"
 
+	"fmt"
 	"github.com/cloudwan/gohan/db"
 	db_mocks "github.com/cloudwan/gohan/db/mocks"
 	"github.com/cloudwan/gohan/db/transaction/mocks"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/mock"
+	"strings"
 )
 
 func newEnvironmentWithExtension(extension *schema.Extension, db db.DB) (env extension.Environment) {
@@ -136,191 +140,208 @@ var _ = Describe("GohanDb", func() {
 
 	})
 
-	Describe("gohan_db_list", func() {
+	Describe("gohan_db_(lock)list", func() {
+		var setExpect = func(tx *mocks.Transaction, methodName string, s *schema.Schema, filter transaction.Filter, paginator *pagination.Paginator) *mock.Call {
+			if strings.Contains(methodName, "Lock") {
+				return tx.On(methodName, s, filter, paginator, transaction.LockRelatedResources)
+			} else {
+				return tx.On(methodName, s, filter, paginator)
+			}
+		}
+
 		Context("When valid minimum parameters are given", func() {
-			It("returns the list ordered by id", func() {
-				extension, err := schema.NewExtension(map[string]interface{}{
-					"id": "test_extension",
-					"code": `
+			DescribeTable("returns the list ordered by id",
+				func(function, methodName string) {
+					extension, err := schema.NewExtension(map[string]interface{}{
+						"id": "test_extension",
+						"code": fmt.Sprintf(`
 					  gohan_register_handler("test_event", function(context){
 					    var tx = context.transaction;
-					    context.resp = gohan_db_list(
+					    context.resp = %s(
 					      tx,
 					      "test",
 					      {"tenant_id": "tenant0"}
 					    );
-					  });`,
-					"path": ".*",
-				})
-				Expect(err).ToNot(HaveOccurred())
-				env := newEnvironmentWithExtension(extension, testDB)
+					  });`, function),
+						"path": ".*",
+					})
+					Expect(err).ToNot(HaveOccurred())
+					env := newEnvironmentWithExtension(extension, testDB)
 
-				var pagenator *pagination.Paginator
-				var fakeTx = new(mocks.Transaction)
-				fakeTx.On(
-					"List", s, transaction.Filter{"tenant_id": "tenant0"}, pagenator,
-				).Return(
-					[]*schema.Resource{r0, r1},
-					uint64(2),
-					nil,
-				)
+					var paginator *pagination.Paginator
+					var fakeTx = new(mocks.Transaction)
+					setExpect(fakeTx, methodName, s, transaction.Filter{"tenant_id": "tenant0"}, paginator).Return(
+						[]*schema.Resource{r0, r1},
+						uint64(2),
+						nil,
+					)
 
-				context := map[string]interface{}{
-					"transaction": fakeTx,
-				}
-				Expect(env.HandleEvent("test_event", context)).To(Succeed())
+					context := map[string]interface{}{
+						"transaction": fakeTx,
+					}
+					Expect(env.HandleEvent("test_event", context)).To(Succeed())
 
-				Expect(context["resp"]).To(
-					Equal(
-						fakeResources,
-					),
-				)
-			})
+					Expect(context["resp"]).To(
+						Equal(
+							fakeResources,
+						),
+					)
+				},
+				Entry("gohan_db_list", "gohan_db_list", "List"),
+				Entry("gohan_db_lock_list", "gohan_db_lock_list", "LockList"),
+			)
 		})
 
 		Context("When boolean parameter is given", func() {
-			It("returns the list test_bool is true", func() {
-				extension, err := schema.NewExtension(map[string]interface{}{
-					"id": "test_extension",
-					"code": `
+			DescribeTable("returns the list test_bool is true",
+				func(function, methodName string) {
+					extension, err := schema.NewExtension(map[string]interface{}{
+						"id": "test_extension",
+						"code": fmt.Sprintf(`
 					  gohan_register_handler("test_event", function(context){
 					    var tx = context.transaction;
-					    context.resp = gohan_db_list(
+					    context.resp = %s(
 					      tx,
 					      "test",
 					      {"test_bool": true}
 					    );
-					  });`,
-					"path": ".*",
-				})
-				Expect(err).ToNot(HaveOccurred())
-				env := newEnvironmentWithExtension(extension, testDB)
+					  });`, function),
+						"path": ".*",
+					})
+					Expect(err).ToNot(HaveOccurred())
+					env := newEnvironmentWithExtension(extension, testDB)
 
-				var pagenator *pagination.Paginator
-				var fakeTx = new(mocks.Transaction)
-				fakeTx.On(
-					"List", s, transaction.Filter{"test_bool": true}, pagenator,
-				).Return(
-					[]*schema.Resource{r1},
-					uint64(1),
-					nil,
-				)
+					var paginator *pagination.Paginator
+					var fakeTx = new(mocks.Transaction)
+					setExpect(fakeTx, methodName, s, transaction.Filter{"test_bool": true}, paginator).Return(
+						[]*schema.Resource{r1},
+						uint64(1),
+						nil,
+					)
 
-				context := map[string]interface{}{
-					"transaction": fakeTx,
-				}
-				Expect(env.HandleEvent("test_event", context)).To(Succeed())
+					context := map[string]interface{}{
+						"transaction": fakeTx,
+					}
+					Expect(env.HandleEvent("test_event", context)).To(Succeed())
 
-				Expect(context["resp"]).To(
-					Equal(
-						[]map[string]interface{}{
-							map[string]interface{}{"tenant_id": "t1", "test_string": "str1", "test_bool": true},
-						},
-					),
-				)
-			})
+					Expect(context["resp"]).To(
+						Equal(
+							[]map[string]interface{}{
+								map[string]interface{}{"tenant_id": "t1", "test_string": "str1", "test_bool": true},
+							},
+						),
+					)
+				},
+				Entry("gohan_db_list", "gohan_db_list", "List"),
+				Entry("gohan_db_lock_list", "gohan_db_lock_list", "LockList"),
+			)
 		})
 
 		Context("When 4 parameters are given", func() {
-			It("returns the list ordered by given clumn", func() {
-				extension, err := schema.NewExtension(map[string]interface{}{
-					"id": "test_extension",
-					"code": `
+			DescribeTable("returns the list ordered by given column",
+				func(function, methodName string) {
+					extension, err := schema.NewExtension(map[string]interface{}{
+						"id": "test_extension",
+						"code": fmt.Sprintf(`
 					  gohan_register_handler("test_event", function(context){
 					    var tx = context.transaction;
-					    context.resp = gohan_db_list(
+					    context.resp = %s(
 					      tx,
 					      "test",
 					      {"tenant_id": "tenant0"},
 					      "test_string"
 					    );
-					  });`,
-					"path": ".*",
-				})
-				Expect(err).ToNot(HaveOccurred())
-				env := newEnvironmentWithExtension(extension, testDB)
+					  });`, function),
+						"path": ".*",
+					})
+					Expect(err).ToNot(HaveOccurred())
+					env := newEnvironmentWithExtension(extension, testDB)
 
-				pagenator := &pagination.Paginator{
-					Key:   "test_string",
-					Order: pagination.ASC,
-				}
-				var fakeTx = new(mocks.Transaction)
-				fakeTx.On(
-					"List", s, transaction.Filter{"tenant_id": "tenant0"}, pagenator,
-				).Return(
-					[]*schema.Resource{r0, r1},
-					uint64(2),
-					nil,
-				)
+					paginator := &pagination.Paginator{
+						Key:   "test_string",
+						Order: pagination.ASC,
+					}
+					var fakeTx = new(mocks.Transaction)
+					setExpect(fakeTx, methodName, s, transaction.Filter{"tenant_id": "tenant0"}, paginator).Return(
+						[]*schema.Resource{r0, r1},
+						uint64(2),
+						nil,
+					)
 
-				context := map[string]interface{}{
-					"transaction": fakeTx,
-				}
-				Expect(env.HandleEvent("test_event", context)).To(Succeed())
+					context := map[string]interface{}{
+						"transaction": fakeTx,
+					}
+					Expect(env.HandleEvent("test_event", context)).To(Succeed())
 
-				Expect(context["resp"]).To(
-					Equal(
-						fakeResources,
-					),
-				)
-			})
+					Expect(context["resp"]).To(
+						Equal(
+							fakeResources,
+						),
+					)
+				},
+				Entry("gohan_db_list", "gohan_db_list", "List"),
+				Entry("gohan_db_lock_list", "gohan_db_lock_list", "LockList"),
+			)
 		})
 
 		Context("When 5 parameters are given", func() {
-			It("returns the list ordered by given clumn and limited", func() {
-				extension, err := schema.NewExtension(map[string]interface{}{
-					"id": "test_extension",
-					"code": `
+			DescribeTable("returns the list ordered by given column and limited",
+				func(function, methodName string) {
+					extension, err := schema.NewExtension(map[string]interface{}{
+						"id": "test_extension",
+						"code": fmt.Sprintf(`
 					  gohan_register_handler("test_event", function(context){
 					    var tx = context.transaction;
-					    context.resp = gohan_db_list(
+					    context.resp = %s(
 					      tx,
 					      "test",
 					      {"tenant_id": "tenant0"},
 					      "test_string",
 					      100
 					    );
-					  });`,
-					"path": ".*",
-				})
-				Expect(err).ToNot(HaveOccurred())
-				env := newEnvironmentWithExtension(extension, testDB)
+					  });`, function),
+						"path": ".*",
+					})
+					Expect(err).ToNot(HaveOccurred())
+					env := newEnvironmentWithExtension(extension, testDB)
 
-				pagenator := &pagination.Paginator{
-					Key:   "test_string",
-					Order: pagination.ASC,
-					Limit: 100,
-				}
-				var fakeTx = new(mocks.Transaction)
-				fakeTx.On(
-					"List", s, transaction.Filter{"tenant_id": "tenant0"}, pagenator,
-				).Return(
-					[]*schema.Resource{r0, r1},
-					uint64(2),
-					nil,
-				)
+					paginator := &pagination.Paginator{
+						Key:   "test_string",
+						Order: pagination.ASC,
+						Limit: 100,
+					}
+					var fakeTx = new(mocks.Transaction)
+					setExpect(fakeTx, methodName, s, transaction.Filter{"tenant_id": "tenant0"}, paginator).Return(
+						[]*schema.Resource{r0, r1},
+						uint64(2),
+						nil,
+					)
 
-				context := map[string]interface{}{
-					"transaction": fakeTx,
-				}
-				Expect(env.HandleEvent("test_event", context)).To(Succeed())
+					context := map[string]interface{}{
+						"transaction": fakeTx,
+					}
+					Expect(env.HandleEvent("test_event", context)).To(Succeed())
 
-				Expect(context["resp"]).To(
-					Equal(
-						fakeResources,
-					),
-				)
-			})
+					Expect(context["resp"]).To(
+						Equal(
+							fakeResources,
+						),
+					)
+				},
+				Entry("gohan_db_list", "gohan_db_list", "List"),
+				Entry("gohan_db_lock_list", "gohan_db_lock_list", "LockList"),
+			)
 		})
 
 		Context("When 6 parameters are given", func() {
-			It("returns the list ordered by given clumn and limited with offset", func() {
-				extension, err := schema.NewExtension(map[string]interface{}{
-					"id": "test_extension",
-					"code": `
+			DescribeTable("returns the list ordered by given column and limited with offset",
+				func(function, methodName string) {
+					extension, err := schema.NewExtension(map[string]interface{}{
+						"id": "test_extension",
+						"code": fmt.Sprintf(`
 					  gohan_register_handler("test_event", function(context){
 					    var tx = context.transaction;
-					    context.resp = gohan_db_list(
+					    context.resp = %s(
 					      tx,
 					      "test",
 					      {"tenant_id": "tenant0"},
@@ -328,38 +349,39 @@ var _ = Describe("GohanDb", func() {
 					      100,
 					      10
 					    );
-					  });`,
-					"path": ".*",
-				})
-				Expect(err).ToNot(HaveOccurred())
-				env := newEnvironmentWithExtension(extension, testDB)
+					  });`, function),
+						"path": ".*",
+					})
+					Expect(err).ToNot(HaveOccurred())
+					env := newEnvironmentWithExtension(extension, testDB)
 
-				pagenator := &pagination.Paginator{
-					Key:    "test_string",
-					Order:  pagination.ASC,
-					Limit:  100,
-					Offset: 10,
-				}
-				var fakeTx = new(mocks.Transaction)
-				fakeTx.On(
-					"List", s, transaction.Filter{"tenant_id": "tenant0"}, pagenator,
-				).Return(
-					[]*schema.Resource{r0, r1},
-					uint64(2),
-					nil,
-				)
+					paginator := &pagination.Paginator{
+						Key:    "test_string",
+						Order:  pagination.ASC,
+						Limit:  100,
+						Offset: 10,
+					}
+					var fakeTx = new(mocks.Transaction)
+					setExpect(fakeTx, methodName, s, transaction.Filter{"tenant_id": "tenant0"}, paginator).Return(
+						[]*schema.Resource{r0, r1},
+						uint64(2),
+						nil,
+					)
 
-				context := map[string]interface{}{
-					"transaction": fakeTx,
-				}
-				Expect(env.HandleEvent("test_event", context)).To(Succeed())
+					context := map[string]interface{}{
+						"transaction": fakeTx,
+					}
+					Expect(env.HandleEvent("test_event", context)).To(Succeed())
 
-				Expect(context["resp"]).To(
-					Equal(
-						fakeResources,
-					),
-				)
-			})
+					Expect(context["resp"]).To(
+						Equal(
+							fakeResources,
+						),
+					)
+				},
+				Entry("gohan_db_list", "gohan_db_list", "List"),
+				Entry("gohan_db_lock_list", "gohan_db_lock_list", "LockList"),
+			)
 		})
 
 	})
