@@ -58,13 +58,14 @@ func RequireModule(name string) (interface{}, error) {
 
 //Environment javascript based environment for gohan extension
 type Environment struct {
-	Name       string
-	VM         *motto.Motto
-	DataStore  db.DB
-	timeLimit  time.Duration
-	timeLimits []*schema.EventTimeLimit
-	Identity   middleware.IdentityService
-	Sync       sync.Sync
+	Name        string
+	VM          *motto.Motto
+	DataStore   db.DB
+	timeLimit   time.Duration
+	timeLimits  []*schema.EventTimeLimit
+	Identity    middleware.IdentityService
+	Sync        sync.Sync
+	globalStore *GlobalStore
 }
 
 //NewEnvironment create new gohan extension environment based on context
@@ -72,11 +73,12 @@ func NewEnvironment(name string, dataStore db.DB, identity middleware.IdentitySe
 	vm := motto.New()
 	vm.Interrupt = make(chan func(), 1)
 	env := &Environment{
-		Name:      name,
-		VM:        vm,
-		DataStore: dataStore,
-		Identity:  identity,
-		Sync:      sync,
+		Name:        name,
+		VM:          vm,
+		DataStore:   dataStore,
+		Identity:    identity,
+		Sync:        sync,
+		globalStore: NewGlobalStore(),
 	}
 	env.SetUp()
 	return env
@@ -309,10 +311,10 @@ func (env *Environment) Clone() ext.Environment {
 	clone.VM.Otto.Interrupt = make(chan func(), 1)
 	clone.timeLimit = env.timeLimit
 	clone.timeLimits = env.timeLimits
-
 	// workaround for original env being shared in builtin closures
 	// need another fix for this race'y and unsafe behavior
 	clone.VM.Otto.Set("gohan_closers", []io.Closer{})
+	clone.globalStore = env.globalStore
 	return clone
 }
 

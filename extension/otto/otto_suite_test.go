@@ -18,6 +18,7 @@ package otto_test
 import (
 	"os"
 	"testing"
+	"time"
 
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/transaction"
@@ -27,7 +28,6 @@ import (
 	"github.com/cloudwan/gohan/sync/etcdv3"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"time"
 )
 
 const (
