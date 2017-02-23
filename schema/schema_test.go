@@ -49,6 +49,59 @@ var _ = Describe("Schema", func() {
 		})
 	})
 
+	Describe("Properties order", func() {
+		var manager *Manager
+
+		index := func(properties []Property, id string) int {
+			for i, property := range properties {
+				if property.ID == id {
+					return i
+				}
+			}
+			return -1
+		}
+
+		BeforeEach(func() {
+			manager = GetManager()
+			Expect(manager.LoadSchemasFromFiles(
+				"../tests/test_schema_property_order.yaml")).To(Succeed())
+
+		})
+
+		It("PropertiesOrder first", func() {
+			s, ok := manager.Schema("school")
+			Expect(ok).To(BeTrue())
+			idIdx := index(s.Properties, "id")
+			nameIdx := index(s.Properties, "name")
+			patronIdx := index(s.Properties, "patron")
+			Expect(idIdx).ToNot(Equal(-1))
+			Expect(nameIdx).ToNot(Equal(-1))
+			Expect(patronIdx).ToNot(Equal(-1))
+			Expect(idIdx).Should(BeNumerically("<", nameIdx))
+			Expect(nameIdx).Should(BeNumerically("<", patronIdx))
+		})
+
+		It("Relations after propertiesOrder", func() {
+			s, ok := manager.Schema("school")
+			Expect(ok).To(BeTrue())
+			cityIdIdx := index(s.Properties, "city_id")
+			patronIdx := index(s.Properties, "patron")
+			Expect(cityIdIdx).ToNot(Equal(-1))
+			Expect(patronIdx).ToNot(Equal(-1))
+			Expect(cityIdIdx).Should(BeNumerically("<", patronIdx))
+		})
+
+		It("Alphabetical order", func() {
+			s, ok := manager.Schema("school")
+			Expect(ok).To(BeTrue())
+			bestInTownIdx := index(s.Properties, "best_in_town")
+			patronIdx := index(s.Properties, "patron")
+			Expect(bestInTownIdx).ToNot(Equal(-1))
+			Expect(patronIdx).ToNot(Equal(-1))
+			Expect(bestInTownIdx).Should(BeNumerically("<", patronIdx))
+		})
+	})
+
 	Describe("Metadata", func() {
 		var metadataSchema *Schema
 		var metadataFailedSchema *Schema
