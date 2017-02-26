@@ -28,9 +28,9 @@ import (
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/server/middleware"
 	"github.com/cloudwan/gohan/sync/noop"
-	"github.com/robertkrimen/otto"
+	"github.com/xyproto/otto"
 
-	_ "github.com/robertkrimen/otto/underscore"
+	_ "github.com/xyproto/otto/underscore"
 
 	gohan_otto "github.com/cloudwan/gohan/extension/otto"
 )
