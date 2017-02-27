@@ -303,6 +303,28 @@ func (manager *Manager) ValidateSchema(schemaPath, filePath string) error {
 	return fmt.Errorf("Invalid json: %s", errMessage)
 }
 
+//OrderedLoadSchemasFromFiles calls LoadSchemaFromFile for each file in right order - first abstract then parent and rest on the end
+func (manager *Manager) OrderedLoadSchemasFromFiles(filePaths []string) error {
+	MAX_DEPTH := 8	// maximum number of nested schemas
+	for i := MAX_DEPTH; i > 0 && len(filePaths) > 0; i-- {
+		rest := make([]string, 0)
+		for _, filePath := range filePaths {
+			if filePath == "" {
+				continue
+			}
+			err := manager.LoadSchemaFromFile(filePath)
+			if err != nil && err.Error() != "data isn't map" {
+				if i == 1 {
+					return err
+				}
+				rest = append(rest, filePath)
+			}
+		}
+		filePaths = rest
+	}
+	return nil
+}
+
 //LoadSchemasFromFiles calls LoadSchemaFromFile for each of provided filePaths
 func (manager *Manager) LoadSchemasFromFiles(filePaths ...string) error {
 	for _, filePath := range filePaths {
