@@ -136,7 +136,7 @@ func (server *Server) initDB() error {
 
 func (server *Server) connectDB() error {
 	config := util.GetConfig()
-	dbType, dbConnection, _, _ := server.getDatabaseConfig()
+	dbType, dbConnection, _, _, _ := server.getDatabaseConfig()
 	maxConn := config.GetInt("database/max_open_conn", db.DefaultMaxOpenConn)
 	dbConn, err := db.ConnectDB(dbType, dbConnection, maxConn)
 	if server.sync == nil {
@@ -147,7 +147,7 @@ func (server *Server) connectDB() error {
 	return err
 }
 
-func (server *Server) getDatabaseConfig() (string, string, bool, bool) {
+func (server *Server) getDatabaseConfig() (string, string, bool, bool, bool) {
 	config := util.GetConfig()
 	databaseType := config.GetString("database/type", "sqlite3")
 	if databaseType == "json" || databaseType == "yaml" {
@@ -159,7 +159,8 @@ func (server *Server) getDatabaseConfig() (string, string, bool, bool) {
 	}
 	databaseDropOnCreate := config.GetBool("database/drop_on_create", false)
 	databaseCascade := config.GetBool("database/cascade_delete", false)
-	return databaseType, databaseConnection, databaseDropOnCreate, databaseCascade
+	databaseAutoMigrate := config.GetBool("database/auto_migrate", true)
+	return databaseType, databaseConnection, databaseDropOnCreate, databaseCascade, databaseAutoMigrate
 }
 
 //NewServer returns new GohanAPIServer

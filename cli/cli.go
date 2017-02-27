@@ -228,7 +228,7 @@ Useful for development purposes.`,
 			cascade := c.Bool("cascade")
 			manager := schema.GetManager()
 			manager.LoadSchemasFromFiles(schemaFile, metaSchemaFile)
-			err := db.InitDBWithSchemas(dbType, dbConnection, dropOnCreate, cascade)
+			err := db.InitDBWithSchemas(dbType, dbConnection, dropOnCreate, cascade, false)
 			if err != nil {
 				util.ExitFatal(err)
 			}

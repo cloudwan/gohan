@@ -56,7 +56,7 @@ var _ = Describe("Sql", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manager.LoadSchemasFromFiles(
 			"../../etc/schema/gohan.json", "../../tests/test_abstract_schema.yaml", "../../tests/test_schema.yaml")).To(Succeed())
-		db.InitDBWithSchemas(dbType, conn, true, false)
+		db.InitDBWithSchemas(dbType, conn, true, false, false)
 
 		// Insert fixture data
 		fixtureDB, err := db.ConnectDB("json", testFixtures, db.DefaultMaxOpenConn)

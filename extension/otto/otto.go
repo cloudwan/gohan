@@ -17,6 +17,7 @@ package otto
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -180,8 +181,8 @@ func (env *Environment) HandleEvent(event string, context map[string]interface{}
 		}
 	}
 	context["event_type"] = event
-	var timeout = fmt.Errorf("exceed timeout for extension execution")
-	var disconnected = fmt.Errorf("client disconnected")
+	var timeout = fmt.Errorf("exceed timeout for extension execution for event: %s", event)
+	var disconnected = fmt.Errorf("client disconnected for event: %s", event)
 
 	defer func() {
 		if caught := recover(); caught != nil {
@@ -232,6 +233,19 @@ func (env *Environment) HandleEvent(event string, context map[string]interface{}
 	if err != nil {
 		return err
 	}
+	defer func() {
+		// cleanup Closers
+		if closers, err := getClosers(vm.Otto); err == nil {
+			log.Debug("Closers for vm %p: %v", vm, closers)
+			for _, closer := range closers {
+				if err = closer.Close(); err != nil {
+					log.Error("Error when closing object %T %p : %s", closer, closer, err)
+				}
+			}
+		} else {
+			log.Warning(err.Error())
+		}
+	}()
 	_, err = vm.Call("gohan_handle_event", nil, event, contextInVM)
 	for key, value := range context {
 		context[key] = ConvertOttoToGo(value)
@@ -254,6 +268,35 @@ func (env *Environment) HandleEvent(event string, context map[string]interface{}
 	return err
 }
 
+func getClosers(vm *otto.Otto) (closers []io.Closer, err error) {
+	closersValue, err := vm.Get("gohan_closers")
+	if err != nil {
+		log.Error("Error when getting env closers: %s", err)
+		return
+	}
+	closersInterface, err := closersValue.Export()
+	if err != nil {
+		log.Error("Error when exporting closers: %s", err)
+		return
+	}
+	closers, ok := closersInterface.([]io.Closer)
+	if !ok {
+		return nil, fmt.Errorf("Object %#v type %t is not []io.Closer", closersInterface, closersInterface)
+	}
+	return
+}
+
+func addCloser(vm *otto.Otto, closer io.Closer) error {
+	closers, err := getClosers(vm)
+	if err != nil {
+		return err
+	}
+	closers = append(closers, closer)
+	// set to vm in case, slice has relocated
+	vm.Set("gohan_closers", closers)
+	return nil
+}
+
 // SetEventTimeLimit overrides the default time limit for a given event for this environment
 func (env *Environment) SetEventTimeLimit(eventRegex string, timeLimit time.Duration) {
 	env.timeLimits = append(env.timeLimits, schema.NewEventTimeLimit(regexp.MustCompile(eventRegex), timeLimit))
@@ -266,6 +309,10 @@ func (env *Environment) Clone() ext.Environment {
 	clone.VM.Otto.Interrupt = make(chan func(), 1)
 	clone.timeLimit = env.timeLimit
 	clone.timeLimits = env.timeLimits
+
+	// workaround for original env being shared in builtin closures
+	// need another fix for this race'y and unsafe behavior
+	clone.VM.Otto.Set("gohan_closers", []io.Closer{})
 	return clone
 }
 

@@ -28,7 +28,7 @@ Gohan supports several types of conditions
 
 Example policy
 
-``` yaml
+```yaml
   policies:
   - action: '*'
     effect: allow
@@ -81,7 +81,7 @@ Example policy
   if it is a dict, we check if we have a key for this value and, updated value matches it.
   Note that this is only valid for update action.
 
-``` yaml
+```yaml
     policy:
       - action: 'read'
         condition:
@@ -133,7 +133,7 @@ With a special type of policy one can define a resource path that do not require
 In this policy only 'id', 'principal' and 'resource.path' properties are used. Policy 'principal'
 is always set to 'Nobody'.
 
-``` yaml
+```yaml
 policies:
 - id: no_auth_favicon
   principal: Nobody

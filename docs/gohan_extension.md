@@ -8,7 +8,7 @@ for extending your Go code with MACRO functionality.
 
 ## Example
 
-```
+```yaml
 extensions:
 - id: order
   path: /v1.0/store/orders
@@ -51,7 +51,7 @@ extensions:
 
 ## Standalone Example
 
-```
+```yaml
     vars:
       world: "USA"
       foods:
@@ -105,7 +105,7 @@ gohan run ../examples/sample1.yaml
 
 You can run list of tasks.
 
-```
+```yaml
   tasks:
   - debug: msg="Hello World"
   - debug: msg="This is gohan script"
@@ -123,7 +123,7 @@ $ gohan run hello_world.yaml
 
 You can define variables using "vars".
 
-```
+```yaml
   tasks:
   - vars:
       place: "Earth"
@@ -159,7 +159,7 @@ a variable identifier.
 
 You can loop over the list item.
 
-```
+```yaml
     vars:
         foods:
         - apple
@@ -187,7 +187,7 @@ You can loop over the list item.
 
 You can also loop over a dict.
 
-```
+```yaml
     vars:
     person:
         name: "John"
@@ -209,7 +209,7 @@ You can also loop over a dict.
     15:32:42.513 ▶ DEBUG  with_items.yaml:9 age 30
 ```
 
-```
+```yaml
     tasks:
     - vars:
         result: ""
@@ -235,7 +235,7 @@ You can also loop over a dict.
 You can use "when" for conditional.
 You can use "else" blocks with "when".
 
-```
+```yaml
     vars:
       number: 1
     tasks:
@@ -259,7 +259,7 @@ You can retry task.
 - retry: how many times you will retry a task
 - delay: how many seconds you will wait on next retry
 
-```
+```yaml
     tasks:
     - fail: msg="Failed"
       retry: 3
@@ -278,7 +278,7 @@ You can retry task.
 You can group a set of tasks using blocks.
 blocks also supports loops, conditional and retries.
 
-```
+```yaml
     tasks:
     - blocks:
       - debug: msg="hello"
@@ -295,7 +295,7 @@ blocks also supports loops, conditional and retries.
 
 You can change variable value using "register".
 
-```
+```yaml
     tasks:
     - http_get: url=https://status.github.com/api/status.json
       register: result
@@ -313,7 +313,7 @@ We support concurrent execution over a loop.
 
 - worker: specify number of max workers
 
-```
+```yaml
     tasks:
     - blocks:
       - http_get: url="https://status.github.com/{{ item }}"
@@ -335,7 +335,7 @@ We support concurrent execution over a loop.
 
 You can also execute tasks in background.
 
-```
+```yaml
     tasks:
     - background:
       - sleep: 1000
@@ -361,7 +361,7 @@ You can define function using "define" task.
 - args: arguments
 - body: body of code
 
-```
+```yaml
     tasks:
     - define:
         name: fib
@@ -399,7 +399,7 @@ you can use return task in function block.
 
 You can include gohan script
 
-```
+```yaml
     tasks:
     - include: lib.yaml
 ```
@@ -413,7 +413,7 @@ You can include gohan script
 
 You can set breakpoint using "debugger"
 
-```
+```yaml
     vars:
     world: "USA"
     foods:
@@ -448,12 +448,12 @@ additional arguments will be stored in variable.
 If the value doesn't contain "=", it will be pushed to args.
 If the value contains "=", it get splitted for key and value and stored in flags.
 
-```
+```yaml
     tasks:
     - debug: msg="{{ flags.greeting }} {{ args.0 }}"
 ```
 
-```
+```yaml
 $ gohan run args.yaml world greeting=hello
 hello world
 ```
@@ -470,7 +470,7 @@ in the specified directory.
 
 ## Run Gohan script from Go
 
-```
+```go
 	vm := gohan.NewVM()
 	_, err := vm.RunFile("test/spec.yaml")
 	if err != nil {
