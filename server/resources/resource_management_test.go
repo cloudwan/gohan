@@ -186,6 +186,11 @@ var _ = Describe("Resource manager", func() {
 				Expect(ok).To(BeFalse())
 				_, ok = properties["shared"]
 				Expect(ok).To(BeFalse())
+
+				By("Adding schema permission")
+				permission, ok := theSchema["permission"].([]string)
+				Expect(ok).To(BeTrue())
+				Expect(permission).To(Equal([]string{"create", "read", "update", "delete"}))
 			})
 
 			It("Should return no schema when appropriate", func() {

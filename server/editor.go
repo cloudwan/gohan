@@ -46,6 +46,14 @@ func GetSchema(s *schema.Schema, authorization schema.Authorization) (result *sc
 	filteredSchema["propertiesOrder"] = schemaPropertiesOrder
 	filteredSchema["required"] = schemaRequired
 
+	permission := []string{}
+	for _, a := range schema.AllActions {
+		if p, _ := manager.PolicyValidate(a, s.GetPluralURL(), authorization); p != nil {
+			permission = append(permission, a)
+		}
+	}
+	filteredSchema["permission"] = permission
+
 	result, err = schema.NewResource(metaschema, rawSchema)
 	if err != nil {
 		log.Warning("%s %s", result, err)
