@@ -44,6 +44,7 @@ import (
 	"github.com/lestrrat/go-server-starter/listener"
 	"github.com/martini-contrib/staticbin"
 	"regexp"
+	"github.com/cloudwan/gohan/db/migration"
 )
 
 type tlsConfig struct {
@@ -135,6 +136,9 @@ func (server *Server) initDB() error {
 }
 
 func (server *Server) connectDB() error {
+	if err := migration.Init(); err != nil {
+		return err
+	}
 	config := util.GetConfig()
 	dbType, dbConnection, _, _, _ := server.getDatabaseConfig()
 	maxConn := config.GetInt("database/max_open_conn", db.DefaultMaxOpenConn)
@@ -167,10 +171,13 @@ func (server *Server) getDatabaseConfig() (string, string, bool, bool, bool) {
 func NewServer(configFile string) (*Server, error) {
 	manager := schema.GetManager()
 	config := util.GetConfig()
-	config.ReadConfig(configFile)
-	err := os.Chdir(path.Dir(configFile))
+	err := config.ReadConfig(configFile)
 	if err != nil {
 		return nil, fmt.Errorf("Config load error: %s", err)
+	}
+	err = os.Chdir(path.Dir(configFile))
+	if err != nil {
+		return nil, fmt.Errorf("Chdir error: %s", err)
 	}
 	err = l.SetUpLogging(config)
 	if err != nil {
