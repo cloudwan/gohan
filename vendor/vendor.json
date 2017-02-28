@@ -356,6 +356,12 @@
 			"revision": "fb0230561a6ba1cab17beb95f1faedc16584fdb8"
 		},
 		{
+			"checksumSHA1": "YfPnrXip0lJoadcRYOpMc5+HDKE=",
+			"path": "github.com/pressly/goose",
+			"revision": "f9980cee258976cd89b5edeaee57983104b9180f",
+			"revisionTime": "2016-12-09T18:06:30Z"
+		},
+		{
 			"checksumSHA1": "/j0HRFJPThv7HEkZZ/gurf+5fQI=",
 			"origin": "github.com/coreos/etcd/vendor/github.com/prometheus/client_golang/prometheus",
 			"path": "github.com/prometheus/client_golang/prometheus",

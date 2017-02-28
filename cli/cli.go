@@ -16,11 +16,8 @@
 package cli
 
 import (
-	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -31,7 +28,6 @@ import (
 
 	"github.com/cloudwan/gohan/cli/client"
 	"github.com/cloudwan/gohan/db"
-	"github.com/cloudwan/gohan/db/sql"
 	"github.com/cloudwan/gohan/extension/framework"
 	"github.com/cloudwan/gohan/server"
 	"github.com/codegangsta/cli"
@@ -40,6 +36,7 @@ import (
 	//Import gohan script lib
 	_ "github.com/cloudwan/gohan/extension/gohanscript/autogen"
 	l "github.com/cloudwan/gohan/log"
+	"github.com/cloudwan/gohan/db/migration"
 )
 
 var log = l.NewLogger()
@@ -335,52 +332,39 @@ documentation for detail information about writing tests.`,
 	}
 }
 
+func getMigrateSubcommand(subcmd, usage string) cli.Command {
+	return cli.Command{
+		Name:      subcmd,
+		Usage:     usage,
+		Flags: []cli.Flag{
+			cli.StringFlag{Name: "config-file", Value: defaultConfigFile, Usage: "Server config File"},
+		},
+		Action: func(context *cli.Context) {
+			configFile := context.String("config-file")
+			if migration.LoadConfig(configFile) != nil {
+				return
+			}
+			migration.Run(subcmd, context.Args())
+		},
+	}
+}
+
 func getMigrateCommand() cli.Command {
 	return cli.Command{
 		Name:        "migrate",
 		ShortName:   "mig",
-		Usage:       "Generate goose migration script",
-		Description: `Generates goose migraion script`,
-		Flags: []cli.Flag{
-			cli.StringFlag{Name: "name, n", Value: "init_schema", Usage: "name of migrate"},
-			cli.StringFlag{Name: "schema, s", Value: "", Usage: "Schema definition"},
-			cli.StringFlag{Name: "path, p", Value: "etc/db/migrations", Usage: "Migrate path"},
-			cli.BoolFlag{Name: "cascade", Usage: "If true, FOREIGN KEYS in database will be created with ON DELETE CASCADE"},
+		Usage:       "Manage migrations",
+		Subcommands: []cli.Command{
+			getMigrateSubcommand("up", "Migrate to the most recent version"),
+			getMigrateSubcommand("up-by-one", "Migrate one version up"),
+			getMigrateSubcommand("create", "Create a template for a new migration"),
+			getMigrateSubcommand("down", "Migrate to the oldest version"),
+			getMigrateSubcommand("redo", "Migrate one version back"),
+			getMigrateSubcommand("status", "Display migration status"),
+			getMigrateSubcommand("version", "Display migration version"),
 		},
 		Action: func(c *cli.Context) {
-			schemaFile := c.String("schema")
-			cascade := c.Bool("cascade")
-			manager := schema.GetManager()
-			manager.LoadSchemasFromFiles(schemaFile)
-			name := c.String("name")
-			now := time.Now()
-			version := fmt.Sprintf("%s_%s.sql", now.Format("20060102150405"), name)
-			path := filepath.Join(c.String("path"), version)
-			var sqlString = bytes.NewBuffer(make([]byte, 0, 100))
-			fmt.Printf("Generating goose migration file to %s ...\n", path)
-			sqlDB := sql.NewDB()
-			schemas := manager.Schemas()
-			sqlString.WriteString("\n")
-			sqlString.WriteString("-- +goose Up\n")
-			sqlString.WriteString("-- SQL in section 'Up' is executed when this migration is applied\n")
-			for _, s := range schemas {
-				createSql, indices := sqlDB.GenTableDef(s, cascade)
-				sqlString.WriteString(createSql + "\n")
-				for _, indexSql := range indices {
-					sqlString.WriteString(indexSql + "\n")
-				}
-			}
-			sqlString.WriteString("\n")
-			sqlString.WriteString("-- +goose Down\n")
-			sqlString.WriteString("-- SQL section 'Down' is executed when this migration is rolled back\n")
-			for _, s := range schemas {
-				sqlString.WriteString(fmt.Sprintf("drop table %s;", s.GetDbTableName()))
-				sqlString.WriteString("\n\n")
-			}
-			err := ioutil.WriteFile(path, sqlString.Bytes(), os.ModePerm)
-			if err != nil {
-				fmt.Println(err)
-			}
+			migration.Help()
 		},
 	}
 }
