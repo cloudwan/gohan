@@ -318,7 +318,11 @@ func (manager *Manager) LoadSchemasFromFiles(filePaths ...string) error {
 func (manager *Manager) LoadSchemaFromFile(filePath string) error {
 	manager.mu.Lock()
 	defer manager.mu.Unlock()
+	return manager.loadSchemaFromFile(filePath)
+}
 
+//loadSchemaFromFile loads schema from json file - recursive version for nested schemas
+func (manager *Manager) loadSchemaFromFile(filePath string) error {
 	log.Info("Loading schema %s ...", filePath)
 	schemas, err := util.LoadMap(filePath)
 	if err != nil {
@@ -340,13 +344,20 @@ func (manager *Manager) LoadSchemaFromFile(filePath string) error {
 	schemaMap := map[string]*Schema{}
 	list, _ := schemas["schemas"].([]interface{})
 	for _, schemaData := range list {
-		metaschema, _ := manager.schema("schema")
-		schemaObj, err := newSchemaFromObj(schemaData, metaschema)
-		if err != nil {
-			return err
+		if fileName, ok := schemaData.(string); ok {
+			err := manager.loadSchemaFromFile(fileName)	// recursive call for included files
+			if err != nil {
+				return err
+			}
+		} else {
+			metaschema, _ := manager.schema("schema")
+			schemaObj, err := newSchemaFromObj(schemaData, metaschema)
+			if err != nil {
+				return err
+			}
+			schemaMap[schemaObj.ID] = schemaObj
+			schemaObjList = append(schemaObjList, schemaObj)
 		}
-		schemaMap[schemaObj.ID] = schemaObj
-		schemaObjList = append(schemaObjList, schemaObj)
 	}
 	_, err = reorderSchemas(schemaObjList)
 	if err != nil {
