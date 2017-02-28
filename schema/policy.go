@@ -23,9 +23,6 @@ import (
 )
 
 const (
-	conditionIsOwner       = "is_owner"
-	conditionTypeBelongsTo = "belongs_to"
-	conditionProperty      = "property"
 	// ActionGlob allows to perform all actions
 	ActionGlob = "*"
 	// ActionCreate allows to create a resource
@@ -37,12 +34,16 @@ const (
 	// ActionDelete allows to delete a resource
 	ActionDelete = "delete"
 
+	conditionIsOwner       = "is_owner"
+	conditionTypeBelongsTo = "belongs_to"
+	conditionProperty      = "property"
+
 	globalRegexp = ".*"
 
 	onlyOneOfTenantIDTenantNameError = "Only one of [tenant_id, tenant_name] should be specified"
 )
 
-var allActions = []string{ActionCreate, ActionRead, ActionUpdate, ActionDelete}
+var AllActions = []string{ActionCreate, ActionRead, ActionUpdate, ActionDelete}
 
 func newTenant(tenantID, tenantName string) Tenant {
 	tenantIDRegexp, _ := getRegexp(tenantID)
@@ -247,7 +248,7 @@ func (p *Policy) precomputeConditions() error {
 			conditionObject := condition.(map[string]interface{})
 			switch conditionObject["type"] {
 			case conditionTypeBelongsTo:
-				actions := allActions
+				actions := AllActions
 				if action, ok := conditionObject["action"]; ok && action != ActionGlob {
 					actions = []string{action.(string)}
 				}
@@ -271,7 +272,7 @@ func (p *Policy) precomputeConditions() error {
 					p.AddTenantToFilter(action, Tenant{ID: tenantID, Name: tenantName})
 				}
 			case conditionProperty:
-				actions := allActions
+				actions := AllActions
 				if action, ok := conditionObject["action"]; ok && action != ActionGlob {
 					actions = []string{action.(string)}
 				}

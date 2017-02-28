@@ -25,8 +25,8 @@ import (
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
-	"github.com/cloudwan/gohan/util"
 	"github.com/cloudwan/gohan/sync/etcdv3"
+	"github.com/cloudwan/gohan/util"
 	"time"
 )
 
@@ -35,7 +35,7 @@ const (
 	configFile        = "./server_test_config.yaml"
 	dbType            = "sqlite3"
 	dbFile            = "./test.db"
-	testSyncEndpoint = "localhost:2379"
+	testSyncEndpoint  = "localhost:2379"
 	adminTokenID      = "admin_token"
 	memberTokenID     = "demo_token"
 	powerUserTokenID  = "power_user_token"
@@ -45,7 +45,7 @@ const (
 )
 
 var (
-	testDB    db.DB
+	testDB   db.DB
 	testSync *etcdv3.Sync
 
 	whitelist = map[string]bool{
@@ -100,7 +100,7 @@ var _ = Describe("Suit set up and tear down", func() {
 		schemaFiles := config.GetStringList("schemas", nil)
 		Expect(schemaFiles).NotTo(BeNil())
 		Expect(manager.LoadSchemasFromFiles(schemaFiles...)).To(Succeed())
-		Expect(db.InitDBWithSchemas(dbType, dbFile, false, false)).To(Succeed())
+		Expect(db.InitDBWithSchemas(dbType, dbFile, false, false, false)).To(Succeed())
 	})
 
 	var _ = AfterSuite(func() {

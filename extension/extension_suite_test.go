@@ -21,15 +21,15 @@ import (
 
 	"github.com/cloudwan/gohan/db"
 
+	"github.com/cloudwan/gohan/sync/etcdv3"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/cloudwan/gohan/sync/etcdv3"
 	"time"
 )
 
 var (
-	testDB1 db.DB
-	testDB2 db.DB
+	testDB1  db.DB
+	testDB2  db.DB
 	testSync *etcdv3.Sync
 )
 
@@ -40,8 +40,8 @@ func TestExtension(t *testing.T) {
 
 var _ = Describe("Suite set up and tear down", func() {
 	const (
-		testDBFile1 = "./extensionTest1.db"
-		testDBFile2 = "./extensionTest2.db"
+		testDBFile1      = "./extensionTest1.db"
+		testDBFile2      = "./extensionTest2.db"
 		testSyncEndpoint = "localhost:2379"
 	)
 

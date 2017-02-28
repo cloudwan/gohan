@@ -166,9 +166,9 @@ func (handler *numberHandler) decode(property *schema.Property, data interface{}
 	case []uint8: // mysql
 		res, _ = strconv.ParseFloat(string(t), 64)
 
-	case float64:  // sqlite3
+	case float64: // sqlite3
 		res = float64(t)
-	case uint64:  // sqlite3
+	case uint64: // sqlite3
 		res = float64(t)
 	}
 	return
@@ -235,6 +235,15 @@ func quote(str string) string {
 	return fmt.Sprintf("`%s`", str)
 }
 
+func foreignKeyName(fromTable, fromProperty, toTable, toProperty string) string {
+	name := fmt.Sprintf("%s_%s_%s_%s", fromTable, fromProperty, toTable, toProperty)
+	if len(name) > 64 {
+		diff := len(name) - 64
+		return name[diff:]
+	}
+	return name
+}
+
 //Connect connec to the db
 func (db *DB) Connect(sqlType, conn string, maxOpenConn int) (err error) {
 	db.sqlType = sqlType
@@ -268,7 +277,7 @@ func (db *DB) Close() {
 }
 
 //Begin starts new transaction
-func (db *DB) Begin() (transaction.Transaction, error) {
+func (db *DB) Begin() (tx transaction.Transaction, err error) {
 	transaction, err := db.DB.Beginx()
 	if err != nil {
 		return nil, err
@@ -276,11 +285,13 @@ func (db *DB) Begin() (transaction.Transaction, error) {
 	if db.sqlType == "sqlite3" {
 		transaction.Exec("PRAGMA foreign_keys = ON;")
 	}
-	return &Transaction{
+	tx = &Transaction{
 		db:          db,
 		transaction: transaction,
 		closed:      false,
-	}, nil
+	}
+	log.Debug("Created transaction %#v", transaction)
+	return
 }
 
 func (db *DB) genTableCols(s *schema.Schema, cascade bool, exclude []string) ([]string, []string, []string) {
@@ -331,7 +342,8 @@ func (db *DB) genTableCols(s *schema.Schema, cascade bool, exclude []string) ([]
 					relationColumn = property.RelationColumn
 				}
 
-				relations = append(relations, fmt.Sprintf("foreign key(`%s`) REFERENCES `%s`(%s) %s",
+				relations = append(relations, fmt.Sprintf("constraint %s foreign key(`%s`) REFERENCES `%s`(%s) %s",
+					quote(foreignKeyName(s.GetDbTableName(), property.ID, foreignSchema.GetDbTableName(), relationColumn)),
 					property.ID, foreignSchema.GetDbTableName(), relationColumn, cascadeString))
 			}
 		}
@@ -393,11 +405,16 @@ func (db *DB) GenTableDef(s *schema.Schema, cascade bool) (string, []string) {
 }
 
 //RegisterTable creates table in the db
-func (db *DB) RegisterTable(s *schema.Schema, cascade bool) error {
+func (db *DB) RegisterTable(s *schema.Schema, cascade, migrate bool) error {
 	if s.IsAbstract() {
 		return nil
 	}
 	tableDef, indices, err := db.AlterTableDef(s, cascade)
+	if !migrate {
+		if tableDef != "" || (indices != nil && len(indices) > 0) {
+			return fmt.Errorf("needs migration, run \"gohan migrate\"")
+		}
+	}
 	if err != nil {
 		tableDef, indices = db.GenTableDef(s, cascade)
 	}
@@ -665,13 +682,12 @@ func decodeState(data map[string]interface{}, state *transaction.ResourceState) 
 	return nil
 }
 
-//List resources in the db
-func (tx *Transaction) List(s *schema.Schema, filter transaction.Filter, pg *pagination.Paginator) (list []*schema.Resource, total uint64, err error) {
-	cols := MakeColumns(s, s.GetDbTableName(), true)
+func buildSelect(s *schema.Schema, filter transaction.Filter, pg *pagination.Paginator, join bool) (string, []interface{}, error) {
+	cols := MakeColumns(s, s.GetDbTableName(), join)
 	q := sq.Select(cols...).From(quote(s.GetDbTableName()))
-	q, err = addFilterToQuery(s, q, filter, true)
+	q, err := addFilterToQuery(s, q, filter, join)
 	if err != nil {
-		return nil, 0, err
+		return "", nil, err
 	}
 	if pg != nil {
 		property, err := s.GetPropertyByID(pg.Key)
@@ -685,12 +701,13 @@ func (tx *Transaction) List(s *schema.Schema, filter transaction.Filter, pg *pag
 			}
 		}
 	}
-	q = makeJoin(s, s.GetDbTableName(), q)
-
-	sql, args, err := q.ToSql()
-	if err != nil {
-		return
+	if join {
+		q = makeJoin(s, s.GetDbTableName(), q)
 	}
+	return q.ToSql()
+}
+
+func executeSelect(s *schema.Schema, filter transaction.Filter, sql string, args []interface{}, tx *Transaction) (list []*schema.Resource, total uint64, err error) {
 	logQuery(sql, args...)
 	rows, err := tx.transaction.Queryx(sql, args...)
 	if err != nil {
@@ -703,6 +720,42 @@ func (tx *Transaction) List(s *schema.Schema, filter transaction.Filter, pg *pag
 	}
 	total, err = tx.count(s, filter)
 	return
+}
+
+//List resources in the db
+func (tx *Transaction) List(s *schema.Schema, filter transaction.Filter, pg *pagination.Paginator) (list []*schema.Resource, total uint64, err error) {
+	sql, args, err := buildSelect(s, filter, pg, true)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return executeSelect(s, filter, sql, args, tx)
+}
+
+func shouldJoin(policy transaction.LockPolicy) bool {
+	switch policy {
+	case transaction.LockRelatedResources:
+		return true
+	case transaction.SkipRelatedResources:
+		return false
+	default:
+		log.Fatalf("Unknown lock policy %+v", policy)
+		panic("Unexpected locking policy")
+	}
+}
+
+//Lock resources in the db
+func (tx *Transaction) LockList(s *schema.Schema, filter transaction.Filter, pg *pagination.Paginator, lockPolicy transaction.LockPolicy) (list []*schema.Resource, total uint64, err error) {
+	sql, args, err := buildSelect(s, filter, pg, shouldJoin(lockPolicy))
+	if err != nil {
+		return nil, 0, err
+	}
+
+	if tx.db.sqlType == "mysql" {
+		sql += " FOR UPDATE"
+	}
+
+	return executeSelect(s, filter, sql, args, tx)
 }
 
 // Query with raw sql string
@@ -773,6 +826,15 @@ func (tx *Transaction) Fetch(s *schema.Schema, filter transaction.Filter) (*sche
 	return list[0], err
 }
 
+//Fetch & lock a resource
+func (tx *Transaction) LockFetch(s *schema.Schema, filter transaction.Filter, lockPolicy transaction.LockPolicy) (*schema.Resource, error) {
+	list, _, err := tx.LockList(s, filter, nil, lockPolicy)
+	if len(list) < 1 {
+		return nil, fmt.Errorf("Failed to fetch and lock %s", filter)
+	}
+	return list[0], err
+}
+
 //StateFetch fetches the state of the specified resource
 func (tx *Transaction) StateFetch(s *schema.Schema, filter transaction.Filter) (state transaction.ResourceState, err error) {
 	if !s.StateVersioning() {
@@ -809,6 +871,7 @@ func (tx *Transaction) RawTransaction() *sqlx.Tx {
 
 //SetIsolationLevel specify transaction isolation level
 func (tx *Transaction) SetIsolationLevel(level transaction.Type) error {
+	log.Debug("Setting isolation level for transaction %#v %s", tx, level)
 	if tx.db.sqlType == "mysql" {
 		err := tx.Exec(fmt.Sprintf("set session transaction isolation level %s", level))
 		return err
@@ -818,6 +881,7 @@ func (tx *Transaction) SetIsolationLevel(level transaction.Type) error {
 
 //Commit commits transaction
 func (tx *Transaction) Commit() error {
+	log.Debug("Committing transaction %#v", tx)
 	err := tx.transaction.Commit()
 	if err != nil {
 		return err
@@ -829,6 +893,7 @@ func (tx *Transaction) Commit() error {
 //Close closes connection
 func (tx *Transaction) Close() error {
 	//Rollback if it isn't committed yet
+	log.Debug("Closing transaction %#v", tx)
 	var err error
 	if !tx.closed {
 		err = tx.transaction.Rollback()

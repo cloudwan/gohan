@@ -47,6 +47,13 @@ func init() {
 				if err != nil {
 					ThrowOttoException(&call, "failed to start a transaction: %s", err.Error())
 				}
+
+				if err = addCloser(call.Otto, tx); err != nil {
+					tx.Close()
+					ThrowOttoException(&call, fmt.Errorf(
+						"Cannot register closer for gohan_db_transaction: %s", err).Error())
+				}
+
 				if setTxIsolationLevel {
 					strIsolationLevel, err := GetString(call.Argument(0))
 					if err != nil {
@@ -114,6 +121,68 @@ func init() {
 				value, _ := vm.ToValue(resp)
 				return value
 			},
+			"gohan_db_lock_list": func(call otto.FunctionCall) otto.Value {
+				if len(call.ArgumentList) < 4 {
+					defaultOrderKey, _ := otto.ToValue("") // no sorting
+					call.ArgumentList = append(call.ArgumentList, defaultOrderKey)
+				}
+				if len(call.ArgumentList) < 5 {
+					defaultLimit, _ := otto.ToValue(0) // no limit
+					call.ArgumentList = append(call.ArgumentList, defaultLimit)
+				}
+				if len(call.ArgumentList) < 6 {
+					defaultOffset, _ := otto.ToValue(0) // no offset
+					call.ArgumentList = append(call.ArgumentList, defaultOffset)
+				}
+				if len(call.ArgumentList) < 7 {
+					defaultLockPolicy, _ := otto.ToValue(transaction.LockRelatedResources)
+					call.ArgumentList = append(call.ArgumentList, defaultLockPolicy)
+				}
+				VerifyCallArguments(&call, "gohan_db_lock_list", 7)
+
+				tx, needCommit, err := env.GetOrCreateTransaction(call.Argument(0))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+				if needCommit {
+					defer tx.Close()
+				}
+				schemaID, err := GetString(call.Argument(1))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+				filter, err := GetMap(call.Argument(2))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+				orderKey, err := GetString(call.Argument(3))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+				rawLimit, err := GetInt64(call.Argument(4))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+				limit := uint64(rawLimit)
+				rawOffset, err := GetInt64(call.Argument(5))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+				offset := uint64(rawOffset)
+				rawLockPolicy, err := GetInt64(call.Argument(6))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+				lockPolicy := transaction.LockPolicy(rawLockPolicy)
+
+				resp, err := GohanDbLockList(tx, schemaID, filter, orderKey, limit, offset, lockPolicy)
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+
+				value, _ := vm.ToValue(resp)
+				return value
+			},
 			"gohan_db_fetch": func(call otto.FunctionCall) otto.Value {
 				VerifyCallArguments(&call, "gohan_db_fetch", 4)
 				transaction, needCommit, err := env.GetOrCreateTransaction(call.Argument(0))
@@ -142,7 +211,45 @@ func init() {
 				}
 
 				if resp == nil {
-					otto.NullValue()
+					panic("Fetch failed: no data returned but err is nil")
+				}
+				value, _ := vm.ToValue(resp.Data())
+				return value
+			},
+			"gohan_db_lock_fetch": func(call otto.FunctionCall) otto.Value {
+				VerifyCallArguments(&call, "gohan_db_lock_fetch", 5)
+				tx, needCommit, err := env.GetOrCreateTransaction(call.Argument(0))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+				if needCommit {
+					defer tx.Close()
+				}
+				schemaID, err := GetString(call.Argument(1))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+				ID, err := GetString(call.Argument(2))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+				tenantID, err := GetString(call.Argument(3))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+				rawLockPolicy, err := GetInt64(call.Argument(4))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+				lockPolicy := transaction.LockPolicy(rawLockPolicy)
+
+				resp, err := GohanDbLockFetch(tx, schemaID, ID, tenantID, lockPolicy)
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+
+				if resp == nil {
+					panic("LockFetch failed: no data returned but err is nil")
 				}
 				value, _ := vm.ToValue(resp.Data())
 				return value
@@ -334,21 +441,36 @@ func init() {
 	RegisterInit(gohanDBInit)
 }
 
+func prepareListResources(schemaID string, key string, limit uint64, offset uint64) (schema *schema.Schema, paginator *pagination.Paginator, err error) {
+	schema, err = getSchema(schemaID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if key != "" {
+		paginator, err = pagination.NewPaginator(schema, key, "", limit, offset)
+		if err != nil {
+			return nil, nil, fmt.Errorf("Error during gohan_db_list: %s", err.Error())
+		}
+	}
+	return
+}
+
+func parseListResults(resources []*schema.Resource) []map[string]interface{} {
+	resp := []map[string]interface{}{}
+	for _, resource := range resources {
+		resp = append(resp, resource.Data())
+	}
+	return resp
+}
+
 //GohanDbList lists resources in database filtered by filter and paginator
 func GohanDbList(transaction transaction.Transaction, schemaID string,
 	filter map[string]interface{}, key string, limit uint64, offset uint64) ([]map[string]interface{}, error) {
 
-	schema, err := getSchema(schemaID)
+	schema, paginator, err := prepareListResources(schemaID, key, limit, offset)
 	if err != nil {
 		return []map[string]interface{}{}, err
-	}
-
-	var paginator *pagination.Paginator
-	if key != "" {
-		paginator, err = pagination.NewPaginator(schema, key, "", limit, offset)
-		if err != nil {
-			return []map[string]interface{}{}, fmt.Errorf("Error during gohan_db_list: %s", err.Error())
-		}
 	}
 
 	resources, _, err := transaction.List(schema, filter, paginator)
@@ -356,11 +478,24 @@ func GohanDbList(transaction transaction.Transaction, schemaID string,
 		return []map[string]interface{}{}, fmt.Errorf("Error during gohan_db_list: %s", err.Error())
 	}
 
-	resp := []map[string]interface{}{}
-	for _, resource := range resources {
-		resp = append(resp, resource.Data())
+	return parseListResults(resources), nil
+}
+
+//GohanDbLockList locks resources in database filtered by filter and paginator
+func GohanDbLockList(tx transaction.Transaction, schemaID string,
+	filter map[string]interface{}, key string, limit uint64, offset uint64, policy transaction.LockPolicy) ([]map[string]interface{}, error) {
+
+	schema, paginator, err := prepareListResources(schemaID, key, limit, offset)
+	if err != nil {
+		return []map[string]interface{}{}, err
 	}
-	return resp, nil
+
+	resources, _, err := tx.LockList(schema, filter, paginator, policy)
+	if err != nil {
+		return []map[string]interface{}{}, fmt.Errorf("Error during gohan_db_lock_list: %s", err.Error())
+	}
+
+	return parseListResults(resources), nil
 }
 
 //GohanDbFetch gets resource from database
@@ -378,6 +513,23 @@ func GohanDbFetch(tx transaction.Transaction, schemaID, ID,
 	resp, err := tx.Fetch(schema, filter)
 	if err != nil {
 		return nil, fmt.Errorf("Error during gohan_db_fetch: %s", err.Error())
+	}
+	return resp, nil
+}
+
+//GohanDbLockFetch gets resource from database
+func GohanDbLockFetch(tx transaction.Transaction, schemaID, ID, tenantID string, policy transaction.LockPolicy) (*schema.Resource, error) {
+	schema, err := getSchema(schemaID)
+	if err != nil {
+		return nil, err
+	}
+	filter := transaction.IDFilter(ID)
+	if tenantID != "" {
+		filter["tenant_id"] = tenantID
+	}
+	resp, err := tx.LockFetch(schema, filter, policy)
+	if err != nil {
+		return nil, fmt.Errorf("Error during gohan_db_lock_fetch: %s", err.Error())
 	}
 	return resp, nil
 }

@@ -17,6 +17,7 @@ package otto
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -77,7 +78,30 @@ func init() {
 					ThrowOttoException(&call, err.Error())
 				}
 				log.Debug("gohan_http  [%s] %s %s %s %s", method, rawHeaders, url, opaque, timeout)
-				code, headers, body, err := gohanHTTP(method, url, rawHeaders, data, opaque, timeout)
+
+				ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Millisecond)
+				defer cancel()
+
+				var (
+					code    int
+					headers http.Header
+					body    string
+				)
+
+				done := make(chan struct{})
+				go func() {
+					code, headers, body, err = gohanHTTP(ctx, method, url, rawHeaders, data, opaque)
+					close(done)
+				}()
+
+				select {
+				case interrupt := <-call.Otto.Interrupt:
+					log.Debug("Received otto interrupt in gohan_http")
+					cancel()
+					interrupt()
+				case <-done:
+				}
+
 				log.Debug("response code %d", code)
 				resp := map[string]interface{}{}
 				if err != nil {
@@ -113,11 +137,15 @@ func init() {
 				}
 				//TODO: pass Transport options like timeouts
 
+				ctx, cancel := context.WithCancel(context.Background())
+				defer cancel()
+
 				// prepare request
-				request, err := http.NewRequest(method, url, strings.NewReader(rawData))
+				req, err := http.NewRequest(method, url, strings.NewReader(rawData))
 				if err != nil {
 					ThrowOttoException(&call, err.Error())
 				}
+				req.WithContext(ctx)
 
 				// set headers
 				for header, rawValue := range rawHeaders {
@@ -126,22 +154,37 @@ func init() {
 						ThrowOttoException(&call, fmt.Sprintf(
 							"Header '%s' value must be a string type", header))
 					}
-					request.Header.Set(header, value)
+					req.Header.Set(header, value)
 				}
 
+				var resp *http.Response
+
 				// run query
-				response, err := http.DefaultTransport.RoundTrip(request)
+				done := make(chan struct{})
+				go func() {
+					resp, err = http.DefaultTransport.RoundTrip(req)
+					close(done)
+				}()
+
+				select {
+				case interrupt := <-call.Otto.Interrupt:
+					log.Debug("Received otto interrupt in gohan_raw_http")
+					cancel()
+					interrupt()
+				case <-done:
+				}
+
 				if err != nil {
 					ThrowOttoException(&call, err.Error())
 				}
 
-				// process response
+				// process resp
 				result := map[string]interface{}{}
-				result["status"] = response.Status
-				result["status_code"] = response.StatusCode
-				result["headers"] = response.Header
+				result["status"] = resp.Status
+				result["status_code"] = resp.StatusCode
+				result["headers"] = resp.Header
 
-				body, err := ioutil.ReadAll(response.Body)
+				body, err := ioutil.ReadAll(resp.Body)
 				if err != nil {
 					ThrowOttoException(&call, err.Error())
 				}
@@ -189,15 +232,23 @@ func init() {
 			},
 			"gohan_sleep": func(call otto.FunctionCall) otto.Value {
 				VerifyCallArguments(&call, "gohan_sleep", 1)
-				rawSleep, _ := call.Argument(0).Export()
 				var sleep time.Duration
-				switch rawSleep.(type) {
+
+				s, _ := call.Argument(0).Export()
+				switch t := s.(type) {
 				case int:
-					sleep = time.Duration(rawSleep.(int))
+					sleep = time.Duration(t) * time.Millisecond
 				case int64:
-					sleep = time.Duration(rawSleep.(int64))
+					sleep = time.Duration(t) * time.Millisecond
 				}
-				time.Sleep(sleep * time.Millisecond)
+				log.Debug("Sleep %s", sleep)
+				select {
+				case interrupt := <-call.Otto.Interrupt:
+					log.Debug("Received otto interrupt in gohan_sleep")
+					interrupt()
+				case <-time.NewTimer(sleep).C:
+				}
+
 				return otto.NullValue()
 			},
 			"gohan_template": func(call otto.FunctionCall) otto.Value {
@@ -223,14 +274,39 @@ func init() {
 				if err != nil {
 					ThrowOttoException(&call, err.Error())
 				}
-				out, err := exec.Command(command, stringArgs...).Output()
+
+				cmd := exec.Command(command, stringArgs...)
+				var stdout bytes.Buffer
+				cmd.Stdout = &stdout
+				cmd.Stderr = &stdout
+
+				done := make(chan struct{})
+				go func() {
+					if err = cmd.Run(); err != nil {
+						log.Debug("Run %s %s error: %s", command, stringArgs, err)
+					}
+					close(done)
+				}()
+
+				select {
+				case interrupt := <-call.Otto.Interrupt:
+					log.Debug("Received otto interrupt in gohan_exec")
+					if cmd.Process != nil {
+						if err := cmd.Process.Kill(); err != nil {
+							log.Debug("Kill %s %s failed: %s", command, stringArgs, err)
+						}
+					}
+					interrupt()
+				case <-done:
+				}
+
 				resp := map[string]string{}
 				if err != nil {
 					resp["status"] = "error"
 					resp["output"] = err.Error()
 				} else {
 					resp["status"] = "success"
-					resp["output"] = string(out)
+					resp["output"] = stdout.String()
 				}
 				value, _ := vm.ToValue(resp)
 				return value
@@ -260,11 +336,9 @@ func init() {
 	RegisterInit(gohanUtilInit)
 }
 
-func gohanHTTP(method, rawURL string, headers map[string]interface{},
-	postData interface{}, opaque bool, timeout int64) (int, http.Header, string, error) {
+func gohanHTTP(ctx context.Context, method, rawURL string, headers map[string]interface{},
+	postData interface{}, opaque bool) (int, http.Header, string, error) {
 
-	client := &http.Client{}
-	client.Timeout = time.Duration(timeout) * time.Millisecond
 	var reader io.Reader
 
 	if postData != nil {
@@ -291,29 +365,30 @@ func gohanHTTP(method, rawURL string, headers map[string]interface{},
 				headers["content-type"] = "application/json"
 			}
 		}
-		log.Debug("request data: %s", string(requestData))
+		log.Debug("reqest data: %s", string(requestData))
 		reader = bytes.NewBuffer(requestData)
-
 	}
 
-	request, err := http.NewRequest(method, rawURL, reader)
-	if headers != nil {
-		for key, value := range headers {
-			request.Header.Add(key, value.(string))
-		}
-	}
+	req, err := http.NewRequest(method, rawURL, reader)
 	if err != nil {
 		return 0, http.Header{}, "", err
 	}
+	req.WithContext(ctx)
+
+	if headers != nil {
+		for key, value := range headers {
+			req.Header.Add(key, value.(string))
+		}
+	}
 
 	if opaque {
-		request.URL = &url.URL{
-			Scheme: request.URL.Scheme,
-			Host:   request.URL.Host,
+		req.URL = &url.URL{
+			Scheme: req.URL.Scheme,
+			Host:   req.URL.Host,
 			Opaque: rawURL,
 		}
 	}
-	resp, err := client.Do(request)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return 0, http.Header{}, "", err
 	}

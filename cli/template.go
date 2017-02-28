@@ -19,7 +19,7 @@ import (
 func deleteGohanExtendedProperties(node map[string]interface{}) {
 	extendedProperties := [...]string{"unique", "permission", "relation",
 		"relation_property", "view", "detail_view", "propertiesOrder",
-		"on_delete_cascade", "indexed", "relationColumn" }
+		"on_delete_cascade", "indexed", "relationColumn"}
 
 	for _, extendedProperty := range extendedProperties {
 		delete(node, extendedProperty)
@@ -157,12 +157,12 @@ func doTemplate(c *cli.Context) {
 	}
 	policies := manager.Policies()
 	policy := c.String("policy")
-	schemasPolicy := filterSchemasForPolicy(policy, policies, schemas)
+	schemasPolicy, schemasCRUDPolicy := filterSchemasForPolicy(policy, policies, schemas)
 	if c.IsSet("split-by-resource-group") {
-		saveAllResources(schemasPolicy, tpl)
+		saveAllResources(schemasPolicy, schemasCRUDPolicy, tpl)
 		return
 	}
-	output, err := tpl.Execute(pongo2.Context{"schemas": schemasPolicy, "schemaName": "gohan API"})
+	output, err := tpl.Execute(pongo2.Context{"schemas": schemasPolicy, "schemasCRUD": schemasCRUDPolicy, "schemaName": "gohan API"})
 	if err != nil {
 		util.ExitFatal(err)
 		return
@@ -171,19 +171,22 @@ func doTemplate(c *cli.Context) {
 	fmt.Println(output)
 }
 
-func saveAllResources(schemas []*schema.Schema, tpl *pongo2.Template) {
-	for _, resource := range getAllResourcesFromSchemas(schemas) {
+func saveAllResources(schemas []*schema.Schema, schemasCRUD []*schema.Schema, tpl *pongo2.Template) {
+	for _, resource := range getAllResourcesFromSchemas(schemas, schemasCRUD) {
 		resourceSchemas := filerSchemasByResource(resource, schemas)
-		output, _ := tpl.Execute(pongo2.Context{"schemas": resourceSchemas, "schemaName": resource})
+		resourceCRUDSchemas := filerSchemasByResource(resource, schemasCRUD)
+		output, _ := tpl.Execute(pongo2.Context{"schemas": resourceSchemas, "schemasCRUD": resourceCRUDSchemas, "schemaName": resource})
 		ioutil.WriteFile(resource+".json", []byte(output), 0644)
 	}
 }
 
-func getAllResourcesFromSchemas(schemas []*schema.Schema) []string {
+func getAllResourcesFromSchemas(schemasList ...[]*schema.Schema) []string {
 	resourcesSet := make(map[string]bool)
-	for _, schema := range schemas {
-		metadata, _ := schema.Metadata["resource_group"].(string)
-		resourcesSet[metadata] = true
+	for _, schemas := range schemasList {
+		for _, schema := range schemas {
+			metadata, _ := schema.Metadata["resource_group"].(string)
+			resourcesSet[metadata] = true
+		}
 	}
 	resources := make([]string, 0, len(resourcesSet))
 	for resource := range resourcesSet {
@@ -202,23 +205,80 @@ func filerSchemasByResource(resource string, schemas []*schema.Schema) []*schema
 	return filteredSchemas
 }
 
-func filterSchemasForPolicy(principal string, policies []*schema.Policy, schemas []*schema.Schema) []*schema.Schema {
+func filterSchemasForPolicy(principal string, policies []*schema.Policy, schemas []*schema.Schema) ([]*schema.Schema, []*schema.Schema) {
+	matchedPolicies := filterPolicies(principal, policies)
+	principalNobody := "Nobody"
+	nobodyPolicies := filterPolicies(principalNobody, policies)
+	if principal == principalNobody {
+		nobodyPolicies = nil
+	}
 	var schemasPolicy []*schema.Schema
-	var matchedPolicies []* schema.Policy
+	var schemasCRUDPolicy []*schema.Schema
+	for _, schemaOriginal := range schemas {
+		policy := getMatchingPolicy(schemaOriginal, matchedPolicies)
+		if policy == nil {
+			continue
+		}
+		schemaCopy := *schemaOriginal
+		if policy.Action == "read" {
+			schemasPolicy = append(schemasPolicy, &schemaCopy)
+		} else {
+			schemasCRUDPolicy = append(schemasCRUDPolicy, &schemaCopy)
+		}
+		schemaCopy.Actions = filterActions(schemaOriginal, nobodyPolicies, matchedPolicies)
+	}
+	return schemasPolicy, schemasCRUDPolicy
+}
+
+func getMatchingPolicy(schema *schema.Schema, policies []*schema.Policy) *schema.Policy {
+	for _, policy := range policies {
+		if policy.Resource.Path.MatchString(schema.URL) {
+			return policy
+		}
+	}
+	return nil
+}
+
+func filterActions(schemaToFilter *schema.Schema, nobodyPolicies []*schema.Policy, policies []*schema.Policy) []schema.Action {
+	actions := make([]schema.Action, 0)
+	for _, action := range schemaToFilter.Actions {
+		if !hasMatchingPolicy(action, nobodyPolicies) && canUseAction(action, policies, schemaToFilter.URL) {
+			actions = append(actions, action)
+		}
+	}
+	return actions
+}
+
+func hasMatchingPolicy(action schema.Action, policies []*schema.Policy) bool {
+	for _, policy := range policies {
+		if action.ID == policy.Action {
+			return true
+		}
+	}
+	return false
+}
+
+func canUseAction(action schema.Action, policies []*schema.Policy, url string) bool {
+	for _, policy := range policies {
+		if policy.Resource.Path.MatchString(url) && isMatchingPolicy(action, policy) {
+			return true
+		}
+	}
+	return false
+}
+
+func isMatchingPolicy(action schema.Action, policy *schema.Policy) bool {
+	return action.ID == policy.Action || policy.Action == "*" || (policy.Action == "read" && action.Method == "GET") || (policy.Action == "update" && action.Method == "POST")
+}
+
+func filterPolicies(principal string, policies []*schema.Policy) []*schema.Policy {
+	var matchedPolicies []*schema.Policy
 	for _, policy := range policies {
 		if policy.Principal == principal {
 			matchedPolicies = append(matchedPolicies, policy)
 		}
 	}
-	for _, schema := range schemas {
-		for _, policy := range matchedPolicies {
-			if policy.Resource.Path.MatchString(schema.URL)  {
-				schemasPolicy = append(schemasPolicy, schema)
-				break
-			}
-		}
-	}
-	return schemasPolicy
+	return matchedPolicies
 }
 
 func getTemplateCommand() cli.Command {

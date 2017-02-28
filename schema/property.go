@@ -21,14 +21,14 @@ type Property struct {
 	Type, Format           string
 	Properties             map[string]interface{}
 	Relation               string
-	RelationColumn	       string
+	RelationColumn         string
 	RelationProperty       string
 	Unique                 bool
 	Nullable               bool
 	SQLType                string
 	OnDeleteCascade        bool
 	Default                interface{}
-	Indexed		       bool
+	Indexed                bool
 }
 
 //PropertyMap is a map of Property
@@ -51,7 +51,7 @@ func NewProperty(id, title, description, typeID, format, relation, relationColum
 		Properties:       properties,
 		SQLType:          sqlType,
 		OnDeleteCascade:  onDeleteCascade,
-		Indexed:	  indexed,
+		Indexed:          indexed,
 	}
 	return Property
 }

@@ -21,7 +21,7 @@ test:
     - mkdir -p /home/ubuntu/.go_workspace/src/github.com/cloudwan/
     - ln -s /home/ubuntu/gohan /home/ubuntu/.go_workspace/src/github.com/cloudwan/gohan
   override:
-    - make format:
+    - make gen:
         pwd: ../.go_workspace/src/github.com/cloudwan/gohan
     - make lint:
         pwd: ../.go_workspace/src/github.com/cloudwan/gohan

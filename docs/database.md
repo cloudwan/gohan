@@ -50,7 +50,6 @@ the main subcommand documentation in located in the library:
 https://github.com/pressly/goose/blob/master/README.md
 
 ```
-
   NAME:
      migrate - Manage migrations
 

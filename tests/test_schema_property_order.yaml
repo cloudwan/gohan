@@ -1,0 +1,63 @@
+schemas:
+
+- id: city
+  description: City
+  singular: city
+  plural: cities
+  title: City
+  prefix: /v1.0
+  schema:
+    properties:
+      id:
+        description: The ID of City
+        title: ID
+        type: string
+        permission:
+        - create
+      name:
+        description: Name
+        title: Name
+        type: string
+        permission:
+        - create
+    propertiesOrder:
+    - id
+    - name
+    type: object
+
+- id: school
+  description: School
+  singular: school
+  plural: schools
+  title: School
+  prefix: /v1.0
+  schema:
+    properties:
+      id:
+        description: The ID of School
+        title: ID
+        type: string
+        permission:
+        - create
+      name:
+        description: Name
+        title: Name
+        type: string
+        permission:
+        - create
+      city_id:
+        description: City
+        title: City
+        type: string
+        relation: city
+        relation_property: city
+        permission:
+        - create
+      patron:
+        type: string
+      best_in_town:
+        type: bool
+    propertiesOrder:
+    - id
+    - name
+    type: object
