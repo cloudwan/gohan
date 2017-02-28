@@ -44,7 +44,6 @@ Gohan supports generating goose (https://bitbucket.org/liamstask/goose) migratio
 Currently, Gohan doesn't provide function calculating diff on a schema, so that app developers should manage this migration script.
 
 ```
-
   NAME:
      migrate - Generate goose migration script
 

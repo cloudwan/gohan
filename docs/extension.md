@@ -11,7 +11,7 @@ Extensions has properties:
 
 Example Code
 
-```
+```yaml
   extensions:
   - code: console.log(Object.keys(context));
     id: test
@@ -189,7 +189,7 @@ You can implement Gohan extension by native go.
 You can use "go" for code_type and specify your callback id in code.
 Also, you can register go struct & call it from javascript.
 
-```
+```yaml
   extensions:
   - code: exampleapp_callback
     code_type: go
@@ -197,7 +197,7 @@ Also, you can register go struct & call it from javascript.
     path: .*
 ```
 
-```
+```go
   //Register go callback
   extension.RegisterGoCallback("exampleapp_callback",
   	func(event string, context map[string]interface{}) error {

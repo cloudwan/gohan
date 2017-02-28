@@ -12,7 +12,7 @@ Namespace has the following properties:
 
 Example namespace
 
-```
+```yaml
   namespaces:
   - description: Neutron API
     id: neutron

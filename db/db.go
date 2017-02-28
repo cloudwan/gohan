@@ -36,7 +36,7 @@ type DB interface {
 	Connect(string, string, int) error
 	Close()
 	Begin() (transaction.Transaction, error)
-	RegisterTable(*schema.Schema, bool) error
+	RegisterTable(s *schema.Schema, cascade, migrate bool) error
 	DropTable(*schema.Schema) error
 }
 
@@ -110,7 +110,7 @@ func CopyDBResources(input, output DB, overrideExisting bool) error {
 }
 
 //InitDBWithSchemas initializes database using schemas stored in Manager
-func InitDBWithSchemas(dbType, dbConnection string, dropOnCreate, cascade bool) error {
+func InitDBWithSchemas(dbType, dbConnection string, dropOnCreate, cascade, migrate bool) error {
 	aDb, err := ConnectDB(dbType, dbConnection, DefaultMaxOpenConn)
 	if err != nil {
 		return err
@@ -138,13 +138,13 @@ func InitDBWithSchemas(dbType, dbConnection string, dropOnCreate, cascade bool) 
 			continue
 		}
 		log.Debug("Registering schema %s", s.ID)
-		err = aDb.RegisterTable(s, cascade)
+		err = aDb.RegisterTable(s, cascade, migrate)
 		if err != nil {
-			message := "Error during registering table: %s"
+			message := "Error during registering table %q: %s"
 			if strings.Contains(err.Error(), "already exists") {
-				log.Warning(message, err.Error())
+				log.Warning(message, s.GetDbTableName(), err)
 			} else {
-				log.Fatal(message, err.Error())
+				log.Fatalf(message, s.GetDbTableName(), err)
 			}
 		}
 	}

@@ -100,7 +100,7 @@ var _ = Describe("Suit set up and tear down", func() {
 		schemaFiles := config.GetStringList("schemas", nil)
 		Expect(schemaFiles).NotTo(BeNil())
 		Expect(manager.LoadSchemasFromFiles(schemaFiles...)).To(Succeed())
-		Expect(db.InitDBWithSchemas(dbType, dbFile, false, false)).To(Succeed())
+		Expect(db.InitDBWithSchemas(dbType, dbFile, false, false, false)).To(Succeed())
 	})
 
 	var _ = AfterSuite(func() {

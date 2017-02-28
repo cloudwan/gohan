@@ -27,7 +27,7 @@ Schemas might also have any of the following optional properties.
 Gohan supports mix-in of multiple schemas.
 Developers can make a schema as abstract schema specifying type=abstract. The developer can mix-in abstract schema.
 
-```
+```yaml
   schemas:
   - description: base
     type: abstract
@@ -217,7 +217,7 @@ You can use following parameters for a string.
 - on_delete_cascade  (extended spec by Gohan) cascading delete when related resource deleted
 
 eg.
-```
+```yaml
         name:
           permission:
           - create
@@ -233,7 +233,7 @@ type boolean for boolean value
 
 eg.
 
-```
+```yaml
         admin_state:
           permission:
           - create
@@ -253,7 +253,7 @@ You can use following parameters to define valid range
 
 eg.
 
-```
+```yaml
         age:
           permission:
           - create
@@ -274,7 +274,7 @@ type array is for a defining list of elements
 
 eg.
 
-```
+```yaml
         route_targets:
           default: []
           items:
@@ -305,7 +305,7 @@ Following parameters supported in the object type.
 
 eg.
 
-```
+```yaml
         providor_networks:
           default: {}
           permission:
@@ -338,7 +338,7 @@ Gohan adds <parent>_id property automatically when Gohan loads schemas.
 
 eg.
 
-```
+```yaml
         schemas:
         - description: Test Device
           id: test_device
@@ -399,7 +399,7 @@ Resources can have custom actions, besides CRUD. To define them, add "actions" s
 
 eg.
 
-```
+```yaml
         schemas:
         - description: Server
           id: server
@@ -456,7 +456,7 @@ Then, register extension to handle it, e.g.
 
 In order to query above action, POST to /v1.0/servers/:id/action with
 
-```
+```yaml
   {
     "reboot": {
       "message": "Maintenance",
@@ -470,7 +470,7 @@ In order to query above action, POST to /v1.0/servers/:id/action with
 Developers can specify the transaction isolation level for API requests when Gohan is configured to connect MySQL database.
 The default setting is "read repeatable" for read operations and "serializable" for operations that modify the database (create, update, delete) and sync operation. (state_update, monitoring_update). The default for unspecified action is repeatable read.
 
-```
+```yaml
     isolation_level:
       read:  REPEATABLE READ
       create:  SERIALIZABLE
@@ -540,7 +540,7 @@ Response will be
 
 HTTP Status Code: 200
 
-```
+```json
 
   {
     "$plural": [
@@ -576,7 +576,7 @@ Response will be
 
 HTTP Status Code: 200
 
-```
+```json
   {
     "$singular": {
       "attr1": XX,
@@ -597,7 +597,7 @@ Note that input JSON can only contain if you set "create" permission for this
 
 HTTP Status Code: 202
 
-```
+```json
   {
     "$singular": {
       "attr1": XX,
@@ -608,7 +608,7 @@ HTTP Status Code: 202
 
 Response will be
 
-```
+```json
   {
     "$singular": {
       "attr1": XX,
@@ -627,7 +627,7 @@ Input
 
 Note that input JSON can only contain if you set "update" permission for this
 
-```
+```json
   {
     "$singular": {
       "attr1": XX,
@@ -640,7 +640,7 @@ Response will be
 
 HTTP Status Code: 200
 
-```
+```json
   {
     "$singular": {
       "attr1": XX,
@@ -668,7 +668,7 @@ Input
 
 Input JSON can only contain parameters defined in the input schema definition. It requires "$action" allow policy
 
-```
+```json
   {
     "parameter1": XX,
     "parameter2": XX
@@ -679,7 +679,7 @@ Response will be
 
 HTTP Status Code: 200
 
-```
+```json
   {
     "output1": XX,
     "output2": XX

@@ -20,6 +20,8 @@ import (
 
 	"strings"
 
+	"sort"
+
 	"github.com/cloudwan/gohan/util"
 	"github.com/flosch/pongo2"
 	"github.com/xeipuuv/gojsonschema"
@@ -154,6 +156,64 @@ func newSchemaFromObj(rawTypeData interface{}, metaschema *Schema) (*Schema, err
 	return schema, nil
 }
 
+type PropertyOrder struct {
+	properties      []Property
+	propertiesOrder []string
+}
+
+func (p PropertyOrder) Len() int {
+	return len(p.properties)
+}
+
+func (p PropertyOrder) Swap(i, j int) {
+	p.properties[i], p.properties[j] = p.properties[j], p.properties[i]
+}
+
+func (p PropertyOrder) Less(i, j int) bool {
+	// lookup in propertiesOrder from schema
+	// Then "id"
+	// Then indexed columns
+	// Then columns with relation
+	// Then alphabetical order on name
+
+	lhv := p.properties[i]
+	rhv := p.properties[j]
+	iIdx := util.Index(p.propertiesOrder, lhv.ID)
+	jIdx := util.Index(p.propertiesOrder, rhv.ID)
+	if iIdx != -1 && jIdx == -1 {
+		return true
+	} else if iIdx == -1 && jIdx != -1 {
+		return false
+	} else if iIdx != -1 && jIdx != -1 {
+		return iIdx < jIdx
+	} else {
+		if lhv.ID == "id" {
+			return true
+		}
+		if lhv.Indexed && !rhv.Indexed {
+			return true
+		} else if !lhv.Indexed && rhv.Indexed {
+			return false
+		} else {
+			if lhv.Relation != "" && rhv.Relation == "" {
+				return true
+			} else if lhv.Relation == "" && rhv.Relation != "" {
+				return false
+			} else {
+				return lhv.ID < rhv.ID
+			}
+		}
+	}
+}
+
+func (p PropertyOrder) String() string {
+	props := ""
+	for _, property := range p.properties {
+		props += property.ID + ","
+	}
+	return fmt.Sprintf("Order: %s, Properties: %s", p.propertiesOrder, props)
+}
+
 // Init initializes schema
 func (schema *Schema) Init() error {
 	if schema.IsAbstract() {
@@ -177,18 +237,7 @@ func (schema *Schema) Init() error {
 	schema.JSONSchemaOnUpdate = filterSchemaByPermission(jsonSchema, "update")
 
 	schema.Properties = []Property{}
-	for key := range properties {
-		if !util.ContainsString(propertiesOrder, key) {
-			propertiesOrder = append(propertiesOrder, key)
-		}
-	}
-	jsonSchema["propertiesOrder"] = propertiesOrder
-
-	for _, id := range propertiesOrder {
-		property, ok := properties[id]
-		if !ok {
-			continue
-		}
+	for id, property := range properties {
 		propertyRequired := util.ContainsString(required, id)
 		propertyObj, err := NewPropertyFromObj(id, property, propertyRequired)
 		if err != nil {
@@ -196,6 +245,17 @@ func (schema *Schema) Init() error {
 		}
 		schema.Properties = append(schema.Properties, *propertyObj)
 	}
+
+	order := PropertyOrder{propertiesOrder: propertiesOrder, properties: schema.Properties}
+	sort.Sort(order)
+
+	for key := range properties {
+		if !util.ContainsString(propertiesOrder, key) {
+			propertiesOrder = append(propertiesOrder, key)
+		}
+	}
+	jsonSchema["propertiesOrder"] = propertiesOrder
+
 	return nil
 }
 
