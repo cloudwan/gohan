@@ -14,6 +14,7 @@ database:
     max_open_conn: 100
     # please set no_init true in the production env, so that gohan don't initialize table
     # no_init: true
+    migrations: "db/migrations"
 
 schemas:
     - "embed://etc/schema/gohan.json"
