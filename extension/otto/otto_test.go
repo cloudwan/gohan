@@ -1648,6 +1648,139 @@ var _ = Describe("Otto extension manager", func() {
 			})
 		})
 	})
+
+	Describe("Using gohan_global", func() {
+		var (
+			loadingExtension       *schema.Extension
+			loadingGlobalExtension *schema.Extension
+		)
+
+		BeforeEach(func() {
+			loadingExtension, _ = schema.NewExtension(map[string]interface{}{
+				"id": "test_extension",
+				"code": `
+					gohan_register_handler(
+						"test_event",
+					        function(context) {
+							var abc = gohan_global("abc");
+							context.resp = abc.test
+						}
+					);
+					`,
+				"path": ".*",
+			})
+			loadingGlobalExtension, _ = schema.NewExtension(map[string]interface{}{
+				"id": "test_extension",
+				"code": `
+					gohan_register_handler(
+						"test_event",
+					        function(context) {
+							var abc = gohan_process_global("abc");
+							context.resp = abc.test
+						}
+					);
+					`,
+				"path": ".*",
+			})
+		})
+
+		It("Should return same value for each environment when using process global", func() {
+			savingExtension, err := schema.NewExtension(map[string]interface{}{
+				"id": "test_extension",
+				"code": `
+					gohan_register_handler(
+						"test_event",
+					        function(context) {
+							var abc = gohan_process_global("abc");
+							abc.test = 123
+						}
+					);
+					`,
+				"path": ".*",
+			})
+			Expect(err).ToNot(HaveOccurred())
+			extensions := []*schema.Extension{savingExtension, loadingGlobalExtension}
+			env1 := newEnvironment()
+			env2 := newEnvironment()
+			Expect(env1.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
+			Expect(env2.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
+			context := map[string]interface{}{}
+			Expect(env1.HandleEvent("test_event", context)).To(Succeed())
+			Expect(env2.HandleEvent("test_event", context)).To(Succeed())
+			Expect(context["resp"]).To(Equal(int64(123)))
+		})
+
+		It("Should return different values for each environment when using gohan_global", func() {
+			savingExtension1, err := schema.NewExtension(map[string]interface{}{
+				"id": "test_extension",
+				"code": `
+					gohan_register_handler(
+						"test_event",
+					        function(context) {
+							var abc = gohan_global("abc");
+							abc.test = 123
+						}
+					);
+					`,
+				"path": ".*",
+			})
+			Expect(err).ToNot(HaveOccurred())
+			savingExtension2, err := schema.NewExtension(map[string]interface{}{
+				"id": "test_extension",
+				"code": `
+					gohan_register_handler(
+						"test_event",
+					        function(context) {
+							var abc = gohan_global("abc");
+							abc.test = 456
+						}
+					);
+					`,
+				"path": ".*",
+			})
+			Expect(err).ToNot(HaveOccurred())
+			env1Extensions := []*schema.Extension{savingExtension1, loadingExtension}
+			env2Extensions := []*schema.Extension{savingExtension2, loadingExtension}
+			env1, env2 := newEnvironment(), newEnvironment()
+			Expect(env1.LoadExtensionsForPath(env1Extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
+			Expect(env2.LoadExtensionsForPath(env2Extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
+			env1Context := map[string]interface{}{}
+			env2Context := map[string]interface{}{}
+			Expect(env1.HandleEvent("test_event", env1Context)).To(Succeed())
+			Expect(env2.HandleEvent("test_event", env2Context)).To(Succeed())
+			Expect(env1Context["resp"]).To(Equal(int64(123)))
+			Expect(env2Context["resp"]).To(Equal(int64(456)))
+		})
+
+		It("Should return same value within cloned environment when using gohan_global", func() {
+			savingExtension, err := schema.NewExtension(map[string]interface{}{
+				"id": "test_extension",
+				"code": `
+					gohan_register_handler(
+						"test_event",
+					        function(context) {
+							var abc = gohan_global("abc");
+							abc.test = 123
+						}
+					);
+					`,
+				"path": ".*",
+			})
+			Expect(err).ToNot(HaveOccurred())
+			extensions := []*schema.Extension{savingExtension, loadingExtension}
+			env1 := newEnvironment()
+			env2 := env1.Clone()
+			Expect(env1.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
+			Expect(env2.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
+			env1Context := map[string]interface{}{}
+			env2Context := map[string]interface{}{}
+			Expect(env1.HandleEvent("test_event", env1Context)).To(Succeed())
+			Expect(env2.HandleEvent("test_event", env2Context)).To(Succeed())
+			Expect(env1Context["resp"]).To(Equal(int64(123)))
+			Expect(env2Context["resp"]).To(Equal(int64(123)))
+		})
+	})
+
 	Describe("Using gohan_sync_fetch builtin", func() {
 		It("Should fetch sync", func() {
 			extension, err := schema.NewExtension(map[string]interface{}{
