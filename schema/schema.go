@@ -309,7 +309,7 @@ func (schema *Schema) GetDbTableName() string {
 
 // GetParentURL returns Parent URL
 func (schema *Schema) GetParentURL() string {
-	if schema.Parent == "" {
+	if schema.ParentSchema == nil {
 		return ""
 	}
 

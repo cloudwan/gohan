@@ -215,16 +215,19 @@ Useful for development purposes.`,
 			cli.BoolFlag{Name: "drop-on-create", Usage: "If true, old database will be dropped"},
 			cli.BoolFlag{Name: "cascade", Usage: "If true, FOREIGN KEYS in database will be created with ON DELETE CASCADE"},
 			cli.StringFlag{Name: "meta-schema, m", Value: "", Usage: "Meta-schema file (optional)"},
+			cli.StringFlag{Name: "multiple-schemas", Value: "", Usage: "Multiple schema files separated by semicolon (;)"},
 		},
 		Action: func(c *cli.Context) {
 			dbType := c.String("database-type")
 			dbConnection := c.String("database")
 			schemaFile := c.String("schema")
 			metaSchemaFile := c.String("meta-schema")
+			multipleSchemaFiles := c.String("multiple-schemas")
 			dropOnCreate := c.Bool("drop-on-create")
 			cascade := c.Bool("cascade")
 			manager := schema.GetManager()
 			manager.LoadSchemasFromFiles(schemaFile, metaSchemaFile)
+			manager.OrderedLoadSchemasFromFiles(strings.Split(multipleSchemaFiles, ";"))
 			err := db.InitDBWithSchemas(dbType, dbConnection, dropOnCreate, cascade, false)
 			if err != nil {
 				util.ExitFatal(err)
