@@ -1,5 +1,32 @@
 schemas:
 
+- id: base_resource
+  type: abstract
+  description: Resource Base
+  singular: base_resource
+  plural: base_resource
+  prefix: /v1.0
+  schema:
+    properties:
+      id:
+        description: ID
+        permission:
+        - create
+        title: ID
+        type: string
+        view:
+        - detail
+      name:
+        description: Name
+        permission:
+        - create
+        - update
+        title: Name
+        type: string
+    type: object
+  title: Base
+
+
 - id: city
   description: City
   singular: city
@@ -28,23 +55,13 @@ schemas:
 - id: school
   description: School
   singular: school
+  extends:
+    - base_resource
   plural: schools
   title: School
   prefix: /v1.0
   schema:
     properties:
-      id:
-        description: The ID of School
-        title: ID
-        type: string
-        permission:
-        - create
-      name:
-        description: Name
-        title: Name
-        type: string
-        permission:
-        - create
       city_id:
         description: City
         title: City

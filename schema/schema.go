@@ -249,9 +249,9 @@ func (schema *Schema) Init() error {
 	order := PropertyOrder{propertiesOrder: propertiesOrder, properties: schema.Properties}
 	sort.Sort(order)
 
-	for key := range properties {
-		if !util.ContainsString(propertiesOrder, key) {
-			propertiesOrder = append(propertiesOrder, key)
+	for _, property := range schema.Properties {
+		if !util.ContainsString(propertiesOrder, property.ID) {
+			propertiesOrder = append(propertiesOrder, property.ID)
 		}
 	}
 	jsonSchema["propertiesOrder"] = propertiesOrder
