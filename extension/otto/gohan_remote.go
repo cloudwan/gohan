@@ -18,13 +18,13 @@ package otto
 import (
 	"bytes"
 
-	"github.com/robertkrimen/otto"
+	"github.com/xyproto/otto"
 	"golang.org/x/crypto/ssh"
 
 	"github.com/Juniper/go-netconf/netconf"
 	"github.com/cloudwan/gohan/util"
 	//Import otto underscore lib
-	_ "github.com/robertkrimen/otto/underscore"
+	_ "github.com/xyproto/otto/underscore"
 )
 
 //SetUp sets up vm to with environment
