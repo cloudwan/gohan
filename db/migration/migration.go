@@ -95,5 +95,8 @@ func Run(subcmd string, args []string) {
 		return
 	}
 
-	goose.Run(subcmd, db, migrationsPath, args...)
+	err = goose.Run(subcmd, db, migrationsPath, args...)
+	if err != nil {
+		fmt.Println(err)
+	}
 }
