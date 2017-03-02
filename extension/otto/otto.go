@@ -29,13 +29,13 @@ import (
 	"github.com/cloudwan/gohan/sync"
 
 	"github.com/ddliu/motto"
-	"github.com/robertkrimen/otto"
+	"github.com/xyproto/otto"
 
 	"reflect"
 	//Import otto underscore lib
 	"regexp"
 
-	_ "github.com/robertkrimen/otto/underscore"
+	_ "github.com/xyproto/otto/underscore"
 )
 
 var inits = []func(env *Environment){}
