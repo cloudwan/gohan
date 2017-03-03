@@ -47,14 +47,9 @@ func GetSchema(s *schema.Schema, authorization schema.Authorization) (result *sc
 	filteredSchema["required"] = schemaRequired
 
 	permission := []string{}
-	for _, action := range schema.AllActions {
-		if p, _ := manager.PolicyValidate(action, s.GetPluralURL(), authorization); p != nil {
-			permission = append(permission, action)
-			if p.Resource.Properties != nil {
-				clearPermission(action, schemaProperties, p.Resource.Properties)
-			}
-		} else {
-			clearPermission(action, schemaProperties, nil)
+	for _, a := range schema.AllActions {
+		if p, _ := manager.PolicyValidate(a, s.GetPluralURL(), authorization); p != nil {
+			permission = append(permission, a)
 		}
 	}
 	filteredSchema["permission"] = permission
@@ -65,43 +60,6 @@ func GetSchema(s *schema.Schema, authorization schema.Authorization) (result *sc
 		return
 	}
 	return
-}
-
-func clearPermission(action string, schemaProperties map[string]interface{}, skipProperties []interface{}) {
-	all := skipProperties == nil
-
-	skip := map[string]bool{}
-	if skipProperties != nil {
-		for _, v := range skipProperties {
-			skip[v.(string)] = true
-		}
-	}
-
-	for k, v := range schemaProperties {
-		m := v.(map[string]interface{})
-		if all || !skip[k] {
-			if _, ok := m["permission"]; !ok {
-				continue
-			}
-			m["permission"] = clear(action, m["permission"].([]interface{}))
-		}
-	}
-}
-
-func clear(action string, permission []interface{}) []interface{} {
-	idx := -1
-	for i, v := range permission {
-		if action == v.(string) {
-			idx = i
-			break
-		}
-	}
-
-	if idx != -1 {
-		permission = append(permission[:idx], permission[idx+1:]...)
-	}
-
-	return permission
 }
 
 func setupEditor(server *Server) {
