@@ -103,17 +103,13 @@ var _ = Describe("Sql", func() {
 			Expect(ok).To(BeTrue())
 		})
 
-		var selectAllQuery = func() string {
-			return fmt.Sprintf(
-				"SELECT %s FROM %s",
-				strings.Join(MakeColumns(s, s.GetDbTableName(), false), ", "),
-				s.GetDbTableName(),
-			)
-		}
-
 		Context("Without place holders", func() {
 			It("Returns resources", func() {
-				query := selectAllQuery()
+				query := fmt.Sprintf(
+					"SELECT %s FROM %s",
+					strings.Join(MakeColumns(s, s.GetDbTableName(), false), ", "),
+					s.GetDbTableName(),
+				)
 				results, err := tx.Query(s, query, []interface{}{})
 				Expect(err).ToNot(HaveOccurred())
 				Expect(len(results)).To(Equal(4))
@@ -176,68 +172,6 @@ var _ = Describe("Sql", func() {
 				}),
 				)
 			})
-		})
-
-		Context("Null values in resource", func() {
-
-			var extractSingleResource = func() *schema.Resource {
-				query := selectAllQuery()
-				results, err := tx.Query(s, query, []interface{}{})
-				Expect(err).To(BeNil())
-				Expect(results).To(HaveLen(4))
-
-				return results[0]
-			}
-
-			var nullableAttribute = "description"
-			var notNullableAttribute = "tenant_id"
-
-			Context("Updates", func() {
-				It("Setting not nullable field results in error", func() {
-					resource := extractSingleResource()
-					delete(resource.Data(), notNullableAttribute)
-
-					err := tx.Update(resource)
-					Expect(err).ToNot(BeNil())
-				})
-
-				It("Setting null to nullable field", func() {
-					resource := extractSingleResource()
-					delete(resource.Data(), nullableAttribute)
-
-					err := tx.Update(resource)
-					Expect(err).To(BeNil())
-					updatedResource, err := tx.Fetch(s, transaction.Filter{"id": resource.ID()})
-					Expect(err).To(BeNil())
-					Expect(updatedResource.Data()[nullableAttribute]).To(BeNil())
-				})
-			})
-
-			Context("Creates", func() {
-				It("Setting not nullable field results in error", func() {
-					resource := extractSingleResource()
-
-					resource.Data()["id"] = "id_1"
-					delete(resource.Data(), notNullableAttribute)
-
-					err := tx.Create(resource)
-					Expect(err).ToNot(BeNil())
-				})
-
-				It("Setting null to nullable field", func() {
-					resource := extractSingleResource()
-					newId := "id_1"
-					resource.Data()["id"] = newId
-					delete(resource.Data(), nullableAttribute)
-
-					err := tx.Create(resource)
-					Expect(err).To(BeNil())
-					createdResource, err := tx.Fetch(s, transaction.Filter{"id": newId})
-					Expect(err).To(BeNil())
-					Expect(createdResource.Data()[nullableAttribute]).To(BeNil())
-				})
-			})
-
 		})
 	})
 
