@@ -469,6 +469,7 @@ func (tx *Transaction) Create(resource *schema.Resource) error {
 	data := resource.Data()
 	q := sq.Insert(quote(s.GetDbTableName()))
 	for _, attr := range s.Properties {
+		//TODO(nati) support optional value
 		if _, ok := data[attr.ID]; ok {
 			handler := db.handler(&attr)
 			cols = append(cols, quote(attr.ID))
@@ -477,13 +478,6 @@ func (tx *Transaction) Create(resource *schema.Resource) error {
 				return fmt.Errorf("SQL Create encoding error: %s", err)
 			}
 			values = append(values, encoded)
-		} else {
-			if attr.Nullable {
-				cols = append(cols, quote(attr.ID))
-				values = append(values, nil)
-			} else {
-				return fmt.Errorf("%s attribute is not nullable", attr.ID)
-			}
 		}
 	}
 	q = q.Columns(cols...).Values(values...)
@@ -499,8 +493,8 @@ func (tx *Transaction) updateQuery(resource *schema.Resource) (sq.UpdateBuilder,
 	db := tx.db
 	data := resource.Data()
 	q := sq.Update(quote(s.GetDbTableName()))
-
 	for _, attr := range s.Properties {
+		//TODO(nati) support optional value
 		if _, ok := data[attr.ID]; ok {
 			handler := db.handler(&attr)
 			encoded, err := handler.encode(&attr, data[attr.ID])
@@ -508,15 +502,8 @@ func (tx *Transaction) updateQuery(resource *schema.Resource) (sq.UpdateBuilder,
 				return q, fmt.Errorf("SQL Update encoding error: %s", err)
 			}
 			q = q.Set(quote(attr.ID), encoded)
-		} else {
-			if attr.Nullable {
-				q = q.Set(quote(attr.ID), nil)
-			} else {
-				return q, fmt.Errorf("%s attribute is not nullable", attr.ID)
-			}
 		}
 	}
-
 	if s.Parent != "" {
 		q = q.Set(s.ParentSchemaPropertyID(), resource.ParentID())
 	}

@@ -35,17 +35,17 @@ gohan_register_handler("custom_action", function (context) {
   var new_network = {
     "id": context.id,
     "name": "Net1",
-    "status": "ACTIVE",
-    "shared": false,
-    "admin_state_up": true
+    "status": "ACTIVE"
   };
   gohan_db_create(tx, "network", new_network);
   tx.Commit();
   tx.Close();
 
   tx = gohan_db_transaction();
-  new_network.name = "Net2";
-  new_network.status = "DOWN";
+  var new_network = {
+    "id": context.id,
+    "status": "DOWN"
+  };
   gohan_db_update(tx, "network", new_network);
   tx.Commit();
   tx.Close();
