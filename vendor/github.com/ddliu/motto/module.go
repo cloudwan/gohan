@@ -6,7 +6,7 @@ package motto
 
 import (
 	"errors"
-	"github.com/xyproto/otto"
+	"github.com/robertkrimen/otto"
 	"io/ioutil"
 	"path/filepath"
 )

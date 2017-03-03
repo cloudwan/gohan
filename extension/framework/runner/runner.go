@@ -21,9 +21,9 @@ import (
 	"os"
 	"regexp"
 
-	"github.com/xyproto/otto"
-	"github.com/xyproto/otto/ast"
-	"github.com/xyproto/otto/parser"
+	"github.com/robertkrimen/otto"
+	"github.com/robertkrimen/otto/ast"
+	"github.com/robertkrimen/otto/parser"
 
 	l "github.com/cloudwan/gohan/log"
 )

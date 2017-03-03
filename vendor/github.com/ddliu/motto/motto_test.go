@@ -5,7 +5,7 @@
 package motto
 
 import (
-	"github.com/xyproto/otto"
+	"github.com/robertkrimen/otto"
 	"io/ioutil"
 	"testing"
 )

@@ -1,3 +1,3 @@
 #!/bin/bash
-go get github.com/xyproto/godocdown/godocdown
+go get github.com/robertkrimen/godocdown/godocdown
 godocdown > README.md

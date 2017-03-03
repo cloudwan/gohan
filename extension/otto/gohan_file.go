@@ -17,7 +17,7 @@ package otto
 
 import (
 	"fmt"
-	"github.com/xyproto/otto"
+	"github.com/robertkrimen/otto"
 	"io/ioutil"
 	"os"
 	"os/exec"

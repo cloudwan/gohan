@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/xyproto/otto"
+	"github.com/robertkrimen/otto"
 )
 
 // Globally registered modules
