@@ -18,7 +18,7 @@ package otto
 import (
 	"fmt"
 
-	"github.com/xyproto/otto"
+	"github.com/robertkrimen/otto"
 
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/schema"

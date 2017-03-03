@@ -17,7 +17,7 @@ package otto
 
 import (
 	"github.com/cloudwan/gohan/sync"
-	"github.com/xyproto/otto"
+	"github.com/robertkrimen/otto"
 	"time"
 )
 

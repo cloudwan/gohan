@@ -16,9 +16,9 @@
 package otto
 
 import (
-	"github.com/xyproto/otto"
+	"github.com/robertkrimen/otto"
 	//Import otto underscore lib
-	_ "github.com/xyproto/otto/underscore"
+	_ "github.com/robertkrimen/otto/underscore"
 
 	l "github.com/cloudwan/gohan/log"
 )
