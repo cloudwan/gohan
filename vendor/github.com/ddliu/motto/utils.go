@@ -53,7 +53,7 @@ func parsePackageEntryPoint(path string) (string, error) {
 	return info.Main, nil
 }
 
-// Throw a javascript error, see https://github.com/robertkrimen/otto/issues/17
+// Throw a javascript error, see https://github.com/xyproto/otto/issues/17
 func jsException(vm *Motto, errorType, msg string) {
 	value, _ := vm.Call("new "+errorType, nil, msg)
 	panic(value)

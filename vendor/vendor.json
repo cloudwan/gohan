@@ -404,43 +404,6 @@
 			"revisionTime": "2016-11-18T19:16:01Z"
 		},
 		{
-			"checksumSHA1": "UCCSwlUqouKcBVbMOy9zkTH130o=",
-			"path": "github.com/robertkrimen/otto",
-			"revision": "b283580aeaa4e7bd6544c7e6325f438ceef11b2c",
-			"revisionTime": "2016-04-25T06:16:03Z"
-		},
-		{
-			"checksumSHA1": "e+fi5cg957boF24g9TfhAPw/K1c=",
-			"path": "github.com/robertkrimen/otto/ast",
-			"revision": "c2346f4ada7cdbda7f3523c87d986c91d4677b98"
-		},
-		{
-			"checksumSHA1": "Lhq4XXJcLqX1M2AayFiC1vigOOY=",
-			"path": "github.com/robertkrimen/otto/dbg",
-			"revision": "c2346f4ada7cdbda7f3523c87d986c91d4677b98"
-		},
-		{
-			"checksumSHA1": "IyD638BE79e40ir0bF6+fN9T0LY=",
-			"path": "github.com/robertkrimen/otto/file",
-			"revision": "c2346f4ada7cdbda7f3523c87d986c91d4677b98"
-		},
-		{
-			"checksumSHA1": "ypXxDlr/Dt2kBz8juCFhKQUbPyU=",
-			"path": "github.com/robertkrimen/otto/parser",
-			"revision": "c2346f4ada7cdbda7f3523c87d986c91d4677b98"
-		},
-		{
-			"checksumSHA1": "7J/7NaYRqKhBvZ+dTIutsEoEgFw=",
-			"path": "github.com/robertkrimen/otto/registry",
-			"revision": "b283580aeaa4e7bd6544c7e6325f438ceef11b2c",
-			"revisionTime": "2016-04-25T06:16:03Z"
-		},
-		{
-			"checksumSHA1": "/jMXYuXycBpTqWhRyJ2xsqvHvQI=",
-			"path": "github.com/robertkrimen/otto/token",
-			"revision": "c2346f4ada7cdbda7f3523c87d986c91d4677b98"
-		},
-		{
 			"checksumSHA1": "SGdxr5J2yDoVinCTo6ag2cDpc5g=",
 			"comment": "v1-2-g67823cd",
 			"path": "github.com/robfig/cron",
@@ -478,6 +441,66 @@
 			"path": "github.com/xeipuuv/gojsonschema",
 			"revision": "93e72a773fade158921402d6a24c819b48aba29d",
 			"revisionTime": "2016-03-23T03:03:13Z"
+		},
+		{
+			"checksumSHA1": "0Zpy2bTFm4U0zUBKaNbO1c0NM9o=",
+			"path": "github.com/xyproto/otto",
+			"revision": "71833bbd24b84a14b8540f648d2ff6ab7afd682e",
+			"revisionTime": "2017-02-24T12:22:48Z"
+		},
+		{
+			"checksumSHA1": "B1mDAQwtvXFbQTNyID9N25a2AeY=",
+			"path": "github.com/xyproto/otto/ast",
+			"revision": "71833bbd24b84a14b8540f648d2ff6ab7afd682e",
+			"revisionTime": "2017-02-24T12:22:48Z"
+		},
+		{
+			"checksumSHA1": "LHV5qggaQgqUDnb0IU7NGSBDYDA=",
+			"path": "github.com/xyproto/otto/dbg",
+			"revision": "71833bbd24b84a14b8540f648d2ff6ab7afd682e",
+			"revisionTime": "2017-02-24T12:22:48Z"
+		},
+		{
+			"checksumSHA1": "MEJKiFtdYq7HkXI8JGAZpA2IkWU=",
+			"path": "github.com/xyproto/otto/file",
+			"revision": "71833bbd24b84a14b8540f648d2ff6ab7afd682e",
+			"revisionTime": "2017-02-24T12:22:48Z"
+		},
+		{
+			"checksumSHA1": "z7ckxWy4ST+H5yeXrShn0cfqDos=",
+			"path": "github.com/xyproto/otto/parser",
+			"revision": "71833bbd24b84a14b8540f648d2ff6ab7afd682e",
+			"revisionTime": "2017-02-24T12:22:48Z"
+		},
+		{
+			"checksumSHA1": "r46GB7/Q0dENPmj0B8rAzGxJDS4=",
+			"path": "github.com/xyproto/otto/registry",
+			"revision": "71833bbd24b84a14b8540f648d2ff6ab7afd682e",
+			"revisionTime": "2017-02-24T12:22:48Z"
+		},
+		{
+			"checksumSHA1": "HqWGbURyNuUXT8mzQ9iwf4UzynY=",
+			"path": "github.com/xyproto/otto/token",
+			"revision": "71833bbd24b84a14b8540f648d2ff6ab7afd682e",
+			"revisionTime": "2017-02-24T12:22:48Z"
+		},
+		{
+			"checksumSHA1": "WmPp0rSV1Z3jIAr9F7gp1LEtaH4=",
+			"path": "github.com/xyproto/otto/underscore",
+			"revision": "71833bbd24b84a14b8540f648d2ff6ab7afd682e",
+			"revisionTime": "2017-02-24T12:22:48Z"
+		},
+		{
+			"checksumSHA1": "0VUxqpCcl+N2zRRpuCkYMIc8Wxg=",
+			"path": "github.com/xyproto/p5r",
+			"revision": "195ef59204e2c80350bdd1986fd1ec8a92525609",
+			"revisionTime": "2017-03-04T08:47:29Z"
+		},
+		{
+			"checksumSHA1": "n6trKPuLdAT7YlcuISmeYQ2DK1E=",
+			"path": "github.com/xyproto/p5r/syntax",
+			"revision": "195ef59204e2c80350bdd1986fd1ec8a92525609",
+			"revisionTime": "2017-03-04T08:47:29Z"
 		},
 		{
 			"checksumSHA1": "HSzEA32rVv/GeWvRLRQXXGXTPTA=",
