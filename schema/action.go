@@ -23,10 +23,11 @@ type Action struct {
 	Description  string
 	InputSchema  map[string]interface{}
 	OutputSchema map[string]interface{}
+	Parameters   map[string]interface{}
 }
 
 // NewAction create Action
-func NewAction(id, method, path, description string, inputSchema, outputSchema map[string]interface{}) Action {
+func NewAction(id, method, path, description string, inputSchema, outputSchema, parameters map[string]interface{}) Action {
 	return Action{
 		ID:           id,
 		Method:       method,
@@ -34,6 +35,7 @@ func NewAction(id, method, path, description string, inputSchema, outputSchema m
 		Description:  description,
 		InputSchema:  inputSchema,
 		OutputSchema: outputSchema,
+		Parameters:   parameters,
 	}
 }
 
@@ -45,5 +47,6 @@ func NewActionFromObject(id string, rawData interface{}) (Action, error) {
 	description, _ := actionData["description"].(string)
 	inputSchema, _ := actionData["input"].(map[string]interface{})
 	outputSchema, _ := actionData["output"].(map[string]interface{})
-	return NewAction(id, method, path, description, inputSchema, outputSchema), nil
+	parameters, _ := actionData["parameters"].(map[string]interface{})
+	return NewAction(id, method, path, description, inputSchema, outputSchema, parameters), nil
 }

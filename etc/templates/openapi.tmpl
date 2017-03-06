@@ -78,7 +78,7 @@
                     "application/json"
                 ],
                 {% with has_id=action.Path | swagger_has_id_param put_or_post=action.Method | lower == "post" or action.Method | lower == "put" %}
-                {% with has_params_in_get=action.Method | lower == "get" and action.InputSchema | length != 0 %}
+                {% with has_params_in_get=action.Method | lower == "get" and action.Parameters | length != 0 %}
                 "parameters": [ {% if has_id %}
                 {
                     "name": "id",
@@ -87,7 +87,7 @@
                     "required": true,
                     "type": "string"
                 }{% endif %}{% if has_id and (has_params_in_get or put_or_post) %}, {% endif %} {% if has_params_in_get %}
-                {% for key, value in action.InputSchema %}
+                {% for key, value in action.Parameters %}
                 {
                     "name": "{{ key }}",
                     "in": "query",
@@ -101,7 +101,7 @@
                     "description": "{{ action.ID }} request object",
                     "required": true,
                     "schema":
-                    {% with schema=action.InputSchema | swagger: "                    " %}
+                    {% with schema=action.Parameters | swagger: "                    " %}
                     {% if schema == "null" %}
                     {} {% else %} {{schema}} {% endif %}{% endwith %}
                 }{% endif %} {% endwith %}
@@ -282,7 +282,7 @@
                     "application/json"
                 ],
                 {% with has_id=action.Path | swagger_has_id_param put_or_post=action.Method | lower == "post" or action.Method | lower == "put" %}
-                {% with has_params_in_get=action.Method | lower == "get" and action.InputSchema | length != 0 %}
+                {% with has_params_in_get=action.Method | lower == "get" and action.Parameters | length != 0 %}
                 "parameters": [ {% if has_id %}
                 {
                     "name": "id",
@@ -291,7 +291,7 @@
                     "required": true,
                     "type": "string"
                 }{% endif %}{% if has_id and (has_params_in_get or put_or_post) %}, {% endif %} {% if has_params_in_get %}
-                {% for key, value in action.InputSchema %}
+                {% for key, value in action.Parameters %}
                 {
                     "name": "{{ key }}",
                     "in": "query",
@@ -305,7 +305,7 @@
                     "description": "{{ action.ID }} request object",
                     "required": true,
                     "schema":
-                    {% with schema=action.InputSchema | swagger: "                    " %}
+                    {% with schema=action.Parameters | swagger: "                    " %}
                     {% if schema == "null" %}
                     {} {% else %} {{schema}} {% endif %}{% endwith %}
                 }{% endif %} {% endwith %}
