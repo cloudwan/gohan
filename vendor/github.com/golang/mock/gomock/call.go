@@ -22,23 +22,23 @@ import (
 
 // Call represents an expected call to a mock.
 type Call struct {
-	t                  TestReporter  // for triggering test failures on invalid call setup
+	t TestReporter // for triggering test failures on invalid call setup
 
-	receiver           interface{}   // the receiver of the method call
-	method             string        // the name of the method
-	args               []Matcher     // the args
-	rets               []interface{} // the return values (if any)
+	receiver interface{}   // the receiver of the method call
+	method   string        // the name of the method
+	args     []Matcher     // the args
+	rets     []interface{} // the return values (if any)
 
-	preReqs            []*Call       // prerequisite calls
+	preReqs []*Call // prerequisite calls
 
-					 // Expectations
+	// Expectations
 	minCalls, maxCalls int
 
-	numCalls           int           // actual number made
+	numCalls int // actual number made
 
-					 // Actions
-	doFunc             reflect.Value
-	setArgs            map[int]reflect.Value
+	// Actions
+	doFunc  reflect.Value
+	setArgs map[int]reflect.Value
 }
 
 // AnyTimes allows the expectation to be called 0 or more times
@@ -265,6 +265,6 @@ func (c *Call) methodType() reflect.Type {
 // InOrder declares that the given calls should occur in order.
 func InOrder(calls ...*Call) {
 	for i := 1; i < len(calls); i++ {
-		calls[i].After(calls[i - 1])
+		calls[i].After(calls[i-1])
 	}
 }

@@ -90,7 +90,6 @@ func NewPropertyFromObj(id string, rawTypeData interface{}, required bool) (*Pro
 	}
 	sqlType, _ := typeData["sql"].(string)
 	indexed, _ := typeData["indexed"].(bool)
-
 	Property := NewProperty(id, title, description, typeID, format, relation, relationColumn, relationProperty,
 		sqlType, unique, nullable, cascade, properties, defaultValue, indexed)
 	return &Property, nil

@@ -39,9 +39,9 @@ func (cs callSet) Remove(call *Call) {
 		if c == call {
 			// quick removal; we don't need to maintain call order
 			if len(sl) > 1 {
-				sl[i] = sl[len(sl) - 1]
+				sl[i] = sl[len(sl)-1]
 			}
-			methodMap[call.method] = sl[:len(sl) - 1]
+			methodMap[call.method] = sl[:len(sl)-1]
 			break
 		}
 	}
