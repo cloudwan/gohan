@@ -410,6 +410,12 @@
 			"revision": "67823cd24dece1b04cced3a0a0b3ca2bc84d875e"
 		},
 		{
+			"checksumSHA1": "2pomhK12VRaro+l83VqZ6C3zoSw=",
+			"path": "github.com/serenize/snaker",
+			"revision": "543781d2b79bd95c51ffe70e70a55c946ca211ff",
+			"revisionTime": "2016-11-23T06:43:35Z"
+		},
+		{
 			"checksumSHA1": "adyFoZ6JIofMdQK4bRXKD0qeDGY=",
 			"path": "github.com/streadway/amqp",
 			"revision": "1aedb1f9e106db5d7403222313a0504a06def5b3"
