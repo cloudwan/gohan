@@ -28,7 +28,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/robertkrimen/otto"
+	"github.com/xyproto/otto"
 	"github.com/twinj/uuid"
 
 	"github.com/cloudwan/gohan/schema"
