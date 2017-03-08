@@ -141,23 +141,36 @@ func init() {
 		}
 
 		err = env.Load("<Gohan built-ins>", `
-		var gohan_handler = {}
+		var gohan_handler = {};
+		var gohan_caller = "";
+		function gohan_add_dots(str, lim){
+  		  if(str.length > lim){
+		    str = str.substring(0,lim) + "...";
+		  }
+		  return str;
+		}
 		function gohan_register_handler(event_type, func){
 		  if(_.isUndefined(gohan_handler[event_type])){
 		    gohan_handler[event_type] = [];
 		  }
-		  gohan_handler[event_type].push(func)
+		  gohan_caller = gohan_uuid();
+		  gohan_handler[event_type].push({fn:func,uuid:gohan_caller})
+		  gohan_log_debug("REG: type = '" + event_type.toString() +
+				"'; index = " + (gohan_handler[event_type].length - 1).toString() +
+				"; handler = '" + gohan_add_dots(
+					func.toString().replace(/\s\s+/g, '').replace("%", "%%"), 60) + "'")
 		}
-
 		function gohan_handle_event(event_type, context){
 		  if(_.isUndefined(gohan_handler[event_type])){
 		    return;
 		  }
-
 		  for (var i = 0; i < gohan_handler[event_type].length; ++i) {
 		    try {
 		      var old_module = gohan_log_module_push(event_type);
-		      gohan_handler[event_type][i](context);
+		      gohan_caller = gohan_handler[event_type][i].uuid;
+		      gohan_log_debug("CALL: type = '" + event_type.toString() + "'")
+		      gohan_handler[event_type][i].fn(context);
+		      gohan_log_debug("RET: type = '" + event_type.toString() + "'")
 		      //backwards compatibility
 		      if (!_.isUndefined(context.response_code)) {
 		        throw new CustomException(context.response, context.response_code);
