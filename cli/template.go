@@ -11,9 +11,12 @@ import (
 	"github.com/cloudwan/gohan/util"
 	"github.com/codegangsta/cli"
 
-	"github.com/flosch/pongo2"
 	"io/ioutil"
 	"strings"
+
+	"github.com/flosch/pongo2"
+
+	"github.com/serenize/snaker"
 )
 
 func deleteGohanExtendedProperties(node map[string]interface{}) {
@@ -111,10 +114,38 @@ func hasIdParam(in *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.E
 	return pongo2.AsValue(strings.Contains(i, ":id")), nil
 }
 
+func SnakeToCamel(in *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
+	i := in.String()
+	return pongo2.AsValue(snaker.SnakeToCamel(i)), nil
+}
+
+func toGoType(in *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
+	i := in.String()
+	switch in.String() {
+	case "string":
+		return pongo2.AsValue("null.String"), nil
+	case "number":
+		// #TODO support more format
+		return pongo2.AsValue(""), nil
+	case "boolean":
+		// #TODO support more format
+		return pongo2.AsValue("null.Int8"), nil
+	case "object":
+		// #TODO support more format
+		return pongo2.AsValue("interface{}"), nil
+	case "array":
+		// #TODO support more format
+		return pongo2.AsValue("interface{}"), nil
+	}
+	return pongo2.AsValue(strings.Contains(i, ":id")), nil
+}
+
 func init() {
 	pongo2.RegisterFilter("swagger", toSwagger)
 	pongo2.RegisterFilter("swagger_path", toSwaggerPath)
 	pongo2.RegisterFilter("swagger_has_id_param", hasIdParam)
+	pongo2.RegisterFilter("to_go_type", toGoType)
+	pongo2.RegisterFilter("snake_to_camel", SnakeToCamel)
 }
 
 func doTemplate(c *cli.Context) {
@@ -157,7 +188,12 @@ func doTemplate(c *cli.Context) {
 	}
 	policies := manager.Policies()
 	policy := c.String("policy")
-	schemasPolicy, schemasCRUDPolicy := filterSchemasForPolicy(policy, policies, schemas)
+	var schemasPolicy, schemasCRUDPolicy []*schema.Schema
+	if policy == "" {
+		schemasPolicy, schemasCRUDPolicy = schemas, schemas
+	} else {
+		schemasPolicy, schemasCRUDPolicy = filterSchemasForPolicy(policy, policies, schemas)
+	}
 	if c.IsSet("split-by-resource-group") {
 		saveAllResources(schemasPolicy, schemasCRUDPolicy, tpl)
 		return
@@ -291,7 +327,7 @@ func getTemplateCommand() cli.Command {
 			cli.StringFlag{Name: "config-file", Value: "gohan.yaml", Usage: "Server config File"},
 			cli.StringFlag{Name: "template, t", Value: "", Usage: "Template File"},
 			cli.StringFlag{Name: "split-by-resource-group", Value: "", Usage: "Group by resource"},
-			cli.StringFlag{Name: "policy", Value: "admin", Usage: "Policy"},
+			cli.StringFlag{Name: "policy", Value: "", Usage: "Policy"},
 		},
 		Action: doTemplate,
 	}

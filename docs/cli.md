@@ -364,3 +364,142 @@ Gohan will read this information and update the database accordingly.
 Any monitoring updates made when the state version does not yet equal
 the config version or the version in the JSON data doesn't match with
 the config version will be ignored.
+
+## Migrate
+
+gohan migrate command is a simple wrapper for goose command.
+Using gohan migrate command, you can use gohan configuraion to manage 
+goose based db migraion.
+gohan create command will genenarete initial goose file using schema.
+
+``` shell
+NAME:
+   gohan migrate - Manage migrations
+
+USAGE:
+   gohan migrate [global options] command [command options] [arguments...]
+
+VERSION:
+   a71c59f8f5e0f0b17957e1c9901e89b99a93b81d
+
+COMMANDS:
+   up			Migrate to the most recent version
+   up-by-one		Migrate one version up
+   create		Create a template for a new migration
+   initial, init	Generate initial goose migration script from schema
+   down			Migrate to the oldest version
+   redo			Migrate one version back
+   status		Display migration status
+   version		Display migration version
+   help, h		Shows a list of commands or help for one command
+
+GLOBAL OPTIONS:
+   --help, -h	show help
+```
+
+## Generate
+
+gohan generate command generates server side code.
+The idea is to genearate code which is fastest as possible.
+
+- Use echo framework which is fastest web framework in golang in early 2017
+- Trying to minimize use of interface
+- Use sqlboilar OR mapping framework
+[SQLBoilar](https://github.com/vattle/sqlboiler) SQLBoilar framework generates
+ORM code from table schema. This is fastest ORM solution for golang in early 2017 accoding to benchmark.
+- Generate JSON marshal function
+
+You can also change generated code providing custom template.
+
+``` shell
+NAME:
+   generate - Generate ServerSide Code
+
+USAGE:
+   command generate [command options] [arguments...]
+
+OPTIONS:
+   --template, -t "embed://etc/templates/server.tmpl"	Application template path
+   --config-file, -c "./gohan.yaml"			Gohan config file
+   --output, -o "."					Dir of output
+   --package, -p "gen"					Package Name
+
+```
+
+This command requires mysql setup, and generated code would work with only MySQL.
+
+### Step1
+
+Setup mysql
+
+### Step2
+
+Prepare gohan.yaml with MySQL configuration
+
+## Step3
+
+Prepare SQLBoiler 
+
+``` toml
+blacklist=["goose_db_version"]
+schema="myschema"
+pkgname="gen"
+output="gen"
+no-tests=true
+no-hooks=true
+[mysql]
+  dbname="gohan"
+  host="localhost"
+  port=3306
+  user="root"
+  pass="password"
+  sslmode="false"
+```
+
+## Step3
+
+Prepare main.go file
+
+``` go
+package main
+
+import (
+	"./gen"
+
+	_ "github.com/go-sql-driver/mysql"
+)
+
+func main() {
+	configFile := "./gohan.yaml"
+	gen.RunServer(configFile, nil)
+}
+
+```
+
+## Step4
+
+You can add custom logic by providing own controller struct using embed struct.
+
+``` go
+type Controller struct {
+	gen.BaseController
+	DB *sql.DB
+}
+
+func (controller *Controller) CreateUser(c echo.Context) error {
+    // Custom Logic
+}
+//Route setup routes
+func (controller *Controller) Routes() map[string]*gen.Handler {
+	routes := controller.BaseController.Routes()
+	routes["/ccc/users"].POST = controller.CreateUser
+	return routes
+}
+
+//Route setup routes
+func (controller *Controller) SetDB(db *sql.DB) {
+	controller.BaseController.SetDB(db)
+	controller.DB = db
+}
+
+```

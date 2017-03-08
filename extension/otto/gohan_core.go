@@ -27,7 +27,7 @@ import (
 	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
-	"github.com/robertkrimen/otto"
+	"github.com/xyproto/otto"
 )
 
 var log = l.NewLogger()
