@@ -33,8 +33,8 @@ func init() {
 		vm := env.VM
 
 		builtins := map[string]interface{}{
-			"gohan_log": func(call otto.FunctionCall) otto.Value {
-				VerifyCallArguments(&call, "gohan_log", 3)
+			"gohan_log_impl": func(call otto.FunctionCall) otto.Value {
+				VerifyCallArguments(&call, "gohan_log_impl", 4)
 
 				// TODO:
 				// Taking this as an argument is a workaround
@@ -54,12 +54,23 @@ func init() {
 				}
 				level := l.Level(intLevel)
 
-				message, err := GetString(call.Argument(2))
+				caller, err := GetString(call.Argument(2))
+				if err != nil {
+					ThrowOttoException(&call, "Caller: %v", err)
+				}
+
+				message, err := GetString(call.Argument(3))
 				if err != nil {
 					ThrowOttoException(&call, "Message: %v", err)
 				}
 
-				logGeneral(logger, level, message)
+				// if caller is non-empty, add extra information about the calling handler
+				if caller != "" {
+					logGeneral(logger, level, "[" + caller + "] " + message)
+				} else {
+					// otherwise, do not put empty information about the caller
+					logGeneral(logger, level, message)
+				}
 
 				return otto.Value{}
 			},
@@ -90,6 +101,10 @@ func init() {
 
 		function gohan_log_module_restore(old_module){
 		    LOG_MODULE = old_module;
+		}
+
+		function gohan_log(module, level, msg) {
+		    gohan_log_impl(module, level, gohan_caller, msg);
 		}
 
 		function gohan_log_critical(msg) {
