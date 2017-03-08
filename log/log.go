@@ -80,7 +80,12 @@ var (
 
 // getModuleName returns module name.
 func getModuleName() string {
-	pc, _, _, ok := runtime.Caller(1)
+	// 0 - this function
+	// 1 - NewLogger
+	// 2 - calling module
+	const SKIP_STACK_FRAMES = 2
+
+	pc, _, _, ok := runtime.Caller(SKIP_STACK_FRAMES)
 	if !ok {
 		return defaultLoggerName
 	}
