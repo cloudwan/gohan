@@ -30,6 +30,27 @@ function testSingleReturnSingleCall() {
   }
 }
 
+function testSingleReturnSingleCallDeepEqual() {
+    var mock_response = "OK";
+    var expectedData = {
+      we: {
+        need: {
+              to: {
+                  go: ["deeper"]
+              }
+          }
+      }
+    };
+    var we = {};
+    we.need = {to: {go: ["deeper"]}};
+    we.nope = undefined;
+    gohan_http.Expect("GET", "http://www.xyz.com", {}, expectedData).Return(mock_response);
+    var response = gohan_http("GET", "http://www.xyz.com", {}, {we: we});
+    if (response !== mock_response) {
+        Fail();
+    }
+}
+
 function testSingleReturnMultipleCalls() {
   var mock_response = "OK";
   gohan_http.Expect("GET", "http://www.xyz.com", {}, {}).Return(mock_response);
