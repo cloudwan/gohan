@@ -297,10 +297,11 @@ var _ = Describe("Runner", func() {
 			})
 
 			It("Should work", func() {
-				Expect(errors).To(HaveLen(4))
+				Expect(errors).To(HaveLen(5))
 				Expect(errors).To(HaveKeyWithValue(
 					"testUnexpectedCall", MatchError(ContainSubstring("Unexpected call"))))
 				Expect(errors).To(HaveKeyWithValue("testSingleReturnSingleCall", BeNil()))
+				Expect(errors).To(HaveKeyWithValue("testSingleReturnSingleCallDeepEqual", BeNil()))
 				Expect(errors).To(HaveKeyWithValue(
 					"testSingleReturnMultipleCalls", MatchError(ContainSubstring("Unexpected call"))))
 				Expect(errors).To(HaveKeyWithValue(
