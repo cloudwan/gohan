@@ -16,7 +16,7 @@
 package otto
 
 import (
-	"github.com/robertkrimen/otto"
+	"github.com/xyproto/otto"
 )
 
 func init() {
