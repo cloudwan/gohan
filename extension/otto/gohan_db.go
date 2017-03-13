@@ -448,7 +448,7 @@ func prepareListResources(schemaID string, key string, limit uint64, offset uint
 	}
 
 	if key != "" {
-		paginator, err = pagination.NewPaginator(schema, key, "", limit, offset)
+		paginator, err = pagination.NewPaginator(schema, key, "", limit, offset, nil)
 		if err != nil {
 			return nil, nil, fmt.Errorf("Error during gohan_db_list: %s", err.Error())
 		}
@@ -673,6 +673,6 @@ func GohanDbMakeColumns(schemaID string) ([]string, error) {
 	if err != nil {
 		return []string{}, err
 	}
-	results := sql.MakeColumns(schema, schema.GetDbTableName(), false)
+	results := sql.MakeColumns(schema, schema.GetDbTableName(), nil, false)
 	return results, nil
 }

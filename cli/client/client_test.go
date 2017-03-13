@@ -610,6 +610,13 @@ var _ = Describe("CLI functions", func() {
 					Expect(argsMap).To(Equal(argsExpected))
 				})
 
+				It("Should parse arguments successfully - handle fields", func() {
+					args = append(args, "--fields", "field1,field2")
+					argsMap, err := gohanClientCLI.handleArguments(args, s)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(argsMap).To(Equal(argsExpected))
+				})
+
 				It("Should show error - wrong arguments format", func() {
 					args = append(args, "--windows")
 					argsMap, err := getArgsAsMap(args, s)
@@ -738,6 +745,28 @@ var _ = Describe("CLI functions", func() {
 `))
 					})
 
+					It("Should format single resource with filtered columns successfully", func() {
+						rawResult := map[string]interface{}{
+							"resource": map[string]interface{}{
+								"cidr":  "cidr",
+								"mac":   "mac",
+								"id":    nil,
+								"port":  nil,
+								"regex": nil,
+							},
+						}
+						gohanClientCLI.opts.fields = []string{"cidr", "mac"}
+						result := gohanClientCLI.formatOutput(netSchema, rawResult)
+						Expect(result).To(Equal(
+							`+----------+-------+
+| PROPERTY | VALUE |
++----------+-------+
+| CIDR     | cidr  |
+| MAC      | mac   |
++----------+-------+
+`))
+					})
+
 					It("Should format multiple resources successfully", func() {
 						rawResult := map[string]interface{}{
 							"resources": []interface{}{
@@ -811,6 +840,45 @@ var _ = Describe("CLI functions", func() {
 |       | mac2 |       | port2 |        |
 | cidr3 |      | test3 |       | regex3 |
 +-------+------+-------+-------+--------+
+`))
+					})
+
+					It("Should format multiple resources with filtered columns successfully", func() {
+						rawResult := map[string]interface{}{
+							"resources": []interface{}{
+								map[string]interface{}{
+									"cidr":  "cidr1",
+									"mac":   "mac1",
+									"id":    nil,
+									"port":  nil,
+									"regex": nil,
+								},
+								map[string]interface{}{
+									"cidr":  "cidr2",
+									"mac":   "mac2",
+									"id":    nil,
+									"port":  nil,
+									"regex": nil,
+								},
+								map[string]interface{}{
+									"cidr":  "cidr3",
+									"mac":   "mac3",
+									"id":    nil,
+									"port":  nil,
+									"regex": nil,
+								},
+							},
+						}
+						gohanClientCLI.opts.fields = []string{"cidr", "mac"}
+						result := gohanClientCLI.formatOutput(netSchema, rawResult)
+						Expect(result).To(Equal(
+							`+-------+------+
+| CIDR  | MAC  |
++-------+------+
+| cidr1 | mac1 |
+| cidr2 | mac2 |
+| cidr3 | mac3 |
++-------+------+
 `))
 					})
 
