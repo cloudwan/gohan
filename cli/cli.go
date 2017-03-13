@@ -108,6 +108,7 @@ ARGUMENTS:
             Special named arguments:
                 --output-format [json/table] - specifies in which format results should be shown
                 --verbosity [0-3] - specifies how much debug info Gohan Client should show (default 0)
+                --fields [field1,field2] - specifies which fields should be visible (default all)
         - unnamed:
             they are in 'value' format and should be specified at the end of the line,
             after all named arguments. At the moment only 'id' argument in 'show',
@@ -137,6 +138,7 @@ CONFIGURATION:
         * Cache path (default - /tmp/.cached-gohan-schemas) - GOHAN_CACHE_PATH
         * In which format results should be shown, see --output-format - GOHAN_OUTPUT_FORMAT
         * How much debug info Gohan Client should show, see --verbosity - GOHAN_VERBOSITY
+        * Which columns should be visible in results, see --fields - GOHAN_FIELDS
     Additional options for Keystone v3 only:
         * Keystone domain name or domain id - OS_DOMAIN_NAME or OS_DOMAIN_ID
 `,

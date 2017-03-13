@@ -577,16 +577,38 @@ func makeAliasTableName(tableName string, property schema.Property) string {
 	return fmt.Sprintf("%s__%s", tableName, property.RelationProperty)
 }
 
+//normField returns field prefixed with schema ID.
+func normField(field, schemaID string) string {
+	if strings.Contains(field, ".") {
+		return field
+	}
+
+	return fmt.Sprintf("%s.%s", schemaID, field)
+}
+
 // MakeColumns generates an array that has Gohan style colmun names
-func MakeColumns(s *schema.Schema, tableName string, join bool) []string {
-	var cols []string
+func MakeColumns(s *schema.Schema, tableName string, fields []string, join bool) []string {
 	manager := schema.GetManager()
+
+	var include map[string]bool
+	if fields != nil {
+		include = make(map[string]bool)
+		for _, f := range fields {
+			include[f] = true
+		}
+	}
+
+	var cols []string
 	for _, property := range s.Properties {
+		if include != nil && !include[normField(property.ID, s.ID)] {
+			continue
+		}
+
 		cols = append(cols, makeColumn(tableName, property)+" as "+quote(makeColumnID(tableName, property)))
 		if property.RelationProperty != "" && join {
 			relatedSchema, _ := manager.Schema(property.Relation)
 			aliasTableName := makeAliasTableName(tableName, property)
-			cols = append(cols, MakeColumns(relatedSchema, aliasTableName, true)...)
+			cols = append(cols, MakeColumns(relatedSchema, aliasTableName, fields, true)...)
 		}
 	}
 	return cols
@@ -670,7 +692,17 @@ func decodeState(data map[string]interface{}, state *transaction.ResourceState) 
 }
 
 func buildSelect(s *schema.Schema, filter transaction.Filter, pg *pagination.Paginator, join bool) (string, []interface{}, error) {
-	cols := MakeColumns(s, s.GetDbTableName(), join)
+	var fields []string
+	if pg != nil {
+		fields = pg.Fields
+	}
+	if fields != nil {
+		for i, f := range fields {
+			fields[i] = normField(f, s.ID)
+		}
+	}
+
+	cols := MakeColumns(s, s.GetDbTableName(), fields, join)
 	q := sq.Select(cols...).From(quote(s.GetDbTableName()))
 	q, err := addFilterToQuery(s, q, filter, join)
 	if err != nil {
