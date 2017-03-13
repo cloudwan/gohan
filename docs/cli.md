@@ -212,12 +212,16 @@ In addition to resource related commands, some formatting commands are available
       +-------------+--------------------------------------+
 ```
 
-* :code:`--verbosity [0-3]` - specifies how much information Gohan Client should show - handy for dubugging. Can also be specified with :code:`GOHAN_VERBOSITY` environment variable.
+* :code:`--verbosity [0-3]` - specifies how much information Gohan Client should show - handy for debugging. Can also be specified with :code:`GOHAN_VERBOSITY` environment variable.
 
   - :code:`0` - no additional debug information is shown
   - :code:`1` - Sent request url and method is shown
   - :code:`2` - same as level :code:`1` + request & response body
   - :code:`3` - same as level :code:`2` + used auth token
+
+
+* :code:`--fields [field1,field2,field3]` - specifies which fields Gohan Client should show - handy for filtering out unwanted data. Can also be specified with :code:`GOHAN_FIELDS` environment variable.
+
 
 ### Resource identifier
 
