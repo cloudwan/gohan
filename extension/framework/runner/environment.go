@@ -323,7 +323,17 @@ func argumentsEqual(a, b []otto.Value) bool {
 		return false
 	}
 	for i := range a {
-		if !reflect.DeepEqual(a[i], b[i]) {
+		valA, err := a[i].Export()
+		if err != nil {
+			panic(fmt.Sprintf(
+				"Error when exporting otto value for comparison %v", a[i]))
+		}
+		valB, err := b[i].Export()
+		if err != nil {
+			panic(fmt.Sprintf(
+				"Error when exporting otto value for comparison %v", b[i]))
+		}
+		if !reflect.DeepEqual(valA, valB) {
 			return false
 		}
 	}

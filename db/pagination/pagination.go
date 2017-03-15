@@ -39,10 +39,11 @@ type Paginator struct {
 	Order  string
 	Limit  uint64
 	Offset uint64
+	Fields []string
 }
 
 //NewPaginator create Paginator
-func NewPaginator(s *schema.Schema, key, order string, limit, offset uint64) (*Paginator, error) {
+func NewPaginator(s *schema.Schema, key, order string, limit, offset uint64, fields []string) (*Paginator, error) {
 	if key == "" {
 		key = defaultSortKey
 	}
@@ -69,6 +70,7 @@ func NewPaginator(s *schema.Schema, key, order string, limit, offset uint64) (*P
 		Order:  order,
 		Limit:  limit,
 		Offset: offset,
+		Fields: fields,
 	}, nil
 }
 
@@ -76,21 +78,24 @@ func NewPaginator(s *schema.Schema, key, order string, limit, offset uint64) (*P
 func FromURLQuery(s *schema.Schema, values url.Values) (pg *Paginator, err error) {
 	sortKey := values.Get("sort_key")
 	sortOrder := values.Get("sort_order")
+	fields := values["fields"]
+
 	var limit uint64
 	var offset uint64
 
 	if l := values.Get("limit"); l != "" {
 		limit, err = strconv.ParseUint(l, 10, 64)
-	}
-	if err != nil {
-		return
+		if err != nil {
+			return
+		}
 	}
 
 	if o := values.Get("offset"); o != "" {
 		offset, err = strconv.ParseUint(o, 10, 64)
+		if err != nil {
+			return
+		}
 	}
-	if err != nil {
-		return
-	}
-	return NewPaginator(s, sortKey, sortOrder, limit, offset)
+
+	return NewPaginator(s, sortKey, sortOrder, limit, offset, fields)
 }

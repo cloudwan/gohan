@@ -66,7 +66,7 @@ func init() {
 
 				// if caller is non-empty, add extra information about the calling handler
 				if caller != "" {
-					logGeneral(logger, level, "[" + caller + "] " + message)
+					logGeneral(logger, level, "[%s] %s", caller, message)
 				} else {
 					// otherwise, do not put empty information about the caller
 					logGeneral(logger, level, message)

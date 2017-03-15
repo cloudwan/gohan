@@ -74,7 +74,7 @@ func (gohanClientCLI *GohanClientCLI) getListCommand(s *schema.Schema) gohanComm
 			if err != nil {
 				return "", err
 			}
-			url := fmt.Sprintf("%s%s", gohanClientCLI.opts.gohanEndpointURL, s.URL)
+			url := fmt.Sprintf("%s%s%s", gohanClientCLI.opts.gohanEndpointURL, s.URL, gohanClientCLI.getFieldsParam(true))
 			result, err := gohanClientCLI.request("GET", url, nil)
 			return gohanClientCLI.formatOutput(s, result), err
 		},
@@ -97,7 +97,7 @@ func (gohanClientCLI *GohanClientCLI) getGetCommand(s *schema.Schema) gohanComma
 			if err != nil {
 				return "", err
 			}
-			url := fmt.Sprintf("%s%s/%s", gohanClientCLI.opts.gohanEndpointURL, s.URL, id)
+			url := fmt.Sprintf("%s%s/%s%s", gohanClientCLI.opts.gohanEndpointURL, s.URL, id, gohanClientCLI.getFieldsParam(true))
 			result, err := gohanClientCLI.request("GET", url, nil)
 			if err != nil {
 				return "", err
@@ -110,7 +110,7 @@ func (gohanClientCLI *GohanClientCLI) getGetCommand(s *schema.Schema) gohanComma
 					buffer.WriteString(childSchema.Title)
 					buffer.WriteString("\n")
 					parentSchemaPropertyID := childSchema.ParentSchemaPropertyID()
-					url := fmt.Sprintf("%s%s?%s=%s", gohanClientCLI.opts.gohanEndpointURL, childSchema.URL, parentSchemaPropertyID, id)
+					url := fmt.Sprintf("%s%s?%s=%s", gohanClientCLI.opts.gohanEndpointURL, childSchema.URL, parentSchemaPropertyID, id, gohanClientCLI.getFieldsParam(false))
 					result, err := gohanClientCLI.request("GET", url, nil)
 					if err != nil {
 						return "", err
@@ -343,4 +343,26 @@ func (gohanClientCLI *GohanClientCLI) handleResponse(response *http.Response, er
 	}
 
 	return result, err
+}
+
+func (gohanClientCLI *GohanClientCLI) getFieldsParam(prependQuestionMark bool) string {
+	if len(gohanClientCLI.opts.fields) == 0 {
+		return ""
+	}
+
+	param := ""
+
+	if prependQuestionMark {
+		param = param + "?"
+	}
+
+	for index, field := range gohanClientCLI.opts.fields {
+		if index > 0 {
+			param = param + "&"
+		}
+
+		param  = param + "fields=" + field
+	}
+
+	return param
 }
