@@ -64,9 +64,11 @@ func init() {
 					ThrowOttoException(&call, "Message: %v", err)
 				}
 
+				// if caller is non-empty, add extra information about the calling handler
 				if caller != "" {
 					logGeneral(logger, level, "[%s] %s", caller, message)
 				} else {
+					// otherwise, do not put empty information about the caller
 					logGeneral(logger, level, message)
 				}
 
