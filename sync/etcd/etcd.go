@@ -61,8 +61,11 @@ func (s *Sync) Update(key, jsonString string) error {
 }
 
 //Delete sync update sync
-func (s *Sync) Delete(key string) error {
-	s.etcdClient.Delete(key, false)
+func (s *Sync) Delete(key string, prefix bool) error {
+	if prefix {
+		log.Warning("Prefix option is translated as Recursive for Etcd v2 compatibility.")
+	}
+	s.etcdClient.Delete(key, prefix)
 	return nil
 }
 
