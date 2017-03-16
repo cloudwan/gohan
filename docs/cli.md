@@ -83,6 +83,8 @@ GLOBAL OPTIONS:
     OPTIONS:
         --config-file "gohan.yaml"				Server config File
         --template, -t "embed://etc/templates/openapi.tmpl"	Template File
+        --split-by-resource-group ""                           Group by resource
+        --policy "admin"                                       Show only schema with chosen policy
 ```
 
 ## MarkDown
@@ -100,6 +102,8 @@ GLOBAL OPTIONS:
     OPTIONS:
         --config-file "gohan.yaml"				Server config File
         --template, -t "embed://etc/templates/markdown.tmpl"	Template File
+        --split-by-resource-group ""                           Group by resource
+        --policy "admin"                                       Show only schema with chosen policy
 ```
 
 ## CLI Client
