@@ -188,6 +188,8 @@ func doTemplate(c *cli.Context) {
 	}
 	policies := manager.Policies()
 	policy := c.String("policy")
+	title := c.String("title")
+	version := c.String("version")
 	var schemasPolicy, schemasCRUDPolicy []*schema.Schema
 	if policy == "" {
 		schemasPolicy, schemasCRUDPolicy = schemas, schemas
@@ -195,10 +197,10 @@ func doTemplate(c *cli.Context) {
 		schemasPolicy, schemasCRUDPolicy = filterSchemasForPolicy(policy, policies, schemas)
 	}
 	if c.IsSet("split-by-resource-group") {
-		saveAllResources(schemasPolicy, schemasCRUDPolicy, tpl)
+		saveAllResources(schemasPolicy, schemasCRUDPolicy, tpl, version)
 		return
 	}
-	output, err := tpl.Execute(pongo2.Context{"schemas": schemasPolicy, "schemasCRUD": schemasCRUDPolicy, "schemaName": "gohan API"})
+	output, err := tpl.Execute(pongo2.Context{"schemas": schemasPolicy, "schemasCRUD": schemasCRUDPolicy, "title": title, "version": version})
 	if err != nil {
 		util.ExitFatal(err)
 		return
@@ -207,11 +209,11 @@ func doTemplate(c *cli.Context) {
 	fmt.Println(output)
 }
 
-func saveAllResources(schemas []*schema.Schema, schemasCRUD []*schema.Schema, tpl *pongo2.Template) {
+func saveAllResources(schemas []*schema.Schema, schemasCRUD []*schema.Schema, tpl *pongo2.Template, version string) {
 	for _, resource := range getAllResourcesFromSchemas(schemas, schemasCRUD) {
 		resourceSchemas := filerSchemasByResource(resource, schemas)
 		resourceCRUDSchemas := filerSchemasByResource(resource, schemasCRUD)
-		output, _ := tpl.Execute(pongo2.Context{"schemas": resourceSchemas, "schemasCRUD": resourceCRUDSchemas, "schemaName": resource})
+		output, _ := tpl.Execute(pongo2.Context{"schemas": resourceSchemas, "schemasCRUD": resourceCRUDSchemas, "title": resource, "version": version})
 		ioutil.WriteFile(resource+".json", []byte(output), 0644)
 	}
 }
@@ -344,6 +346,8 @@ func getOpenAPICommand() cli.Command {
 			cli.StringFlag{Name: "template, t", Value: "embed://etc/templates/openapi.tmpl", Usage: "Template File"},
 			cli.StringFlag{Name: "split-by-resource-group", Value: "", Usage: "Group by resource"},
 			cli.StringFlag{Name: "policy", Value: "admin", Usage: "Policy"},
+			cli.StringFlag{Name: "version", Value: "0.1", Usage: "API version"},
+			cli.StringFlag{Name: "title", Value: "gohan API", Usage: "API title"},
 		},
 		Action: doTemplate,
 	}
