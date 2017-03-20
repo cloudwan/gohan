@@ -2050,6 +2050,41 @@ var _ = Describe("Using gohan_file builtin", func() {
 			Expect(context).ToNot(HaveKey("list"))
 		})
 	})
+	Context("Read file with CD to the JavaScript file location", func() {
+		It("Should work", func() {
+			extension, err := schema.NewExtension(map[string]interface{}{
+				"id": "read_file_cd",
+				"code": `
+					gohan_register_handler("test_event", function(context){
+						context.list = gohan_file_read_cd('./test.db');
+					});`,
+				"path": ".*",
+			})
+			Expect(err).ToNot(HaveOccurred())
+			extensions := []*schema.Extension{extension}
+			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
+
+			Expect(env.HandleEvent("test_event", context)).To(Succeed())
+			Expect(context).To(HaveKey("list"))
+			Expect(context["list"]).ToNot(BeNil())
+		})
+		It("Shouldn't work", func() {
+			extension, err := schema.NewExtension(map[string]interface{}{
+				"id": "read_file_cd",
+				"code": `
+					gohan_register_handler("test_event", function(context){
+						context.list = gohan_file_read_cd('./doesnt_exist');
+					});`,
+				"path": ".*",
+			})
+			Expect(err).ToNot(HaveOccurred())
+			extensions := []*schema.Extension{extension}
+			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
+
+			Expect(env.HandleEvent("test_event", context)).ToNot(Succeed())
+			Expect(context).ToNot(HaveKey("list"))
+		})
+	})
 	Context("Is dir", func() {
 		It("Is dir", func() {
 			extension, err := schema.NewExtension(map[string]interface{}{
