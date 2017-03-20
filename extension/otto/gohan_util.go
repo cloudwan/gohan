@@ -31,9 +31,11 @@ import (
 	"github.com/xyproto/otto"
 	"github.com/twinj/uuid"
 
+	"os"
+	"strings"
+
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
-	"strings"
 )
 
 const (
@@ -323,6 +325,19 @@ func init() {
 				}
 				config := util.GetConfig()
 				result := config.GetParam(configKey, defaultValue)
+				value, _ := vm.ToValue(result)
+				return value
+			},
+			"gohan_get_env": func(call otto.FunctionCall) otto.Value {
+				VerifyCallArguments(&call, "gohan_get_env", 2)
+				key, err := GetString(call.Argument(0))
+				ThrowWithMessageIfHappened(&call, err, "Expected one string argument")
+				defaultValue, err := GetString(call.Argument(1))
+				ThrowWithMessageIfHappened(&call, err, "Expected default value")
+				result := os.Getenv(key)
+				if result == "" {
+					result = defaultValue
+				}
 				value, _ := vm.ToValue(result)
 				return value
 			},

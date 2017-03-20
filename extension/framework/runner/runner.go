@@ -25,6 +25,8 @@ import (
 	"github.com/xyproto/otto/ast"
 	"github.com/xyproto/otto/parser"
 
+	"time"
+
 	l "github.com/cloudwan/gohan/log"
 )
 
@@ -160,6 +162,10 @@ func (runner *TestRunner) runTest(testName string, env *Environment) (err error)
 			err = fmt.Errorf(ottoError.String())
 		}
 	}
+
+	env.SetEventTimeLimit("exit", time.Second*30)
+	env.HandleEvent("exit", map[string]interface{}{})
+
 	mockError := env.CheckAllMockCallsMade()
 	if err == nil {
 		err = mockError

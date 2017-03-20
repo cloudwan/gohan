@@ -78,12 +78,7 @@ func (env *Environment) InitializeEnvironment() error {
 	env.SetUp()
 	env.addTestingAPI()
 
-	script, err := env.VM.Otto.Compile(env.testFileName, env.testSource)
-	if err != nil {
-		return fmt.Errorf("Failed to compile the file '%s': %s", env.testFileName, err)
-	}
-
-	env.VM.Otto.Run(script)
+	env.Load(env.testFileName, string(env.testSource))
 
 	err = env.loadSchemaIncludes()
 

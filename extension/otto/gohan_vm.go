@@ -17,7 +17,7 @@ package otto
 
 import (
 	"github.com/ddliu/motto"
-	"github.com/robertkrimen/otto"
+	"github.com/xyproto/otto"
 )
 
 func vmModule(vm *motto.Motto) (otto.Value, error) {

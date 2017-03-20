@@ -28,6 +28,8 @@ import (
 	"github.com/onsi/gomega/ghttp"
 	ottopkg "github.com/xyproto/otto"
 
+	"os"
+
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/extension/otto"
@@ -1776,6 +1778,102 @@ var _ = Describe("Otto extension manager", func() {
 			Expect(env2.HandleEvent("test_event", env2Context)).To(Succeed())
 			Expect(env1Context["resp"]).To(Equal(int64(123)))
 			Expect(env2Context["resp"]).To(Equal(int64(123)))
+		})
+	})
+
+	Describe("Using gohan_get_env builtin", func() {
+
+		AfterEach(func() {
+			os.Unsetenv("GOHAN_TEST_GET_ENV")
+		})
+
+		It("Should return proper environmental variable", func() {
+			os.Setenv("GOHAN_TEST_GET_ENV", "123")
+			extension, err := schema.NewExtension(map[string]interface{}{
+				"id": "test_extension",
+				"code": `
+					gohan_register_handler("test_event",
+					 	function(context) {
+					 		context.resp = gohan_get_env("GOHAN_TEST_GET_ENV", "");
+						}
+					);
+					`,
+				"path": ".*",
+			})
+			Expect(err).ToNot(HaveOccurred())
+			extensions := []*schema.Extension{extension}
+			env := newEnvironment()
+			context := map[string]interface{}{}
+			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
+			Expect(env.HandleEvent("test_event", context)).To(Succeed())
+			Expect(context["resp"]).To(Equal("123"))
+		})
+
+		It("Should return default value environmental variable is not set", func() {
+			extension, err := schema.NewExtension(map[string]interface{}{
+				"id": "test_extension",
+				"code": `
+					gohan_register_handler("test_event",
+					 	function(context) {
+					 		context.resp = gohan_get_env("GOHAN_TEST_GET_ENV", "321");
+						}
+					);
+					`,
+				"path": ".*",
+			})
+			Expect(err).ToNot(HaveOccurred())
+			extensions := []*schema.Extension{extension}
+			env := newEnvironment()
+			context := map[string]interface{}{}
+			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
+			Expect(env.HandleEvent("test_event", context)).To(Succeed())
+			Expect(context["resp"]).To(Equal("321"))
+		})
+	})
+
+	Describe("Using gohan_load_hook builtin", func() {
+		It("Should use registered load hook when loading extension code", func() {
+			hookExtension, err := schema.NewExtension(map[string]interface{}{
+				"id": "test_extension",
+				"code": `
+					function loadHook(code, file) {
+						return " \
+						gohan_register_handler( \
+							\"test_event\", \
+						 	function(context) { \
+								context.resp = 321; \
+							} \
+						); ";
+					}
+					gohan_register_handler(
+						"reg_hook",
+					 	function(context) {
+					 		gohan_load_hook("loadHook");
+						}
+					);
+					`,
+				"path": "hook",
+			})
+			Expect(err).ToNot(HaveOccurred())
+			extension, err := schema.NewExtension(map[string]interface{}{
+				"id": "test_extension",
+				"code": `
+					gohan_register_handler("test_event",
+					 	function(context) {
+					 		context.resp = 123;
+						}
+					);
+					`,
+				"path": ".*",
+			})
+			extensions := []*schema.Extension{hookExtension, extension}
+			env := newEnvironment()
+			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "hook")).To(Succeed())
+			context := map[string]interface{}{}
+			Expect(env.HandleEvent("reg_hook", context)).To(Succeed())
+			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
+			Expect(env.HandleEvent("test_event", context)).To(Succeed())
+			Expect(context["resp"]).To(Equal(int64(321)))
 		})
 	})
 

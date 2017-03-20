@@ -8,7 +8,7 @@ import (
 	"io"
 
 	"github.com/ddliu/motto"
-	"github.com/robertkrimen/otto"
+	"github.com/xyproto/otto"
 )
 
 func cryptoModule(vm *motto.Motto) (otto.Value, error) {
