@@ -19,8 +19,11 @@ import (
 	"fmt"
 	"github.com/xyproto/otto"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 )
 
 func init() {
@@ -55,10 +58,33 @@ func init() {
 				value, _ := vm.ToValue(stat.IsDir())
 				return value
 			},
-
 			"gohan_file_read": func(call otto.FunctionCall) otto.Value {
 				VerifyCallArguments(&call, "gohan_file_read", 1)
 				fileName := call.Argument(0).String()
+				bytes, err := ioutil.ReadFile(fileName)
+				if err != nil {
+					ThrowOttoException(&call, fmt.Sprintf("%v", err))
+				}
+				value, _ := vm.ToValue(string(bytes))
+				return value
+			},
+			"gohan_file_read_cd": func(call otto.FunctionCall) otto.Value {
+				VerifyCallArguments(&call, "gohan_file_read_cd", 1)
+				fileName := call.Argument(0).String()
+
+				if !filepath.IsAbs(fileName) {
+					// file:///home/some/where/ex.js:10:3 (url:line:char)
+					loc := call.CallerLocation()
+					items := strings.Split(loc, ":")
+					extFile := strings.Join(items[:len(items)-2], ":")
+					url, err := url.Parse(extFile)
+					if err == nil {
+						extFile = url.Host + url.Path
+					}
+					base := filepath.Dir(extFile)
+					fileName = filepath.Join(base, fileName)
+				}
+
 				bytes, err := ioutil.ReadFile(fileName)
 				if err != nil {
 					ThrowOttoException(&call, fmt.Sprintf("%v", err))
