@@ -20,7 +20,10 @@
                 "description" : "Get list of {{ schema.ID}} resources",
                 "produces": [
                     "application/json"
-                ],
+                ],{% if schema.Metadata.resource_group | length != 0 %}
+                "tags": [
+                    "{{ schema.Metadata.resource_group }}"
+                ],{% endif %}
                 "responses": {
                     "200": {
                         "description": "{{ schema.description }}",
@@ -45,7 +48,10 @@
                 "description" : "Show a {{ schema.ID}} resources",
                 "produces": [
                     "application/json"
-                ],
+                ],{% if schema.Metadata.resource_group | length != 0 %}
+                "tags": [
+                    "{{ schema.Metadata.resource_group }}"
+                ],{% endif %}
                 "parameters": [
                 {
                     "name": "id",
@@ -76,7 +82,10 @@
                 "description": "{% if action.Description | length == 0 %}Action {{ action.ID}}{% else %}{{ action.Description }}{% endif %}",
                 "produces": [
                     "application/json"
-                ],
+                ],{% if schema.Metadata.resource_group | length != 0 %}
+                "tags": [
+                    "{{ schema.Metadata.resource_group }}"
+                ],{% endif %}
                 {% with has_id=action.Path | swagger_has_id_param put_or_post=action.Method | lower == "post" or action.Method | lower == "put" %}
                 {% with has_params_in_get=action.Method | lower == "get" and action.Parameters | length != 0 %}
                 "parameters": [ {% if has_id %}
@@ -128,7 +137,10 @@
                 "description" : "Get list of {{ schema.ID}} resources",
                 "produces": [
                     "application/json"
-                ],
+                ],{% if schema.Metadata.resource_group | length != 0 %}
+                "tags": [
+                    "{{ schema.Metadata.resource_group }}"
+                ],{% endif %}
                 "responses": {
                     "200": {
                         "description": "{{ schema.description }}",
@@ -151,7 +163,10 @@
                 "description" : "Create new {{ schema.ID }} resource",
                 "produces": [
                     "application/json"
-                ],
+                ],{% if schema.Metadata.resource_group | length != 0 %}
+                "tags": [
+                    "{{ schema.Metadata.resource_group }}"
+                ],{% endif %}
                 "parameters": [
                 {
                     "name": "{{ schema.ID }}",
@@ -183,7 +198,10 @@
                 "description" : "Show a {{ schema.ID}} resources",
                 "produces": [
                     "application/json"
-                ],
+                ],{% if schema.Metadata.resource_group | length != 0 %}
+                "tags": [
+                    "{{ schema.Metadata.resource_group }}"
+                ],{% endif %}
                 "parameters": [
                 {
                     "name": "id",
@@ -212,7 +230,10 @@
                 "description" : "Update {{ schema.ID }} resource",
                 "produces": [
                     "application/json"
-                ],
+                ],{% if schema.Metadata.resource_group | length != 0 %}
+                "tags": [
+                    "{{ schema.Metadata.resource_group }}"
+                ],{% endif %}
                 "parameters": [
                 {
                     "name": "id",
@@ -249,7 +270,10 @@
                 "description" : "Delete a {{ schema.ID }} resources",
                 "produces": [
                     "application/json"
-                ],
+                ],{% if schema.Metadata.resource_group | length != 0 %}
+                "tags": [
+                    "{{ schema.Metadata.resource_group }}"
+                ],{% endif %}
                 "parameters": [
                 {
                     "name": "id",
@@ -280,7 +304,10 @@
                 "description": "{% if action.Description | length == 0 %}Action {{ action.ID}}{% else %}{{ action.Description }}{% endif %}",
                 "produces": [
                     "application/json"
-                ],
+                ],{% if schema.Metadata.resource_group | length != 0 %}
+                "tags": [
+                    "{{ schema.Metadata.resource_group }}"
+                ],{% endif %}
                 {% with has_id=action.Path | swagger_has_id_param put_or_post=action.Method | lower == "post" or action.Method | lower == "put" %}
                 {% with has_params_in_get=action.Method | lower == "get" and action.Parameters | length != 0 %}
                 "parameters": [ {% if has_id %}
