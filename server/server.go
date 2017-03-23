@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/http/pprof"
 	"os"
 	"os/signal"
 	"path"
@@ -121,6 +122,21 @@ func (server *Server) mapRoutes() {
 func (server *Server) addOptionsRoute() {
 	server.martini.AddRoute("OPTIONS", ".*", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
+	})
+}
+
+func (server *Server) addPprofRoutes() {
+	server.martini.Group("/debug/pprof", func (r martini.Router) {
+		r.Any("/", pprof.Index)
+		r.Any("/cmdline", pprof.Cmdline)
+		r.Any("/profile", pprof.Profile)
+		r.Any("/symbol", pprof.Symbol)
+		r.Any("/trace", pprof.Trace)
+		r.Any("/block", pprof.Handler("block").ServeHTTP)
+		r.Any("/heap", pprof.Handler("heap").ServeHTTP)
+		r.Any("/mutex", pprof.Handler("mutex").ServeHTTP)
+		r.Any("/goroutine", pprof.Handler("goroutine").ServeHTTP)
+		r.Any("/threadcreate", pprof.Handler("threadcreate").ServeHTTP)
 	})
 }
 
@@ -291,6 +307,9 @@ func NewServer(configFile string) (*Server, error) {
 		return nil, fmt.Errorf("invalid base dir: %s", err)
 	}
 
+	if config.GetBool("profiling/enabled", false) {
+		server.addPprofRoutes()
+	}
 	server.addOptionsRoute()
 	cors := config.GetString("cors", "")
 	if cors != "" {

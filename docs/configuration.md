@@ -59,6 +59,11 @@ Gohan server configuration uses YAML format.
   # CORS (Cross-origin resource sharing (CORS)) configuraion for javascript based client
   cors: "*"
 
+  # Profiling configuration
+  profiling:
+      # if true, gohan add routes /debug/pprof/ for pprof profiling
+      enabled: true
+
   # allowed levels  "CRITICAL", "ERROR", "WARNING", "NOTICE", "INFO", "DEBUG",
   logging:
       stderr:
@@ -230,6 +235,26 @@ Note: DO NOT USE * configuraion in production deployment.
 ```yaml
   cors: "*"
 ```
+
+## Profiling
+
+Gohan runs with pprof profiling feature. You can get profiling results by querying
+``http://<gohan_host>:<gohan_port>/debug/pprof/*`` . To get the profiling result,
+you need admin credentials.
+
+You can use profiling feature by set ``profiling/enabled`` as ``true``.
+
+```yaml
+  profiling:
+      enabled: true
+```
+
+For the detail of pprof, please see https://golang.org/pkg/net/http/pprof/ .
+
+NOTE: authentication is not provided under ``/debug/pprof/`` path, so when
+you enable pprof on production environment, you should block the access to
+this URL with a different way.
+
 
 ## Logging
 
