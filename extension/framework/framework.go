@@ -24,11 +24,12 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/codegangsta/cli"
+
 	"github.com/cloudwan/gohan/extension/framework/runner"
 	l "github.com/cloudwan/gohan/log"
-	"github.com/cloudwan/gohan/schema"
+	"github.com/cloudwan/gohan/singleton"
 	"github.com/cloudwan/gohan/util"
-	"github.com/codegangsta/cli"
 )
 
 var (
@@ -109,7 +110,7 @@ func RunTests(testFiles []string, printAllLogs bool, testFilter string, workers 
 	}
 
 	// force goroutine local manager
-	schema.SetManagerScope(schema.ScopeGLSSingleton)
+	singleton.SetScope(singleton.ScopeGLSSingleton)
 
 	for workers > 0 {
 		wg.Add(1)
