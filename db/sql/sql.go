@@ -290,7 +290,7 @@ func (db *DB) Begin() (tx transaction.Transaction, err error) {
 		transaction: transaction,
 		closed:      false,
 	}
-	log.Debug("Created transaction %#v", transaction)
+	log.Debug("[%p] Created transaction %#v", transaction, transaction)
 	return
 }
 
@@ -447,15 +447,15 @@ func escapeID(ID string) string {
 	return strings.Replace(ID, "-", "_escape_", -1)
 }
 
-func logQuery(sql string, args ...interface{}) {
+func (tx *Transaction) logQuery(sql string, args ...interface{}) {
 	sqlFormat := strings.Replace(sql, "?", "%s", -1)
 	query := fmt.Sprintf(sqlFormat, args...)
-	log.Debug("Executing SQL query '%s'", query)
+	log.Debug("[%p] Executing SQL query '%s'", tx.transaction, query)
 }
 
 // Exec executes sql in transaction
 func (tx *Transaction) Exec(sql string, args ...interface{}) error {
-	logQuery(sql, args...)
+	tx.logQuery(sql, args...)
 	_, err := tx.transaction.Exec(sql, args...)
 	return err
 }
@@ -727,7 +727,7 @@ func buildSelect(s *schema.Schema, filter transaction.Filter, pg *pagination.Pag
 }
 
 func executeSelect(s *schema.Schema, filter transaction.Filter, sql string, args []interface{}, tx *Transaction) (list []*schema.Resource, total uint64, err error) {
-	logQuery(sql, args...)
+	tx.logQuery(sql, args...)
 	rows, err := tx.transaction.Queryx(sql, args...)
 	if err != nil {
 		return
@@ -779,7 +779,7 @@ func (tx *Transaction) LockList(s *schema.Schema, filter transaction.Filter, pg 
 
 // Query with raw sql string
 func (tx *Transaction) Query(s *schema.Schema, query string, arguments []interface{}) (list []*schema.Resource, err error) {
-	logQuery(query, arguments...)
+	tx.logQuery(query, arguments...)
 	rows, err := tx.transaction.Queryx(query, arguments...)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to run query: %s", query)
@@ -867,7 +867,7 @@ func (tx *Transaction) StateFetch(s *schema.Schema, filter transaction.Filter) (
 	if err != nil {
 		return
 	}
-	logQuery(sql, args...)
+	tx.logQuery(sql, args...)
 	rows, err := tx.transaction.Queryx(sql, args...)
 	if err != nil {
 		return
@@ -890,7 +890,7 @@ func (tx *Transaction) RawTransaction() *sqlx.Tx {
 
 //SetIsolationLevel specify transaction isolation level
 func (tx *Transaction) SetIsolationLevel(level transaction.Type) error {
-	log.Debug("Setting isolation level for transaction %#v %s", tx, level)
+	log.Debug("[%p] Setting isolation level for transaction %#v %s", tx.transaction, tx, level)
 	if tx.db.sqlType == "mysql" {
 		err := tx.Exec(fmt.Sprintf("set session transaction isolation level %s", level))
 		return err
@@ -900,9 +900,10 @@ func (tx *Transaction) SetIsolationLevel(level transaction.Type) error {
 
 //Commit commits transaction
 func (tx *Transaction) Commit() error {
-	log.Debug("Committing transaction %#v", tx)
+	log.Debug("[%p] Committing transaction %#v", tx.transaction, tx)
 	err := tx.transaction.Commit()
 	if err != nil {
+		log.Error("[%p] Commit %#v failed: %s", tx.transaction, tx, err)
 		return err
 	}
 	tx.closed = true
@@ -912,11 +913,13 @@ func (tx *Transaction) Commit() error {
 //Close closes connection
 func (tx *Transaction) Close() error {
 	//Rollback if it isn't committed yet
-	log.Debug("Closing transaction %#v", tx)
+	log.Debug("[%p] Closing transaction %#v", tx.transaction, tx)
 	var err error
 	if !tx.closed {
+		log.Debug("[%p] Rolling back %#v", tx.transaction, tx)
 		err = tx.transaction.Rollback()
 		if err != nil {
+			log.Error("[%p] Rolling back %#v failed: %s", tx.transaction, tx, err)
 			return err
 		}
 		tx.closed = true

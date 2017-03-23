@@ -238,7 +238,7 @@ func (env *Environment) HandleEvent(event string, context map[string]interface{}
 	defer func() {
 		// cleanup Closers
 		if closers, err := getClosers(vm.Otto); err == nil {
-			log.Debug("Closers for vm %p: %v", vm, closers)
+			log.Debug("Closers for vm %p: %v", vm.Otto, closers)
 			for _, closer := range closers {
 				if err = closer.Close(); err != nil {
 					log.Error("Error when closing object %T %p : %s", closer, closer, err)
@@ -289,6 +289,7 @@ func getClosers(vm *otto.Otto) (closers []io.Closer, err error) {
 }
 
 func addCloser(vm *otto.Otto, closer io.Closer) error {
+	log.Debug("Registering closer %p in VM %p", closer, vm);
 	closers, err := getClosers(vm)
 	if err != nil {
 		return err

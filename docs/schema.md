@@ -157,6 +157,11 @@ We don't sync this resource for sync backend when this option is true.
 
   Write only the value of the specified property to the sync backend.
 
+- resource_group (string)
+
+  Used in OpenApi documentation it allows to categorized schema according to given `resource_group` by setting appropriate tags.
+  If `--split-by-resource-group` option is used to generate OpenApi documentation it will additionally place given schema to `resource_group.js` file.
+
 ## Properties
 
 We need to define properties of a resource using following parameters.
