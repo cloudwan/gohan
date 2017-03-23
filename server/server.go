@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"path"
@@ -184,6 +185,14 @@ func NewServer(configFile string) (*Server, error) {
 		return nil, fmt.Errorf("Logging setup error: %s", err)
 	}
 	log.Info("logging initialized")
+
+	pprof := config.GetString("pprof", "")
+	if pprof != "" {
+		go func() {
+			log.Info("pprof server started at " + pprof)
+			log.Info("%s", http.ListenAndServe(pprof, nil))
+		}()
+	}
 
 	server := &Server{}
 

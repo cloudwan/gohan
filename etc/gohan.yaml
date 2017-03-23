@@ -63,6 +63,9 @@ logging:
         enabled: true
         level: INFO
 
+# Enable pprof debugging endpoint at host:port
+pprof: ":6123"
+
 extension:
   default: gohanscript
   use:
