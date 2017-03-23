@@ -17,9 +17,11 @@ package extension
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/cloudwan/gohan/schema"
+	"github.com/cloudwan/gohan/singleton"
 )
 
 //Environment is a interface for extension environment
@@ -29,16 +31,18 @@ type Environment interface {
 	Clone() Environment
 }
 
-var manager *Manager
-
 //Manager takes care of mapping schemas to Environments.
 //This is a singleton class.
 type Manager struct {
 	environments map[string]Environment
+	mu sync.RWMutex
 }
 
 //RegisterEnvironment registers a new environment for the given schema ID
 func (manager *Manager) RegisterEnvironment(schemaID string, env Environment) error {
+	manager.mu.Lock()
+	defer manager.mu.Unlock()
+
 	if _, ok := manager.environments[schemaID]; ok {
 		return fmt.Errorf("Environment already registered for this schema")
 	}
@@ -48,6 +52,9 @@ func (manager *Manager) RegisterEnvironment(schemaID string, env Environment) er
 
 //UnRegisterEnvironment removes an environment registered for the given schema ID
 func (manager *Manager) UnRegisterEnvironment(schemaID string) error {
+	manager.mu.Lock()
+	defer manager.mu.Unlock()
+
 	if _, ok := manager.environments[schemaID]; !ok {
 		return fmt.Errorf("No environment registered for this schema")
 	}
@@ -57,6 +64,9 @@ func (manager *Manager) UnRegisterEnvironment(schemaID string) error {
 
 //GetEnvironment returns the environment registered for the given schema ID
 func (manager *Manager) GetEnvironment(schemaID string) (env Environment, ok bool) {
+	manager.mu.RLock()
+	defer manager.mu.RUnlock()
+
 	env, ok = manager.environments[schemaID]
 	if ok {
 		env = env.Clone()
@@ -66,17 +76,16 @@ func (manager *Manager) GetEnvironment(schemaID string) (env Environment, ok boo
 
 //GetManager gets manager
 func GetManager() *Manager {
-	if manager == nil {
-		manager = &Manager{
+	return singleton.Get("extension/manager", func() interface{} {
+		return &Manager{
 			environments: map[string]Environment{},
 		}
-	}
-	return manager
+	}).(*Manager)
 }
 
 //ClearManager clears manager
 func ClearManager() {
-	manager = nil
+	singleton.Clear("extension/manager")
 }
 
 // Error is created when a problem has occurred during event handling. It contains the information
