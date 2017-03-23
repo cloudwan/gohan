@@ -80,7 +80,7 @@ func init() {
 
 				select {
 				case interrupt := <-call.Otto.Interrupt:
-					log.Debug("Received otto interrupt in gohan_http")
+					log.Debug("Received otto interrupt in gohan_sync_fetch")
 					interrupt()
 				case <-done:
 				}
@@ -92,6 +92,46 @@ func init() {
 
 				if value, err = vm.ToValue(convertSyncNode(node)); err == nil {
 					return value
+				}
+
+				return otto.NullValue()
+			},
+			"gohan_sync_delete": func(call otto.FunctionCall) otto.Value {
+				var path string
+				var prefix bool
+				var err error
+
+				if len(call.ArgumentList) == 1 {
+					defaultPrefix, _ := otto.ToValue(false)
+					call.ArgumentList = append(call.ArgumentList, defaultPrefix)
+				}
+				VerifyCallArguments(&call, "gohan_sync_delete", 2)
+
+				if path, err = GetString(call.Argument(0)); err != nil {
+					ThrowOttoException(&call, "Invalid type of first argument: expected a string")
+					return otto.NullValue()
+				}
+				if prefix, err = GetBool(call.Argument(1)); err != nil {
+					ThrowOttoException(&call, "Invalid type of second argument: expected a bool")
+					return otto.NullValue()
+				}
+
+				done := make(chan struct{})
+				go func() {
+					err = env.Sync.Delete(path, prefix)
+					close(done)
+				}()
+
+				select {
+				case interrupt := <-call.Otto.Interrupt:
+					log.Debug("Received otto interrupt in gohan_sync_delete")
+					interrupt()
+				case <-done:
+				}
+
+				if err != nil {
+					ThrowOttoException(&call, "Failed to delete sync: "+err.Error())
+					return otto.NullValue()
 				}
 
 				return otto.NullValue()

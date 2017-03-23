@@ -222,6 +222,7 @@ func (env *Environment) addTestingAPI() {
 	env.mockFunction("gohan_exec")
 	env.mockFunction("gohan_config")
 	env.mockFunction("gohan_sync_fetch")
+	env.mockFunction("gohan_sync_delete")
 	env.mockFunction("gohan_sync_watch")
 }
 
