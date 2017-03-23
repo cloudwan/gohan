@@ -62,22 +62,27 @@ func Init() error {
 	dbType, dbConnection, migrationsPath := readGooseConfig()
 
 	if err := goose.SetDialect(dbType); err != nil {
-		fmt.Printf("error: failed to set goose dialect: %s\n", err.Error())
-		return err
+		return fmt.Errorf("migration: failed to set goose dialect: %s", err)
 	}
 
 	db, err := sql.Open(dbType, dbConnection)
 
 	if err != nil {
-		fmt.Printf("error: failed to open db: %s\n", err.Error())
-		return err
+		return fmt.Errorf("migration: failed to open db: %s", err)
 	}
 
-	return goose.Status(db, migrationsPath)
+	v, err := goose.EnsureDBVersion(db)
+	if err != nil {
+		return fmt.Errorf("migration: failed to ensure db version: %s", err)
+	}
+
+	logger.Info("migration path: %q, version: %d", migrationsPath, v)
+
+	return nil
 }
 
 func Help() {
-	fmt.Println("missing subcommand: help, up, up-by-one, create, down, redo, status, version")
+	fmt.Println("missing subcommand: help, up, up-by-one, up-to, create, down, down-to, redo, status, version")
 }
 
 func Run(subcmd string, args []string) {

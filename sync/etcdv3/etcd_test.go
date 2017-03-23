@@ -46,7 +46,7 @@ func TestNonEmptyUpdate(t *testing.T) {
 		t.Errorf("unexpected node: %+v", node)
 	}
 
-	err = sync.Delete(path)
+	err = sync.Delete(path, false)
 	if err != nil {
 		t.Errorf("unexpected error")
 	}

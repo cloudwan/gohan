@@ -24,7 +24,7 @@ type Sync interface {
 	Unlock(path string) error
 	Fetch(path string) (*Node, error)
 	Update(path, json string) error
-	Delete(path string) error
+	Delete(path string, prefix bool) error
 	Watch(path string, responseChan chan *Event, stopChan chan bool, revision int64) error
 	Close()
 }

@@ -178,17 +178,17 @@ func (server *Server) syncEvent(resource *schema.Resource) error {
 			}
 		}
 		log.Debug("deleting %s", statePrefix+deletePath)
-		err = server.sync.Delete(statePrefix + deletePath)
+		err = server.sync.Delete(statePrefix + deletePath, false)
 		if err != nil {
 			log.Error(fmt.Sprintf("Delete from sync failed %s", err))
 		}
 		log.Debug("deleting %s", monitoringPrefix+deletePath)
-		err = server.sync.Delete(monitoringPrefix + deletePath)
+		err = server.sync.Delete(monitoringPrefix + deletePath, false)
 		if err != nil {
 			log.Error(fmt.Sprintf("Delete from sync failed %s", err))
 		}
 		log.Debug("deleting %s", resourcePath)
-		err = server.sync.Delete(path)
+		err = server.sync.Delete(path, false)
 		if err != nil {
 			log.Error(fmt.Sprintf("Delete from sync failed %s", err))
 			return err
