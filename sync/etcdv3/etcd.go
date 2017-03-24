@@ -87,8 +87,12 @@ func (s *Sync) Update(key, jsonString string) error {
 }
 
 //Delete sync update sync
-func (s *Sync) Delete(key string) error {
-	_, err := s.etcdClient.Delete(s.withTimeout(), key)
+func (s *Sync) Delete(key string, prefix bool) error {
+	opts := []etcd.OpOption{}
+	if prefix {
+		opts = append(opts, etcd.WithPrefix())
+	}
+	_, err := s.etcdClient.Delete(s.withTimeout(), key, opts...)
 	return err
 }
 

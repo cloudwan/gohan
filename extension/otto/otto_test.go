@@ -28,6 +28,8 @@ import (
 	"github.com/onsi/gomega/ghttp"
 	ottopkg "github.com/xyproto/otto"
 
+	"os"
+
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/extension/otto"
@@ -1779,6 +1781,102 @@ var _ = Describe("Otto extension manager", func() {
 		})
 	})
 
+	Describe("Using gohan_get_env builtin", func() {
+
+		AfterEach(func() {
+			os.Unsetenv("GOHAN_TEST_GET_ENV")
+		})
+
+		It("Should return proper environmental variable", func() {
+			os.Setenv("GOHAN_TEST_GET_ENV", "123")
+			extension, err := schema.NewExtension(map[string]interface{}{
+				"id": "test_extension",
+				"code": `
+					gohan_register_handler("test_event",
+					 	function(context) {
+					 		context.resp = gohan_get_env("GOHAN_TEST_GET_ENV", "");
+						}
+					);
+					`,
+				"path": ".*",
+			})
+			Expect(err).ToNot(HaveOccurred())
+			extensions := []*schema.Extension{extension}
+			env := newEnvironment()
+			context := map[string]interface{}{}
+			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
+			Expect(env.HandleEvent("test_event", context)).To(Succeed())
+			Expect(context["resp"]).To(Equal("123"))
+		})
+
+		It("Should return default value environmental variable is not set", func() {
+			extension, err := schema.NewExtension(map[string]interface{}{
+				"id": "test_extension",
+				"code": `
+					gohan_register_handler("test_event",
+					 	function(context) {
+					 		context.resp = gohan_get_env("GOHAN_TEST_GET_ENV", "321");
+						}
+					);
+					`,
+				"path": ".*",
+			})
+			Expect(err).ToNot(HaveOccurred())
+			extensions := []*schema.Extension{extension}
+			env := newEnvironment()
+			context := map[string]interface{}{}
+			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
+			Expect(env.HandleEvent("test_event", context)).To(Succeed())
+			Expect(context["resp"]).To(Equal("321"))
+		})
+	})
+
+	Describe("Using gohan_load_hook builtin", func() {
+		It("Should use registered load hook when loading extension code", func() {
+			hookExtension, err := schema.NewExtension(map[string]interface{}{
+				"id": "test_extension",
+				"code": `
+					function loadHook(code, file) {
+						return " \
+						gohan_register_handler( \
+							\"test_event\", \
+						 	function(context) { \
+								context.resp = 321; \
+							} \
+						); ";
+					}
+					gohan_register_handler(
+						"reg_hook",
+					 	function(context) {
+					 		gohan_load_hook("loadHook");
+						}
+					);
+					`,
+				"path": "hook",
+			})
+			Expect(err).ToNot(HaveOccurred())
+			extension, err := schema.NewExtension(map[string]interface{}{
+				"id": "test_extension",
+				"code": `
+					gohan_register_handler("test_event",
+					 	function(context) {
+					 		context.resp = 123;
+						}
+					);
+					`,
+				"path": ".*",
+			})
+			extensions := []*schema.Extension{hookExtension, extension}
+			env := newEnvironment()
+			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "hook")).To(Succeed())
+			context := map[string]interface{}{}
+			Expect(env.HandleEvent("reg_hook", context)).To(Succeed())
+			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
+			Expect(env.HandleEvent("test_event", context)).To(Succeed())
+			Expect(context["resp"]).To(Equal(int64(321)))
+		})
+	})
+
 	Describe("Using gohan_sync_fetch builtin", func() {
 		It("Should fetch sync", func() {
 			extension, err := schema.NewExtension(map[string]interface{}{
@@ -1798,7 +1896,7 @@ var _ = Describe("Otto extension manager", func() {
 			env := newEnvironment()
 			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
 			context := map[string]interface{}{}
-			env.Sync.Delete("/gohan_sync_fetch_test")
+			env.Sync.Delete("/gohan_sync_fetch_test", false)
 			env.Sync.Update("/gohan_sync_fetch_test", "{}")
 			Expect(env.HandleEvent("test_event", context)).To(Succeed())
 			Expect(context).To(HaveKeyWithValue("resp", HaveKeyWithValue("value", "{}")))
@@ -1824,7 +1922,7 @@ var _ = Describe("Otto extension manager", func() {
 			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
 
 			context := map[string]interface{}{}
-			env.Sync.Delete("/gohan_sync_watch_test")
+			env.Sync.Delete("/gohan_sync_watch_test", false)
 			Expect(env.HandleEvent("test_event", context)).To(Succeed())
 			Expect(context).To(HaveKeyWithValue("resp", HaveLen(0)))
 		})
@@ -1848,7 +1946,7 @@ var _ = Describe("Otto extension manager", func() {
 			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
 
 			context := map[string]interface{}{}
-			env.Sync.Delete("/gohan_sync_watch_test")
+			env.Sync.Delete("/gohan_sync_watch_test", false)
 			go func() {
 				time.Sleep(time.Duration(200) * time.Millisecond)
 				env.Sync.Update("/gohan_sync_watch_test", "{}")
@@ -1857,6 +1955,61 @@ var _ = Describe("Otto extension manager", func() {
 			Expect(context).To(HaveKeyWithValue("resp", HaveKeyWithValue("action", "set")))
 			Expect(context).To(HaveKeyWithValue("resp", HaveKeyWithValue("key", "/gohan_sync_watch_test")))
 			Expect(context).To(HaveKeyWithValue("resp", HaveKeyWithValue("data", map[string]interface{}{})))
+		})
+	})
+
+	Describe("Using gohan_sync_delete builtin", func() {
+		It("Should delete sync", func() {
+			extension, err := schema.NewExtension(map[string]interface{}{
+				"id": "test_extension",
+				"code": `
+					gohan_register_handler(
+						"test_event",
+					 	function(context) {
+							gohan_sync_delete("/gohan_sync_delete_test");
+						}
+					);
+					`,
+				"path": ".*",
+			})
+			Expect(err).ToNot(HaveOccurred())
+			extensions := []*schema.Extension{extension}
+			env := newEnvironment()
+			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
+			context := map[string]interface{}{}
+			env.Sync.Delete("/gohan_sync_delete_test", false)
+			env.Sync.Update("/gohan_sync_delete_test", "{}")
+			Expect(env.HandleEvent("test_event", context)).To(Succeed())
+			node, err := env.Sync.Fetch("/gohan_sync_delete_test")
+			Expect(node).To(BeNil())
+		})
+	})
+
+	Describe("Using gohan_sync_delete builtin with prefix", func() {
+		It("Should delete sync", func() {
+			extension, err := schema.NewExtension(map[string]interface{}{
+				"id": "test_extension",
+				"code": `
+					gohan_register_handler(
+						"test_event",
+					 	function(context) {
+							gohan_sync_delete("/gohan_sync_delete_test", true);
+						}
+					);
+					`,
+				"path": ".*",
+			})
+			Expect(err).ToNot(HaveOccurred())
+			extensions := []*schema.Extension{extension}
+			env := newEnvironment()
+			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
+			context := map[string]interface{}{}
+			env.Sync.Delete("/gohan_sync_delete_test", true)
+			env.Sync.Update("/gohan_sync_delete_test/child1", "bla")
+			env.Sync.Update("/gohan_sync_delete_test/child2", "bar")
+			Expect(env.HandleEvent("test_event", context)).To(Succeed())
+			node, err := env.Sync.Fetch("/gohan_sync_delete_test")
+			Expect(node).To(BeNil())
 		})
 	})
 	var _ = Describe("Concurrency race", func() {

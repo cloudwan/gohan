@@ -90,6 +90,7 @@ func init() {
 		}
 
 		loadNPMModules()
+		registerBuiltinModules(vm)
 
 		err := env.Load("<Gohan built-in exceptions>", `
 		function BaseException() {
@@ -262,4 +263,19 @@ func loadNPMModules() {
 			motto.AddModule(f.Name(), loader)
 		}
 	}
+}
+
+func registerBuiltinModules(vm *motto.Motto) {
+	vm.AddModule("fs", fsModule)
+	vm.AddModule("vm", vmModule)
+	vm.AddModule("crypto", cryptoModule)
+
+	vm.AddModule("os", emptyModule)
+	vm.AddModule("assert", emptyModule)
+	vm.AddModule("glob", emptyModule)
+}
+
+func emptyModule(vm *motto.Motto) (otto.Value, error) {
+	module, _ := vm.Object(`({})`)
+	return vm.ToValue(module)
 }

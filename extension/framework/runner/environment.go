@@ -78,12 +78,7 @@ func (env *Environment) InitializeEnvironment() error {
 	env.SetUp()
 	env.addTestingAPI()
 
-	script, err := env.VM.Otto.Compile(env.testFileName, env.testSource)
-	if err != nil {
-		return fmt.Errorf("Failed to compile the file '%s': %s", env.testFileName, err)
-	}
-
-	env.VM.Otto.Run(script)
+	env.Load(env.testFileName, string(env.testSource))
 
 	err = env.loadSchemaIncludes()
 
@@ -222,6 +217,7 @@ func (env *Environment) addTestingAPI() {
 	env.mockFunction("gohan_exec")
 	env.mockFunction("gohan_config")
 	env.mockFunction("gohan_sync_fetch")
+	env.mockFunction("gohan_sync_delete")
 	env.mockFunction("gohan_sync_watch")
 }
 

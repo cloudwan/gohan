@@ -32,7 +32,7 @@ func (sync *Sync) Update(path, json string) error {
 }
 
 //Delete sync update sync
-func (sync *Sync) Delete(path string) error {
+func (sync *Sync) Delete(path string, prefix bool) error {
 	return nil
 }
 

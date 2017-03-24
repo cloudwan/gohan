@@ -365,9 +365,11 @@ func getMigrateCommand() cli.Command {
 		Subcommands: []cli.Command{
 			getMigrateSubcommand("up", "Migrate to the most recent version"),
 			getMigrateSubcommand("up-by-one", "Migrate one version up"),
+			getMigrateSubcommand("up-to", "Migrate up to specific version"),
 			getMigrateSubcommand("create", "Create a template for a new migration"),
 			getCreateInitialMigrationCommand(),
 			getMigrateSubcommand("down", "Migrate to the oldest version"),
+			getMigrateSubcommand("down-to", "Migrate to specific version"),
 			getMigrateSubcommand("redo", "Migrate one version back"),
 			getMigrateSubcommand("status", "Display migration status"),
 			getMigrateSubcommand("version", "Display migration version"),

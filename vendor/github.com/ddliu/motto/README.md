@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/ddliu/motto.png)](https://travis-ci.org/ddliu/motto)
 
-Modular [otto](https://github.com/robertkrimen/otto)
+Modular [otto](https://github.com/xyproto/otto)
 
 Motto provide a Nodejs like module environment to run javascript files in golang.
 
@@ -55,7 +55,7 @@ package fs
 
 import (
     "github.com/ddliu/motto"
-    "github.com/robertkrimen/otto"
+    "github.com/xyproto/otto"
 )
 
 func fsModuleLoader(vm *motto.Motto) (otto.Value, error) {
