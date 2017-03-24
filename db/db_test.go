@@ -182,7 +182,7 @@ var _ = Describe("Database operation test", func() {
 				})
 
 				It("Locks the expected list", func() {
-					list, num, err := tx.LockList(networkSchema, nil, nil, transaction.LockRelatedResources)
+					list, num, err := tx.LockList(networkSchema, nil, nil, schema.LockRelatedResources)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(num).To(Equal(uint64(2)))
 					Expect(list).To(HaveLen(2))
@@ -207,7 +207,7 @@ var _ = Describe("Database operation test", func() {
 					filter := map[string]interface{}{
 						"tenant_id": []string{"red"},
 					}
-					list, num, err := tx.LockList(networkSchema, filter, nil, transaction.LockRelatedResources)
+					list, num, err := tx.LockList(networkSchema, filter, nil, schema.LockRelatedResources)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(num).To(Equal(uint64(1)))
 					Expect(list).To(HaveLen(1))
@@ -227,7 +227,7 @@ var _ = Describe("Database operation test", func() {
 					filter := map[string]interface{}{
 						"bad_filter": []string{"red"},
 					}
-					_, _, err := tx.LockList(networkSchema, filter, nil, transaction.LockRelatedResources)
+					_, _, err := tx.LockList(networkSchema, filter, nil, schema.LockRelatedResources)
 					Expect(err).To(HaveOccurred())
 				})
 
@@ -241,7 +241,7 @@ var _ = Describe("Database operation test", func() {
 				})
 
 				It("Locks related resources when requested", func() {
-					list, num, err := tx.LockList(serverSchema, nil, nil, transaction.LockRelatedResources)
+					list, num, err := tx.LockList(serverSchema, nil, nil, schema.LockRelatedResources)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(num).To(Equal(uint64(1)))
 					Expect(list).To(HaveLen(1))
@@ -250,7 +250,7 @@ var _ = Describe("Database operation test", func() {
 				})
 
 				It("Doesn't lock related resources when requested", func() {
-					list, num, err := tx.LockList(serverSchema, nil, nil, transaction.SkipRelatedResources)
+					list, num, err := tx.LockList(serverSchema, nil, nil, schema.SkipRelatedResources)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(num).To(Equal(uint64(1)))
 					Expect(list).To(HaveLen(1))
@@ -266,21 +266,21 @@ var _ = Describe("Database operation test", func() {
 				})
 
 				It("Fetches and locks an existing resource", func() {
-					networkResourceFetched, err := tx.LockFetch(networkSchema, transaction.IDFilter(networkResource1.ID()), transaction.LockRelatedResources)
+					networkResourceFetched, err := tx.LockFetch(networkSchema, transaction.IDFilter(networkResource1.ID()), schema.LockRelatedResources)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(networkResourceFetched).To(util.MatchAsJSON(networkResource1))
 					Expect(tx.Commit()).To(Succeed())
 				})
 
 				It("Fetches and locks related resources when requested", func() {
-					networkResourceFetched, err := tx.LockFetch(serverSchema, nil, transaction.LockRelatedResources)
+					networkResourceFetched, err := tx.LockFetch(serverSchema, nil, schema.LockRelatedResources)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(networkResourceFetched.Data()).To(HaveKeyWithValue("network", HaveKeyWithValue("name", networkResource1.Data()["name"])))
 					Expect(tx.Commit()).To(Succeed())
 				})
 
 				It("Fetches and doesn't lock related resources when requested", func() {
-					networkResourceFetched, err := tx.LockFetch(serverSchema, nil, transaction.SkipRelatedResources)
+					networkResourceFetched, err := tx.LockFetch(serverSchema, nil, schema.SkipRelatedResources)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(networkResourceFetched.Data()).To(HaveKeyWithValue("network", HaveKeyWithValue("name", BeNil())))
 					Expect(tx.Commit()).To(Succeed())

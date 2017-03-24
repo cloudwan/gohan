@@ -41,13 +41,6 @@ const (
 	Serializable Type = "Serializable"
 )
 
-type LockPolicy int
-
-const (
-	LockRelatedResources LockPolicy = iota
-	SkipRelatedResources
-)
-
 //ResourceState represents the state of a resource
 type ResourceState struct {
 	ConfigVersion int64
@@ -65,10 +58,10 @@ type Transaction interface {
 	StateUpdate(*schema.Resource, *ResourceState) error
 	Delete(*schema.Schema, interface{}) error
 	Fetch(*schema.Schema, Filter) (*schema.Resource, error)
-	LockFetch(*schema.Schema, Filter, LockPolicy) (*schema.Resource, error)
+	LockFetch(*schema.Schema, Filter, schema.LockPolicy) (*schema.Resource, error)
 	StateFetch(*schema.Schema, Filter) (ResourceState, error)
 	List(*schema.Schema, Filter, *pagination.Paginator) ([]*schema.Resource, uint64, error)
-	LockList(*schema.Schema, Filter, *pagination.Paginator, LockPolicy) ([]*schema.Resource, uint64, error)
+	LockList(*schema.Schema, Filter, *pagination.Paginator, schema.LockPolicy) ([]*schema.Resource, uint64, error)
 	RawTransaction() *sqlx.Tx
 	Query(*schema.Schema, string, []interface{}) (list []*schema.Resource, err error)
 	Commit() error

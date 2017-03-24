@@ -269,7 +269,7 @@ func (tx *Transaction) List(s *schema.Schema, filter transaction.Filter, pg *pag
 }
 
 //Lock resources in the db. Not supported in file db
-func (tx *Transaction) LockList(s *schema.Schema, filter transaction.Filter, pg *pagination.Paginator, policy transaction.LockPolicy) (list []*schema.Resource, total uint64, err error) {
+func (tx *Transaction) LockList(s *schema.Schema, filter transaction.Filter, pg *pagination.Paginator, policy schema.LockPolicy) (list []*schema.Resource, total uint64, err error) {
 	return tx.List(s, filter, pg)
 }
 
@@ -283,7 +283,7 @@ func (tx *Transaction) Fetch(s *schema.Schema, filter transaction.Filter) (*sche
 }
 
 //Fetch & lock a resource. Not supported in file db
-func (tx *Transaction) LockFetch(s *schema.Schema, filter transaction.Filter, policy transaction.LockPolicy) (*schema.Resource, error) {
+func (tx *Transaction) LockFetch(s *schema.Schema, filter transaction.Filter, policy schema.LockPolicy) (*schema.Resource, error) {
 	return tx.Fetch(s, filter)
 }
 

@@ -106,20 +106,24 @@ var _ = Describe("Schema", func() {
 		var metadataSchema *Schema
 		var metadataFailedSchema *Schema
 		var metadataIDSchema *Schema
+		var metadataPolicySchema *Schema
 
 		BeforeEach(func() {
 			var exists bool
 			var failedExists bool
 			var idExists bool
+			var policyExists bool
 			manager := GetManager()
 			schemaPath := "../tests/test_schema_metadata.yaml"
 			Expect(manager.LoadSchemaFromFile(schemaPath)).To(Succeed())
 			metadataSchema, exists = manager.Schema("metadata")
 			metadataFailedSchema, failedExists = manager.Schema("metadata_failed")
 			metadataIDSchema, idExists = manager.Schema("metadata_id")
+			metadataPolicySchema, policyExists = manager.Schema("metadata_policy")
 			Expect(exists).To(BeTrue())
 			Expect(failedExists).To(BeTrue())
 			Expect(idExists).To(BeTrue())
+			Expect(policyExists).To(BeTrue())
 		})
 
 		It("SyncKeyTemplate", func() {
@@ -159,6 +163,15 @@ var _ = Describe("Schema", func() {
 			Expect(path).To(Equal("/v1.0/metadata-id/1234/"))
 			str := metadataIDSchema.GetResourceIDFromPath(path)
 			Expect(str).To(Equal("1234"))
+		})
+
+		It("Should use non locking policy when unspecified", func() {
+			Expect(metadataIDSchema.GetLockingPolicy("update")).To(Equal(NoLocking))
+		})
+
+		It("Should return locking policies", func() {
+			Expect(metadataPolicySchema.GetLockingPolicy("update")).To(Equal(LockRelatedResources))
+			Expect(metadataPolicySchema.GetLockingPolicy("delete")).To(Equal(SkipRelatedResources))
 		})
 
 		AfterEach(func() {

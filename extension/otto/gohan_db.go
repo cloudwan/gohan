@@ -135,7 +135,7 @@ func init() {
 					call.ArgumentList = append(call.ArgumentList, defaultOffset)
 				}
 				if len(call.ArgumentList) < 7 {
-					defaultLockPolicy, _ := otto.ToValue(transaction.LockRelatedResources)
+					defaultLockPolicy, _ := otto.ToValue(schema.LockRelatedResources)
 					call.ArgumentList = append(call.ArgumentList, defaultLockPolicy)
 				}
 				VerifyCallArguments(&call, "gohan_db_lock_list", 7)
@@ -173,7 +173,7 @@ func init() {
 				if err != nil {
 					ThrowOttoException(&call, err.Error())
 				}
-				lockPolicy := transaction.LockPolicy(rawLockPolicy)
+				lockPolicy := schema.LockPolicy(rawLockPolicy)
 
 				resp, err := GohanDbLockList(tx, schemaID, filter, orderKey, limit, offset, lockPolicy)
 				if err != nil {
@@ -241,7 +241,7 @@ func init() {
 				if err != nil {
 					ThrowOttoException(&call, err.Error())
 				}
-				lockPolicy := transaction.LockPolicy(rawLockPolicy)
+				lockPolicy := schema.LockPolicy(rawLockPolicy)
 
 				resp, err := GohanDbLockFetch(tx, schemaID, ID, tenantID, lockPolicy)
 				if err != nil {
@@ -483,7 +483,7 @@ func GohanDbList(transaction transaction.Transaction, schemaID string,
 
 //GohanDbLockList locks resources in database filtered by filter and paginator
 func GohanDbLockList(tx transaction.Transaction, schemaID string,
-	filter map[string]interface{}, key string, limit uint64, offset uint64, policy transaction.LockPolicy) ([]map[string]interface{}, error) {
+	filter map[string]interface{}, key string, limit uint64, offset uint64, policy schema.LockPolicy) ([]map[string]interface{}, error) {
 
 	schema, paginator, err := prepareListResources(schemaID, key, limit, offset)
 	if err != nil {
@@ -518,7 +518,7 @@ func GohanDbFetch(tx transaction.Transaction, schemaID, ID,
 }
 
 //GohanDbLockFetch gets resource from database
-func GohanDbLockFetch(tx transaction.Transaction, schemaID, ID, tenantID string, policy transaction.LockPolicy) (*schema.Resource, error) {
+func GohanDbLockFetch(tx transaction.Transaction, schemaID, ID, tenantID string, policy schema.LockPolicy) (*schema.Resource, error) {
 	schema, err := getSchema(schemaID)
 	if err != nil {
 		return nil, err

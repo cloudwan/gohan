@@ -367,6 +367,7 @@ func CreateOrUpdateResource(
 	if tenantIDs != nil {
 		filter["tenant_id"] = tenantIDs
 	}
+
 	_, fetchErr := preTransaction.Fetch(resourceSchema, filter)
 	preTransaction.Close()
 
@@ -600,8 +601,18 @@ func UpdateResourceInTransaction(
 	if tenantIDs != nil {
 		filter["tenant_id"] = tenantIDs
 	}
-	resource, err := mainTransaction.Fetch(
-		resourceSchema, filter)
+
+	var resource *schema.Resource
+	var err error
+	switch resourceSchema.GetLockingPolicy("update") {
+	case schema.NoLocking:
+		resource, err = mainTransaction.Fetch(resourceSchema, filter)
+	case schema.LockRelatedResources:
+		resource, err = mainTransaction.LockFetch(resourceSchema, filter, schema.LockRelatedResources)
+	case schema.SkipRelatedResources:
+		resource, err = mainTransaction.LockFetch(resourceSchema, filter, schema.SkipRelatedResources)
+	}
+
 	if err != nil {
 		return ResourceError{err, err.Error(), WrongQuery}
 	}
@@ -719,7 +730,18 @@ func DeleteResourceInTransaction(context middleware.Context, resourceSchema *sch
 	if tenantIDs != nil {
 		filter["tenant_id"] = tenantIDs
 	}
-	resource, err := mainTransaction.Fetch(resourceSchema, filter)
+
+	var resource *schema.Resource
+	var err error
+	switch resourceSchema.GetLockingPolicy("delete") {
+	case schema.NoLocking:
+		resource, err = mainTransaction.Fetch(resourceSchema, filter)
+	case schema.LockRelatedResources:
+		resource, err = mainTransaction.LockFetch(resourceSchema, filter, schema.LockRelatedResources)
+	case schema.SkipRelatedResources:
+		resource, err = mainTransaction.LockFetch(resourceSchema, filter, schema.SkipRelatedResources)
+	}
+
 	log.Debug("%s %s", resource, err)
 	if err != nil {
 		return err

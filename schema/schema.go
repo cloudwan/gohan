@@ -55,6 +55,14 @@ const (
 	abstract string = "abstract"
 )
 
+type LockPolicy int
+
+const (
+	LockRelatedResources LockPolicy = iota
+	SkipRelatedResources
+	NoLocking
+)
+
 //Schemas is a list of schema
 //This struct is needed for json decode
 type Schemas struct {
@@ -604,5 +612,24 @@ func (schema *Schema) JSON() map[string]interface{} {
 		"schema":      schema.JSONSchema,
 		"actions":     actions,
 		"metadata":    schema.Metadata,
+	}
+}
+
+func (schema *Schema) GetLockingPolicy(event string) LockPolicy {
+	if schema.Metadata["locking_policy"] == nil {
+		return NoLocking
+	}
+
+	policies := util.MaybeMap(schema.Metadata["locking_policy"])
+	policy := util.MaybeString(policies[event])
+	switch policy {
+	case "lock_related":
+		return LockRelatedResources
+	case "skip_related":
+		return SkipRelatedResources
+	case "":
+		return NoLocking
+	default:
+		panic(fmt.Sprintf("Unknown locking policy '%s' for event %s in schema %s", policy, event, schema.ID))
 	}
 }
