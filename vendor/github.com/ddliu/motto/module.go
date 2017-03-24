@@ -6,9 +6,11 @@ package motto
 
 import (
 	"errors"
-	"github.com/xyproto/otto"
 	"io/ioutil"
 	"path/filepath"
+	"strings"
+
+	"github.com/xyproto/otto"
 )
 
 // ModuleLoader is declared to load a module.
@@ -23,7 +25,7 @@ type ModuleLoader func(*Motto) (otto.Value, error)
 func CreateLoaderFromSource(source, pwd string) ModuleLoader {
 	return func(vm *Motto) (otto.Value, error) {
 		// Wraps the source to create a module environment
-		source = "(function(module) {var require = module.require;var exports = module.exports;\n" + source + "\n})"
+		source = "(function(module) {var require = module.require;var exports = module.exports;var __dirname = module.__dirname;\n" + source + "\n})"
 
 		// Provide the "require" method in the module scope.
 		jsRequire := func(call otto.FunctionCall) otto.Value {
@@ -39,6 +41,7 @@ func CreateLoaderFromSource(source, pwd string) ModuleLoader {
 
 		jsModule, _ := vm.Object(`({exports: {}})`)
 		jsModule.Set("require", jsRequire)
+		jsModule.Set("__dirname", pwd)
 		jsExports, _ := jsModule.Get("exports")
 
 		// Run the module source, with "jsModule" as the "module" variable, "jsExports" as "this"(Nodejs capable).
@@ -95,24 +98,29 @@ func FindFileModule(name, pwd string, paths []string) (string, error) {
 		return "", errors.New("Empty module name")
 	}
 
+	add := func(choices []string, name string) []string {
+		ext := filepath.Ext(name)
+		if ext != ".js" && ext != ".json" {
+			choices = append(choices, name+".js", name+".json")
+		}
+		choices = append(choices, name)
+		return choices
+	}
+
 	var choices []string
 	if name[0] == '.' || filepath.IsAbs(name) {
 		if name[0] == '.' {
 			name = filepath.Join(pwd, name)
 		}
 
-		choices = append(choices, name)
-		ext := filepath.Ext(name)
-		if ext != ".js" && ext != ".json" {
-			choices = append(choices, name+".js", name+".json")
-		}
+		choices = add(choices, name)
 	} else {
 		if pwd != "" {
-			choices = append(choices, filepath.Join(pwd, "node_modules", name))
+			choices = add(choices, filepath.Join(pwd, "node_modules", name))
 		}
 
 		for _, v := range paths {
-			choices = append(choices, filepath.Join(v), name)
+			choices = add(choices, filepath.Join(v, name))
 		}
 	}
 
@@ -135,11 +143,16 @@ func FindFileModule(name, pwd string, paths []string) (string, error) {
 				if err != nil {
 					return "", err
 				}
-			} else {
+			}
+
+			if entryPoint == "" {
 				entryPoint = "./index.js"
 			}
 
-			return filepath.Abs(filepath.Join(v, entryPoint))
+			if !strings.HasPrefix(entryPoint, ".") {
+				entryPoint = "./" + entryPoint
+			}
+			return FindFileModule(entryPoint, v, paths)
 		}
 
 		ok, err = isFile(v)

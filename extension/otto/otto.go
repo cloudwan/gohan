@@ -35,6 +35,8 @@ import (
 	//Import otto underscore lib
 	"regexp"
 
+	"strings"
+
 	_ "github.com/xyproto/otto/underscore"
 )
 
@@ -66,6 +68,7 @@ type Environment struct {
 	Identity    middleware.IdentityService
 	Sync        sync.Sync
 	globalStore *GlobalStore
+	loadHooks   []string
 }
 
 //NewEnvironment create new gohan extension environment based on context
@@ -79,6 +82,7 @@ func NewEnvironment(name string, dataStore db.DB, identity middleware.IdentitySe
 		Identity:    identity,
 		Sync:        sync,
 		globalStore: NewGlobalStore(),
+		loadHooks:   make([]string, 0),
 	}
 	env.SetUp()
 	return env
@@ -99,6 +103,19 @@ func RegisterInit(init func(env *Environment)) {
 //Load loads script for environment
 func (env *Environment) Load(source, code string) error {
 	vm := env.VM
+
+	for _, hook := range env.loadHooks {
+		rv, err := vm.Call(hook, nil, code, source)
+		if err != nil {
+			return err
+		}
+		transformedCode, err := GetString(rv)
+		if err != nil {
+			return err
+		}
+		code = transformedCode
+	}
+
 	script, err := vm.Compile(source, code)
 	if err != nil {
 		return err
@@ -124,12 +141,8 @@ func (env *Environment) LoadExtensionsForPath(extensions []*schema.Extension, ti
 			if extension.CodeType != "javascript" {
 				continue
 			}
-
-			script, err := env.VM.Compile(extension.URL, code)
-			if err != nil {
-				return err
-			}
-			_, err = env.VM.Otto.Run(script)
+			url := strings.TrimPrefix(extension.URL, "file://")
+			err := env.Load(url, code)
 			if err != nil {
 				return err
 			}
@@ -316,6 +329,9 @@ func (env *Environment) Clone() ext.Environment {
 	// need another fix for this race'y and unsafe behavior
 	clone.VM.Otto.Set("gohan_closers", []io.Closer{})
 	clone.globalStore = env.globalStore
+	for _, hook := range env.loadHooks {
+		clone.loadHooks = append(clone.loadHooks, hook)
+	}
 	return clone
 }
 
@@ -346,6 +362,18 @@ func throwOtto(call *otto.FunctionCall, exceptionName string, arguments ...inter
 //ThrowOttoException throws a JavaScript exception that will be passed to Otto
 func ThrowOttoException(call *otto.FunctionCall, format string, arguments ...interface{}) {
 	throwOtto(call, "Error", fmt.Sprintf(format, arguments...))
+}
+
+// ThrowIfHappened throws an exception with err's message if err happened
+func ThrowIfHappened(call *otto.FunctionCall, err error) {
+	ThrowWithMessageIfHappened(call, err, "%v", err)
+}
+
+// ThrowWithMessageIfHappened throws an exception with the formatted message if err happened
+func ThrowWithMessageIfHappened(call *otto.FunctionCall, err error, format string, arguments ...interface{}) {
+	if err != nil {
+		ThrowOttoException(call, format, arguments...)
+	}
 }
 
 //VerifyCallArguments verify number of calles
