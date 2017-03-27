@@ -1210,6 +1210,8 @@ var _ = Describe("Server package test", func() {
 
 			result := testURL("POST", responderPluralURL+"/r1/hi", memberTokenID, testHiAction, http.StatusUnauthorized)
 			Expect(result).To(HaveKey("error"))
+			result = testURL("POST", responderParentPluralURL+"/p1/responders/r1/hi", memberTokenID, testHiAction, http.StatusUnauthorized)
+			Expect(result).To(HaveKey("error"))
 		})
 
 		It("should be invalid requests", func() {
