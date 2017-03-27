@@ -6,14 +6,18 @@ Goose is a database migration tool. Manage your database's evolution by creating
 
 ### Goals of this fork
 
-This is a fork of https://bitbucket.org/liamstask/goose with the following changes:
+github.com/pressly/goose is a fork of bitbucket.org/liamstask/goose with the following changes:
 - No config files
-- Default goose binary can migrate SQL files only
-- We dropped building .go files on-the-fly in favor of the below
-- Import `github.com/pressly/goose` package
-    - To run complex Go migrations with your own `*sql.DB` connection via `*sql.Tx` transactions
-    - The pkg doesn't register any SQL drivers anymore (no `panic()` driver conflicts with your codebase!)
-    - The pkg doesn't have any vendor dependencies anymore
+- [Default goose binary](./cmd/goose/main.go) can migrate SQL files only
+- Go migrations:
+    - We dropped building Go migrations on-the-fly from .go source files
+    - Instead, you can create your own goose binary, import `github.com/pressly/goose`
+      package and run complex Go migrations with your own `*sql.DB` connection
+    - Each Go migration function is called with `*sql.Tx` argument - within its own transaction
+- The goose pkg is decoupled from the default binary:
+    - goose pkg doesn't register any SQL drivers anymore
+      (no driver `panic()` conflict within your codebase!)
+    - goose pkg doesn't have any vendor dependencies anymore
 
 # Install
 
@@ -97,6 +101,8 @@ Print the status of all migrations:
     $   Sun Jan  6 11:25:03 2013 -- 002_next.sql
     $   Pending                  -- 003_and_again.go
 
+Note: for MySQL [parseTime flag](https://github.com/go-sql-driver/mysql#parsetime) must be enabled.
+
 ## dbversion
 
 Print the current version of the database:
@@ -159,9 +165,12 @@ language plpgsql;
 
 ## Go Migrations
 
-Import `github.com/pressly/goose` from your own project (see [example](./example/migrations-go/cmd/main.go)), register migration functions and run goose command (ie. `goose.Up(db *sql.DB, dir string)`).
+1. Create your own goose binary, see [example](./example/migrations-go/cmd/main.go)
+2. Import `github.com/pressly/goose`
+3. Register your migration functions
+4. Run goose command, ie. `goose.Up(db *sql.DB, dir string)`
 
-A [sample Go migration 00002_users_add_email.go file](./example/migrations-go/00002_users_add_email.go) looks like:
+A [sample Go migration 00002_users_add_email.go file](./example/migrations-go/00002_rename_root.go) looks like:
 
 ```go
 package migrations
@@ -177,7 +186,7 @@ func init() {
 }
 
 func Up(tx *sql.Tx) error {
-	_, err := tx.Query("ALTER TABLE users ADD COLUMN email text DEFAULT '' NOT NULL;")
+	_, err := tx.Exec("UPDATE users SET username='admin' WHERE username='root';")
 	if err != nil {
 		return err
 	}
@@ -185,7 +194,7 @@ func Up(tx *sql.Tx) error {
 }
 
 func Down(tx *sql.Tx) error {
-	_, err := tx.Query("ALTER TABLE users DROP COLUMN email;")
+	_, err := tx.Exec("UPDATE users SET username='root' WHERE username='admin';")
 	if err != nil {
 		return err
 	}
