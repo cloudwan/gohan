@@ -16,14 +16,15 @@
 package migration
 
 import (
-	"fmt"
-
 	"database/sql"
-	"github.com/cloudwan/gohan/log"
-	"github.com/cloudwan/gohan/util"
-	"github.com/pressly/goose"
+	"fmt"
 	"os"
 	"path"
+
+	"github.com/pressly/goose"
+
+	"github.com/cloudwan/gohan/log"
+	"github.com/cloudwan/gohan/util"
 )
 
 var logger = log.NewLogger()
@@ -48,35 +49,67 @@ func LoadConfig(configFile string) (err error) {
 	return
 }
 
-func readGooseConfig() (dbType, dbConnection, migrationsPath string) {
-	config := util.GetConfig()
-	dbType = config.GetString("database/type", "sqlite3")
-	dbConnection = config.GetString("database/connection", "")
-	migrationsPath = config.GetString("database/migrations", "etc/db/migrations")
-	return
+type config struct {
+	dbType string
+	dbConnection string
+	dbNoInit bool
+	dbMigrations string
 }
 
-func Init() error {
-	logger.Info("migration: init")
+func readConfig() *config {
+	c := util.GetConfig()
+	return &config{
+		dbType: c.GetString("database/type", "sqlite3"),
+		dbConnection: c.GetString("database/connection", ""),
+		dbNoInit: c.GetBool("database/no_init", false),
+		dbMigrations: c.GetString("database/migrations", "etc/db/migrations"),
+	}
+}
 
-	dbType, dbConnection, migrationsPath := readGooseConfig()
+func EnsureVersion() error {
+	config := readConfig()
 
-	if err := goose.SetDialect(dbType); err != nil {
-		return fmt.Errorf("migration: failed to set goose dialect: %s", err)
+	if !config.dbNoInit {
+		logger.Debug("migration: db version check skipped: no_init")
+		return nil
 	}
 
-	db, err := sql.Open(dbType, dbConnection)
+	if config.dbMigrations == "" {
+		logger.Debug("migration: db version check skipped: no migrations path")
+		return nil
+	}
 
+	if err := goose.SetDialect(config.dbType); err != nil {
+		return fmt.Errorf("migration: failed to set goose dialect: %s", err)
+	}
+	db, err := sql.Open(config.dbType, config.dbConnection)
 	if err != nil {
 		return fmt.Errorf("migration: failed to open db: %s", err)
+	}
+
+	ms, err := goose.CollectMigrations(config.dbMigrations, 0, goose.MaxVersion)
+	if err != nil {
+		return fmt.Errorf("migration: failed to list migrations: %s", err)
+	}
+	if len(ms) == 0 {
+		logger.Debug("migration: no migrations")
+		return nil
+	}
+
+	m, err := ms.Last()
+	if err != nil {
+		return fmt.Errorf("migration: failed to get last migration: %s", err)
 	}
 
 	v, err := goose.EnsureDBVersion(db)
 	if err != nil {
 		return fmt.Errorf("migration: failed to ensure db version: %s", err)
 	}
+	logger.Info("migration path: %q, db version: %d", config.dbMigrations, v)
 
-	logger.Info("migration path: %q, version: %d", migrationsPath, v)
+	if m.Version != v {
+		return fmt.Errorf("migration: version mismatch db version=%d, last migration=%d", v, m.Version)
+	}
 
 	return nil
 }
@@ -86,21 +119,21 @@ func Help() {
 }
 
 func Run(subcmd string, args []string) {
-	dbType, dbConnection, migrationsPath := readGooseConfig()
+	config := readConfig()
 
-	if err := goose.SetDialect(dbType); err != nil {
+	if err := goose.SetDialect(config.dbType); err != nil {
 		fmt.Printf("error: failed to set goose dialect: %s\n", err.Error())
 		return
 	}
 
-	db, err := sql.Open(dbType, dbConnection)
+	db, err := sql.Open(config.dbType, config.dbConnection)
 
 	if err != nil {
 		fmt.Printf("error: failed to open db: %s\n", err.Error())
 		return
 	}
 
-	err = goose.Run(subcmd, db, migrationsPath, args...)
+	err = goose.Run(subcmd, db, config.dbMigrations, args...)
 	if err != nil {
 		fmt.Println(err)
 	}

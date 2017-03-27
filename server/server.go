@@ -136,7 +136,7 @@ func (server *Server) initDB() error {
 }
 
 func (server *Server) connectDB() error {
-	if err := migration.Init(); err != nil {
+	if err := migration.EnsureVersion(); err != nil {
 		return err
 	}
 	config := util.GetConfig()
@@ -259,7 +259,9 @@ func NewServer(configFile string) (*Server, error) {
 		return nil, fmt.Errorf("invalid sync type: %s", syncType)
 	}
 
-	server.connectDB()
+	if err := server.connectDB(); err != nil {
+		return nil, fmt.Errorf("could not connect to database: %s", err)
+	}
 
 	schemaFiles := config.GetStringList("schemas", nil)
 	if schemaFiles == nil {
