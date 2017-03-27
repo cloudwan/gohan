@@ -365,15 +365,15 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 			// TODO use authorization middleware
 			manager := schema.GetManager()
 			path := r.URL.Path
-			policy, role := manager.PolicyValidate(action.ID, path, auth)
+			policy, role := manager.PolicyValidate(action.ID, s.GetPluralURL(), auth)
 			if policy == nil {
 				middleware.HTTPJSONError(w, fmt.Sprintf("No matching policy: %s %s %s", action, path, s.Actions), http.StatusUnauthorized)
 				return
 			}
 			context["policy"] = policy
+			context["role"] = role
 			context["tenant_id"] = auth.TenantID()
 			context["auth_token"] = auth.AuthToken()
-			context["role"] = role
 			context["catalog"] = auth.Catalog()
 			context["auth"] = auth
 
