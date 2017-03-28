@@ -136,7 +136,7 @@ Developers can make a schema as abstract schema specifying type=abstract. The de
 
 - nosync (boolean)
 
-We don't sync this resource for sync backend when this option is true.
+  We don't sync this resource for sync backend when this option is true.
 
 - state_versioning (boolean)
 
@@ -162,6 +162,19 @@ We don't sync this resource for sync backend when this option is true.
   Used in OpenApi documentation it allows to categorized schema according to given `resource_group` by setting appropriate tags.
   If `--split-by-resource-group` option is used to generate OpenApi documentation it will additionally place given schema to `resource_group.js` file.
 
+- locking_policy (list)
+
+  Sets if the resource should be locked in the database (using `SELECT ... FOR UPDATE`) at the beginning of `pre_update_in_transaction` and `pre_delete_in_transaction` event handling. 
+  
+  Subkeys:
+  - delete (string) - locking policy for `pre_delete_in_transaction`
+  - update (string) - locking policy for `pre_update_in_transaction`
+  
+  Allowed values:
+  - `lock_related` - locks the resource and related resources
+  - `skip_related` - locks the resource but leaves related resources unlocked
+  - (empty): default, no locking
+    
 ## Properties
 
 We need to define properties of a resource using following parameters.

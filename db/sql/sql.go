@@ -751,11 +751,11 @@ func (tx *Transaction) List(s *schema.Schema, filter transaction.Filter, pg *pag
 	return executeSelect(s, filter, sql, args, tx)
 }
 
-func shouldJoin(policy transaction.LockPolicy) bool {
+func shouldJoin(policy schema.LockPolicy) bool {
 	switch policy {
-	case transaction.LockRelatedResources:
+	case schema.LockRelatedResources:
 		return true
-	case transaction.SkipRelatedResources:
+	case schema.SkipRelatedResources:
 		return false
 	default:
 		log.Fatalf("Unknown lock policy %+v", policy)
@@ -764,7 +764,7 @@ func shouldJoin(policy transaction.LockPolicy) bool {
 }
 
 //Lock resources in the db
-func (tx *Transaction) LockList(s *schema.Schema, filter transaction.Filter, pg *pagination.Paginator, lockPolicy transaction.LockPolicy) (list []*schema.Resource, total uint64, err error) {
+func (tx *Transaction) LockList(s *schema.Schema, filter transaction.Filter, pg *pagination.Paginator, lockPolicy schema.LockPolicy) (list []*schema.Resource, total uint64, err error) {
 	sql, args, err := buildSelect(s, filter, pg, shouldJoin(lockPolicy))
 	if err != nil {
 		return nil, 0, err
@@ -846,7 +846,7 @@ func (tx *Transaction) Fetch(s *schema.Schema, filter transaction.Filter) (*sche
 }
 
 //Fetch & lock a resource
-func (tx *Transaction) LockFetch(s *schema.Schema, filter transaction.Filter, lockPolicy transaction.LockPolicy) (*schema.Resource, error) {
+func (tx *Transaction) LockFetch(s *schema.Schema, filter transaction.Filter, lockPolicy schema.LockPolicy) (*schema.Resource, error) {
 	list, _, err := tx.LockList(s, filter, nil, lockPolicy)
 	if len(list) < 1 {
 		return nil, fmt.Errorf("Failed to fetch and lock %s", filter)
