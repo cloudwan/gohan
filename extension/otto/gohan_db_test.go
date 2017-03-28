@@ -143,7 +143,7 @@ var _ = Describe("GohanDb", func() {
 	Describe("gohan_db_(lock)list", func() {
 		var setExpect = func(tx *mocks.Transaction, methodName string, s *schema.Schema, filter transaction.Filter, paginator *pagination.Paginator) *mock.Call {
 			if strings.Contains(methodName, "Lock") {
-				return tx.On(methodName, s, filter, paginator, transaction.LockRelatedResources)
+				return tx.On(methodName, s, filter, paginator, schema.LockRelatedResources)
 			} else {
 				return tx.On(methodName, s, filter, paginator)
 			}
