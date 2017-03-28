@@ -64,3 +64,22 @@ schemas:
     type: object
   singular: metadata_id
   title: MetadataId
+- description: MetadataPolicy
+  id: metadata_policy
+  plural: metadatas_policies
+  metadata:
+    locking_policy:
+      update: lock_related
+      delete: skip_related
+  schema:
+    properties:
+      m1:
+        description: M1
+        title: M1
+        type: string
+        unique: false
+    propertiesOrder:
+    - m1
+    type: object
+  singular: metadata_policy
+  title: MetadataPolicy
