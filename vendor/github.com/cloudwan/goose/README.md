@@ -6,12 +6,12 @@ Goose is a database migration tool. Manage your database's evolution by creating
 
 ### Goals of this fork
 
-github.com/pressly/goose is a fork of bitbucket.org/liamstask/goose with the following changes:
+github.com/cloudwan/goose is a fork of github.com/pressly/goose (indirectly bitbucket.org/liamstask/goose) with the following changes:
 - No config files
 - [Default goose binary](./cmd/goose/main.go) can migrate SQL files only
 - Go migrations:
     - We dropped building Go migrations on-the-fly from .go source files
-    - Instead, you can create your own goose binary, import `github.com/pressly/goose`
+    - Instead, you can create your own goose binary, import `github.com/cloudwan/goose`
       package and run complex Go migrations with your own `*sql.DB` connection
     - Each Go migration function is called with `*sql.Tx` argument - within its own transaction
     - If a deployment model does not allow go compiler to be available from PATH it is possible
@@ -23,7 +23,7 @@ github.com/pressly/goose is a fork of bitbucket.org/liamstask/goose with the fol
 
 # Install
 
-    $ go get -u github.com/pressly/goose/cmd/goose
+    $ go get -u github.com/cloudwan/goose/cmd/goose
 
 This will install the `goose` binary to your `$GOPATH/bin` directory.
 
@@ -169,7 +169,7 @@ language plpgsql;
 ## Go Migrations
 
 1. Create your own goose binary, see [example](./example/migrations-go/cmd/main.go)
-2. Import `github.com/pressly/goose`
+2. Import `github.com/cloudwan/goose`
 3. Register your migration functions
 4. Run goose command, ie. `goose.Up(db *sql.DB, dir string)`
 
@@ -181,7 +181,7 @@ package main
 import (
 	"database/sql"
 
-	"github.com/pressly/goose"
+	"github.com/cloudwan/goose"
 )
 
 func init() {
@@ -207,7 +207,7 @@ func Down(tx *sql.Tx) error {
 
 ## Go Migrations from a precompiled plugins
 
-1. Import `github.com/pressly/goose`
+1. Import `github.com/cloudwan/goose`
 2. Load migration plugins with LoadMigrationPlugins
 4. Run goose command, ie. `goose.Up(db *sql.DB, dir string)`
 
@@ -223,7 +223,7 @@ go build -buildmode=plugin -o 002_next.so 002_next.sql
 
 Licensed under [MIT License](./LICENSE)
 
-[GoDoc]: https://godoc.org/github.com/pressly/goose
-[GoDoc Widget]: https://godoc.org/github.com/pressly/goose?status.svg
-[Travis]: https://travis-ci.org/pressly/goose
-[Travis Widget]: https://travis-ci.org/pressly/goose.svg?branch=master
+[GoDoc]: https://godoc.org/github.com/cloudwan/goose
+[GoDoc Widget]: https://godoc.org/github.com/cloudwan/goose?status.svg
+[Travis]: https://travis-ci.org/cloudwan/goose
+[Travis Widget]: https://travis-ci.org/cloudwan/goose.svg?branch=master

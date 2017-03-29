@@ -41,13 +41,13 @@ You can convert data source each other using convert tool.
 ## Database Migration
 
 Gohan supports generating database migration scripts. Current implementation is based
-on a goose fork (https://github.org/pressly/goose) that allows easy integration
+on a goose fork (https://github.org/cloudwan/goose) that allows easy integration
 and has minimum number of external dependencies.
 During startup gohan always checks if the database is in current version and if not, it rejects
 to run to avoid data corruption. Using the scripts provided by a developer user can perform
 migration across different versions. Since gohan migration support is mostly done with an external library,
 the main subcommand documentation in located in the library:
-https://github.com/pressly/goose/blob/master/README.md
+https://github.com/cloudwan/goose/blob/master/README.md
 
 ```
   NAME:
