@@ -356,10 +356,10 @@
 			"revision": "fb0230561a6ba1cab17beb95f1faedc16584fdb8"
 		},
 		{
-			"checksumSHA1": "wlTQrI2jNleFS+jfyfH5o29kvdk=",
+			"checksumSHA1": "+roVEOcjBhE8Vabfg/a6nTQ5RNE=",
 			"path": "github.com/pressly/goose",
-			"revision": "31bb74f65b148c79649dc42e4c4bf3948adfb355",
-			"revisionTime": "2017-03-29T13:44:05Z"
+			"revision": "ac2d2badf5936328e5d17dc357b29ab8d2814471",
+			"revisionTime": "2017-03-29T14:11:25Z"
 		},
 		{
 			"checksumSHA1": "/j0HRFJPThv7HEkZZ/gurf+5fQI=",
