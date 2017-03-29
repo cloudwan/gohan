@@ -86,7 +86,7 @@ func Init() error {
 }
 
 func Help() {
-	fmt.Println("missing subcommand: help, up, up-by-one, up-to, create, down, down-to, redo, status, version")
+	fmt.Println("missing subcommand: help, up, up-by-one, up-to, create, create-next, down, down-to, redo, status, version")
 }
 
 func Run(subCmd string, args []string) {
