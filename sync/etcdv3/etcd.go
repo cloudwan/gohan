@@ -102,7 +102,7 @@ func (s *Sync) Fetch(key string) (*sync.Node, error) {
 	if err != nil {
 		return nil, err
 	}
-	dir, err := s.etcdClient.Get(s.withTimeout(), key+"/", etcd.WithPrefix(), etcd.WithSort(etcd.SortByKey, etcd.SortAscend))
+	dir, err := s.etcdClient.Get(s.withTimeout(), key, etcd.WithPrefix(), etcd.WithSort(etcd.SortByKey, etcd.SortAscend))
 	if err != nil {
 		return nil, err
 	}
@@ -252,7 +252,7 @@ func (s *Sync) Watch(path string, responseChan chan *sync.Event, stopChan chan b
 	if revision != sync.RevisionCurrent {
 		options = append(options, etcd.WithMinModRev(revision+1))
 	}
-	node, err := s.etcdClient.Get(s.withTimeout(), path+"/", options...)
+	node, err := s.etcdClient.Get(s.withTimeout(), path, options...)
 	if err != nil {
 		return err
 	}
@@ -294,7 +294,7 @@ func (s *Sync) Watch(path string, responseChan chan *sync.Event, stopChan chan b
 	go func() {
 		defer wg.Done()
 		err := func() error {
-			rch := s.etcdClient.Watch(ctx, path+"/", etcd.WithPrefix(), etcd.WithRev(revision))
+			rch := s.etcdClient.Watch(ctx, path, etcd.WithPrefix(), etcd.WithRev(revision))
 
 			for wresp := range rch {
 				err := wresp.Err()
