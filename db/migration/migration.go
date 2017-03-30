@@ -119,3 +119,17 @@ func Run(subCmd string, args []string) {
 		os.Exit(1)
 	}
 }
+
+var modifiedSchemas = map[string]bool{}
+
+func MarkSchemaAsModified(schemaID string) {
+	modifiedSchemas[schemaID] = true
+}
+
+func GetModifiedSchemas() []string {
+	schemas := make([]string, len(modifiedSchemas))
+	for schema, _ := range modifiedSchemas {
+		schemas = append(schemas, schema)
+	}
+	return schemas
+}

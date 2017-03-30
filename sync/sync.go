@@ -15,7 +15,11 @@
 
 package sync
 
+import l "github.com/cloudwan/gohan/log"
+
 const RevisionCurrent = -1
+
+var log = l.NewLogger()
 
 //Sync is a interface for sync servers
 type Sync interface {

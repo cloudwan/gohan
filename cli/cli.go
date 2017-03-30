@@ -38,10 +38,15 @@ import (
 
 	"github.com/cloudwan/gohan/extension/gohanscript"
 	//Import gohan script lib
+
 	"github.com/cloudwan/gohan/db/migration"
 	"github.com/cloudwan/gohan/db/sql"
+	"github.com/cloudwan/gohan/extension"
 	_ "github.com/cloudwan/gohan/extension/gohanscript/autogen"
+	"github.com/cloudwan/gohan/extension/otto"
 	l "github.com/cloudwan/gohan/log"
+	"github.com/cloudwan/gohan/server/middleware"
+	sync_util "github.com/cloudwan/gohan/sync/util"
 )
 
 var log = l.NewLogger()
@@ -357,15 +362,114 @@ func getMigrateSubcommand(subcmd, usage string) cli.Command {
 	}
 }
 
+func getMigrateSubcommandWithPostMigrateEvent(subcmd, usage string) cli.Command {
+	const (
+		POST_MIGRATION_EVENT_TIMEOUT_FLAG = "post-migration-event-timeout"
+		CONFIG_FILE_FLAG                  = "config-file"
+		EMIT_POST_MIGRATION_EVENT_FLAG    = "emit-post-migration-event"
+		POST_MIGRATION_EVENT              = "post-migration"
+	)
+	return cli.Command{
+		Name:  subcmd,
+		Usage: usage,
+		Flags: []cli.Flag{
+			cli.StringFlag{Name: CONFIG_FILE_FLAG, Value: defaultConfigFile, Usage: "Server config File"},
+			cli.BoolFlag{Name: EMIT_POST_MIGRATION_EVENT_FLAG, Usage: "Enable if post-migration event should be emited to modified schema extensions"},
+			cli.DurationFlag{Name: POST_MIGRATION_EVENT_TIMEOUT_FLAG, Value: time.Second * 30, Usage: "Maximum duration of post-migration event"},
+		},
+		Action: func(context *cli.Context) {
+			configFile := context.String(CONFIG_FILE_FLAG)
+			if migration.LoadConfig(configFile) != nil {
+				return
+			}
+			config := util.GetConfig()
+
+			migration.Run(subcmd, context.Args())
+
+			emitEvent := context.Bool(EMIT_POST_MIGRATION_EVENT_FLAG)
+			if !emitEvent {
+				return
+			}
+
+			modifiedSchemas := migration.GetModifiedSchemas()
+
+			if len(modifiedSchemas) == 0 {
+				log.Info("No modified schemas, skipping post-migration event")
+				return
+			}
+
+			log.Debug("Modified schemas: %s", modifiedSchemas)
+
+			schemaFiles := config.GetStringList("schemas", nil)
+			if schemaFiles == nil {
+				log.Fatal("No schema specified in configuraion")
+			}
+
+			manager := schema.GetManager()
+			if err := manager.LoadSchemasFromFiles(schemaFiles...); err != nil {
+				log.Fatal(err)
+			}
+
+			dbConn, err := db.CreateFromConfig(config)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			sync, err := sync_util.CreateFromConfig(config)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			identity, err := middleware.CreateIdentityServiceFromConfig(config)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			environmentManager := extension.GetManager()
+
+			for _, s := range manager.Schemas() {
+				if !util.ContainsString(modifiedSchemas, s.ID) {
+					continue
+				}
+				pluralURL := s.GetPluralURL()
+
+				if _, ok := environmentManager.GetEnvironment(s.ID); !ok {
+					env := otto.NewEnvironment("post-migration-env", dbConn, identity, sync)
+					eventTimeout := context.Duration(POST_MIGRATION_EVENT_TIMEOUT_FLAG)
+					env.SetEventTimeLimit(POST_MIGRATION_EVENT, eventTimeout)
+					env.LoadExtensionsForPath(manager.Extensions, manager.TimeLimit, manager.TimeLimits, pluralURL)
+					log.Info("Loading environment for %s schema with URL: %s", s.ID, pluralURL)
+					if err != nil {
+						log.Fatal(fmt.Sprintf("[%s] %v", pluralURL, err))
+					}
+					environmentManager.RegisterEnvironment(s.ID, env)
+				}
+
+				env, _ := environmentManager.GetEnvironment(s.ID)
+				eventContext := map[string]interface{}{}
+				eventContext["schema"] = s
+				eventContext["sync"] = sync
+				eventContext["db"] = dbConn
+				eventContext["identity_service"] = identity
+				err := env.HandleEvent(POST_MIGRATION_EVENT, eventContext)
+				if err != nil {
+					log.Fatalf("Failed to handle event post-migration, err: %s", err)
+				}
+			}
+		},
+	}
+
+}
+
 func getMigrateCommand() cli.Command {
 	return cli.Command{
 		Name:      "migrate",
 		ShortName: "mig",
 		Usage:     "Manage migrations",
 		Subcommands: []cli.Command{
-			getMigrateSubcommand("up", "Migrate to the most recent version"),
-			getMigrateSubcommand("up-by-one", "Migrate one version up"),
-			getMigrateSubcommand("up-to", "Migrate up to specific version"),
+			getMigrateSubcommandWithPostMigrateEvent("up", "Migrate to the most recent version"),
+			getMigrateSubcommandWithPostMigrateEvent("up-by-one", "Migrate one version up"),
+			getMigrateSubcommandWithPostMigrateEvent("up-to", "Migrate up to specific version"),
 			getMigrateSubcommand("create", "Create a template for a new migration"),
 			getCreateInitialMigrationCommand(),
 			getMigrateSubcommand("down", "Migrate to the oldest version"),

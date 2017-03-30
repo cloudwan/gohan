@@ -24,7 +24,11 @@ import (
 	"strings"
 	"time"
 
+	"fmt"
+
+	"github.com/cloudwan/gohan/cloud"
 	"github.com/cloudwan/gohan/schema"
+	"github.com/cloudwan/gohan/util"
 	"github.com/go-martini/martini"
 	"github.com/rackspace/gophercloud"
 )
@@ -108,6 +112,33 @@ type IdentityService interface {
 	VerifyToken(string) (schema.Authorization, error)
 	GetServiceAuthorization() (schema.Authorization, error)
 	GetClient() *gophercloud.ServiceClient
+}
+
+func CreateIdentityServiceFromConfig(config *util.Config) (IdentityService, error) {
+	//TODO(marcin) remove this
+	if config.GetBool("keystone/use_keystone", false) {
+		if config.GetBool("keystone/fake", false) {
+			//TODO(marcin) requests to fake server also get authenticated
+			//             we need a separate routing Group
+			log.Info("Debug Mode with Fake Keystone Server")
+			return &FakeIdentity{}, nil
+
+		} else {
+			log.Info("Keystone backend server configured")
+			keystoneIdentity, err := cloud.NewKeystoneIdentity(
+				config.GetString("keystone/auth_url", "http://localhost:35357/v3"),
+				config.GetString("keystone/user_name", "admin"),
+				config.GetString("keystone/password", "password"),
+				config.GetString("keystone/domain_name", "Default"),
+				config.GetString("keystone/tenant_name", "admin"),
+				config.GetString("keystone/version", ""))
+			if err != nil {
+				log.Fatal("Failed to create keystone identity service, err: %s", err)
+			}
+			return keystoneIdentity, nil
+		}
+	}
+	return nil, fmt.Errorf("No identity service defined in config")
 }
 
 //NobodyResourceService contains a definition of nobody resources (that do not require authorization)
