@@ -2,7 +2,7 @@
 #  Gohan API Server example configuraion
 ######################################################
 
-# database connection configuraion
+# database connection configuration
 database:
     # yaml, json, sqlite3 and mysql supported
     # yaml and json db is for schema development purpose
@@ -14,6 +14,8 @@ database:
     max_open_conn: 100
     # please set no_init true in the production env, so that gohan don't initialize table
     # no_init: true
+    # migrations path contains SQL migrations (*.sql)
+    # and precompiled GO migrations (*.so)
     migrations: "db/migrations"
 
 schemas:

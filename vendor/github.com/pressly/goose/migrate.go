@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"path/filepath"
+	"plugin"
 	"runtime"
 	"sort"
 )
@@ -79,15 +80,19 @@ func (ms Migrations) String() string {
 
 func AddMigration(up func(*sql.Tx) error, down func(*sql.Tx) error) {
 	_, filename, _, _ := runtime.Caller(1)
+	AddNamedMigration(filename, up, down)
+}
+
+func AddNamedMigration(filename string, up func(*sql.Tx) error, down func(*sql.Tx) error) {
 	v, _ := NumericComponent(filename)
 	migration := &Migration{Version: v, Next: -1, Previous: -1, UpFn: up, DownFn: down, Source: filename}
 
 	goMigrations = append(goMigrations, migration)
 }
 
-// collect all the valid looking migration scripts in the
-// migrations folder and go func registry, and key them by version
-func collectMigrations(dirpath string, current, target int64) (Migrations, error) {
+// CollectMigrations returns all the valid looking migration scripts in the
+// migrations folder and go func registry, and key them by version.
+func CollectMigrations(dirpath string, current, target int64) (Migrations, error) {
 	var migrations Migrations
 
 	// extract the numeric component of each migration,
@@ -122,6 +127,38 @@ func collectMigrations(dirpath string, current, target int64) (Migrations, error
 	migrations = sortAndConnectMigrations(migrations)
 
 	return migrations, nil
+}
+
+// LoadMigrationPlugins loads all the valid looking precompiled migration libraries
+// in the migrations folder and go func registry, and key them by version. Registration
+// is done automatically by shared library init func.
+func LoadMigrationPlugins(dirpath string) error {
+	migrationsPlugins, err := filepath.Glob(dirpath + "/*.so")
+	if err != nil {
+		return err
+	}
+
+	for _, file := range migrationsPlugins {
+		if _, err = plugin.Open(file); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// lastVersion returns version of last migration present in dirpath
+func LastMigration(dirpath string) (*Migration, error) {
+	ms, err := CollectMigrations(dirpath, 0, MaxVersion)
+	if err != nil {
+		return nil, err
+	}
+	m, err := ms.Last()
+
+	if err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 func sortAndConnectMigrations(migrations Migrations) Migrations {

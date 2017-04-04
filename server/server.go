@@ -259,7 +259,9 @@ func NewServer(configFile string) (*Server, error) {
 		return nil, fmt.Errorf("invalid sync type: %s", syncType)
 	}
 
-	server.connectDB()
+	if dbErr := server.connectDB(); dbErr != nil {
+		log.Fatalf("Error while connecting to DB: %s", dbErr)
+	}
 
 	schemaFiles := config.GetStringList("schemas", nil)
 	if schemaFiles == nil {
