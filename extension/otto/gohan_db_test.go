@@ -17,6 +17,8 @@ package otto_test
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/cloudwan/gohan/db/pagination"
@@ -26,16 +28,13 @@ import (
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/server/middleware"
 
-	"fmt"
 	"github.com/cloudwan/gohan/db"
 	db_mocks "github.com/cloudwan/gohan/db/mocks"
-	"github.com/cloudwan/gohan/db/transaction/mocks"
+	tr_mocks "github.com/cloudwan/gohan/db/transaction/mocks"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	"github.com/stretchr/testify/mock"
-	"strings"
 )
 
 func newEnvironmentWithExtension(extension *schema.Extension, db db.DB) (env extension.Environment) {
@@ -96,17 +95,20 @@ var _ = Describe("GohanDb", func() {
 					"path": ".*",
 				})
 				Expect(err).ToNot(HaveOccurred())
-				var fakeTx = new(mocks.Transaction)
-				fakeTx.On("Commit").Return(nil)
-				fakeTx.On("Close").Return(nil)
+
+				mockTx := tr_mocks.NewMockTransaction(mockCtrl)
+				gomock.InOrder(
+					mockTx.EXPECT().Commit().Return(nil),
+					mockTx.EXPECT().Close().Return(nil).Times(2),
+				)
+
 				mockDB := db_mocks.NewMockDB(mockCtrl)
-				mockDB.EXPECT().Begin().Return(fakeTx, nil)
+				mockDB.EXPECT().Begin().Return(mockTx, nil)
 				env := newEnvironmentWithExtension(ext, mockDB)
 
 				context := map[string]interface{}{}
 
 				Expect(env.HandleEvent("test_event", context)).To(Succeed())
-				fakeTx.AssertExpectations(GinkgoT())
 			})
 		})
 
@@ -123,30 +125,34 @@ var _ = Describe("GohanDb", func() {
 					"path": ".*",
 				})
 				Expect(err).ToNot(HaveOccurred())
-				var fakeTx = new(mocks.Transaction)
-				fakeTx.On("SetIsolationLevel", transaction.Serializable).Return(nil)
-				fakeTx.On("Commit").Return(nil)
-				fakeTx.On("Close").Return(nil)
+
+				mockTx := tr_mocks.NewMockTransaction(mockCtrl)
+				gomock.InOrder(
+					mockTx.EXPECT().SetIsolationLevel(transaction.Serializable).Return(nil),
+					mockTx.EXPECT().Commit().Return(nil),
+					mockTx.EXPECT().Close().Return(nil).Times(2),
+				)
+
 				mockDB := db_mocks.NewMockDB(mockCtrl)
-				mockDB.EXPECT().Begin().Return(fakeTx, nil)
+				mockDB.EXPECT().Begin().Return(mockTx, nil)
 				env := newEnvironmentWithExtension(ext, mockDB)
 
-				context := map[string]interface{}{}
+				context := map[string]interface{}{
+					"transaction": mockTx,
+				}
 
 				Expect(env.HandleEvent("test_event", context)).To(Succeed())
-				fakeTx.AssertExpectations(GinkgoT())
 			})
 		})
 
 	})
 
 	Describe("gohan_db_(lock)list", func() {
-		var setExpect = func(tx *mocks.Transaction, methodName string, s *schema.Schema, filter transaction.Filter, paginator *pagination.Paginator) *mock.Call {
+		var listCall = func(tx *tr_mocks.MockTransaction, methodName string, s *schema.Schema, f transaction.Filter, pg *pagination.Paginator) *gomock.Call {
 			if strings.Contains(methodName, "Lock") {
-				return tx.On(methodName, s, filter, paginator, schema.SkipRelatedResources)
-			} else {
-				return tx.On(methodName, s, filter, paginator)
+				return tx.EXPECT().LockList(s, f, nil, pg, schema.SkipRelatedResources)
 			}
+			return tx.EXPECT().List(s, f, nil, pg)
 		}
 
 		Context("When valid minimum parameters are given", func() {
@@ -168,19 +174,18 @@ var _ = Describe("GohanDb", func() {
 					Expect(err).ToNot(HaveOccurred())
 					env := newEnvironmentWithExtension(extension, testDB)
 
-					var paginator *pagination.Paginator
-					var fakeTx = new(mocks.Transaction)
-					setExpect(fakeTx, methodName, s, transaction.Filter{"tenant_id": "tenant0"}, paginator).Return(
+					mockTx := tr_mocks.NewMockTransaction(mockCtrl)
+					listCall(mockTx, methodName, s, transaction.Filter{"tenant_id": "tenant0"}, nil).Return(
 						[]*schema.Resource{r0, r1},
 						uint64(2),
 						nil,
 					)
 
 					context := map[string]interface{}{
-						"transaction": fakeTx,
+						"transaction": mockTx,
 					}
-					Expect(env.HandleEvent("test_event", context)).To(Succeed())
 
+					Expect(env.HandleEvent("test_event", context)).To(Succeed())
 					Expect(context["resp"]).To(
 						Equal(
 							fakeResources,
@@ -211,16 +216,15 @@ var _ = Describe("GohanDb", func() {
 					Expect(err).ToNot(HaveOccurred())
 					env := newEnvironmentWithExtension(extension, testDB)
 
-					var paginator *pagination.Paginator
-					var fakeTx = new(mocks.Transaction)
-					setExpect(fakeTx, methodName, s, transaction.Filter{"test_bool": true}, paginator).Return(
+					mockTx := tr_mocks.NewMockTransaction(mockCtrl)
+					listCall(mockTx, methodName, s, transaction.Filter{"test_bool": true}, nil).Return(
 						[]*schema.Resource{r1},
 						uint64(1),
 						nil,
 					)
 
 					context := map[string]interface{}{
-						"transaction": fakeTx,
+						"transaction": mockTx,
 					}
 					Expect(env.HandleEvent("test_event", context)).To(Succeed())
 
@@ -257,19 +261,19 @@ var _ = Describe("GohanDb", func() {
 					Expect(err).ToNot(HaveOccurred())
 					env := newEnvironmentWithExtension(extension, testDB)
 
-					paginator := &pagination.Paginator{
+					mockTx := tr_mocks.NewMockTransaction(mockCtrl)
+					pg := &pagination.Paginator{
 						Key:   "test_string",
 						Order: pagination.ASC,
 					}
-					var fakeTx = new(mocks.Transaction)
-					setExpect(fakeTx, methodName, s, transaction.Filter{"tenant_id": "tenant0"}, paginator).Return(
+					listCall(mockTx, methodName, s, transaction.Filter{"tenant_id": "tenant0"}, pg).Return(
 						[]*schema.Resource{r0, r1},
 						uint64(2),
 						nil,
 					)
 
 					context := map[string]interface{}{
-						"transaction": fakeTx,
+						"transaction": mockTx,
 					}
 					Expect(env.HandleEvent("test_event", context)).To(Succeed())
 
@@ -305,20 +309,20 @@ var _ = Describe("GohanDb", func() {
 					Expect(err).ToNot(HaveOccurred())
 					env := newEnvironmentWithExtension(extension, testDB)
 
-					paginator := &pagination.Paginator{
+					mockTx := tr_mocks.NewMockTransaction(mockCtrl)
+					pg := &pagination.Paginator{
 						Key:   "test_string",
 						Order: pagination.ASC,
 						Limit: 100,
 					}
-					var fakeTx = new(mocks.Transaction)
-					setExpect(fakeTx, methodName, s, transaction.Filter{"tenant_id": "tenant0"}, paginator).Return(
+					listCall(mockTx, methodName, s, transaction.Filter{"tenant_id": "tenant0"}, pg).Return(
 						[]*schema.Resource{r0, r1},
 						uint64(2),
 						nil,
 					)
 
 					context := map[string]interface{}{
-						"transaction": fakeTx,
+						"transaction": mockTx,
 					}
 					Expect(env.HandleEvent("test_event", context)).To(Succeed())
 
@@ -355,21 +359,21 @@ var _ = Describe("GohanDb", func() {
 					Expect(err).ToNot(HaveOccurred())
 					env := newEnvironmentWithExtension(extension, testDB)
 
-					paginator := &pagination.Paginator{
+					mockTx := tr_mocks.NewMockTransaction(mockCtrl)
+					pg := &pagination.Paginator{
 						Key:    "test_string",
 						Order:  pagination.ASC,
 						Limit:  100,
 						Offset: 10,
 					}
-					var fakeTx = new(mocks.Transaction)
-					setExpect(fakeTx, methodName, s, transaction.Filter{"tenant_id": "tenant0"}, paginator).Return(
+					listCall(mockTx, methodName, s, transaction.Filter{"tenant_id": "tenant0"}, pg).Return(
 						[]*schema.Resource{r0, r1},
 						uint64(2),
 						nil,
 					)
 
 					context := map[string]interface{}{
-						"transaction": fakeTx,
+						"transaction": mockTx,
 					}
 					Expect(env.HandleEvent("test_event", context)).To(Succeed())
 
@@ -406,11 +410,8 @@ var _ = Describe("GohanDb", func() {
 				Expect(err).ToNot(HaveOccurred())
 				env := newEnvironmentWithExtension(extension, testDB)
 
-				var fakeTx = new(mocks.Transaction)
-				fakeTx.On(
-					"StateFetch", s,
-					transaction.Filter{"id": "resource_id", "tenant_id": "tenant0"},
-				).Return(
+				mockTx := tr_mocks.NewMockTransaction(mockCtrl)
+				mockTx.EXPECT().StateFetch(s, transaction.Filter{"id": "resource_id", "tenant_id": "tenant0"}).Return(
 					transaction.ResourceState{
 						ConfigVersion: 30,
 						StateVersion:  29,
@@ -422,10 +423,10 @@ var _ = Describe("GohanDb", func() {
 				)
 
 				context := map[string]interface{}{
-					"transaction": fakeTx,
+					"transaction": mockTx,
 				}
-				Expect(env.HandleEvent("test_event", context)).To(Succeed())
 
+				Expect(env.HandleEvent("test_event", context)).To(Succeed())
 				Expect(context["resp"]).To(
 					Equal(
 						map[string]interface{}{
@@ -505,15 +506,13 @@ var _ = Describe("GohanDb", func() {
 				Expect(err).ToNot(HaveOccurred())
 				env := newEnvironmentWithExtension(extension, testDB)
 
-				var fakeTx = new(mocks.Transaction)
-				fakeTx.On(
-					"Query", s, "SELECT DUMMY", []interface{}{"tenant0", "obj1"},
-				).Return(
+				mockTx := tr_mocks.NewMockTransaction(mockCtrl)
+				mockTx.EXPECT().Query(s, "SELECT DUMMY", []interface{}{"tenant0", "obj1"}).Return(
 					[]*schema.Resource{r0, r1}, nil,
 				)
 
 				context := map[string]interface{}{
-					"transaction": fakeTx,
+					"transaction": mockTx,
 				}
 				Expect(env.HandleEvent("test_event", context)).To(Succeed())
 				Expect(context["resp"]).To(Equal(fakeResources))
@@ -568,8 +567,10 @@ var _ = Describe("GohanDb", func() {
 				Expect(err).ToNot(HaveOccurred())
 				env := newEnvironmentWithExtension(extension, testDB)
 
+				mockTx := tr_mocks.NewMockTransaction(mockCtrl)
+
 				context := map[string]interface{}{
-					"transaction": new(mocks.Transaction),
+					"transaction": mockTx,
 				}
 				err = env.HandleEvent("test_event", context)
 				Expect(err).NotTo(BeNil())
@@ -596,8 +597,10 @@ var _ = Describe("GohanDb", func() {
 				Expect(err).ToNot(HaveOccurred())
 				env := newEnvironmentWithExtension(extension, testDB)
 
+				mockTx := tr_mocks.NewMockTransaction(mockCtrl)
+
 				context := map[string]interface{}{
-					"transaction": new(mocks.Transaction),
+					"transaction": mockTx,
 				}
 				err = env.HandleEvent("test_event", context)
 				Expect(err).NotTo(BeNil())
@@ -624,21 +627,18 @@ var _ = Describe("GohanDb", func() {
 				Expect(err).ToNot(HaveOccurred())
 				env := newEnvironmentWithExtension(extension, testDB)
 
-				var fakeTx = new(mocks.Transaction)
-				fakeTx.On(
-					"Query", s, "SELECT DUMMY", []interface{}{},
-				).Return(
+				mockTx := tr_mocks.NewMockTransaction(mockCtrl)
+				mockTx.EXPECT().Query(s, "SELECT DUMMY", []interface{}{}).Return(
 					nil, errors.New("SOMETHING HAPPENED"),
 				)
 
 				context := map[string]interface{}{
-					"transaction": fakeTx,
+					"transaction": mockTx,
 				}
 				err = env.HandleEvent("test_event", context)
 				Expect(err).NotTo(BeNil())
 				Expect(err.Error()).To(MatchRegexp("test_event: Error: Error during gohan_db_query: SOMETHING HAPPEN"))
 			})
 		})
-
 	})
 })

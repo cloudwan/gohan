@@ -68,7 +68,7 @@ func clearTable(tx transaction.Transaction, s *schema.Schema) error {
 			}
 		}
 	}
-	resources, _, err := tx.List(s, nil, nil)
+	resources, _, err := tx.List(s, nil, nil, nil)
 	if err != nil {
 		return err
 	}

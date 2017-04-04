@@ -283,7 +283,7 @@ var _ = Describe("Server package test", func() {
 			testURL("POST", parentsPluralURL, adminTokenID, charlieParent, http.StatusCreated)
 
 			By("assuring 1 parent was returned without error")
-			result := testURL("GET", parentsPluralURL, adminTokenID, nil, http.StatusOK)
+			result := testURL("GET", parentsPluralURL + "?_details=true", adminTokenID, nil, http.StatusOK)
 			res := result.(map[string]interface{})
 			parents := res["parents"].([]interface{})
 			Expect(parents).To(HaveLen(1))
@@ -1325,7 +1325,7 @@ func startTestServer(config string) error {
 	go func() {
 		err := server.Start()
 		if err != nil {
-			return
+			panic(err)
 		}
 	}()
 	return nil
@@ -1451,7 +1451,7 @@ func clearTable(tx transaction.Transaction, s *schema.Schema) error {
 			}
 		}
 	}
-	resources, _, err := tx.List(s, nil, nil)
+	resources, _, err := tx.List(s, nil, nil, nil)
 	if err != nil {
 		return err
 	}

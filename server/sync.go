@@ -87,8 +87,8 @@ func (server *Server) listEvents() ([]*schema.Resource, error) {
 	defer tx.Close()
 	schemaManager := schema.GetManager()
 	eventSchema, _ := schemaManager.Schema("event")
-	paginator, _ := pagination.NewPaginator(eventSchema, "id", pagination.ASC, eventPollingLimit, 0, nil)
-	resourceList, _, err := tx.List(eventSchema, nil, paginator)
+	paginator, _ := pagination.NewPaginator(eventSchema, "id", pagination.ASC, eventPollingLimit, 0)
+	resourceList, _, err := tx.List(eventSchema, nil, nil, paginator)
 	if err != nil {
 		return nil, err
 	}
