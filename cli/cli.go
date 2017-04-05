@@ -533,9 +533,6 @@ func getCreateInitialMigrationCommand() cli.Command {
 				if s.IsAbstract() {
 					continue
 				}
-				if s.Metadata["type"] == "metaschema" {
-					continue
-				}
 				createSql, indices := sqlDB.GenTableDef(s, cascade)
 				sqlString.WriteString(createSql + "\n")
 				for _, indexSql := range indices {
@@ -547,9 +544,6 @@ func getCreateInitialMigrationCommand() cli.Command {
 			sqlString.WriteString("-- SQL section 'Down' is executed when this migration is rolled back\n")
 			for _, s := range schemas {
 				if s.IsAbstract() {
-					continue
-				}
-				if s.Metadata["type"] == "metaschema" {
 					continue
 				}
 				sqlString.WriteString(fmt.Sprintf("drop table %s;", s.GetDbTableName()))

@@ -24,7 +24,7 @@ import (
 
 	"github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/util"
-	"github.com/pressly/goose"
+	"github.com/cloudwan/goose"
 )
 
 var logger = log.NewLogger()
