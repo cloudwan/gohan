@@ -135,7 +135,7 @@ func init() {
 					call.ArgumentList = append(call.ArgumentList, defaultOffset)
 				}
 				if len(call.ArgumentList) < 7 {
-					defaultLockPolicy, _ := otto.ToValue(schema.LockRelatedResources)
+					defaultLockPolicy, _ := otto.ToValue(schema.SkipRelatedResources)
 					call.ArgumentList = append(call.ArgumentList, defaultLockPolicy)
 				}
 				VerifyCallArguments(&call, "gohan_db_lock_list", 7)

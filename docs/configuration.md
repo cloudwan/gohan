@@ -347,7 +347,8 @@ You can select extension types you use.
 
 a sample configuration.
 
-- watch/keys  list of watched keys in etcd. Gohan watches the path recursively.
+- watch/keys  list of watched keys in etcd. Gohan watches the pathes which start with keys for etcd v3.
+  For etcd v2, this will be done recursively.
 - events list of an event we invokes an extension
 - worker_count: number of concurrent execution tasks
 

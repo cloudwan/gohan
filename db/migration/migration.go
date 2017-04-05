@@ -19,11 +19,12 @@ import (
 	"fmt"
 
 	"database/sql"
-	"github.com/cloudwan/gohan/log"
-	"github.com/cloudwan/gohan/util"
-	"github.com/pressly/goose"
 	"os"
 	"path"
+
+	"github.com/cloudwan/gohan/log"
+	"github.com/cloudwan/gohan/util"
+	"github.com/cloudwan/goose"
 )
 
 var logger = log.NewLogger()
@@ -34,14 +35,13 @@ func LoadConfig(configFile string) (err error) {
 	err = config.ReadConfig(configFile)
 
 	if err != nil {
-		fmt.Printf("error: failed to load config: %s\n", err.Error())
+		fmt.Printf("error: failed to load config: %s\n", err)
 		return
 	}
 
 	err = os.Chdir(path.Dir(configFile))
-
 	if err != nil {
-		fmt.Printf("error: chdir() failed: %s\n", err.Error())
+		fmt.Printf("error: chdir() failed: %s\n", err)
 		return
 	}
 
@@ -78,30 +78,44 @@ func Init() error {
 
 	logger.Info("migration path: %q, version: %d", migrationsPath, v)
 
-	return nil
+	if err = goose.LoadMigrationPlugins(migrationsPath); err != nil {
+		return fmt.Errorf("migration: failed to load migration plugins: %s", err)
+	}
+
+	return goose.Status(db, migrationsPath)
 }
 
 func Help() {
-	fmt.Println("missing subcommand: help, up, up-by-one, up-to, create, down, down-to, redo, status, version")
+	fmt.Println("missing subcommand: help, up, up-by-one, up-to, create, create-next, down, down-to, redo, status, version")
 }
 
-func Run(subcmd string, args []string) {
+func Run(subCmd string, args []string) {
 	dbType, dbConnection, migrationsPath := readGooseConfig()
 
 	if err := goose.SetDialect(dbType); err != nil {
-		fmt.Printf("error: failed to set goose dialect: %s\n", err.Error())
-		return
+		fmt.Printf("error: failed to set goose dialect: %s\n", err)
+		os.Exit(1)
 	}
 
 	db, err := sql.Open(dbType, dbConnection)
 
 	if err != nil {
-		fmt.Printf("error: failed to open db: %s\n", err.Error())
+		fmt.Printf("error: failed to open db: %s\n", err)
+		os.Exit(1)
+	}
+
+	if err = goose.LoadMigrationPlugins(migrationsPath); err != nil {
+		logger.Error("migration: failed to load migration plugins: %s", err)
 		return
 	}
 
-	err = goose.Run(subcmd, db, migrationsPath, args...)
 	if err != nil {
-		fmt.Println(err)
+		logger.Error("migration: failed to load runtime migrations: %s", err.Error())
+		return
+	}
+
+	if err = goose.Run(subCmd, db, migrationsPath, args...); err != nil {
+		fmt.Printf("migration: failed to run: %s\n", err)
+		os.Exit(1)
 	}
 }
