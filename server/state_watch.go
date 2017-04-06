@@ -55,22 +55,22 @@ func startStateWatchProcess(server *Server) {
 		defer l.LogFatalPanic(log)
 
 		for server.running {
-			lockKey := lockPath + "/state_watch"
-			err := server.sync.Lock(lockKey, true)
-			if err != nil {
-				log.Warning("Can't start state watch process due to lock", err)
-				time.Sleep(5 * time.Second)
-				continue
-			}
-			defer func() {
-				server.sync.Unlock(lockKey)
-			}()
+			func() {
+				lockKey := lockPath + "/state_watch"
+				err := server.sync.Lock(lockKey, true)
+				if err != nil {
+					log.Warning("Can't start state watch process due to lock", err)
+					time.Sleep(5 * time.Second)
+					return
+				}
+				defer server.sync.Unlock(lockKey)
 
-			err = server.sync.Watch(stateWatchPrefix, stateResponseChan, stateStopChan,
-				gohan_sync.RevisionCurrent)
-			if err != nil {
-				log.Error(fmt.Sprintf("sync state watch error: %s", err))
-			}
+				err = server.sync.Watch(stateWatchPrefix, stateResponseChan, stateStopChan,
+					gohan_sync.RevisionCurrent)
+				if err != nil {
+					log.Error(fmt.Sprintf("sync state watch error: %s", err))
+				}
+			}()
 		}
 	}()
 
