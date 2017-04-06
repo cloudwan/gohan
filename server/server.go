@@ -24,27 +24,25 @@ import (
 	"os/signal"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"syscall"
 	"time"
 
 	"github.com/braintree/manners"
-	"github.com/cloudwan/gohan/cloud"
 	"github.com/cloudwan/gohan/db"
+	"github.com/cloudwan/gohan/db/migration"
 	"github.com/cloudwan/gohan/job"
 	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/server/middleware"
 	"github.com/cloudwan/gohan/sync"
-	"github.com/cloudwan/gohan/sync/etcd"
-	"github.com/cloudwan/gohan/sync/etcdv3"
+	sync_util "github.com/cloudwan/gohan/sync/util"
 	"github.com/cloudwan/gohan/util"
 	"github.com/drone/routes"
 	"github.com/go-martini/martini"
 	"github.com/lestrrat/go-server-starter/listener"
 	"github.com/martini-contrib/staticbin"
-	"regexp"
-	"github.com/cloudwan/gohan/db/migration"
 )
 
 type tlsConfig struct {
@@ -140,9 +138,7 @@ func (server *Server) connectDB() error {
 		return err
 	}
 	config := util.GetConfig()
-	dbType, dbConnection, _, _, _ := server.getDatabaseConfig()
-	maxConn := config.GetInt("database/max_open_conn", db.DefaultMaxOpenConn)
-	dbConn, err := db.ConnectDB(dbType, dbConnection, maxConn)
+	dbConn, err := db.CreateFromConfig(config)
 	if server.sync == nil {
 		server.db = dbConn
 	} else {
@@ -238,25 +234,10 @@ func NewServer(configFile string) (*Server, error) {
 		}
 	}
 
-	syncType := config.GetString("sync", "etcd")
-	switch syncType {
-	case "etcd":
-		etcdServers := config.GetStringList("etcd", nil)
-		if etcdServers != nil {
-			log.Info("etcd servers: %s", etcdServers)
-			server.sync = etcd.NewSync(etcdServers)
-		}
-	case "etcdv3":
-		etcdServers := config.GetStringList("etcd", nil)
-		if etcdServers != nil {
-			log.Info("etcd servers: %s", etcdServers)
-			server.sync, err = etcdv3.NewSync(etcdServers, time.Second)
-			if err != nil {
-				return nil, fmt.Errorf("failed to connect to etcd servers: %s", err)
-			}
-		}
-	default:
-		return nil, fmt.Errorf("invalid sync type: %s", syncType)
+	server.sync, err = sync_util.CreateFromConfig(config)
+	if err != nil {
+		log.Error("Failed to create sync, err: %s", err)
+		return nil, err
 	}
 
 	if dbErr := server.connectDB(); dbErr != nil {
@@ -295,29 +276,9 @@ func NewServer(configFile string) (*Server, error) {
 	m.Map(middleware.NewNobodyResourceService(manager.NobodyResourcePaths()))
 
 	if config.GetBool("keystone/use_keystone", false) {
-		//TODO remove this
-		if config.GetBool("keystone/fake", false) {
-			server.keystoneIdentity = &middleware.FakeIdentity{}
-			//TODO(marcin) requests to fake server also get authenticated
-			//             we need a separate routing Group
-			log.Info("Debug Mode with Fake Keystone Server")
-		} else {
-			log.Info("Keystone backend server configured")
-			server.keystoneIdentity, err = cloud.NewKeystoneIdentity(
-				config.GetString("keystone/auth_url", "http://localhost:35357/v3"),
-				config.GetString("keystone/user_name", "admin"),
-				config.GetString("keystone/password", "password"),
-				config.GetString("keystone/domain_name", "Default"),
-				config.GetString("keystone/tenant_name", "admin"),
-				config.GetString("keystone/version", ""),
-			)
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
+		server.keystoneIdentity, err = middleware.CreateIdentityServiceFromConfig(config)
 		m.MapTo(server.keystoneIdentity, (*middleware.IdentityService)(nil))
 		m.Use(middleware.Authentication())
-		//m.Use(Authorization())
 	} else {
 		m.MapTo(&middleware.NoIdentityService{}, (*middleware.IdentityService)(nil))
 		m.Map(schema.NewAuthorization("admin", "admin", "admin_token", []string{"admin"}, nil))
