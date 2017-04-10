@@ -30,3 +30,15 @@ logging:
         enabled: true
         level: CRITICAL
         filename: ./gohan.log
+
+watch:
+  keys:
+  - /watch/key/1
+  - /watch/key/2
+  - /watch/key/3
+  - /watch/key/4
+  - /watch/key/5
+  - /watch/key/6
+  events:
+  - watch/key
+  worker_count: 4

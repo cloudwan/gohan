@@ -15,7 +15,11 @@
 
 package sync
 
-import l "github.com/cloudwan/gohan/log"
+import (
+	"context"
+
+	l "github.com/cloudwan/gohan/log"
+)
 
 const RevisionCurrent = -1
 
@@ -35,6 +39,9 @@ type Sync interface {
 	// give ReivisionCurrent when you want to start from the current reivision.
 	// Returnes an error when gets any error including connection failures.
 	Watch(path string, responseChan chan *Event, stopChan chan bool, revision int64) error
+	//WatchContext keep watch update under the path until context is canceled.
+	WatchContext(ctx context.Context, path string, revision int64) (<-chan *Event, error)
+	GetProcessID() string
 	Close()
 }
 
@@ -44,6 +51,8 @@ type Event struct {
 	Key      string
 	Data     map[string]interface{}
 	Revision int64
+	// Err is used only by Sync.WatchContext()
+	Err error
 }
 
 //Node is a struct for Fetch response

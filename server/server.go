@@ -52,16 +52,19 @@ type tlsConfig struct {
 
 //Server is a struct for GohanAPIServer
 type Server struct {
-	address          string
-	tls              *tlsConfig
-	documentRoot     string
-	db               db.DB
-	sync             sync.Sync
-	running          bool
-	martini          *martini.ClassicMartini
-	extensions       []string
-	keystoneIdentity middleware.IdentityService
-	queue            *job.Queue
+	address                 string
+	tls                     *tlsConfig
+	documentRoot            string
+	db                      db.DB
+	sync                    sync.Sync
+	running                 bool
+	martini                 *martini.ClassicMartini
+	extensions              []string
+	keystoneIdentity        middleware.IdentityService
+	queue                   *job.Queue
+
+	stopChanProcessWatch    chan bool
+	respChanProcessWatch    chan *sync.Event
 }
 
 func (server *Server) mapRoutes() {
@@ -374,6 +377,16 @@ func (server *Server) Address() string {
 	return server.address
 }
 
+// GetSync returns server sync.
+func (server *Server) GetSync() sync.Sync {
+	return server.sync
+}
+
+// SetRunning sets server running status.
+func (server *Server) SetRunning(running bool) {
+	server.running = running
+}
+
 //Start starts GohanAPIServer
 func (server *Server) Start() (err error) {
 	listeners, err := listener.ListenAll()
@@ -407,9 +420,10 @@ func (server *Server) Router() http.Handler {
 func (server *Server) Stop() {
 	server.running = false
 	if server.sync != nil {
+		StopProcessWatchProcess(server)
 		stopSyncProcess(server)
 		stopStateWatchProcess(server)
-		stopSyncWatchProcess(server)
+		StopSyncWatchProcess(server)
 	}
 	stopAMQPProcess(server)
 	stopSNMPProcess(server)
@@ -454,9 +468,10 @@ func RunServer(configFile string) {
 	server.running = true
 
 	if server.sync != nil {
+		StartProcessWatchProcess(server)
 		startSyncProcess(server)
 		startStateWatchProcess(server)
-		startSyncWatchProcess(server)
+		StartSyncWatchProcess(server)
 	}
 	startAMQPProcess(server)
 	startSNMPProcess(server)
