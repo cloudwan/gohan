@@ -16,10 +16,14 @@
 package transaction
 
 import (
+	"errors"
+
 	"github.com/cloudwan/gohan/db/pagination"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/jmoiron/sqlx"
 )
+
+var ErrResourceNotFound = errors.New("resource not found")
 
 //Type represents transaction types
 type Type string
@@ -59,7 +63,7 @@ type ListOptions struct {
 	Fields []string
 }
 
-//Transaction is common interface for handing transaction
+//Transaction is common interface for handling transaction
 type Transaction interface {
 	Create(*schema.Resource) error
 	Update(*schema.Resource) error

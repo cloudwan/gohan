@@ -954,7 +954,7 @@ var _ = Describe("Server package test", func() {
 					Expect(err).ToNot(HaveOccurred())
 				})
 
-				It("With wrong resource ID should return the proper error", func() {
+				It("With wrong resource ID should return ErrResourceNotFound", func() {
 					possibleEvent = gohan_sync.Event{
 						Action: "this is ignored here",
 						Data: map[string]interface{}{
@@ -965,7 +965,7 @@ var _ = Describe("Server package test", func() {
 						Key: statePrefix + networkResource.Path() + "malesta",
 					}
 					err := srv.StateUpdate(&possibleEvent, server)
-					Expect(err).To(MatchError(ContainSubstring("Failed to fetch")))
+					Expect(err).To(Equal(transaction.ErrResourceNotFound))
 				})
 
 				It("Without version should return the proper error", func() {
@@ -1092,7 +1092,7 @@ var _ = Describe("Server package test", func() {
 					Expect(err).ToNot(HaveOccurred())
 				})
 
-				It("With wrong resource ID should return the proper error", func() {
+				It("With wrong resource ID should return ErrResourceNotFound", func() {
 					possibleEvent = gohan_sync.Event{
 						Action: "this is ignored here",
 						Data: map[string]interface{}{
@@ -1102,7 +1102,7 @@ var _ = Describe("Server package test", func() {
 						Key: monitoringPrefix + networkResource.Path() + "malesta",
 					}
 					err := srv.MonitoringUpdate(&possibleEvent, server)
-					Expect(err).To(MatchError(ContainSubstring("Failed to fetch")))
+					Expect(err).To(Equal(transaction.ErrResourceNotFound))
 				})
 
 				It("Without monitoring should return the proper error", func() {
