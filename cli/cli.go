@@ -357,9 +357,8 @@ func getMigrateSubcommand(subcmd, usage string) cli.Command {
 			if migration.LoadConfig(configFile) != nil {
 				return
 			}
-
-			if migration.Run(subcmd, context.Args()) != nil {
-				os.Exit(1)
+			if err := migration.Run(subcmd, context.Args()); err != nil {
+				log.Fatal(err)
 			}
 		},
 	}
@@ -387,8 +386,8 @@ func getMigrateSubcommandWithPostMigrateEvent(subcmd, usage string) cli.Command 
 			}
 			config := util.GetConfig()
 
-			if migration.Run(subcmd, context.Args()) != nil {
-				os.Exit(1)
+			if err := migration.Run(subcmd, context.Args()); err != nil {
+				log.Fatal(err)
 			}
 
 			emitEvent := context.Bool(EMIT_POST_MIGRATION_EVENT_FLAG)
