@@ -471,6 +471,7 @@ func getMigrateCommand() cli.Command {
 			getMigrateSubcommandWithPostMigrateEvent("up-by-one", "Migrate one version up"),
 			getMigrateSubcommandWithPostMigrateEvent("up-to", "Migrate up to specific version"),
 			getMigrateSubcommand("create", "Create a template for a new migration"),
+			getMigrateSubcommand("create-next", "Create a sequential template for a new migration"),
 			getCreateInitialMigrationCommand(),
 			getMigrateSubcommand("down", "Migrate to the oldest version"),
 			getMigrateSubcommand("down-to", "Migrate to specific version"),

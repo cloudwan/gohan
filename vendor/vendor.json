@@ -31,7 +31,6 @@
 		},
 		{
 			"checksumSHA1": "xMIDpZGGPcue3D0DXDgxEfjUSGw=",
-			"origin": "github.com/cloudwan/gohan/vendor/github.com/cloudwan/goose",
 			"path": "github.com/cloudwan/goose",
 			"revision": "477d8a85d34faf69e45314c106a21d9ff039c5a1",
 			"revisionTime": "2017-03-30T15:47:14Z"
@@ -59,6 +58,12 @@
 			"path": "github.com/coreos/etcd/clientv3",
 			"revision": "3d5ba43211beec7fbb1472634a9c3b464581658a",
 			"revisionTime": "2016-11-18T19:16:01Z"
+		},
+		{
+			"checksumSHA1": "77qmlZb2Us0Qlu/OHKMdZ8RajEo=",
+			"path": "github.com/coreos/etcd/clientv3/concurrency",
+			"revision": "3ecd88fbdd37942343dc1b583337cd2b233963ab",
+			"revisionTime": "2016-11-21T07:42:46Z"
 		},
 		{
 			"checksumSHA1": "r+7xDd2beH0akjMnYqoo84v9QW0=",
