@@ -3,8 +3,8 @@
 In this section, we will describe how to to configure and use Gohan
 migrations.
 
-Gohan migrations are based on goose library fork 'pressly/goose'
-(see http://github.com/pressly/goose). The library is used internally
+Gohan migrations are based on goose library fork 'cloudwan/goose'
+(see http://github.com/cloudwan/goose). The library is used internally
 so user does not need to have an external working goose binary.
 All migration tasks are exposed with a single 'gohan migrate' command.
 

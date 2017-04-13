@@ -24,6 +24,7 @@ import (
 	"github.com/cloudwan/gohan/db/transaction"
 
 	"github.com/cloudwan/gohan/schema"
+	"github.com/cloudwan/gohan/util"
 )
 
 //DefaultMaxOpenConn will applied for db object
@@ -80,7 +81,7 @@ func CopyDBResources(input, output DB, overrideExisting bool) error {
 			continue
 		}
 		log.Info("Populating resources for schema %s", s.ID)
-		resources, _, err := itx.List(s, nil, nil)
+		resources, _, err := itx.List(s, nil, nil, nil)
 		if err != nil {
 			return err
 		}
@@ -107,6 +108,23 @@ func CopyDBResources(input, output DB, overrideExisting bool) error {
 		return err
 	}
 	return otx.Commit()
+}
+
+func CreateFromConfig(config *util.Config) (DB, error) {
+	dbType := config.GetString("database/type", "sqlite3")
+	dbConnection := config.GetString("database/connection", "")
+	maxConn := config.GetInt("database/max_open_conn", DefaultMaxOpenConn)
+	var dbConn DB
+	if dbType == "json" || dbType == "yaml" {
+		dbConn = file.NewDB()
+	} else {
+		dbConn = sql.NewDB()
+	}
+	err := dbConn.Connect(dbType, dbConnection, maxConn)
+	if err != nil {
+		return nil, err
+	}
+	return dbConn, nil
 }
 
 //InitDBWithSchemas initializes database using schemas stored in Manager

@@ -146,7 +146,7 @@ var _ = Describe("Database operation test", func() {
 
 			Context("When the database is empty", func() {
 				It("Returns an empty list", func() {
-					list, num, err := tx.List(networkSchema, nil, nil)
+					list, num, err := tx.List(networkSchema, nil, nil, nil)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(num).To(Equal(uint64(0)))
 					Expect(list).To(BeEmpty())
@@ -172,7 +172,7 @@ var _ = Describe("Database operation test", func() {
 				})
 
 				It("Returns the expected list", func() {
-					list, num, err := tx.List(networkSchema, nil, nil)
+					list, num, err := tx.List(networkSchema, nil, nil, nil)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(num).To(Equal(uint64(2)))
 					Expect(list).To(HaveLen(2))
@@ -182,7 +182,7 @@ var _ = Describe("Database operation test", func() {
 				})
 
 				It("Locks the expected list", func() {
-					list, num, err := tx.LockList(networkSchema, nil, nil, schema.LockRelatedResources)
+					list, num, err := tx.LockList(networkSchema, nil, nil, nil, schema.LockRelatedResources)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(num).To(Equal(uint64(2)))
 					Expect(list).To(HaveLen(2))
@@ -195,7 +195,7 @@ var _ = Describe("Database operation test", func() {
 					filter := map[string]interface{}{
 						"tenant_id": []string{"red"},
 					}
-					list, num, err := tx.List(networkSchema, filter, nil)
+					list, num, err := tx.List(networkSchema, filter, nil, nil)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(num).To(Equal(uint64(1)))
 					Expect(list).To(HaveLen(1))
@@ -207,7 +207,7 @@ var _ = Describe("Database operation test", func() {
 					filter := map[string]interface{}{
 						"tenant_id": []string{"red"},
 					}
-					list, num, err := tx.LockList(networkSchema, filter, nil, schema.LockRelatedResources)
+					list, num, err := tx.LockList(networkSchema, filter, nil, nil, schema.LockRelatedResources)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(num).To(Equal(uint64(1)))
 					Expect(list).To(HaveLen(1))
@@ -219,7 +219,7 @@ var _ = Describe("Database operation test", func() {
 					filter := map[string]interface{}{
 						"bad_filter": []string{"red"},
 					}
-					_, _, err := tx.List(networkSchema, filter, nil)
+					_, _, err := tx.List(networkSchema, filter, nil, nil)
 					Expect(err).To(HaveOccurred())
 				})
 
@@ -227,12 +227,12 @@ var _ = Describe("Database operation test", func() {
 					filter := map[string]interface{}{
 						"bad_filter": []string{"red"},
 					}
-					_, _, err := tx.LockList(networkSchema, filter, nil, schema.LockRelatedResources)
+					_, _, err := tx.LockList(networkSchema, filter, nil, nil, schema.LockRelatedResources)
 					Expect(err).To(HaveOccurred())
 				})
 
 				It("Shows related resources", func() {
-					list, num, err := tx.List(serverSchema, nil, nil)
+					list, num, err := tx.List(serverSchema, nil, nil, nil)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(num).To(Equal(uint64(1)))
 					Expect(list).To(HaveLen(1))
@@ -241,7 +241,7 @@ var _ = Describe("Database operation test", func() {
 				})
 
 				It("Locks related resources when requested", func() {
-					list, num, err := tx.LockList(serverSchema, nil, nil, schema.LockRelatedResources)
+					list, num, err := tx.LockList(serverSchema, nil, nil, nil, schema.LockRelatedResources)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(num).To(Equal(uint64(1)))
 					Expect(list).To(HaveLen(1))
@@ -250,11 +250,47 @@ var _ = Describe("Database operation test", func() {
 				})
 
 				It("Doesn't lock related resources when requested", func() {
-					list, num, err := tx.LockList(serverSchema, nil, nil, schema.SkipRelatedResources)
+					list, num, err := tx.LockList(serverSchema, nil, nil, nil, schema.SkipRelatedResources)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(num).To(Equal(uint64(1)))
 					Expect(list).To(HaveLen(1))
 					Expect(list[0].Data()).To(HaveKeyWithValue("network", HaveKeyWithValue("name", BeNil())))
+					Expect(tx.Commit()).To(Succeed())
+				})
+
+				It("Doesn't show related resources when details is false", func() {
+					list, num, err := tx.List(serverSchema, nil, &transaction.ListOptions{Details: false}, nil)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(num).To(Equal(uint64(1)))
+					Expect(list).To(HaveLen(1))
+					Expect(list[0].Data()).NotTo(HaveKey("network"))
+					Expect(tx.Commit()).To(Succeed())
+				})
+
+				It("Doesn't show related resources when fields is set and nothing is selected", func() {
+					list, num, err := tx.List(serverSchema, nil, &transaction.ListOptions{
+						Details: true,
+						Fields: []string{"id"},
+					}, nil)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(num).To(Equal(uint64(1)))
+					Expect(list).To(HaveLen(1))
+					Expect(list[0].Data()).To(HaveKey("id"))
+					Expect(list[0].Data()).NotTo(HaveKey("network"))
+					Expect(tx.Commit()).To(Succeed())
+				})
+
+				It("Show related resources when fields is set and something is selected", func() {
+					list, num, err := tx.List(serverSchema, nil, &transaction.ListOptions{
+						Details: true,
+						Fields: []string{"id", "network.name"},
+					}, nil)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(num).To(Equal(uint64(1)))
+					Expect(list).To(HaveLen(1))
+					Expect(list[0].Data()).To(HaveKey("id"))
+					Expect(list[0].Data()).To(HaveKeyWithValue("network", HaveKeyWithValue("name", "NetworkRed")))
+					Expect(list[0].Data()).To(HaveKeyWithValue("network", Not(HaveKey("id"))))
 					Expect(tx.Commit()).To(Succeed())
 				})
 
@@ -374,7 +410,7 @@ var _ = Describe("Database operation test", func() {
 				if s.Metadata["type"] == "metaschema" {
 					continue
 				}
-				resources, _, err := inTx.List(s, nil, nil)
+				resources, _, err := inTx.List(s, nil, nil, nil)
 				Expect(err).ToNot(HaveOccurred())
 				for _, inResource := range resources {
 					outResource, err := verifyTx.Fetch(s, transaction.Filter{"id": inResource.ID()})
@@ -405,7 +441,7 @@ var _ = Describe("Database operation test", func() {
 			Expect(err).ToNot(HaveOccurred())
 			list, _, err := tx.List(subnetSchema, map[string]interface{}{
 				"name": "subnetRedA",
-			}, nil)
+			}, nil, nil)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(list).To(HaveLen(1))
 			subnet := list[0]
@@ -421,7 +457,7 @@ var _ = Describe("Database operation test", func() {
 			Expect(err).ToNot(HaveOccurred())
 			list, _, err = tx.List(subnetSchema, map[string]interface{}{
 				"name": "subnetRedA",
-			}, nil)
+			}, nil, nil)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(list).To(HaveLen(1))
 			subnet = list[0]
