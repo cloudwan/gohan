@@ -577,15 +577,6 @@ func makeAliasTableName(tableName string, property schema.Property) string {
 	return fmt.Sprintf("%s__%s", tableName, property.RelationProperty)
 }
 
-//normField returns field prefixed with schema ID.
-func normField(field, schemaID string) string {
-	if strings.Contains(field, ".") {
-		return field
-	}
-
-	return fmt.Sprintf("%s.%s", schemaID, field)
-}
-
 // MakeColumns generates an array that has Gohan style colmun names
 func MakeColumns(s *schema.Schema, tableName string, fields []string, join bool) []string {
 	manager := schema.GetManager()
@@ -600,16 +591,17 @@ func MakeColumns(s *schema.Schema, tableName string, fields []string, join bool)
 
 	var cols []string
 	for _, property := range s.Properties {
-		if include != nil && !include[normField(property.ID, s.ID)] {
-			continue
-		}
-
-		cols = append(cols, makeColumn(tableName, property)+" as "+quote(makeColumnID(tableName, property)))
 		if property.RelationProperty != "" && join {
 			relatedSchema, _ := manager.Schema(property.Relation)
 			aliasTableName := makeAliasTableName(tableName, property)
 			cols = append(cols, MakeColumns(relatedSchema, aliasTableName, fields, true)...)
 		}
+
+		if include != nil && !include[normField(property.ID, s.ID)] {
+			continue
+		}
+
+		cols = append(cols, makeColumn(tableName, property)+" as "+quote(makeColumnID(tableName, property)))
 	}
 	return cols
 }
@@ -640,29 +632,6 @@ func makeJoin(s *schema.Schema, tableName string, q sq.SelectBuilder) sq.SelectB
 	return q
 }
 
-func (tx *Transaction) decode(s *schema.Schema, tableName string, data map[string]interface{}, resource map[string]interface{}) {
-	manager := schema.GetManager()
-	db := tx.db
-	for _, property := range s.Properties {
-		handler := db.handler(&property)
-		value := data[makeColumnID(tableName, property)]
-		if value != nil || property.Nullable {
-			decoded, err := handler.decode(&property, value)
-			if err != nil {
-				log.Error(fmt.Sprintf("SQL List decoding error: %s", err))
-			}
-			resource[property.ID] = decoded
-		}
-		if property.RelationProperty != "" {
-			relatedSchema, _ := manager.Schema(property.Relation)
-			resourceData := map[string]interface{}{}
-			aliasTableName := makeAliasTableName(tableName, property)
-			tx.decode(relatedSchema, aliasTableName, data, resourceData)
-			resource[property.RelationProperty] = resourceData
-		}
-	}
-}
-
 func decodeState(data map[string]interface{}, state *transaction.ResourceState) error {
 	var ok bool
 	state.ConfigVersion, ok = data[configVersionColumnName].(int64)
@@ -691,64 +660,94 @@ func decodeState(data map[string]interface{}, state *transaction.ResourceState) 
 	return nil
 }
 
-func buildSelect(s *schema.Schema, filter transaction.Filter, pg *pagination.Paginator, join bool) (string, []interface{}, error) {
-	var fields []string
-	if pg != nil {
-		fields = pg.Fields
-	}
+//normFields runs normFields on all the fields.
+func normFields(fields []string, s *schema.Schema) ([]string) {
 	if fields != nil {
 		for i, f := range fields {
 			fields[i] = normField(f, s.ID)
 		}
 	}
+	return fields
+}
 
-	cols := MakeColumns(s, s.GetDbTableName(), fields, join)
-	q := sq.Select(cols...).From(quote(s.GetDbTableName()))
-	q, err := addFilterToQuery(s, q, filter, join)
+//normField returns field prefixed with schema ID.
+func normField(field, schemaID string) string {
+	if strings.Contains(field, ".") {
+		return field
+	}
+	return fmt.Sprintf("%s.%s", schemaID, field)
+}
+
+type selectContext struct {
+	schema *schema.Schema
+	filter transaction.Filter
+	fields []string
+	join   bool
+	paginator *pagination.Paginator
+}
+
+func buildSelect(sc *selectContext) (string, []interface{}, error) {
+	t := sc.schema.GetDbTableName()
+
+	cols := MakeColumns(sc.schema, t, sc.fields, sc.join)
+	q := sq.Select(cols...).From(quote(t))
+	q, err := addFilterToQuery(sc.schema, q, sc.filter, sc.join)
 	if err != nil {
 		return "", nil, err
 	}
-	if pg != nil {
-		property, err := s.GetPropertyByID(pg.Key)
+	if sc.paginator != nil {
+		property, err := sc.schema.GetPropertyByID(sc.paginator.Key)
 		if err == nil {
-			q = q.OrderBy(makeColumn(s.GetDbTableName(), *property) + " " + pg.Order)
-			if pg.Limit > 0 {
-				q = q.Limit(pg.Limit)
+			q = q.OrderBy(makeColumn(t, *property) + " " + sc.paginator.Order)
+			if sc.paginator.Limit > 0 {
+				q = q.Limit(sc.paginator.Limit)
 			}
-			if pg.Offset > 0 {
-				q = q.Offset(pg.Offset)
+			if sc.paginator.Offset > 0 {
+				q = q.Offset(sc.paginator.Offset)
 			}
 		}
 	}
-	if join {
-		q = makeJoin(s, s.GetDbTableName(), q)
+	if sc.join {
+		q = makeJoin(sc.schema, t, q)
 	}
 	return q.ToSql()
 }
 
-func executeSelect(s *schema.Schema, filter transaction.Filter, sql string, args []interface{}, tx *Transaction) (list []*schema.Resource, total uint64, err error) {
+func (tx *Transaction) executeSelect(sc *selectContext, sql string, args []interface{}) (list []*schema.Resource, total uint64, err error) {
 	tx.logQuery(sql, args...)
 	rows, err := tx.transaction.Queryx(sql, args...)
 	if err != nil {
 		return
 	}
 	defer rows.Close()
-	list, err = tx.decodeRows(s, rows, list)
+
+	list, err = tx.decodeRows(sc.schema, rows, list, sc.fields != nil, sc.join)
 	if err != nil {
 		return nil, 0, err
 	}
-	total, err = tx.count(s, filter)
+	total, err = tx.count(sc.schema, sc.filter)
 	return
 }
 
 //List resources in the db
-func (tx *Transaction) List(s *schema.Schema, filter transaction.Filter, pg *pagination.Paginator) (list []*schema.Resource, total uint64, err error) {
-	sql, args, err := buildSelect(s, filter, pg, true)
+func (tx *Transaction) List(s *schema.Schema, filter transaction.Filter, options *transaction.ListOptions, pg *pagination.Paginator) (list []*schema.Resource, total uint64, err error) {
+	sc := &selectContext{
+		schema: s,
+		filter: filter,
+		join: true,
+		paginator: pg,
+	}
+	if options != nil {
+		sc.fields = normFields(options.Fields, s)
+		sc.join = options.Details
+	}
+
+	sql, args, err := buildSelect(sc)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	return executeSelect(s, filter, sql, args, tx)
+	return tx.executeSelect(sc, sql, args)
 }
 
 func shouldJoin(policy schema.LockPolicy) bool {
@@ -764,8 +763,21 @@ func shouldJoin(policy schema.LockPolicy) bool {
 }
 
 //Lock resources in the db
-func (tx *Transaction) LockList(s *schema.Schema, filter transaction.Filter, pg *pagination.Paginator, lockPolicy schema.LockPolicy) (list []*schema.Resource, total uint64, err error) {
-	sql, args, err := buildSelect(s, filter, pg, shouldJoin(lockPolicy))
+func (tx *Transaction) LockList(s *schema.Schema, filter transaction.Filter, options *transaction.ListOptions, pg *pagination.Paginator, lockPolicy schema.LockPolicy) (list []*schema.Resource, total uint64, err error) {
+	policyJoin := shouldJoin(lockPolicy)
+
+	sc := &selectContext{
+		schema: s,
+		filter: filter,
+		join: policyJoin,
+		paginator: pg,
+	}
+	if options != nil {
+		sc.fields = normFields(options.Fields, s)
+		sc.join = policyJoin && options.Details
+	}
+
+	sql, args, err := buildSelect(sc)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -774,7 +786,14 @@ func (tx *Transaction) LockList(s *schema.Schema, filter transaction.Filter, pg 
 		sql += " FOR UPDATE"
 	}
 
-	return executeSelect(s, filter, sql, args, tx)
+	// update join for recursive
+	if options != nil {
+		sc.join = options.Details
+	} else {
+		sc.join = true
+	}
+
+	return tx.executeSelect(sc, sql, args)
 }
 
 // Query with raw sql string
@@ -786,7 +805,7 @@ func (tx *Transaction) Query(s *schema.Schema, query string, arguments []interfa
 	}
 
 	defer rows.Close()
-	list, err = tx.decodeRows(s, rows, list)
+	list, err = tx.decodeRows(s, rows, list, false, false)
 	if err != nil {
 		return nil, err
 	}
@@ -794,21 +813,49 @@ func (tx *Transaction) Query(s *schema.Schema, query string, arguments []interfa
 	return
 }
 
-func (tx *Transaction) decodeRows(s *schema.Schema, rows *sqlx.Rows, list []*schema.Resource) ([]*schema.Resource, error) {
+func (tx *Transaction) decodeRows(s *schema.Schema, rows *sqlx.Rows, list []*schema.Resource, skipNil, recursive bool) ([]*schema.Resource, error) {
 	for rows.Next() {
-		resourceData := map[string]interface{}{}
 		data := map[string]interface{}{}
 		rows.MapScan(data)
 
 		var resource *schema.Resource
-		tx.decode(s, s.GetDbTableName(), data, resourceData)
+		resourceData := tx.decode(s, s.GetDbTableName(), skipNil, recursive, data)
 		resource, err := schema.NewResource(s, resourceData)
 		if err != nil {
 			return nil, fmt.Errorf("Failed to decode rows")
 		}
 		list = append(list, resource)
 	}
+
 	return list, nil
+}
+
+func (tx *Transaction) decode(s *schema.Schema, tableName string, skipNil, recursive bool, data map[string]interface{}) map[string]interface{} {
+	resourceData := map[string]interface{}{}
+
+	manager := schema.GetManager()
+	db := tx.db
+	for _, property := range s.Properties {
+		handler := db.handler(&property)
+		value := data[makeColumnID(tableName, property)]
+		if value != nil || (property.Nullable && !skipNil) {
+			decoded, err := handler.decode(&property, value)
+			if err != nil {
+				log.Error(fmt.Sprintf("SQL List decoding error: %s", err))
+			}
+			resourceData[property.ID] = decoded
+		}
+		if property.RelationProperty != "" && recursive {
+			relatedSchema, _ := manager.Schema(property.Relation)
+			aliasTableName := makeAliasTableName(tableName, property)
+			relatedResourceData := tx.decode(relatedSchema, aliasTableName, skipNil, recursive, data)
+			if len(relatedResourceData) > 0 || !skipNil {
+				resourceData[property.RelationProperty] = relatedResourceData
+			}
+		}
+	}
+
+	return resourceData
 }
 
 //count count all matching resources in the db
@@ -838,7 +885,7 @@ func (tx *Transaction) count(s *schema.Schema, filter transaction.Filter) (res u
 
 //Fetch resources by ID in the db
 func (tx *Transaction) Fetch(s *schema.Schema, filter transaction.Filter) (*schema.Resource, error) {
-	list, _, err := tx.List(s, filter, nil)
+	list, _, err := tx.List(s, filter, nil, nil)
 	if len(list) < 1 {
 		return nil, fmt.Errorf("Failed to fetch %s", filter)
 	}
@@ -847,7 +894,7 @@ func (tx *Transaction) Fetch(s *schema.Schema, filter transaction.Filter) (*sche
 
 //Fetch & lock a resource
 func (tx *Transaction) LockFetch(s *schema.Schema, filter transaction.Filter, lockPolicy schema.LockPolicy) (*schema.Resource, error) {
-	list, _, err := tx.LockList(s, filter, nil, lockPolicy)
+	list, _, err := tx.LockList(s, filter, nil, nil, lockPolicy)
 	if len(list) < 1 {
 		return nil, fmt.Errorf("Failed to fetch and lock %s", filter)
 	}

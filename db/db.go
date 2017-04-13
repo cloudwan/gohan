@@ -81,7 +81,7 @@ func CopyDBResources(input, output DB, overrideExisting bool) error {
 			continue
 		}
 		log.Info("Populating resources for schema %s", s.ID)
-		resources, _, err := itx.List(s, nil, nil)
+		resources, _, err := itx.List(s, nil, nil, nil)
 		if err != nil {
 			return err
 		}

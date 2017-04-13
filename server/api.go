@@ -408,15 +408,18 @@ func MapRouteBySchemas(server *Server, dataStore db.DB) {
 			if policy == nil {
 				continue
 			}
+
 			context["policy"] = policy
 			context["role"] = role
 			context["auth"] = auth
 			context["sync"] = server.sync
+
 			if err := resources.GetResources(
 				context, dataStore,
 				s,
-				resources.FilterFromQueryParameter(
-					s, r.URL.Query()), nil); err != nil {
+				resources.FilterFromQueryParameter(s, r.URL.Query()),
+				nil,
+			); err != nil {
 				handleError(w, err)
 				return
 			}

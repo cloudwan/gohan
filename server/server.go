@@ -82,14 +82,14 @@ func (server *Server) mapRoutes() {
 	}
 
 	policySchema, _ := schemaManager.Schema("policy")
-	policyList, _, err := tx.List(policySchema, nil, nil)
+	policyList, _, err := tx.List(policySchema, nil, nil, nil)
 	if err != nil {
 		log.Info(err.Error())
 	}
 	schemaManager.LoadPolicies(policyList)
 
 	extensionSchema, _ := schemaManager.Schema("extension")
-	extensionList, _, err := tx.List(extensionSchema, nil, nil)
+	extensionList, _, err := tx.List(extensionSchema, nil, nil, nil)
 	if err != nil {
 		log.Info(err.Error())
 	}
@@ -100,7 +100,7 @@ func (server *Server) mapRoutes() {
 		log.Error("No gohan schema. Disabling schema editing mode")
 		return
 	}
-	namespaceList, _, err := tx.List(namespaceSchema, nil, nil)
+	namespaceList, _, err := tx.List(namespaceSchema, nil, nil, nil)
 	if err != nil {
 		log.Info(err.Error())
 	}
