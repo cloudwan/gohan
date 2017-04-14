@@ -448,7 +448,7 @@ func prepareListResources(schemaID string, key string, limit uint64, offset uint
 	}
 
 	if key != "" {
-		paginator, err = pagination.NewPaginator(schema, key, "", limit, offset, nil)
+		paginator, err = pagination.NewPaginator(schema, key, "", limit, offset)
 		if err != nil {
 			return nil, nil, fmt.Errorf("Error during gohan_db_list: %s", err.Error())
 		}
@@ -473,7 +473,7 @@ func GohanDbList(transaction transaction.Transaction, schemaID string,
 		return []map[string]interface{}{}, err
 	}
 
-	resources, _, err := transaction.List(schema, filter, paginator)
+	resources, _, err := transaction.List(schema, filter, nil, paginator)
 	if err != nil {
 		return []map[string]interface{}{}, fmt.Errorf("Error during gohan_db_list: %s", err.Error())
 	}
@@ -490,7 +490,7 @@ func GohanDbLockList(tx transaction.Transaction, schemaID string,
 		return []map[string]interface{}{}, err
 	}
 
-	resources, _, err := tx.LockList(schema, filter, paginator, policy)
+	resources, _, err := tx.LockList(schema, filter, nil, paginator, policy)
 	if err != nil {
 		return []map[string]interface{}{}, fmt.Errorf("Error during gohan_db_lock_list: %s", err.Error())
 	}

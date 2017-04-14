@@ -18,8 +18,10 @@ package server_test
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -283,7 +285,7 @@ var _ = Describe("Server package test", func() {
 			testURL("POST", parentsPluralURL, adminTokenID, charlieParent, http.StatusCreated)
 
 			By("assuring 1 parent was returned without error")
-			result := testURL("GET", parentsPluralURL, adminTokenID, nil, http.StatusOK)
+			result := testURL("GET", parentsPluralURL + "?_details=true", adminTokenID, nil, http.StatusOK)
 			res := result.(map[string]interface{})
 			parents := res["parents"].([]interface{})
 			Expect(parents).To(HaveLen(1))
@@ -1322,12 +1324,28 @@ func startTestServer(config string) error {
 	if err != nil {
 		return err
 	}
+
 	go func() {
 		err := server.Start()
 		if err != nil {
-			return
+			panic(err)
 		}
 	}()
+
+	retry := 3
+	for {
+		conn, err := net.Dial("tcp", server.Address())
+		if err == nil {
+			conn.Close()
+			break
+		}
+		retry--
+		if retry == 0 {
+			return errors.New("server not started")
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+
 	return nil
 }
 
@@ -1451,7 +1469,7 @@ func clearTable(tx transaction.Transaction, s *schema.Schema) error {
 			}
 		}
 	}
-	resources, _, err := tx.List(s, nil, nil)
+	resources, _, err := tx.List(s, nil, nil, nil)
 	if err != nil {
 		return err
 	}
