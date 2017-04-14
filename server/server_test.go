@@ -18,8 +18,10 @@ package server_test
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -1322,12 +1324,28 @@ func startTestServer(config string) error {
 	if err != nil {
 		return err
 	}
+
 	go func() {
 		err := server.Start()
 		if err != nil {
 			panic(err)
 		}
 	}()
+
+	retry := 3
+	for {
+		conn, err := net.Dial("tcp", server.Address())
+		if err == nil {
+			conn.Close()
+			break
+		}
+		retry--
+		if retry == 0 {
+			return errors.New("server not started")
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+
 	return nil
 }
 

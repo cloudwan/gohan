@@ -369,6 +369,11 @@ func NewServer(configFile string) (*Server, error) {
 	return server, nil
 }
 
+// Address returns server address.
+func (server *Server) Address() string {
+	return server.address
+}
+
 //Start starts GohanAPIServer
 func (server *Server) Start() (err error) {
 	listeners, err := listener.ListenAll()
