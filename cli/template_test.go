@@ -41,68 +41,90 @@ var _ = Describe("Templates", func() {
 	})
 
 	Describe("Filtering schemas for specific policy", func() {
+		allPermissions := []string{"create", "read", "update", "delete"}
 		Context("With policy set to admin", func() {
 			It("should return only admin's schemas", func() {
 
-				filteredSchemasRead, filteredSchemas := filterSchemasForPolicy("admin", policies, schemas)
+				filteredSchemas := filterSchemasForPolicy("admin", policies, schemas)
 
-				Expect(filteredSchemasRead).To(BeEmpty())
 				Expect(filteredSchemas).To(HaveLen(3))
-				Expect(filteredSchemas[0].URL).To(Equal("/v2.0/nets"))
-				Expect(filteredSchemas[1].URL).To(Equal("/v2.0/networks"))
-				Expect(filteredSchemas[2].URL).To(Equal("/v2.0/network/:network/subnets"))
+				Expect(filteredSchemas[0].Schema.URL).To(Equal("/v2.0/nets"))
+				Expect(filteredSchemas[0].Policies).To(Equal(allPermissions))
+				Expect(filteredSchemas[1].Schema.URL).To(Equal("/v2.0/networks"))
+				Expect(filteredSchemas[1].Policies).To(Equal(allPermissions))
+				Expect(filteredSchemas[2].Schema.URL).To(Equal("/v2.0/network/:network/subnets"))
+				Expect(filteredSchemas[2].Policies).To(Equal(allPermissions))
+			})
+		})
+
+		Context("With empty policy", func() {
+			It("should return all schemas", func() {
+
+				filteredSchemas := filterSchemasForPolicy("", policies, schemas)
+
+				Expect(filteredSchemas).To(HaveLen(3))
+				Expect(filteredSchemas[0].Schema.URL).To(Equal("/v2.0/nets"))
+				Expect(filteredSchemas[0].Policies).To(Equal(allPermissions))
+				Expect(filteredSchemas[1].Schema.URL).To(Equal("/v2.0/networks"))
+				Expect(filteredSchemas[1].Policies).To(Equal(allPermissions))
+				Expect(filteredSchemas[2].Schema.URL).To(Equal("/v2.0/network/:network/subnets"))
+				Expect(filteredSchemas[2].Policies).To(Equal(allPermissions))
 			})
 		})
 
 		Context("With policy set to member", func() {
 			It("should return only member's schemas", func() {
 
-				filteredSchemasRead, filteredSchemas := filterSchemasForPolicy("Member", policies, schemas)
+				filteredSchemas := filterSchemasForPolicy("Member", policies, schemas)
 
-				Expect(filteredSchemasRead).To(HaveLen(1))
-				Expect(filteredSchemasRead[0].URL).To(Equal("/v2.0/nets"))
-				Expect(filteredSchemas).To(HaveLen(1))
-				Expect(filteredSchemas[0].URL).To(Equal("/v2.0/networks"))
+				Expect(filteredSchemas).To(HaveLen(2))
+				Expect(filteredSchemas[0].Schema.URL).To(Equal("/v2.0/nets"))
+				Expect(filteredSchemas[0].Policies).To(Equal([]string{"read"}))
+				Expect(filteredSchemas[1].Schema.URL).To(Equal("/v2.0/networks"))
+				Expect(filteredSchemas[1].Policies).To(Equal([]string{"create"}))
 			})
 		})
 
 		Context("With policy set to nobody", func() {
 			It("should return only nobody's schemas", func() {
 
-				filteredSchemasRead, filteredSchemas := filterSchemasForPolicy("Nobody", policies, schemas)
+				filteredSchemas := filterSchemasForPolicy("Nobody", policies, schemas)
 
-				Expect(filteredSchemasRead).To(BeEmpty())
 				Expect(filteredSchemas).To(BeEmpty())
 			})
 		})
 	})
 
 	Describe("Filtering schemas for specific resource", func() {
+		var schemaWithPolicy []*SchemaWithPolicy
+		BeforeEach(func() {
+			schemaWithPolicy = filterSchemasForPolicy("", policies, schemas)
+		})
 		Context("With resource set to a", func() {
 			It("should return only a schemas", func() {
 
-				filteredSchemas := filerSchemasByResource("a", schemas)
+				filteredSchemas := filerSchemasByResource("a", schemaWithPolicy)
 
 				Expect(filteredSchemas).To(HaveLen(2))
-				Expect(filteredSchemas[0].URL).To(Equal("/v2.0/nets"))
-				Expect(filteredSchemas[1].URL).To(Equal("/v2.0/networks"))
+				Expect(filteredSchemas[0].Schema.URL).To(Equal("/v2.0/nets"))
+				Expect(filteredSchemas[1].Schema.URL).To(Equal("/v2.0/networks"))
 			})
 		})
 
 		Context("With resource set to b", func() {
 			It("should return only b schemas", func() {
 
-				filteredSchemas := filerSchemasByResource("b", schemas)
+				filteredSchemas := filerSchemasByResource("b", schemaWithPolicy)
 
 				Expect(filteredSchemas).To(HaveLen(1))
-				Expect(filteredSchemas[0].URL).To(Equal("/v2.0/network/:network/subnets"))
+				Expect(filteredSchemas[0].Schema.URL).To(Equal("/v2.0/network/:network/subnets"))
 			})
 		})
 
 		Context("With resource set to c", func() {
 			It("should not return any schemas", func() {
 
-				filteredSchemas := filerSchemasByResource("c", schemas)
+				filteredSchemas := filerSchemasByResource("c", schemaWithPolicy)
 
 				Expect(filteredSchemas).To(BeEmpty())
 			})
@@ -111,7 +133,7 @@ var _ = Describe("Templates", func() {
 		Context("With schema containg 2 resources", func() {
 			It("should recognize correctly all of them", func() {
 
-				resources := getAllResourcesFromSchemas(schemas)
+				resources := getAllResourcesFromSchemas(schemaWithPolicy)
 
 				Expect(resources).To(HaveLen(2))
 				Expect(resources).To(ContainElement("a"))
