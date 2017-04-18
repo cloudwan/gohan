@@ -222,9 +222,9 @@ func FilterFromQueryParameter(resourceSchema *schema.Schema, queryParameters map
 }
 
 func listOptionsFromQueryParameter(v url.Values) *transaction.ListOptions {
-	return &transaction.ListOptions {
-		Details: parseBool(v.Get("_details"), false),
-		Fields: v["_fields"],
+	return &transaction.ListOptions{
+		Details: parseBool(v.Get("_details"), true),
+		Fields:  v["_fields"],
 	}
 }
 
