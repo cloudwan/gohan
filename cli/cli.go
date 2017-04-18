@@ -410,10 +410,11 @@ func getMigrateSubcommandWithPostMigrateEvent(subcmd, usage string) cli.Command 
 				log.Fatal(err)
 			}
 
-			dbConn, err := db.CreateFromConfig(config)
+			rawDbConn, err := db.CreateFromConfig(config)
 			if err != nil {
 				log.Fatal(err)
 			}
+			dbConn := &server.DbSyncWrapper{DB: rawDbConn}
 
 			sync, err := sync_util.CreateFromConfig(config)
 			if err != nil {
