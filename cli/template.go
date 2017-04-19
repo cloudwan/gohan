@@ -195,12 +195,13 @@ func doTemplate(c *cli.Context) {
 	policy := c.String("policy")
 	title := c.String("title")
 	version := c.String("version")
+	description := c.String("description")
 	schemasWithPolicy := filterSchemasForPolicy(policy, policies, schemas)
 	if c.IsSet("split-by-resource-group") {
-		saveAllResources(schemasWithPolicy, tpl, version)
+		saveAllResources(schemasWithPolicy, tpl, version, description)
 		return
 	}
-	output, err := tpl.Execute(pongo2.Context{"schemas": schemasWithPolicy, "title": title, "version": version})
+	output, err := tpl.Execute(pongo2.Context{"schemas": schemasWithPolicy, "title": title, "version": version, "description": description})
 	if err != nil {
 		util.ExitFatal(err)
 		return
@@ -209,10 +210,10 @@ func doTemplate(c *cli.Context) {
 	fmt.Println(output)
 }
 
-func saveAllResources(schemas []*SchemaWithPolicy, tpl *pongo2.Template, version string) {
+func saveAllResources(schemas []*SchemaWithPolicy, tpl *pongo2.Template, version, description string) {
 	for _, resource := range getAllResourcesFromSchemas(schemas) {
 		resourceSchemas := filerSchemasByResource(resource, schemas)
-		output, _ := tpl.Execute(pongo2.Context{"schemas": resourceSchemas, "title": resource, "version": version})
+		output, _ := tpl.Execute(pongo2.Context{"schemas": resourceSchemas, "title": resource, "version": version, "description": description})
 		ioutil.WriteFile(resource+".json", []byte(output), 0644)
 	}
 }
@@ -356,6 +357,7 @@ func getOpenAPICommand() cli.Command {
 			cli.StringFlag{Name: "policy", Value: "admin", Usage: "Policy"},
 			cli.StringFlag{Name: "version", Value: "0.1", Usage: "API version"},
 			cli.StringFlag{Name: "title", Value: "gohan API", Usage: "API title"},
+			cli.StringFlag{Name: "description", Value: "", Usage: "API description"},
 		},
 		Action: doTemplate,
 	}
