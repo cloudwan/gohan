@@ -16,13 +16,12 @@
 package db
 
 import (
-	"fmt"
+	"errors"
 	"strings"
 
 	"github.com/cloudwan/gohan/db/file"
 	"github.com/cloudwan/gohan/db/sql"
 	"github.com/cloudwan/gohan/db/transaction"
-
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
 )
@@ -30,7 +29,7 @@ import (
 //DefaultMaxOpenConn will applied for db object
 const DefaultMaxOpenConn = 100
 
-const noSchemasInManagerError = "No schemas in Manager. Did you remember to load them?"
+var errNoSchemasInManager = errors.New("No schemas in Manager. Did you remember to load them?")
 
 //DB is a common interface for handing db
 type DB interface {
@@ -61,7 +60,7 @@ func CopyDBResources(input, output DB, overrideExisting bool) error {
 	schemaManager := schema.GetManager()
 	schemas := schemaManager.OrderedSchemas()
 	if len(schemas) == 0 {
-		return fmt.Errorf(noSchemasInManagerError)
+		return errNoSchemasInManager
 	}
 
 	itx, err := input.Begin()
@@ -136,7 +135,7 @@ func InitDBWithSchemas(dbType, dbConnection string, dropOnCreate, cascade, migra
 	schemaManager := schema.GetManager()
 	schemas := schemaManager.OrderedSchemas()
 	if len(schemas) == 0 {
-		return fmt.Errorf(noSchemasInManagerError)
+		return errNoSchemasInManager
 	}
 	if dropOnCreate {
 		for i := len(schemas) - 1; i >= 0; i-- {

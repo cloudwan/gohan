@@ -16,25 +16,23 @@
 package sql
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/cloudwan/gohan/db/pagination"
-	"github.com/cloudwan/gohan/db/transaction"
-	"github.com/cloudwan/gohan/util"
-
-	"database/sql"
-
-	"github.com/cloudwan/gohan/schema"
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 	sq "github.com/lann/squirrel"
-	// DB import
-	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/mattn/go-sqlite3"
 	_ "github.com/nati/go-fakedb"
+
+	"github.com/cloudwan/gohan/db/pagination"
+	"github.com/cloudwan/gohan/db/transaction"
+	"github.com/cloudwan/gohan/schema"
+	"github.com/cloudwan/gohan/util"
 )
 
 const retryDB = 50
@@ -244,7 +242,7 @@ func foreignKeyName(fromTable, fromProperty, toTable, toProperty string) string 
 	return name
 }
 
-//Connect connec to the db
+//Connect connects to the db
 func (db *DB) Connect(sqlType, conn string, maxOpenConn int) (err error) {
 	db.sqlType = sqlType
 	db.connectionString = conn
@@ -886,19 +884,25 @@ func (tx *Transaction) count(s *schema.Schema, filter transaction.Filter) (res u
 //Fetch resources by ID in the db
 func (tx *Transaction) Fetch(s *schema.Schema, filter transaction.Filter) (*schema.Resource, error) {
 	list, _, err := tx.List(s, filter, nil, nil)
-	if len(list) < 1 {
-		return nil, fmt.Errorf("Failed to fetch %s", filter)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to fetch %s: %s", filter, err)
 	}
-	return list[0], err
+	if len(list) < 1 {
+		return nil, transaction.ErrResourceNotFound
+	}
+	return list[0], nil
 }
 
 //Fetch & lock a resource
 func (tx *Transaction) LockFetch(s *schema.Schema, filter transaction.Filter, lockPolicy schema.LockPolicy) (*schema.Resource, error) {
 	list, _, err := tx.LockList(s, filter, nil, nil, lockPolicy)
-	if len(list) < 1 {
-		return nil, fmt.Errorf("Failed to fetch and lock %s", filter)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to fetch and lock %s: %s", filter, err)
 	}
-	return list[0], err
+	if len(list) < 1 {
+		return nil, transaction.ErrResourceNotFound
+	}
+	return list[0], nil
 }
 
 //StateFetch fetches the state of the specified resource
@@ -921,7 +925,7 @@ func (tx *Transaction) StateFetch(s *schema.Schema, filter transaction.Filter) (
 	}
 	defer rows.Close()
 	if !rows.Next() {
-		err = fmt.Errorf("No resource found")
+		err = transaction.ErrResourceNotFound
 		return
 	}
 	data := map[string]interface{}{}
