@@ -24,7 +24,6 @@ import (
 
 	"github.com/cloudwan/gohan/db/pagination"
 	"github.com/cloudwan/gohan/db/transaction"
-
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
 )
@@ -276,10 +275,13 @@ func (tx *Transaction) LockList(s *schema.Schema, filter transaction.Filter, opt
 //Fetch resources by ID in the db
 func (tx *Transaction) Fetch(s *schema.Schema, filter transaction.Filter) (*schema.Resource, error) {
 	list, _, err := tx.List(s, filter, nil, nil)
-	if len(list) != 1 {
-		return nil, fmt.Errorf("Failed to fetch %s", filter)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to fetch %s: %s", filter, err)
 	}
-	return list[0], err
+	if len(list) < 1 {
+		return nil, transaction.ErrResourceNotFound
+	}
+	return list[0], nil
 }
 
 //Fetch & lock a resource. Not supported in file db
