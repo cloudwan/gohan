@@ -285,7 +285,7 @@ var _ = Describe("Server package test", func() {
 			testURL("POST", parentsPluralURL, adminTokenID, charlieParent, http.StatusCreated)
 
 			By("assuring 1 parent was returned without error")
-			result := testURL("GET", parentsPluralURL + "?_details=true", adminTokenID, nil, http.StatusOK)
+			result := testURL("GET", parentsPluralURL, adminTokenID, nil, http.StatusOK)
 			res := result.(map[string]interface{})
 			parents := res["parents"].([]interface{})
 			Expect(parents).To(HaveLen(1))
