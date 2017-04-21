@@ -162,7 +162,8 @@ func init() {
 
 				eventChan := make(chan *sync.Event, 32) // non-blocking
 				stopChan := make(chan bool, 1)          // non-blocking
-				errorChan := make(chan error)           // blocking
+				defer func() { stopChan <- true }()
+				errorChan := make(chan error, 1) // non-blocking
 
 				go func() {
 					if err := env.Sync.Watch(path, eventChan, stopChan, revision); err != nil {
@@ -173,14 +174,12 @@ func init() {
 				select {
 				case interrupt := <-call.Otto.Interrupt:
 					log.Debug("Received otto interrupt in gohan_sync_watch")
-					stopChan <- true
 					interrupt()
 				case event := <-eventChan:
 					if value, err = vm.ToValue(convertSyncEvent(event)); err == nil {
 						return value
 					}
 				case <-time.NewTimer(time.Duration(timeoutMsec) * time.Millisecond).C:
-					stopChan <- true
 					if value, err = vm.ToValue(map[string]interface{}{}); err == nil {
 						return value
 					}
