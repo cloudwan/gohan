@@ -260,7 +260,7 @@ func (s *Sync) Watch(path string, responseChan chan *sync.Event, stopChan chan b
 	eventsFromNode("get", node.Kvs, responseChan)
 	revision = node.Header.Revision + 1
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background()) // don't foreget call cancel()
 	errors := make(chan error, 1)
 	var wg syn.WaitGroup
 	wg.Add(1)
@@ -295,6 +295,7 @@ func (s *Sync) Watch(path string, responseChan chan *sync.Event, stopChan chan b
 	// it gets an error, we need a side channel to see the connection state.
 	session, err := concurrency.NewSession(s.etcdClient, concurrency.WithTTL(masterTTL))
 	if err != nil {
+		cancel()
 		return err
 	}
 	defer session.Close()
