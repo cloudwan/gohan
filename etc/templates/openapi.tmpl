@@ -2,6 +2,7 @@
     "swagger": "2.0",
     "info": {
         "version": "{{ version }}",
+        {% if description | length != 0 %}"description": "{{ description }}",{% endif %}
         "title": "{{ title }}"
     },
     "basePath": "/",
@@ -108,7 +109,7 @@
                         }
                     }
                 }
-            }{% if policies | length > 1 %},{% endif %}{% endif %}
+            }{% if "update" in policies or "delete" in policies %},{% endif %}{% endif %}
             {% if "update" in policies %}"put": {
                 "description" : "Update {{ schema.ID }} resource",
                 "produces": [

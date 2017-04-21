@@ -87,6 +87,7 @@ GLOBAL OPTIONS:
         --policy "admin"                                       Show only schema with chosen policy
         --version "0.1"					Version of the API
         --title "gohan API"					Title of the API
+        --description ""					Description of the API
 ```
 
 ## MarkDown
