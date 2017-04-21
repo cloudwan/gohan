@@ -189,7 +189,7 @@ func DBList(tx transaction.Transaction, schemaID string, filter map[string]inter
 			filter[key] = filterList
 		}
 	}
-	resources, _, err := tx.List(schemaObj, filter, nil)
+	resources, _, err := tx.List(schemaObj, filter, nil, nil)
 	resp := []interface{}{}
 	for _, resource := range resources {
 		resp = append(resp, resource.Data())

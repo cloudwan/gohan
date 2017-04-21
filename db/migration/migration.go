@@ -48,18 +48,19 @@ func LoadConfig(configFile string) (err error) {
 	return
 }
 
-func readGooseConfig() (dbType, dbConnection, migrationsPath string) {
+func readGooseConfig() (dbType, dbConnection, migrationsPath string, noInit bool) {
 	config := util.GetConfig()
 	dbType = config.GetString("database/type", "sqlite3")
 	dbConnection = config.GetString("database/connection", "")
 	migrationsPath = config.GetString("database/migrations", "etc/db/migrations")
+	noInit = config.GetBool("database/no_init", false)
 	return
 }
 
 func Init() error {
 	logger.Info("migration: init")
 
-	dbType, dbConnection, migrationsPath := readGooseConfig()
+	dbType, dbConnection, migrationsPath, noInit := readGooseConfig()
 
 	if err := goose.SetDialect(dbType); err != nil {
 		return fmt.Errorf("migration: failed to set goose dialect: %s", err)
@@ -82,6 +83,38 @@ func Init() error {
 		return fmt.Errorf("migration: failed to load migration plugins: %s", err)
 	}
 
+	if noInit {
+		// pending migrations are not allowed if no-init is enabled (no_init=true)
+		m, err := goose.LastMigration(migrationsPath)
+		var last int64
+		if err != nil {
+			if err != goose.ErrNoNextVersion {
+				return err
+			}
+			last = 0;
+		} else {
+			last = m.Version
+		}
+
+		if err != nil {
+			if err != goose.ErrNoNextVersion {
+				return fmt.Errorf("migration: %s", err)
+			}
+		}
+
+		dbVersion, err := goose.GetDBVersion(db)
+
+		logger.Info("migration: db version: %d; last migration: %d", dbVersion, last)
+
+		if err != nil {
+			return fmt.Errorf("migration: GetDBVersion failed: %s", err)
+		}
+
+		if last != dbVersion {
+			return fmt.Errorf("migration: there are pending migrations - reject to run gohan (no_init=true); db version=%d; last migration=%d", dbVersion, last)
+		}
+	}
+
 	return goose.Status(db, migrationsPath)
 }
 
@@ -90,7 +123,7 @@ func Help() {
 }
 
 func Run(subCmd string, args []string) {
-	dbType, dbConnection, migrationsPath := readGooseConfig()
+	dbType, dbConnection, migrationsPath, _ := readGooseConfig()
 
 	if err := goose.SetDialect(dbType); err != nil {
 		fmt.Printf("error: failed to set goose dialect: %s\n", err)
@@ -118,4 +151,18 @@ func Run(subCmd string, args []string) {
 		fmt.Printf("migration: failed to run: %s\n", err)
 		os.Exit(1)
 	}
+}
+
+var modifiedSchemas = map[string]bool{}
+
+func MarkSchemaAsModified(schemaID string) {
+	modifiedSchemas[schemaID] = true
+}
+
+func GetModifiedSchemas() []string {
+	schemas := make([]string, len(modifiedSchemas))
+	for schema, _ := range modifiedSchemas {
+		schemas = append(schemas, schema)
+	}
+	return schemas
 }

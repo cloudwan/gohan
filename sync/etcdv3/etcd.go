@@ -26,6 +26,7 @@ import (
 
 	"github.com/cloudwan/gohan/sync"
 	etcd "github.com/coreos/etcd/clientv3"
+	"github.com/coreos/etcd/clientv3/concurrency"
 	pb "github.com/coreos/etcd/mvcc/mvccpb"
 	cmap "github.com/streamrail/concurrent-map"
 	"github.com/twinj/uuid"
@@ -259,37 +260,9 @@ func (s *Sync) Watch(path string, responseChan chan *sync.Event, stopChan chan b
 	eventsFromNode("get", node.Kvs, responseChan)
 	revision = node.Header.Revision + 1
 
-	ctx, cancel := context.WithCancel(context.Background())
-	errors := make(chan error, 2)
+	ctx, cancel := context.WithCancel(context.Background()) // don't foreget call cancel()
+	errors := make(chan error, 1)
 	var wg syn.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		err := func() error {
-			rch := s.etcdClient.Watch(ctx, path, etcd.WithRev(revision))
-
-			for wresp := range rch {
-				err := wresp.Err()
-				if err != nil {
-					return err
-				}
-				for _, ev := range wresp.Events {
-					action := "unknown"
-					switch ev.Type {
-					case etcd.EventTypePut:
-						action = "set"
-					case etcd.EventTypeDelete:
-						action = "delete"
-					}
-					eventsFromNode(action, []*pb.KeyValue{ev.Kv}, responseChan)
-				}
-			}
-
-			return nil
-		}()
-		errors <- err
-	}()
-
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -318,7 +291,20 @@ func (s *Sync) Watch(path string, responseChan chan *sync.Event, stopChan chan b
 		errors <- err
 	}()
 
+	// since Watch() doesn't close the returning channel even when
+	// it gets an error, we need a side channel to see the connection state.
+	session, err := concurrency.NewSession(s.etcdClient, concurrency.WithTTL(masterTTL))
+	if err != nil {
+		cancel()
+		return err
+	}
+	defer session.Close()
+
 	select {
+	case <-session.Done():
+		cancel()
+		wg.Wait()
+		return fmt.Errorf("Watch aborted by etcd session close")
 	case <-stopChan:
 		cancel()
 		wg.Wait()

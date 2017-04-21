@@ -18,8 +18,10 @@ package server_test
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -952,7 +954,7 @@ var _ = Describe("Server package test", func() {
 					Expect(err).ToNot(HaveOccurred())
 				})
 
-				It("With wrong resource ID should return the proper error", func() {
+				It("With wrong resource ID should return ErrResourceNotFound", func() {
 					possibleEvent = gohan_sync.Event{
 						Action: "this is ignored here",
 						Data: map[string]interface{}{
@@ -963,7 +965,7 @@ var _ = Describe("Server package test", func() {
 						Key: statePrefix + networkResource.Path() + "malesta",
 					}
 					err := srv.StateUpdate(&possibleEvent, server)
-					Expect(err).To(MatchError(ContainSubstring("Failed to fetch")))
+					Expect(err).To(Equal(transaction.ErrResourceNotFound))
 				})
 
 				It("Without version should return the proper error", func() {
@@ -1090,7 +1092,7 @@ var _ = Describe("Server package test", func() {
 					Expect(err).ToNot(HaveOccurred())
 				})
 
-				It("With wrong resource ID should return the proper error", func() {
+				It("With wrong resource ID should return ErrResourceNotFound", func() {
 					possibleEvent = gohan_sync.Event{
 						Action: "this is ignored here",
 						Data: map[string]interface{}{
@@ -1100,7 +1102,7 @@ var _ = Describe("Server package test", func() {
 						Key: monitoringPrefix + networkResource.Path() + "malesta",
 					}
 					err := srv.MonitoringUpdate(&possibleEvent, server)
-					Expect(err).To(MatchError(ContainSubstring("Failed to fetch")))
+					Expect(err).To(Equal(transaction.ErrResourceNotFound))
 				})
 
 				It("Without monitoring should return the proper error", func() {
@@ -1322,12 +1324,28 @@ func startTestServer(config string) error {
 	if err != nil {
 		return err
 	}
+
 	go func() {
 		err := server.Start()
 		if err != nil {
-			return
+			panic(err)
 		}
 	}()
+
+	retry := 3
+	for {
+		conn, err := net.Dial("tcp", server.Address())
+		if err == nil {
+			conn.Close()
+			break
+		}
+		retry--
+		if retry == 0 {
+			return errors.New("server not started")
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+
 	return nil
 }
 
@@ -1451,7 +1469,7 @@ func clearTable(tx transaction.Transaction, s *schema.Schema) error {
 			}
 		}
 	}
-	resources, _, err := tx.List(s, nil, nil)
+	resources, _, err := tx.List(s, nil, nil, nil)
 	if err != nil {
 		return err
 	}

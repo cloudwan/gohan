@@ -2,6 +2,7 @@
     "swagger": "2.0",
     "info": {
         "version": "{{ version }}",
+        {% if description | length != 0 %}"description": "{{ description }}",{% endif %}
         "title": "{{ title }}"
     },
     "basePath": "/",
@@ -14,9 +15,9 @@
     "produces": [
         "application/json"
     ],
-    "paths": { {% for schema in schemas %}{% if schema.Metadata.type != "metaschema" && schema.Type != "abstract" %}
+    "paths": { {% for schemaPolicy in schemas %}{% with schema=schemaPolicy.Schema policies=schemaPolicy.Policies %}{% if schema.Metadata.type != "metaschema" && schema.Type != "abstract" %}
         "{{ schema.GetPluralURL() }}": {
-            "get": {
+            {% if "read" in policies %}"get": {
                 "description" : "Get list of {{ schema.ID}} resources",
                 "produces": [
                     "application/json"
@@ -41,124 +42,7 @@
                         }
                     }
                 }
-            }
-        },
-        "{{ schema.URL }}/{id}": {
-            "get": {
-                "description" : "Show a {{ schema.ID}} resources",
-                "produces": [
-                    "application/json"
-                ],{% if schema.Metadata.resource_group | length != 0 %}
-                "tags": [
-                    "{{ schema.Metadata.resource_group }}"
-                ],{% endif %}
-                "parameters": [
-                {
-                    "name": "id",
-                    "in": "path",
-                    "description": "ID of {{ schema.ID }} to fetch",
-                    "required": true,
-                    "type": "string"
-                }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "{{ schema.description }}",
-                        "schema": {
-                            "$ref": "#/definitions/{{ schema.ID }}"
-                        }
-                    },
-                    "default": {
-                        "description": "unexpected error",
-                        "schema": {
-                        "$ref": "#/definitions/errorModel"
-                        }
-                    }
-                }
-            }
-        }{% for action in schema.Actions %},
-        "{{ schema.GetPluralURL() }}{{ action.Path | swagger_path }}": {
-            "{{ action.Method|lower }}" : {
-                "description": "{% if action.Description | length == 0 %}Action {{ action.ID}}{% else %}{{ action.Description }}{% endif %}",
-                "produces": [
-                    "application/json"
-                ],{% if schema.Metadata.resource_group | length != 0 %}
-                "tags": [
-                    "{{ schema.Metadata.resource_group }}"
-                ],{% endif %}
-                {% with has_id=action.Path | swagger_has_id_param put_or_post=action.Method | lower == "post" or action.Method | lower == "put" %}
-                {% with has_params_in_get=action.Method | lower == "get" and action.Parameters | length != 0 %}
-                "parameters": [ {% if has_id %}
-                {
-                    "name": "id",
-                    "in": "path",
-                    "description": "ID of {{ schema.ID }} to fetch",
-                    "required": true,
-                    "type": "string"
-                }{% endif %}{% if has_id and (has_params_in_get or put_or_post) %}, {% endif %} {% if has_params_in_get %}
-                {% for key, value in action.Parameters %}
-                {
-                    "name": "{{ key }}",
-                    "in": "query",
-                    "type": "{{ value.type }}",
-                    "required": {{ value.required | lower }},
-                    "description": "{{ value.description }}"
-                }{% if not forloop.Last %},{% endif %}{% endfor %}{% endif %}{% endwith %} {% if has_params_in_get and put_or_post %}, {% endif %}{% if put_or_post %}
-                {
-                    "name": "{{ action.ID }} request object",
-                    "in": "body",
-                    "description": "{{ action.ID }} request object",
-                    "required": true,
-                    "schema":
-                    {% with schema=action.Parameters | swagger: "                    " %}
-                    {% if schema == "null" %}
-                    {} {% else %} {{schema}} {% endif %}{% endwith %}
-                }{% endif %} {% endwith %}
-                ],
-                "responses": {
-                    "200": {
-                        "description": "action {{ schema.ID }} response",
-                        "schema":
-                        {{ action.OutputSchema | swagger: "                        "}}
-                    },
-                    "default": {
-                        "description": "unexpected error",
-                        "schema": {
-                        "$ref": "#/definitions/errorModel"
-                        }
-                    }
-                }
-            }
-        }{% endfor %}{% if not (forloop.Last && len(schemasCRUD) == 0) %},{% endif %}
-{% endif %}{% endfor %}
-    {% for schema in schemasCRUD %}{% if schema.Metadata.type != "metaschema" && schema.Type != "abstract" %}
-        "{{ schema.GetPluralURL() }}": {
-            "get": {
-                "description" : "Get list of {{ schema.ID}} resources",
-                "produces": [
-                    "application/json"
-                ],{% if schema.Metadata.resource_group | length != 0 %}
-                "tags": [
-                    "{{ schema.Metadata.resource_group }}"
-                ],{% endif %}
-                "responses": {
-                    "200": {
-                        "description": "{{ schema.description }}",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/{{ schema.ID }}"
-                            }
-                        }
-                    },
-                    "default": {
-                        "description": "unexpected error",
-                        "schema": {
-                        "$ref": "#/definitions/errorModel"
-                        }
-                    }
-                }
-            },
+            }{% if "create" in policies %},{% endif %}{% endif %}{% if "create" in policies %}
             "post": {
                 "description" : "Create new {{ schema.ID }} resource",
                 "produces": [
@@ -191,10 +75,10 @@
                         }
                     }
                 }
-            }
+            }{% endif %}
         },
         "{{ schema.URL }}/{id}": {
-            "get": {
+            {% if "read" in policies %}"get": {
                 "description" : "Show a {{ schema.ID}} resources",
                 "produces": [
                     "application/json"
@@ -225,8 +109,8 @@
                         }
                     }
                 }
-            },
-            "put": {
+            }{% if "update" in policies or "delete" in policies %},{% endif %}{% endif %}
+            {% if "update" in policies %}"put": {
                 "description" : "Update {{ schema.ID }} resource",
                 "produces": [
                     "application/json"
@@ -265,8 +149,8 @@
                         }
                     }
                 }
-            },
-            "delete": {
+            }{% if "delete" in policies %},{% endif %}{% endif %}
+            {% if "delete" in policies %}"delete": {
                 "description" : "Delete a {{ schema.ID }} resources",
                 "produces": [
                     "application/json"
@@ -297,7 +181,7 @@
                         }
                     }
                 }
-            }
+            }{% endif %}
         }{% for action in schema.Actions %},
         "{{ schema.GetPluralURL() }}{{ action.Path | swagger_path }}": {
             "{{ action.Method|lower }}" : {
@@ -352,9 +236,9 @@
                 }
             }
         }{% endfor %}{% if not forloop.Last %},{% endif %}
-{% endif %}{% endfor %}
+{% endif %}{% endwith %}{% endfor %}
     },
-    "definitions": { {% for schema in schemas %}{% if schema.Metadata.type != "metaschema" %}
+    "definitions": { {% for schemaPolicy in schemas %}{% with schema=schemaPolicy.Schema %}{% if schema.Metadata.type != "metaschema" %}
         {% with jsonSchema=schema.JSONSchema | swagger: "        " %}
         {% if jsonSchema != "null"  %}
         "{{ schema.ID }}" :
@@ -367,20 +251,7 @@
         {% if jsonSchemaUpdate != "null"  %}
         "{{ schema.ID }}Update" :
         {{ jsonSchemaUpdate }}, {% endif %}{% endwith %}
-        {% endif %}{% endfor %}{% for schema in schemasCRUD %}{% if schema.Metadata.type != "metaschema" %}
-        {% with jsonSchema=schema.JSONSchema | swagger: "        " %}
-        {% if jsonSchema != "null"  %}
-        "{{ schema.ID }}" :
-        {{ jsonSchema }}, {% endif %} {% endwith %}
-        {% with jsonSchemaInput=schema.JSONSchemaOnCreate | swagger: "        " %}
-        {% if jsonSchemaInput != "null" %}
-        "{{ schema.ID }}Input" :
-        {{ jsonSchemaInput }}, {% endif %}{% endwith %}
-        {% with jsonSchemaUpdate=schema.JSONSchemaOnUpdate | swagger: "        " %}
-        {% if jsonSchemaUpdate != "null"  %}
-        "{{ schema.ID }}Update" :
-        {{ jsonSchemaUpdate }}, {% endif %}{% endwith %}
-        {% endif %}{% endfor %}
+        {% endif %}{% endwith %}{% endfor %}
         "errorModel": {
             "type": "object",
             "properties": {

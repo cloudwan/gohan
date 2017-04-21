@@ -16,16 +16,17 @@
 package transaction
 
 import (
+	"errors"
+
 	"github.com/cloudwan/gohan/db/pagination"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/jmoiron/sqlx"
 )
 
+var ErrResourceNotFound = errors.New("resource not found")
+
 //Type represents transaction types
 type Type string
-
-//Filter represents db filter
-type Filter map[string]interface{}
 
 const (
 	//ReadUncommited is transaction type for READ UNCOMMITTED
@@ -41,6 +42,9 @@ const (
 	Serializable Type = "Serializable"
 )
 
+//Filter represents db filter
+type Filter map[string]interface{}
+
 //ResourceState represents the state of a resource
 type ResourceState struct {
 	ConfigVersion int64
@@ -50,7 +54,16 @@ type ResourceState struct {
 	Monitoring    string
 }
 
-//Transaction is common interface for handing transaction
+//ListOptions specifies additional list related options.
+type ListOptions struct {
+	// Details specifies if all the underlying structures should be
+	// returned.
+	Details bool
+	// Fields limits list output to only showing selected fields.
+	Fields []string
+}
+
+//Transaction is common interface for handling transaction
 type Transaction interface {
 	Create(*schema.Resource) error
 	Update(*schema.Resource) error
@@ -60,8 +73,8 @@ type Transaction interface {
 	Fetch(*schema.Schema, Filter) (*schema.Resource, error)
 	LockFetch(*schema.Schema, Filter, schema.LockPolicy) (*schema.Resource, error)
 	StateFetch(*schema.Schema, Filter) (ResourceState, error)
-	List(*schema.Schema, Filter, *pagination.Paginator) ([]*schema.Resource, uint64, error)
-	LockList(*schema.Schema, Filter, *pagination.Paginator, schema.LockPolicy) ([]*schema.Resource, uint64, error)
+	List(*schema.Schema, Filter, *ListOptions, *pagination.Paginator) ([]*schema.Resource, uint64, error)
+	LockList(*schema.Schema, Filter, *ListOptions, *pagination.Paginator, schema.LockPolicy) ([]*schema.Resource, uint64, error)
 	RawTransaction() *sqlx.Tx
 	Query(*schema.Schema, string, []interface{}) (list []*schema.Resource, err error)
 	Commit() error

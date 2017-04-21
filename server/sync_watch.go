@@ -63,31 +63,31 @@ func startSyncWatchProcess(server *Server) {
 			defer l.LogFatalPanic(log)
 			responseChan := responseChans[path]
 			for server.running {
-				lockKey := lockPath + "/watch" + path
-				err := server.sync.Lock(lockKey, true)
-				if err != nil {
-					log.Warning("Can't start watch process due to lock", err)
-					time.Sleep(5 * time.Second)
-					continue
-				}
-				defer func() {
-					server.sync.Unlock(lockKey)
-				}()
-
-				fromRevision := int64(gohan_sync.RevisionCurrent)
-				lastSeen, err := server.sync.Fetch(SyncWatchRevisionPrefix + path)
-				if err == nil {
-					inStore, err := strconv.ParseInt(lastSeen.Value, 10, 64)
-					if err == nil {
-						log.Info("Using last seen revision `%d` for watching path `%s`", inStore, path)
-						fromRevision = inStore
+				func() {
+					lockKey := lockPath + "/watch" + path
+					err := server.sync.Lock(lockKey, true)
+					if err != nil {
+						log.Warning("Can't start watch process due to lock", err)
+						time.Sleep(5 * time.Second)
+						return
 					}
-				}
+					defer server.sync.Unlock(lockKey)
 
-				err = server.sync.Watch(path, responseChan, stopChan, fromRevision)
-				if err != nil {
-					log.Error(fmt.Sprintf("sync watch error: %s", err))
-				}
+					fromRevision := int64(gohan_sync.RevisionCurrent)
+					lastSeen, err := server.sync.Fetch(SyncWatchRevisionPrefix + path)
+					if err == nil {
+						inStore, err := strconv.ParseInt(lastSeen.Value, 10, 64)
+						if err == nil {
+							log.Info("Using last seen revision `%d` for watching path `%s`", inStore, path)
+							fromRevision = inStore
+						}
+					}
+
+					err = server.sync.Watch(path, responseChan, stopChan, fromRevision)
+					if err != nil {
+						log.Error(fmt.Sprintf("sync watch error: %s", err))
+					}
+				}()
 			}
 		}(path)
 	}

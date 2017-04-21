@@ -17,6 +17,7 @@ package resources
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/cloudwan/gohan/db"
@@ -27,6 +28,8 @@ import (
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/server/middleware"
 	"github.com/twinj/uuid"
+	"net/http"
+	"net/url"
 )
 
 //ResourceProblem describes the kind of problem that occurred during resource manipulation.
@@ -172,7 +175,18 @@ func GetResourcesInTransaction(context middleware.Context, resourceSchema *schem
 		return err
 	}
 
-	list, total, err := mainTransaction.List(resourceSchema, filter, paginator)
+	var o *transaction.ListOptions
+	r, ok := context["http_request"].(*http.Request)
+	if ok {
+		o = listOptionsFromQueryParameter(r.URL.Query())
+	}
+
+	list, total, err := mainTransaction.List(
+		resourceSchema,
+		filter,
+		o,
+		paginator,
+	)
 	if err != nil {
 		response[resourceSchema.Plural] = []interface{}{}
 		context["response"] = response
@@ -194,19 +208,37 @@ func GetResourcesInTransaction(context middleware.Context, resourceSchema *schem
 	return nil
 }
 
-//FilterFromQueryParameter makes list filter from query
-func FilterFromQueryParameter(resourceSchema *schema.Schema,
-	queryParameters map[string][]string) map[string]interface{} {
-	filter := map[string]interface{}{}
+//FilterFromQueryParameter makes list filter from query.
+func FilterFromQueryParameter(resourceSchema *schema.Schema, queryParameters map[string][]string) transaction.Filter {
+	filter := transaction.Filter{}
 	for key, value := range queryParameters {
 		if _, err := resourceSchema.GetPropertyByID(key); err != nil {
-			log.Info("Resource '%s' does not have '%s' property, ignoring filter.",
-				resourceSchema.ID, key)
-			continue
+			log.Debug("Resource '%s' does not have %q property, ignoring filter", resourceSchema.ID, key)
+		} else {
+			filter[key] = value
 		}
-		filter[key] = value
 	}
 	return filter
+}
+
+func listOptionsFromQueryParameter(v url.Values) *transaction.ListOptions {
+	return &transaction.ListOptions{
+		Details: parseBool(v.Get("_details"), true),
+		Fields:  v["_fields"],
+	}
+}
+
+func parseBool(s string, d bool) bool {
+	if s == "" {
+		return d
+	}
+
+	b, err := strconv.ParseBool(s)
+	if err != nil {
+		return d
+	}
+
+	return b
 }
 
 // GetMultipleResources returns all resources specified by the schema and query parameters
