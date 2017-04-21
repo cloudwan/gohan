@@ -154,6 +154,10 @@ Disable auto migrations, set `auto_migrate: false` so that gohan don't alter dat
       auto_migrate: false
 ```
 
+> You should add **?parseTime=true** for connection setting if you use DB migrate functionality.
+> If you do not set this parameter, *gohan migrate status* does not work as expected.
+> See: https://bitbucket.org/liamstask/goose/issues/62/scan-error-on-column-index-0-unsupported
+
 ## Schema
 
 Gohan works based on schema definitions.
