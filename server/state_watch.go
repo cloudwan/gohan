@@ -124,7 +124,7 @@ func startStateWatchProcess(server *Server) {
 			bufferMutex.Unlock()
 		}
 
-		stateStopChan <- true
+		close(stateStopChan)
 	}()
 
 }

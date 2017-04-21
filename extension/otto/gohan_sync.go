@@ -162,7 +162,7 @@ func init() {
 
 				eventChan := make(chan *sync.Event, 32) // non-blocking
 				stopChan := make(chan bool, 1)          // non-blocking
-				defer func() { stopChan <- true }()
+				defer close(stopChan)
 				errorChan := make(chan error, 1) // non-blocking
 
 				go func() {

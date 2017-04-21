@@ -197,7 +197,6 @@ func (s *Sync) Watch(path string, responseChan chan *sync.Event, stopChan chan b
 		_, err = s.etcdClient.Watch(path, lastIndex, true, etcdResponseChan, stopChan)
 		if err != nil {
 			log.Error(fmt.Sprintf("watch error: %s", err))
-			stopChan <- true
 			return
 		}
 	}()
@@ -216,10 +215,8 @@ func (s *Sync) Watch(path string, responseChan chan *sync.Event, stopChan chan b
 				json.Unmarshal([]byte(response.Node.Value), &event.Data)
 				responseChan <- event
 			}
-		case stop := <-stopChan:
-			if stop == true {
-				return nil
-			}
+		case <-stopChan:
+			return nil
 		}
 	}
 }
