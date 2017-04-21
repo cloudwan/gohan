@@ -193,7 +193,10 @@ func (s *Sync) Watch(path string, responseChan chan *sync.Event, stopChan chan b
 	var lastIndex uint64
 	lastIndex = response.EtcdIndex + 1
 	eventsFromNode(response.Action, response.Node, responseChan)
+
+	done := make(chan struct{})
 	go func() {
+		defer close(done)
 		_, err = s.etcdClient.Watch(path, lastIndex, true, etcdResponseChan, stopChan)
 		if err != nil {
 			log.Error(fmt.Sprintf("watch error: %s", err))
@@ -215,7 +218,7 @@ func (s *Sync) Watch(path string, responseChan chan *sync.Event, stopChan chan b
 				json.Unmarshal([]byte(response.Node.Value), &event.Data)
 				responseChan <- event
 			}
-		case <-stopChan:
+		case <-done:
 			return nil
 		}
 	}
