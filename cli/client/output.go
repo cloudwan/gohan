@@ -89,8 +89,10 @@ func (gohanClientCLI *GohanClientCLI) createResourcesTable(s *schema.Schema, buf
 				case "string":
 					v = fmt.Sprint(val)
 					if property.RelationProperty != "" {
-						relatedResource := resource[property.RelationProperty].(map[string]interface{})
-						v = relatedResource["name"].(string)
+						relatedResource, ok := resource[property.RelationProperty].(map[string]interface{})
+						if ok {
+							v = relatedResource["name"].(string)
+						}
 					}
 				default:
 					v = fmt.Sprint(val)
