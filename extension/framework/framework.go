@@ -26,6 +26,7 @@ import (
 
 	"github.com/codegangsta/cli"
 
+	gorunner "github.com/cloudwan/gohan/extension/framework/golang/runner"
 	"github.com/cloudwan/gohan/extension/framework/runner"
 	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/singleton"
@@ -37,8 +38,7 @@ var (
 	log                 = l.NewLoggerForModule("extest")
 )
 
-// TestExtensions runs extension tests when invoked from Gohan CLI
-func TestExtensions(c *cli.Context) {
+func setupConfig(c *cli.Context) *util.Config {
 	l.SetUpBasicLogging(logWriter, l.DefaultFormat)
 
 	var config *util.Config
@@ -59,11 +59,31 @@ func TestExtensions(c *cli.Context) {
 		}
 	}
 
-	testFiles := getTestFiles(c.Args())
+	return config
+}
+
+// TestExtensions runs extension tests when invoked from Gohan CLI
+func TestExtensions(c *cli.Context) {
+	config := setupConfig(c)
+
+	testFiles := getTestFiles(c.Args(), "js")
 
 	//logging from config is a limited printAllLogs option
 	returnCode := RunTests(testFiles, c.Bool("verbose") || config != nil, c.String("run-test"), c.Int("parallel"))
 	os.Exit(returnCode)
+}
+
+func TestGoExtensions(c *cli.Context) {
+	setupConfig(c)
+
+	testFiles := getTestFiles(c.Args(), "so")
+
+	r := gorunner.NewGoTestRunner(testFiles)
+
+	if err := r.Run(); err != nil {
+		panic(err.Error())
+		os.Exit(1)
+	}
 }
 
 // RunTests runs extension tests for CLI.
@@ -171,13 +191,13 @@ func printSummary(summary map[string]error, printAllLogs bool) {
 	}
 }
 
-func getTestFiles(args cli.Args) []string {
+func getTestFiles(args cli.Args, fileExt string) []string {
 	paths := args
 	if len(paths) == 0 {
 		paths = append(paths, ".")
 	}
 
-	pattern := regexp.MustCompile(`^test_.*\.js$`)
+	pattern := regexp.MustCompile(`^test_.*\.` + fileExt + `$`)
 	seen := map[string]bool{}
 	testFiles := []string{}
 	for _, path := range paths {

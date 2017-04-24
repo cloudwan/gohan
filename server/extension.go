@@ -50,7 +50,7 @@ func (server *Server) newEnvironment(name string) extension.Environment {
 		case "gohanscript":
 			envs = append(envs, gohanscript.NewEnvironment())
 		case "go":
-			envs = append(envs, golang.NewEnvironment())
+			envs = append(envs, golang.NewEnvironment(name, server.db, server.keystoneIdentity, server.sync))
 		}
 	}
 	return extension.NewEnvironment(envs)

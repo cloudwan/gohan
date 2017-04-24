@@ -1,0 +1,40 @@
+extensions:
+- id: test_ext_init
+  code_type: go
+  path: ""
+  url: file://test_ext_init.so
+networks: []
+policies:
+- action: '*'
+  effect: allow
+  id: admin_statement
+  principal: admin
+  resource:
+    path: .*
+schemas:
+- description: Test
+  id: test
+  plural: tests
+  prefix: /v0.1
+  schema:
+    properties:
+      id:
+        description: ID
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: false
+      description:
+        description: Description
+        permission:
+        - create
+        title: Description
+        type: string
+        unique: false
+    propertiesOrder:
+    - id
+    - description
+    type: object
+  singular: test
+  title: TestResource

@@ -17,11 +17,33 @@ package main
 
 import (
 	"github.com/cloudwan/gohan/cli"
+
+
+
+
+
+
+	_ "net/http/pprof"
+
+	"log"
+	"net/http"
 )
 
 //BuildVersion get embbeded on build time
 var BuildVersion string
 
 func main() {
+
+	go func() {
+		log.Println(http.ListenAndServe("localhost:6060", nil))
+	}()
+
+
+
+
+
+
+
+
 	cli.Run("gohan", "Gohan", BuildVersion)
 }

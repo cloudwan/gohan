@@ -18,6 +18,7 @@ package extension
 import (
 	"time"
 
+	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/schema"
 )
 
@@ -25,6 +26,8 @@ import (
 type MultiEnvironment struct {
 	childEnv []Environment
 }
+
+var log = l.NewLogger()
 
 //NewEnvironment create new gohan extension environment based on context
 func NewEnvironment(envs []Environment) *MultiEnvironment {
@@ -54,6 +57,7 @@ func (env *MultiEnvironment) LoadExtensionsForPath(extensions []*schema.Extensio
 func (env *MultiEnvironment) HandleEvent(event string, context map[string]interface{}) error {
 	for _, env := range env.childEnv {
 		err := env.HandleEvent(event, context)
+		// log.Info("err: %s, env: %s", err, env)
 		if err != nil {
 			return err
 		}

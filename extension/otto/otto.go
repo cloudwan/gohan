@@ -187,6 +187,8 @@ func convertNilsToNulls(object interface{}) {
 
 //HandleEvent handles event
 func (env *Environment) HandleEvent(event string, context map[string]interface{}) (err error) {
+	start := time.Now()
+
 	vm := env.VM
 	var closeNotifier http.CloseNotifier
 	var closeNotify <-chan bool
@@ -280,6 +282,10 @@ func (env *Environment) HandleEvent(event string, context map[string]interface{}
 	if err != nil {
 		return err
 	}
+
+	stop := time.Now()
+	log.Warning("JS handle event '%s' took %d usec", event, stop.Sub(start).Nanoseconds() / 1000)
+
 	return err
 }
 

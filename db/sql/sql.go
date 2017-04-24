@@ -23,10 +23,10 @@ import (
 	"strings"
 	"time"
 
-	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 	sq "github.com/lann/squirrel"
 	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/nati/go-fakedb"
 
 	"context"
@@ -35,6 +35,7 @@ import (
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 const retryDB = 50

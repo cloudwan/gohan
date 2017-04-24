@@ -1,4 +1,5 @@
 // Copyright (C) 2015 NTT Innovation Institute, Inc.
+// Copyright (C) 2015 NTT Innovation Institute, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -69,7 +70,8 @@ func Run(name, usage, version string) {
 		getInitDbCommand(),
 		getConvertCommand(),
 		getServerCommand(),
-		getTestExtesionsCommand(),
+		getTestExtensionsCommand(),
+		getTestGoExtensionsCommand(),
 		getMigrateCommand(),
 		getTemplateCommand(),
 		getRunCommand(),
@@ -325,7 +327,7 @@ func getServerCommand() cli.Command {
 	}
 }
 
-func getTestExtesionsCommand() cli.Command {
+func getTestExtensionsCommand() cli.Command {
 	return cli.Command{
 		Name:      "test_extensions",
 		ShortName: "test_ex",
@@ -342,6 +344,20 @@ documentation for detail information about writing tests.`,
 			cli.IntFlag{Name: "parallel, p", Value: runtime.NumCPU(), Usage: "Allow parallel execution of test functions"},
 		},
 		Action: framework.TestExtensions,
+	}
+}
+
+func getTestGoExtensionsCommand() cli.Command {
+	return cli.Command{
+		Name:      "test_go_extensions",
+		ShortName: "test_go_ex",
+		Usage:     "Run Go extension tests",
+		Description: `
+Run Go extensions tests in a gohan-server-like environment.`,
+		Flags: []cli.Flag{
+			cli.StringFlag{Name: "config-file,c", Value: "", Usage: "Config file path"},
+		},
+		Action: framework.TestGoExtensions,
 	}
 }
 

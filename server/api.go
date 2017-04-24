@@ -22,6 +22,7 @@ import (
 
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/extension"
+	"github.com/cloudwan/gohan/extension/goext"
 	"github.com/cloudwan/gohan/job"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/server/middleware"
@@ -156,7 +157,10 @@ func handleError(writer http.ResponseWriter, err error) {
 		} else {
 			middleware.HTTPJSONError(writer, message["error"].(string), code)
 		}
+	case goext.Error:
+		middleware.HTTPJSONError(writer, err.Error(), int(err.Code))
 	}
+
 }
 
 func fillInContext(context middleware.Context, db db.DB,
