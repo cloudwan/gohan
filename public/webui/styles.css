@@ -1553,7 +1553,7 @@ pre {
   word-wrap: break-word;
   color: #212121;
   background-color: #f5f5f5;
-  border: 1px solid #ccc;
+  border: 1px solid #eee;
   border-radius: 3px;
 }
 pre code {
@@ -6722,9 +6722,9 @@ button.close {
   }
 }
 /*!
- * Bootstrap-select v1.12.1 (http://silviomoreto.github.io/bootstrap-select)
+ * Bootstrap-select v1.12.2 (http://silviomoreto.github.io/bootstrap-select)
  *
- * Copyright 2013-2016 bootstrap-select
+ * Copyright 2013-2017 bootstrap-select
  * Licensed under MIT (https://github.com/silviomoreto/bootstrap-select/blob/master/LICENSE)
  */
 
@@ -6813,6 +6813,13 @@ select.selectpicker {
 .form-group-lg .bootstrap-select.btn-group.form-control,
 .form-group-sm .bootstrap-select.btn-group.form-control {
   padding: 0;
+}
+.form-group-lg .bootstrap-select.btn-group.form-control .dropdown-toggle,
+.form-group-sm .bootstrap-select.btn-group.form-control .dropdown-toggle {
+  height: 100%;
+  font-size: inherit;
+  line-height: inherit;
+  border-radius: inherit;
 }
 .form-inline .bootstrap-select.btn-group .form-control {
   width: 100%;
@@ -9453,7 +9460,7 @@ body {
   right: 0;
   bottom: 0; }
   .login-panel h1 {
-    background: url(cbaf97f882edd8c9237810131e0975b6.png) no-repeat 8px center;
+    background: url(1e9113c2ec73d227dbe2194e81747f50.png) no-repeat 8px center;
     background-size: 55px 60px;
     font-size: 38px;
     line-height: 60px;
@@ -9566,7 +9573,7 @@ body {
       font-size: 22px;
       line-height: 35px;
       padding-left: 45px;
-      background: url(cbaf97f882edd8c9237810131e0975b6.png) no-repeat 5px 3px;
+      background: url(1e9113c2ec73d227dbe2194e81747f50.png) no-repeat 5px 3px;
       background-size: 30px 32px;
       font-weight: 300; }
       .sidebar .brand h1 a {
@@ -9738,6 +9745,9 @@ span.deleting {
       font-size: 1.3em;
       word-wrap: break-word;
       word-break: break-all; }
+  .gohan-detail-container .gohan-custom-actions {
+    padding: 5px;
+    background-color: #d4d4d4; }
 
 @media (min-width: 768px) {
   .gohan-detail-container .gohan-detail-header {
