@@ -260,7 +260,7 @@ func (s *Sync) Watch(path string, responseChan chan *sync.Event, stopChan chan b
 	eventsFromNode("get", node.Kvs, responseChan)
 	revision = node.Header.Revision + 1
 
-	ctx, cancel := context.WithCancel(context.Background()) // don't foreget call cancel()
+	ctx, cancel := context.WithCancel(context.Background())
 	errors := make(chan error, 1)
 	var wg syn.WaitGroup
 	wg.Add(1)
@@ -290,28 +290,25 @@ func (s *Sync) Watch(path string, responseChan chan *sync.Event, stopChan chan b
 		}()
 		errors <- err
 	}()
+	defer func() {
+		cancel()
+		wg.Wait()
+	}()
 
 	// since Watch() doesn't close the returning channel even when
 	// it gets an error, we need a side channel to see the connection state.
 	session, err := concurrency.NewSession(s.etcdClient, concurrency.WithTTL(masterTTL))
 	if err != nil {
-		cancel()
 		return err
 	}
 	defer session.Close()
 
 	select {
 	case <-session.Done():
-		cancel()
-		wg.Wait()
 		return fmt.Errorf("Watch aborted by etcd session close")
 	case <-stopChan:
-		cancel()
-		wg.Wait()
 		return nil
 	case err := <-errors:
-		cancel()
-		wg.Wait()
 		return err
 	}
 }

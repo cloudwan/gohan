@@ -29,6 +29,11 @@ type Sync interface {
 	Fetch(path string) (*Node, error)
 	Update(path, json string) error
 	Delete(path string, prefix bool) error
+	// Watch monitors changes on path and emits Events to responseChan.
+	// Close stopChan to cancel.
+	// You can specify the reivision to start watching,
+	// give ReivisionCurrent when you want to start from the current reivision.
+	// Returnes an error when gets any error including connection failures.
 	Watch(path string, responseChan chan *Event, stopChan chan bool, revision int64) error
 	Close()
 }
