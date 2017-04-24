@@ -24,10 +24,11 @@ import (
 type Call struct {
 	t TestReporter // for triggering test failures on invalid call setup
 
-	receiver interface{}   // the receiver of the method call
-	method   string        // the name of the method
-	args     []Matcher     // the args
-	rets     []interface{} // the return values (if any)
+	receiver   interface{}   // the receiver of the method call
+	method     string        // the name of the method
+	methodType reflect.Type  // the type of the method
+	args       []Matcher     // the args
+	rets       []interface{} // the return values (if any)
 
 	preReqs []*Call // prerequisite calls
 
@@ -76,7 +77,7 @@ func (c *Call) Do(f interface{}) *Call {
 }
 
 func (c *Call) Return(rets ...interface{}) *Call {
-	mt := c.methodType()
+	mt := c.methodType
 	if len(rets) != mt.NumOut() {
 		c.t.Fatalf("wrong number of arguments to Return for %T.%v: got %d, want %d",
 			c.receiver, c.method, len(rets), mt.NumOut())
@@ -88,7 +89,7 @@ func (c *Call) Return(rets ...interface{}) *Call {
 			// Nil needs special handling.
 			switch want.Kind() {
 			case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
-			// ok
+				// ok
 			default:
 				c.t.Fatalf("argument %d to Return for %T.%v is nil, but %v is not nillable",
 					i, c.receiver, c.method, want)
@@ -120,7 +121,7 @@ func (c *Call) SetArg(n int, value interface{}) *Call {
 	if c.setArgs == nil {
 		c.setArgs = make(map[int]reflect.Value)
 	}
-	mt := c.methodType()
+	mt := c.methodType
 	// TODO: This will break on variadic methods.
 	// We will need to check those at invocation time.
 	if n < 0 || n >= mt.NumIn() {
@@ -136,7 +137,7 @@ func (c *Call) SetArg(n int, value interface{}) *Call {
 			c.t.Fatalf("SetArg(%d, ...) argument is a %v, not assignable to %v", n, vt, dt)
 		}
 	case reflect.Interface:
-	// nothing to do
+		// nothing to do
 	default:
 		c.t.Fatalf("SetArg(%d, ...) referring to argument of non-pointer non-interface type %v", n, at)
 	}
@@ -156,12 +157,11 @@ func (c *Call) isPreReq(other *Call) bool {
 
 // After declares that the call may only match after preReq has been exhausted.
 func (c *Call) After(preReq *Call) *Call {
+	if c == preReq {
+		c.t.Fatalf("A call isn't allowed to be it's own prerequisite")
+	}
 	if preReq.isPreReq(c) {
-		msg := fmt.Sprintf(
-			"Loop in call order: %v is a prerequisite to %v (possibly indirectly).",
-			c, preReq,
-		)
-		panic(msg)
+		c.t.Fatalf("Loop in call order: %v is a prerequisite to %v (possibly indirectly).", c, preReq)
 	}
 
 	c.preReqs = append(c.preReqs, preReq)
@@ -223,7 +223,7 @@ func (c *Call) call(args []interface{}) (rets []interface{}, action func()) {
 	if c.doFunc.IsValid() {
 		doArgs := make([]reflect.Value, len(args))
 		ft := c.doFunc.Type()
-		for i := 0; i < ft.NumIn(); i++ {
+		for i := 0; i < len(args); i++ {
 			if args[i] != nil {
 				doArgs[i] = reflect.ValueOf(args[i])
 			} else {
@@ -231,9 +231,7 @@ func (c *Call) call(args []interface{}) (rets []interface{}, action func()) {
 				doArgs[i] = reflect.Zero(ft.In(i))
 			}
 		}
-		action = func() {
-			c.doFunc.Call(doArgs)
-		}
+		action = func() { c.doFunc.Call(doArgs) }
 	}
 	for n, v := range c.setArgs {
 		reflect.ValueOf(args[n]).Elem().Set(v)
@@ -242,7 +240,7 @@ func (c *Call) call(args []interface{}) (rets []interface{}, action func()) {
 	rets = c.rets
 	if rets == nil {
 		// Synthesize the zero value for each of the return args' types.
-		mt := c.methodType()
+		mt := c.methodType
 		rets = make([]interface{}, mt.NumOut())
 		for i := 0; i < mt.NumOut(); i++ {
 			rets[i] = reflect.Zero(mt.Out(i)).Interface()
@@ -250,16 +248,6 @@ func (c *Call) call(args []interface{}) (rets []interface{}, action func()) {
 	}
 
 	return
-}
-
-func (c *Call) methodType() reflect.Type {
-	recv := reflect.ValueOf(c.receiver)
-	for i := 0; i < recv.Type().NumMethod(); i++ {
-		if recv.Type().Method(i).Name == c.method {
-			return recv.Method(i).Type()
-		}
-	}
-	panic(fmt.Sprintf("gomock: failed finding method %s on %T", c.method, c.receiver))
 }
 
 // InOrder declares that the given calls should occur in order.

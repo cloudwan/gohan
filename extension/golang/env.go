@@ -79,3 +79,8 @@ func (env *Environment) Clone() ext.Environment {
 	clone.goCallbacks = env.goCallbacks
 	return clone
 }
+
+// IsEventHandled returns whether a given event is handled by this environment
+func (env *Environment) IsEventHandled(event string, context map[string]interface{}) bool {
+	return true
+}

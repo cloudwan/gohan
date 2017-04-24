@@ -33,13 +33,14 @@ import (
 	_ "github.com/nati/go-fakedb"
 
 	"context"
+	"os"
 
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/pagination"
 	"github.com/cloudwan/gohan/db/transaction"
+	"github.com/cloudwan/gohan/extension/goext"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
-	"os"
 )
 
 const retryDB = 50
@@ -141,6 +142,13 @@ type stringHandler struct {
 }
 
 func (handler *stringHandler) encode(property *schema.Property, data interface{}) (interface{}, error) {
+	switch t := data.(type) {
+	case goext.NullString:
+		if t.Valid {
+			return t.Value, nil
+		}
+		return nil, nil
+	}
 	return data, nil
 }
 
@@ -154,6 +162,13 @@ func (handler *stringHandler) decode(property *schema.Property, data interface{}
 type boolHandler struct{}
 
 func (handler *boolHandler) encode(property *schema.Property, data interface{}) (interface{}, error) {
+	switch t := data.(type) {
+	case goext.NullBool:
+		if t.Valid {
+			return t.Value, nil
+		}
+		return nil, nil
+	}
 	return data, nil
 }
 
@@ -214,6 +229,13 @@ func (handler *numberHandler) dataType(property *schema.Property) string {
 type integerHandler struct{}
 
 func (handler *integerHandler) encode(property *schema.Property, data interface{}) (interface{}, error) {
+	switch t := data.(type) {
+	case goext.NullInt:
+		if t.Valid {
+			return t.Value, nil
+		}
+		return nil, nil
+	}
 	return data, nil
 }
 

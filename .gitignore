@@ -25,6 +25,7 @@ _testmain.go
 *.db
 *.orig
 test.db
+test.db-journal
 test.json
 test.yaml
 _workspace

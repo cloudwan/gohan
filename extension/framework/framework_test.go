@@ -59,7 +59,7 @@ func TestGetTestFiles(t *testing.T) {
 	defer irrelevantFile.Close()
 
 	args := []string{rootDir}
-	tests := getTestFiles(args)
+	tests := getTestFiles(args, "js")
 
 	Expect(tests).To(ConsistOf(testFile1.Name(), testFile2.Name(), testFile3.Name()))
 }

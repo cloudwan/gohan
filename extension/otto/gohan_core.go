@@ -24,6 +24,7 @@ import (
 
 	"github.com/ddliu/motto"
 
+	"github.com/cloudwan/gohan/extension"
 	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
@@ -80,6 +81,34 @@ func init() {
 					response = append(response, policy.RawData)
 				}
 				value, _ := vm.ToValue(response)
+				return value
+			},
+			"gohan_trigger_event": func(call otto.FunctionCall) otto.Value {
+				VerifyCallArguments(&call, "gohan_trigger_event", 2)
+
+				event, err := GetString(call.Argument(0))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+
+				context, err := GetMap(call.Argument(1))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+
+				schemaID := ""
+
+				if s, ok := context["schema"]; ok {
+					schemaID = s.(*schema.Schema).ID
+				} else {
+					log.Panic("gohan_trigger_event: schema not found")
+				}
+
+				envManager := extension.GetManager()
+				envManager.HandleEventInAllEnvironments(context, event, schemaID)
+
+				value, _ := vm.ToValue(nil)
+
 				return value
 			},
 			"gohan_closers": []io.Closer{},

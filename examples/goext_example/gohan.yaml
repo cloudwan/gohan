@@ -9,12 +9,14 @@ database:
     type: "sqlite3"
     # connection string
     # it is file path for yaml, json and sqlite3 backend
-    connection: "./example.db"
+    connection: "./gohan.db"
+    drop_on_create: true
 # schema path
 schemas:
     - "embed://etc/schema/gohan.json"
     - "embed://etc/extensions/gohan_extension.yaml"
-    - "./example.yaml"
+    - "./todo/entry.yaml"
+    - "./todo/link.yaml"
 
 # listen address for gohan
 address: ":9091"
@@ -25,9 +27,6 @@ tls:
     key_file: ./key.pem
     cert_file: ./cert.pem
 
-# list of etcd backend servers
-etcd:
-    - "http://127.0.0.1:2379"
 # keystone configuraion
 keystone:
     use_keystone: true
@@ -43,11 +42,7 @@ cors: "*"
 logging:
     stderr:
         enabled: true
-        level: INFO
-    file:
-        enabled: true
-        level: INFO
-        filename: ./gohan.log
+        level: DEBUG
 
 webui_config:
     enabled: true

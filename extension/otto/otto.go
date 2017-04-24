@@ -334,6 +334,22 @@ func (env *Environment) Clone() ext.Environment {
 	return clone
 }
 
+// IsEventHandled returns whether a given event is handled by this environment
+func (env *Environment) IsEventHandled(event string, context map[string]interface{}) bool {
+	rawHandlers, err := env.VM.Get("gohan_handler")
+	if err != nil {
+		return false
+	}
+
+	handlers, err := GetMap(rawHandlers)
+	if err != nil {
+		return false
+	}
+
+	_, hasHandlers := handlers[event]
+	return hasHandlers
+}
+
 //GetOrCreateTransaction gets transaction from otto value or creates new is otto value is null
 func (env *Environment) GetOrCreateTransaction(value otto.Value) (transaction.Transaction, bool, error) {
 	if !value.IsNull() {

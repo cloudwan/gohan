@@ -69,6 +69,7 @@ func (manager *Manager) String() string {
 func (manager *Manager) registerSchema(schema *Schema) error {
 	if _, ok := manager.schemas[schema.ID]; ok {
 		log.Warning("Overwriting schema %s", schema.ID)
+		return nil
 	}
 	manager.schemas[schema.ID] = schema
 	manager.schemaOrder = append(manager.schemaOrder, schema.ID)

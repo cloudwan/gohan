@@ -1,0 +1,56 @@
+#######################################################
+#  Gohan API Server example configuraion
+######################################################
+
+# database connection configuraion
+database:
+    # yaml, json, sqlite3 and mysql supported
+    # yaml and json db is for schema development purpose
+    type: "mysql"
+    # connection string
+    # it is file path for yaml, json and sqlite3 backend
+    connection: "root:@tcp(127.0.0.1:3306)/gohan"
+    no_init: false
+
+# schema path
+schemas:
+    - "embed://etc/schema/gohan.json"
+    - "embed://etc/extensions/gohan_extension.yaml"
+    - "./todo/entry.yaml"
+    - "./todo/link.yaml"
+
+# listen address for gohan
+address: ":9091"
+tls:
+    # browsers need to add exception as long as we use self-signed certificates
+    # so lets leave it disabled for now
+    enabled: false
+    key_file: ./key.pem
+    cert_file: ./cert.pem
+
+# list of etcd backend servers
+#etcd:
+#    - "http://127.0.0.1:2379"
+
+# keystone configuraion
+keystone:
+    use_keystone: true
+    fake: true
+    auth_url: "http://localhost:9091/v2.0"
+    user_name: "admin"
+    tenant_name: "admin"
+    password: "gohan"
+
+# CORS (Cross-origin resource sharing (CORS)) configuraion for javascript based client
+cors: "*"
+
+# allowed levels  "CRITICAL", "ERROR", "WARNING", "NOTICE", "INFO", "DEBUG",
+logging:
+    stderr:
+        enabled: true
+        level: DEBUG
+
+webui_config:
+    enabled: true
+    tls: false
+

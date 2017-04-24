@@ -2115,6 +2115,38 @@ var _ = Describe("Otto extension manager", func() {
 			})
 		})
 	})
+
+	Describe("IsEventHandled", func() {
+		var (
+			env     extension.Environment
+			context = map[string]interface{}{"id": "test"}
+		)
+
+		createEnv := func(code string) {
+			extension, err := schema.NewExtension(map[string]interface{}{
+				"id":   "no_handler",
+				"code": code,
+				"path": ".*",
+			})
+			Expect(err).ToNot(HaveOccurred())
+			extensions := []*schema.Extension{extension}
+			env = otto.NewEnvironment("otto_test", testDB, &middleware.FakeIdentity{}, testSync)
+			Expect(env.LoadExtensionsForPath(extensions, time.Duration(100), timeLimits, "test_path")).To(Succeed())
+		}
+
+		It("Should return false if no handler registered", func() {
+			createEnv("")
+
+			Expect(env.IsEventHandled("test_event", context)).To(BeFalse())
+		})
+
+		It("Should return true if a handler is registered", func() {
+			code := `gohan_register_handler("test_event", function(context){});`
+			createEnv(code)
+
+			Expect(env.IsEventHandled("test_event", context)).To(BeTrue())
+		})
+	})
 })
 
 var _ = Describe("Using gohan_file builtin", func() {

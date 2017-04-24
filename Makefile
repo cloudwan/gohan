@@ -23,6 +23,9 @@ gen:
 test:
 	@echo -e "$(OK_COLOR)==> Testing$(NO_COLOR)"
 	./tools/test_bashcompletion.sh
+	# tests require a build with race flag enabled
+	./tools/build.sh -race
+	./tools/build_go_tests.sh -race
 	./run_test.sh
 
 lint:
@@ -32,6 +35,7 @@ lint:
 build: deps
 	@echo -e "$(OK_COLOR)==> Building$(NO_COLOR)"
 	./tools/build.sh
+	./tools/build_go_tests.sh
 
 install:
 	@echo -e "$(OK_COLOR)==> Installing$(NO_COLOR)"

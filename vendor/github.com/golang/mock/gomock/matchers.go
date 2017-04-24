@@ -1,3 +1,5 @@
+//go:generate mockgen -destination mock_matcher/mock_matcher.go github.com/golang/mock/gomock Matcher
+
 // Copyright 2010 Google Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,7 +24,7 @@ import (
 // A Matcher is a representation of a class of values.
 // It is used to represent the valid or expected arguments to a mocked method.
 type Matcher interface {
-	// Matches returns whether y is a match.
+	// Matches returns whether x is a match.
 	Matches(x interface{}) bool
 
 	// String describes what the matcher matches.
@@ -86,15 +88,9 @@ func (n notMatcher) String() string {
 }
 
 // Constructors
-func Any() Matcher {
-	return anyMatcher{}
-}
-func Eq(x interface{}) Matcher {
-	return eqMatcher{x}
-}
-func Nil() Matcher {
-	return nilMatcher{}
-}
+func Any() Matcher             { return anyMatcher{} }
+func Eq(x interface{}) Matcher { return eqMatcher{x} }
+func Nil() Matcher             { return nilMatcher{} }
 func Not(x interface{}) Matcher {
 	if m, ok := x.(Matcher); ok {
 		return notMatcher{m}
