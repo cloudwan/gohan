@@ -21,6 +21,7 @@ import (
 	"github.com/cloudwan/gohan/extension/golang"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
+	"github.com/mohae/deepcopy"
 )
 
 //GetSchema returns the schema filtered and trimmed for a specific user or nil when the user shouldn't see it at all
@@ -38,7 +39,7 @@ func GetSchema(s *schema.Schema, authorization schema.Authorization) (result *sc
 	filteredSchema := util.ExtendMap(nil, s.JSONSchema)
 	rawSchema["schema"] = filteredSchema
 	schemaProperties, schemaPropertiesOrder, schemaRequired := policy.FilterSchema(
-		util.MaybeMap(s.JSONSchema["properties"]),
+		util.MaybeMap(deepcopy.Copy(s.JSONSchema["properties"])),
 		util.MaybeStringList(s.JSONSchema["propertiesOrder"]),
 		util.MaybeStringList(s.JSONSchema["required"]))
 
@@ -47,9 +48,14 @@ func GetSchema(s *schema.Schema, authorization schema.Authorization) (result *sc
 	filteredSchema["required"] = schemaRequired
 
 	permission := []string{}
-	for _, a := range schema.AllActions {
-		if p, _ := manager.PolicyValidate(a, s.GetPluralURL(), authorization); p != nil {
-			permission = append(permission, a)
+	for _, action := range schema.AllActions {
+		if p, _ := manager.PolicyValidate(action, s.GetPluralURL(), authorization); p != nil {
+			permission = append(permission, action)
+			if p.Resource.Properties != nil {
+				filterPermission(action, schemaProperties, p.Resource.Properties)
+			}
+		} else {
+			filterPermission(action, schemaProperties, nil)
 		}
 	}
 	filteredSchema["permission"] = permission
@@ -60,6 +66,45 @@ func GetSchema(s *schema.Schema, authorization schema.Authorization) (result *sc
 		return
 	}
 	return
+}
+
+func filterPermission(action string, schemaProperties map[string]interface{}, propertiesToSkip []interface{}) {
+	checkAllProperties := propertiesToSkip == nil // special case
+
+	propertySkipMap := map[string]bool{}
+
+	if !checkAllProperties {
+		for _, property := range propertiesToSkip {
+			propertySkipMap[property.(string)] = true
+		}
+	}
+
+	for property, rawPermissions := range schemaProperties {
+		permissions := rawPermissions.(map[string]interface{})
+		if checkAllProperties || !propertySkipMap[property] {
+			if _, ok := permissions["permission"]; !ok {
+				continue
+			}
+			permissions["permission"] = removePermission(action, permissions["permission"].([]interface{}))
+		}
+	}
+}
+
+func removePermission(action string, permissions []interface{}) []interface{} {
+	permissionIdx := -1
+
+	for idx, permission := range permissions {
+		if action == permission.(string) {
+			permissionIdx = idx
+			break
+		}
+	}
+
+	if permissionIdx != -1 {
+		permissions = append(permissions[:permissionIdx], permissions[permissionIdx+1:]...)
+	}
+
+	return permissions
 }
 
 func setupEditor(server *Server) {
