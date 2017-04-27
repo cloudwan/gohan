@@ -268,6 +268,12 @@
 			"revision": "33ddf69629c1bcea76b04f4a4e9e00e4cce82eb6"
 		},
 		{
+			"checksumSHA1": "7fDdhyZxC9sxbeqkrn40A1kUUWI=",
+			"path": "github.com/mohae/deepcopy",
+			"revision": "bb9b5e7adda9eda54cc5491fb05d833c2e4a6648",
+			"revisionTime": "2017-03-08T21:23:14Z"
+		},
+		{
 			"checksumSHA1": "WyUox/dGQ/HxQvu6mVzxPTbwL0A=",
 			"path": "github.com/nati/go-fakedb",
 			"revision": "9f51f98721b1a99df2e64585e7160d5e08d82f50",

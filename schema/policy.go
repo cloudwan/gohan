@@ -84,7 +84,7 @@ type Policy struct {
 	actionPropertyConditionFilter              map[string][]map[string]interface{}
 }
 
-//ResourcePolicy describes targe resources
+//ResourcePolicy describes target resources
 type ResourcePolicy struct {
 	Properties []interface{}
 	Path       *regexp.Regexp
