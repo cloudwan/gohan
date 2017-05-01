@@ -639,7 +639,8 @@
                             "update"
                         ],
                         "title": "Event body",
-                        "type": "object"
+                        "type": "object",
+                        "sql": "longtext"
                     },
                     "sync_plain": {
                         "description": "sync_plain",
