@@ -311,15 +311,16 @@ func (db *DB) genTableCols(s *schema.Schema, cascade bool, exclude []string) ([]
 			sqlDataType = handler.dataType(&property)
 			if property.ID == "id" {
 				sqlDataProperties = " primary key"
+			}
+		}
+		if property.ID != "id" {
+			if property.Nullable {
+				sqlDataProperties = " null"
 			} else {
-				if property.Nullable {
-					sqlDataProperties = " null"
-				} else {
-					sqlDataProperties = " not null"
-				}
-				if property.Unique {
-					sqlDataProperties = " unique"
-				}
+				sqlDataProperties = " not null"
+			}
+			if property.Unique {
+				sqlDataProperties = " unique"
 			}
 		}
 		sql := "`" + property.ID + "` " + sqlDataType + sqlDataProperties
