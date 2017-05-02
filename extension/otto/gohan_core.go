@@ -156,10 +156,8 @@ func init() {
 		  }
 		  var handlerUUID = gohan_uuid();
 		  gohan_handler[event_type].push({fn:func,uuid:handlerUUID})
-		  gohan_log_debug("REG: [" + handlerUUID + "] type = '" + event_type.toString() +
-				"'; index = " + (gohan_handler[event_type].length - 1).toString() +
-				"; handler = '" + gohan_add_dots(
-					func.toString().replace(/\s\s+/g, '').replace("%", "%%"), 60) + "'")
+		  gohan_log_debug("REG: id=" + handlerUUID + ", type=" + event_type.toString() +
+				", index=" + (gohan_handler[event_type].length - 1).toString())
 		}
 		function gohan_handle_event(event_type, context){
 		  if(_.isUndefined(gohan_handler[event_type])){
@@ -170,9 +168,11 @@ func init() {
 		    try {
 		      var old_module = gohan_log_module_push(event_type);
 		      var handlerUUID = gohan_handler[event_type][i].uuid;
-		      gohan_log_debug("CALL: [" + handlerUUID + "] type = '" + event_type.toString() + "'")
+		      gohan_log_debug("BEGIN: id=" + handlerUUID + ", type=" + event_type.toString())
+		      var timeStart = new Date().getTime();
 		      gohan_handler[event_type][i].fn(context);
-		      gohan_log_debug("RET: [" + handlerUUID + "] type = '" + event_type.toString() + "'")
+		      var timeStop = new Date().getTime();
+		      gohan_log_debug("END: id=" + handlerUUID + ", type=" + event_type.toString() + ", time=" + (timeStop - timeStart) + " [ms]")
 		      //backwards compatibility
 		      if (!_.isUndefined(context.response_code)) {
 		        throw new CustomException(context.response, context.response_code);
