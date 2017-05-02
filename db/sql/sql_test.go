@@ -293,7 +293,7 @@ var _ = Describe("Sql", func() {
 				))
 				table, _, err := sqlConn.AlterTableDef(server, true)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(table).To(ContainSubstring("alter table`servers` add (`test` varchar(255));"))
+				Expect(table).To(ContainSubstring("alter table`servers` add (`test` varchar(255) not null);"))
 			})
 
 			It("Create index if property should be indexed", func() {
