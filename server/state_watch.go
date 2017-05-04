@@ -25,6 +25,8 @@ import (
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/extension"
 
+	"context"
+
 	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/schema"
 	gohan_sync "github.com/cloudwan/gohan/sync"
@@ -144,15 +146,13 @@ func StateUpdate(response *gohan_sync.Event, server *Server) error {
 	resourceID := curSchema.GetResourceIDFromPath(schemaPath)
 	log.Info("Started StateUpdate for %s %s %v", response.Action, response.Key, response.Data)
 
-	tx, err := dataStore.Begin()
+	isolationLevel := transaction.GetIsolationLevel(curSchema, StateUpdateEventName)
+	tx, err := dataStore.BeginTx(context.Background(), &transaction.TxOptions{IsolationLevel: isolationLevel})
 	if err != nil {
 		return err
 	}
 	defer tx.Close()
-	err = tx.SetIsolationLevel(transaction.GetIsolationLevel(curSchema, StateUpdateEventName))
-	if err != nil {
-		return err
-	}
+
 	curResource, err := tx.Fetch(curSchema, transaction.IDFilter(resourceID))
 	if err != nil {
 		return err
@@ -229,15 +229,14 @@ func MonitoringUpdate(response *gohan_sync.Event, server *Server) error {
 	resourceID := curSchema.GetResourceIDFromPath(schemaPath)
 	log.Info("Started MonitoringUpdate for %s %s %v", response.Action, response.Key, response.Data)
 
-	tx, err := dataStore.Begin()
+	isolationLevel := transaction.GetIsolationLevel(curSchema, MonitoringUpdateEventName)
+
+	tx, err := dataStore.BeginTx(context.Background(), &transaction.TxOptions{IsolationLevel: isolationLevel})
 	if err != nil {
 		return err
 	}
 	defer tx.Close()
-	err = tx.SetIsolationLevel(transaction.GetIsolationLevel(curSchema, MonitoringUpdateEventName))
-	if err != nil {
-		return err
-	}
+
 	curResource, err := tx.Fetch(curSchema, transaction.IDFilter(resourceID))
 	if err != nil {
 		return err

@@ -20,6 +20,8 @@ import (
 
 	"github.com/xyproto/otto"
 
+	"context"
+
 	"github.com/cloudwan/gohan/db/pagination"
 	"github.com/cloudwan/gohan/db/sql"
 	"github.com/cloudwan/gohan/db/transaction"
@@ -32,18 +34,28 @@ func init() {
 		builtins := map[string]interface{}{
 			"gohan_db_transaction": func(call otto.FunctionCall) otto.Value {
 				maxArgs := 1
-				setTxIsolationLevel := false
+				setTxIsolationLevel := len(call.ArgumentList) > 0
 
 				if len(call.ArgumentList) > maxArgs {
 					ThrowOttoException(&call,
 						"Expected no more than %d arguments in %s call, %d arguments given",
 						maxArgs, "gohan_db_transaction", len(call.ArgumentList))
 				}
-				if len(call.ArgumentList) > 0 {
-					setTxIsolationLevel = true
+
+				var tx transaction.Transaction
+				var err error
+
+				if setTxIsolationLevel {
+					strIsolationLevel, err := GetString(call.Argument(0))
+					if err != nil {
+						ThrowOttoException(&call, err.Error())
+					}
+					txOptions := &transaction.TxOptions{IsolationLevel: transaction.Type(strIsolationLevel)}
+					tx, err = env.DataStore.BeginTx(context.Background(), txOptions)
+				} else {
+					tx, err = env.DataStore.Begin()
 				}
 
-				tx, err := env.DataStore.Begin()
 				if err != nil {
 					ThrowOttoException(&call, "failed to start a transaction: %s", err.Error())
 				}
@@ -52,18 +64,6 @@ func init() {
 					tx.Close()
 					ThrowOttoException(&call, fmt.Errorf(
 						"Cannot register closer for gohan_db_transaction: %s", err).Error())
-				}
-
-				if setTxIsolationLevel {
-					strIsolationLevel, err := GetString(call.Argument(0))
-					if err != nil {
-						ThrowOttoException(&call, err.Error())
-					}
-					isolationLevel := transaction.Type(strIsolationLevel)
-					err = tx.SetIsolationLevel(isolationLevel)
-					if err != nil {
-						ThrowOttoException(&call, "failed to set transaction level: %s", err.Error())
-					}
 				}
 				value, _ := vm.ToValue(tx)
 				return value

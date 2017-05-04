@@ -25,11 +25,13 @@ import (
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/extension"
 
+	"context"
+	"net/http"
+	"net/url"
+
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/server/middleware"
 	"github.com/twinj/uuid"
-	"net/http"
-	"net/url"
 )
 
 //ResourceProblem describes the kind of problem that occurred during resource manipulation.
@@ -70,20 +72,18 @@ type ExtensionError struct {
 }
 
 //InTransaction executes function in the db transaction and set it to the context
-func InTransaction(context middleware.Context, dataStore db.DB, level transaction.Type, f func() error) error {
-	if context["transaction"] != nil {
+func InTransaction(ctx middleware.Context, dataStore db.DB, level transaction.Type, f func() error) error {
+	if ctx["transaction"] != nil {
 		return fmt.Errorf("cannot create nested transaction")
 	}
-	aTransaction, err := dataStore.Begin()
+
+	aTransaction, err := dataStore.BeginTx(context.Background(), &transaction.TxOptions{IsolationLevel: level})
 	if err != nil {
 		return fmt.Errorf("cannot create transaction: %v", err)
 	}
 	defer aTransaction.Close()
-	err = aTransaction.SetIsolationLevel(level)
-	if err != nil {
-		return fmt.Errorf("error when setting isolation level '%s': %s", level, err)
-	}
-	context["transaction"] = aTransaction
+
+	ctx["transaction"] = aTransaction
 
 	err = f()
 	if err != nil {
@@ -94,7 +94,7 @@ func InTransaction(context middleware.Context, dataStore db.DB, level transactio
 	if err != nil {
 		return fmt.Errorf("commit error : %s", err)
 	}
-	delete(context, "transaction")
+	delete(ctx, "transaction")
 	return nil
 }
 
