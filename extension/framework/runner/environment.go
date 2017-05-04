@@ -32,6 +32,8 @@ import (
 
 	_ "github.com/xyproto/otto/underscore"
 
+	"context"
+
 	gohan_otto "github.com/cloudwan/gohan/extension/otto"
 )
 
@@ -181,17 +183,24 @@ func (env *Environment) addTestingAPI() {
 		},
 		"MockTransaction": func(call otto.FunctionCall) otto.Value {
 			newTransaction := false
-			if len(call.ArgumentList) > 1 {
+			isolationLevel := transaction.RepeatableRead
+			if len(call.ArgumentList) > 2 {
 				panic("Wrong number of arguments in MockTransaction call.")
-			} else if len(call.ArgumentList) == 1 {
+			}
+			if len(call.ArgumentList) > 0 {
 				rawNewTransaction, _ := call.Argument(0).Export()
 				newTransaction = rawNewTransaction.(bool)
 			}
-			transactionValue, _ := call.Otto.ToValue(env.getTransaction(newTransaction))
+			if len(call.ArgumentList) > 1 {
+				isolationLevel = transaction.Type(call.Argument(1).String())
+			}
+			txOptions := &transaction.TxOptions{IsolationLevel: isolationLevel}
+			transactionValue, _ := call.Otto.ToValue(env.getTransaction(newTransaction, txOptions))
 			return transactionValue
 		},
 		"CommitMockTransaction": func(call otto.FunctionCall) otto.Value {
-			tx := env.getTransaction(false)
+			txOptions := &transaction.TxOptions{IsolationLevel: transaction.RepeatableRead}
+			tx := env.getTransaction(false, txOptions)
 			tx.Commit()
 			tx.Close()
 			return otto.Value{}
@@ -221,7 +230,7 @@ func (env *Environment) addTestingAPI() {
 	env.mockFunction("gohan_sync_watch")
 }
 
-func (env *Environment) getTransaction(isNew bool) transaction.Transaction {
+func (env *Environment) getTransaction(isNew bool, options *transaction.TxOptions) transaction.Transaction {
 	if !isNew {
 		for _, tx := range env.dbTransactions {
 			if !tx.Closed() {
@@ -229,7 +238,7 @@ func (env *Environment) getTransaction(isNew bool) transaction.Transaction {
 			}
 		}
 	}
-	tx, _ := env.dbConnection.Begin()
+	tx, _ := env.dbConnection.BeginTx(context.Background(), options)
 	env.dbTransactions = append(env.dbTransactions, tx)
 	return tx
 }

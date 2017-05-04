@@ -22,6 +22,8 @@ import (
 
 	"github.com/jmoiron/sqlx"
 
+	"context"
+
 	"github.com/cloudwan/gohan/db/pagination"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
@@ -64,6 +66,13 @@ func (db *DB) Begin() (transaction.Transaction, error) {
 	}, nil
 }
 
+//Begin connection starts new transaction with given transaction options
+func (db *DB) BeginTx(_ context.Context, _ *transaction.TxOptions) (transaction.Transaction, error) {
+	return &Transaction{
+		db: db,
+	}, nil
+}
+
 //Close connection
 func (tx *Transaction) Close() error {
 	return nil
@@ -72,6 +81,11 @@ func (tx *Transaction) Close() error {
 //Closed is unsupported in this db
 func (tx *Transaction) Closed() bool {
 	return false
+}
+
+//GetIsolationLevel is unsupported in this db
+func (tx *Transaction) GetIsolationLevel() transaction.Type {
+	return ""
 }
 
 //RegisterTable register table definition
