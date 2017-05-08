@@ -510,6 +510,12 @@
 			"revision": "23142f6773a676cc2cae8dd0cb90b2ea761c853f"
 		},
 		{
+			"checksumSHA1": "/6H1rhQmbq8mEP29pnmLmdwBKUE=",
+			"path": "github.com/cyberdelia/go-metrics-graphite",
+			"revision": "39f87cc3b432bbb898d7c643c0e93cac2bc865ad",
+			"revisionTime": "2016-12-19T23:08:53Z"
+		},
+		{
 			"checksumSHA1": "de0b3+KlG7bWZuiulfre/l27qnc=",
 			"path": "github.com/drone/routes",
 			"revision": "853bef2b231162bb7b09355720416d3af1510d88",
@@ -828,6 +834,12 @@
 			"path": "github.com/prometheus/procfs",
 			"revision": "3d5ba43211beec7fbb1472634a9c3b464581658a",
 			"revisionTime": "2016-11-18T19:16:01Z"
+		},
+		{
+			"checksumSHA1": "KAzbLjI9MzW2tjfcAsK75lVRp6I=",
+			"path": "github.com/rcrowley/go-metrics",
+			"revision": "1f30fe9094a513ce4c700b9a54458bbb0c96996c",
+			"revisionTime": "2016-11-28T21:05:44Z"
 		},
 		{
 			"checksumSHA1": "SGdxr5J2yDoVinCTo6ag2cDpc5g=",
