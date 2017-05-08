@@ -1345,6 +1345,7 @@ func startTestServer(config string) error {
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
+	server.SetRunning(true)
 
 	return nil
 }

@@ -376,6 +376,40 @@ Any monitoring updates made when the state version does not yet equal
 the config version or the version in the JSON data doesn't match with
 the config version will be ignored.
 
+## Sync watch
+
+Gohan has another way to handle data reported from sync layer. Gohan
+will watch sync keys with prefix then if its key's creation/update/deletion
+happens, gohan will occur ``notification`` type event with action and data.
+Sync keys and event path can be configured in ``gohan.yaml`` configuration file like:
+
+```yaml
+  watch:
+      keys:
+        - /v2.0/servers
+        - /v2.0/systems
+      events:
+        - v2.0
+      worker_count: 4
+```
+
+With an above configuration example, gohan will watch the updates of sync keys including
+``/v2.0/servers`` and ``/v2.0/systems`` as an prefix. If gohan detected some changes,
+emitted events can be handled by gohan extension by configuring following extensions configuration,
+for example:
+
+```yaml
+extensions:
+- id: sync_watch_handler
+  path: "v2.0"
+  url: ./handler.js
+```
+
+In Gohan HA environment, watched keys are load-balanced among working gohan instances.
+Even if new gohan instance is added or some gohan instance is stopped, each gohan will
+automatically detect instance addition and deletion then watched keys are automatically
+reballanced.
+
 ## Migrate
 
 gohan migrate command is a simple wrapper for goose command.

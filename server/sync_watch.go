@@ -16,9 +16,13 @@
 package server
 
 import (
+	"context"
+	"errors"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/cloudwan/gohan/extension"
@@ -36,16 +40,21 @@ const (
 	MonitoringUpdateEventName = "monitoring_update"
 
 	SyncWatchRevisionPrefix = "/gohan/watch/revision"
+
+	processPathPrefix = "/gohan/cluster/process"
+
+	masterTTL = 10
 )
 
-//Sync Watch Process
-func startSyncWatchProcess(server *Server) {
+// StartSyncWatchProcess initiates event processing on "watches".
+func StartSyncWatchProcess(server *Server) {
 	config := util.GetConfig()
 	watch := config.GetStringList("watch/keys", nil)
 	events := config.GetStringList("watch/events", nil)
 	if watch == nil {
 		return
 	}
+
 	extensions := map[string]extension.Environment{}
 	for _, event := range events {
 		path := "sync://" + event
@@ -55,73 +64,180 @@ func startSyncWatchProcess(server *Server) {
 		}
 		extensions[event] = env
 	}
-	responseChans := make(map[string]chan *gohan_sync.Event)
-	stopChan := make(chan bool)
-	for _, path := range watch {
-		responseChans[path] = make(chan *gohan_sync.Event)
-		go func(path string) {
-			defer l.LogFatalPanic(log)
-			responseChan := responseChans[path]
-			for server.running {
-				func() {
-					lockKey := lockPath + "/watch" + path
-					err := server.sync.Lock(lockKey, true)
-					if err != nil {
-						log.Warning("Can't start watch process due to lock", err)
-						time.Sleep(5 * time.Second)
+
+	handler := func(response *gohan_sync.Event) {
+		defer l.LogPanic(log)
+		for _, event := range events {
+			//match extensions
+			if strings.HasPrefix(response.Key, "/"+event) {
+				env := extensions[event]
+				runExtensionOnSync(server, response, env.Clone())
+				return
+			}
+		}
+	}
+
+	go func() {
+		processList := []string{}
+		myPosition := -1
+		prevCancel := func() {}
+		prevWG := new(sync.WaitGroup)
+
+		defer func() {
+			prevCancel()
+			prevWG.Wait()
+		}()
+
+		for server.running {
+			processWatchEvent := <-server.respChanProcessWatch
+			log.Debug("cluster change detected: %s process %s", processWatchEvent.Action, processWatchEvent.Key)
+
+			// modify gohan process list
+			pos := -1
+			for p, v := range processList {
+				if v == processWatchEvent.Key {
+					pos = p
+				}
+			}
+			switch processWatchEvent.Action {
+			case "delete":
+				// remove detected process from list
+				if pos > -1 {
+					processList = append((processList)[:pos], (processList)[pos+1:]...)
+				}
+			default:
+				// add detected process from list
+				if pos == -1 {
+					processList = append(processList, processWatchEvent.Key)
+					sort.Sort(sort.StringSlice(processList))
+				}
+			}
+
+			for p, v := range processList {
+				if v == processPathPrefix+"/"+server.sync.GetProcessID() {
+					myPosition = p
+					break
+				}
+			}
+
+			log.Debug("Current cluster consists of following processes: %s, my poistion: %d", processList, myPosition)
+
+			// stop goroutines created by the previous iteration
+			prevCancel()
+			prevWG.Wait()
+
+			ctx, cancel := context.WithCancel(context.TODO())
+			prevCancel = cancel
+			prevWG = new(sync.WaitGroup)
+			for idx, path := range watch {
+				prevWG.Add(1)
+				size := len(processList)
+				prio := (myPosition - (idx % size) + size) % size
+				log.Debug("SyncWatch Priority of `%s`: `%d`", watch, prio)
+
+				go func(ctx context.Context, idx int, path string, prio int) {
+					defer prevWG.Done()
+
+					backoff := time.NewTimer(time.Duration(prio*masterTTL) * time.Second)
+					select {
+					case <-backoff.C:
+					case <-ctx.Done():
 						return
 					}
-					defer server.sync.Unlock(lockKey)
 
-					fromRevision := int64(gohan_sync.RevisionCurrent)
-					lastSeen, err := server.sync.Fetch(SyncWatchRevisionPrefix + path)
-					if err == nil {
-						inStore, err := strconv.ParseInt(lastSeen.Value, 10, 64)
-						if err == nil {
-							log.Info("Using last seen revision `%d` for watching path `%s`", inStore, path)
-							fromRevision = inStore
+					for {
+						err := server.processSyncWatch(ctx, path, handler)
+						if err != nil && err != context.Canceled && err != lockFailedErr {
+							log.Error("Sync Watch on `%s` aborted, retrying...: %s", path, err)
+						}
+
+						backoff := time.NewTimer(time.Second * masterTTL)
+						select {
+						case <-backoff.C:
+						case <-ctx.Done():
+							return
 						}
 					}
+				}(ctx, idx, path, prio)
+			}
+		}
+	}()
+}
 
-					err = server.sync.Watch(path, responseChan, stopChan, fromRevision)
-					if err != nil {
-						log.Error(fmt.Sprintf("sync watch error: %s", err))
-					}
-				}()
-			}
-		}(path)
+var lockFailedErr = errors.New("failed to lock on sync backend")
+
+// processSyncWatch handles events on a path with a handler using the server queue.
+// Returns any error or context cancel.
+// This method gets a lock on the sync backend and returns with an error when fails.
+func (server *Server) processSyncWatch(ctx context.Context, path string, handler func(*gohan_sync.Event)) error {
+	lockKey := lockPath + "/watch" + path
+	err := server.sync.Lock(lockKey, false)
+	if err != nil {
+		return lockFailedErr
 	}
-	//main response lisnter process
-	for _, path := range watch {
-		go func(path string) {
-			defer l.LogFatalPanic(log)
-			responseChan := responseChans[path]
-			for server.running {
-				response := <-responseChan
-				err := server.sync.Update(SyncWatchRevisionPrefix+path, strconv.FormatInt(response.Revision, 10))
-				if err != nil {
-					log.Error("Failed to update revision number for watch path `%s` in sync storage", path)
-				}
-				server.queue.Add(job.NewJob(
-					func() {
-						defer l.LogPanic(log)
-						for _, event := range events {
-							//match extensions
-							if strings.HasPrefix(response.Key, "/"+event) {
-								env := extensions[event]
-								runExtensionOnSync(server, response, env.Clone())
-								return
-							}
-						}
-					}),
-				)
-			}
-		}(path)
+	defer server.sync.Unlock(lockKey)
+
+	watchCtx, watchCancel := context.WithCancel(ctx)
+	respCh, err := server.watchPath(watchCtx, path)
+	if err != nil {
+		return err
 	}
+	defer watchCancel()
+
+	for response := range respCh {
+		if response.Err != nil {
+			return response.Err
+		}
+
+		server.queue.Add(job.NewJob(
+			func() {
+				resp := response
+				handler(resp)
+			},
+		))
+		err := server.storeRevision(path, response.Revision)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// watchPath watches on the sync backend on path from the previously stored revision and emits
+// events to the returned channel.
+// Cancel by ctx.Cancel(). The retunred channel will be closed by any error or cancelation.
+func (server *Server) watchPath(ctx context.Context, path string) (<-chan *gohan_sync.Event, error) {
+	fromRevision := server.fetchStoredRevision(path)
+	return server.sync.WatchContext(ctx, path, fromRevision)
+}
+
+// fetchStoredRevision returns the revision number stored in the sync backend for a path.
+// When it's a new in the backend, returns sync.RevisionCurrent.
+func (server *Server) fetchStoredRevision(path string) int64 { // TODO error?
+	fromRevision := int64(gohan_sync.RevisionCurrent)
+	lastSeen, err := server.sync.Fetch(SyncWatchRevisionPrefix + path)
+	if err == nil {
+		inStore, err := strconv.ParseInt(lastSeen.Value, 10, 64)
+		if err == nil {
+			log.Info("Using last seen revision `%d` for watching path `%s`", inStore, path)
+			fromRevision = inStore
+		}
+	}
+	return fromRevision
+}
+
+// storeRevision puts a reivision number for a path to the sync backend.
+func (server *Server) storeRevision(path string, revision int64) error {
+	err := server.sync.Update(SyncWatchRevisionPrefix+path, strconv.FormatInt(revision, 10))
+	if err != nil {
+		return fmt.Errorf("Failed to update revision number for watch path `%s` in sync storage", path)
+	}
+	return nil
 }
 
 //Stop Watch Process
-func stopSyncWatchProcess(server *Server) {
+func StopSyncWatchProcess(server *Server) {
 }
 
 //Run extension on sync
