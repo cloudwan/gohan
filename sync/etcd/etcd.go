@@ -16,6 +16,7 @@
 package etcd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -27,7 +28,10 @@ import (
 	"github.com/twinj/uuid"
 )
 
-const masterTTL = 10
+const (
+	processPath = "/gohan/cluster/process"
+	masterTTL   = 10
+)
 
 //Sync is struct for etcd based sync
 type Sync struct {
@@ -43,6 +47,11 @@ func NewSync(etcdServers []string) *Sync {
 	hostname, _ := os.Hostname()
 	sync.processID = hostname + uuid.NewV4().String()
 	return sync
+}
+
+//GetProcessID returns processID
+func (s *Sync) GetProcessID() string {
+	return s.processID
 }
 
 //Update sync update sync
@@ -222,6 +231,29 @@ func (s *Sync) Watch(path string, responseChan chan *sync.Event, stopChan chan b
 			return nil
 		}
 	}
+}
+
+// WatchContext keep watch update under the path until context is canceled
+func (s *Sync) WatchContext(ctx context.Context, path string, revision int64) (<-chan *sync.Event, error) {
+	stopChan := make(chan bool)
+	go func() {
+		<-ctx.Done()
+		close(stopChan)
+	}()
+
+	responseChan := make(chan *sync.Event)
+
+	go func() {
+		defer close(responseChan)
+		err := s.Watch(path, responseChan, stopChan, revision)
+		if err != nil {
+			responseChan <- &sync.Event{
+				Err: err,
+			}
+		}
+	}()
+
+	return responseChan, nil
 }
 
 func (s *Sync) Close() {
