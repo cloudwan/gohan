@@ -118,7 +118,7 @@ var _ = Describe("GohanDb", func() {
 					"id": "test_extension",
 					"code": `
 					  gohan_register_handler("test_event", function(context){
-					    var tx = gohan_db_transaction("Serializable");
+					    var tx = gohan_db_transaction("SERIALIZABLE");
 					    tx.Commit();
 					    tx.Close();
 					  });`,
@@ -128,13 +128,13 @@ var _ = Describe("GohanDb", func() {
 
 				mockTx := tr_mocks.NewMockTransaction(mockCtrl)
 				gomock.InOrder(
-					mockTx.EXPECT().SetIsolationLevel(transaction.Serializable).Return(nil),
 					mockTx.EXPECT().Commit().Return(nil),
 					mockTx.EXPECT().Close().Return(nil).Times(2),
 				)
 
+				serializableIsolation := transaction.TxOptions{IsolationLevel: transaction.Serializable}
 				mockDB := db_mocks.NewMockDB(mockCtrl)
-				mockDB.EXPECT().Begin().Return(mockTx, nil)
+				mockDB.EXPECT().BeginTx(gomock.Any(), gomock.Eq(&serializableIsolation)).Return(mockTx, nil)
 				env := newEnvironmentWithExtension(ext, mockDB)
 
 				context := map[string]interface{}{

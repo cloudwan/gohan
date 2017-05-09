@@ -29,6 +29,8 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	_ "github.com/nati/go-fakedb"
 
+	"context"
+
 	"github.com/cloudwan/gohan/db/pagination"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
@@ -55,9 +57,29 @@ type DB struct {
 
 //Transaction is sql implementation of Transaction
 type Transaction struct {
-	transaction *sqlx.Tx
-	db          *DB
-	closed      bool
+	transaction    *sqlx.Tx
+	db             *DB
+	closed         bool
+	isolationLevel transaction.Type
+}
+
+func mapTxOptions(options *transaction.TxOptions) (*sql.TxOptions, error) {
+	sqlOptions := &sql.TxOptions{}
+	switch options.IsolationLevel {
+	case transaction.ReadCommited:
+		sqlOptions.Isolation = sql.LevelReadCommitted
+	case transaction.ReadUncommited:
+		sqlOptions.Isolation = sql.LevelReadUncommitted
+	case transaction.RepeatableRead:
+		sqlOptions.Isolation = sql.LevelRepeatableRead
+	case transaction.Serializable:
+		sqlOptions.Isolation = sql.LevelSerializable
+	default:
+		msg := fmt.Sprintf("Unknown transaction isolation level: %s", options.IsolationLevel)
+		log.Error(msg)
+		return nil, fmt.Errorf(msg)
+	}
+	return sqlOptions, nil
 }
 
 //NewDB constructor
@@ -276,19 +298,44 @@ func (db *DB) Close() {
 
 //Begin starts new transaction
 func (db *DB) Begin() (tx transaction.Transaction, err error) {
-	transaction, err := db.DB.Beginx()
+	rawTx, err := db.DB.Beginx()
 	if err != nil {
 		return nil, err
 	}
 	if db.sqlType == "sqlite3" {
-		transaction.Exec("PRAGMA foreign_keys = ON;")
+		rawTx.Exec("PRAGMA foreign_keys = ON;")
 	}
 	tx = &Transaction{
-		db:          db,
-		transaction: transaction,
-		closed:      false,
+		db:             db,
+		transaction:    rawTx,
+		closed:         false,
+		isolationLevel: transaction.RepeatableRead,
 	}
-	log.Debug("[%p] Created transaction %#v", transaction, transaction)
+	log.Debug("[%p] Created transaction %#v, isolation level: %s", rawTx, rawTx, tx.GetIsolationLevel())
+	return
+}
+
+//Begin starts new transaction with given transaction options
+func (db *DB) BeginTx(ctx context.Context, options *transaction.TxOptions) (tx transaction.Transaction, err error) {
+	sqlOptions, err := mapTxOptions(options)
+	if err != nil {
+		return nil, err
+	}
+
+	rawTx, err := db.DB.BeginTxx(ctx, sqlOptions)
+	if err != nil {
+		return nil, err
+	}
+	if db.sqlType == "sqlite3" {
+		rawTx.Exec("PRAGMA foreign_keys = ON;")
+	}
+	tx = &Transaction{
+		db:             db,
+		transaction:    rawTx,
+		closed:         false,
+		isolationLevel: options.IsolationLevel,
+	}
+	log.Debug("[%p] Created transaction %#v, isolation level %s", rawTx, rawTx, tx.GetIsolationLevel())
 	return
 }
 
@@ -323,9 +370,10 @@ func (db *DB) genTableCols(s *schema.Schema, cascade bool, exclude []string) ([]
 				sqlDataProperties = " unique"
 			}
 		}
-		sql := "`" + property.ID + "` " + sqlDataType + sqlDataProperties
 
-		cols = append(cols, sql)
+		query := "`" + property.ID + "` " + sqlDataType + sqlDataProperties
+
+		cols = append(cols, query)
 		if property.Relation != "" {
 			foreignSchema, _ := schemaManager.Schema(property.Relation)
 			if foreignSchema != nil {
@@ -660,7 +708,7 @@ func decodeState(data map[string]interface{}, state *transaction.ResourceState) 
 }
 
 //normFields runs normFields on all the fields.
-func normFields(fields []string, s *schema.Schema) ([]string) {
+func normFields(fields []string, s *schema.Schema) []string {
 	if fields != nil {
 		for i, f := range fields {
 			fields[i] = normField(f, s.ID)
@@ -678,10 +726,10 @@ func normField(field, schemaID string) string {
 }
 
 type selectContext struct {
-	schema *schema.Schema
-	filter transaction.Filter
-	fields []string
-	join   bool
+	schema    *schema.Schema
+	filter    transaction.Filter
+	fields    []string
+	join      bool
 	paginator *pagination.Paginator
 }
 
@@ -731,9 +779,9 @@ func (tx *Transaction) executeSelect(sc *selectContext, sql string, args []inter
 //List resources in the db
 func (tx *Transaction) List(s *schema.Schema, filter transaction.Filter, options *transaction.ListOptions, pg *pagination.Paginator) (list []*schema.Resource, total uint64, err error) {
 	sc := &selectContext{
-		schema: s,
-		filter: filter,
-		join: true,
+		schema:    s,
+		filter:    filter,
+		join:      true,
 		paginator: pg,
 	}
 	if options != nil {
@@ -766,9 +814,9 @@ func (tx *Transaction) LockList(s *schema.Schema, filter transaction.Filter, opt
 	policyJoin := shouldJoin(lockPolicy)
 
 	sc := &selectContext{
-		schema: s,
-		filter: filter,
-		join: policyJoin,
+		schema:    s,
+		filter:    filter,
+		join:      policyJoin,
 		paginator: pg,
 	}
 	if options != nil {
@@ -940,16 +988,6 @@ func (tx *Transaction) RawTransaction() *sqlx.Tx {
 	return tx.transaction
 }
 
-//SetIsolationLevel specify transaction isolation level
-func (tx *Transaction) SetIsolationLevel(level transaction.Type) error {
-	log.Debug("[%p] Setting isolation level for transaction %#v %s", tx.transaction, tx, level)
-	if tx.db.sqlType == "mysql" {
-		err := tx.Exec(fmt.Sprintf("set session transaction isolation level %s", level))
-		return err
-	}
-	return nil
-}
-
 //Commit commits transaction
 func (tx *Transaction) Commit() error {
 	log.Debug("[%p] Committing transaction %#v", tx.transaction, tx)
@@ -982,6 +1020,11 @@ func (tx *Transaction) Close() error {
 //Closed returns whether the transaction is closed
 func (tx *Transaction) Closed() bool {
 	return tx.closed
+}
+
+// IsolationLevel returns tx isolation level
+func (tx *Transaction) GetIsolationLevel() transaction.Type {
+	return tx.isolationLevel
 }
 
 func addFilterToQuery(s *schema.Schema, q sq.SelectBuilder, filter map[string]interface{}, join bool) (sq.SelectBuilder, error) {

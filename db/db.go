@@ -19,6 +19,8 @@ import (
 	"errors"
 	"strings"
 
+	"context"
+
 	"github.com/cloudwan/gohan/db/file"
 	"github.com/cloudwan/gohan/db/sql"
 	"github.com/cloudwan/gohan/db/transaction"
@@ -36,6 +38,7 @@ type DB interface {
 	Connect(string, string, int) error
 	Close()
 	Begin() (transaction.Transaction, error)
+	BeginTx(ctx context.Context, options *transaction.TxOptions) (transaction.Transaction, error)
 	RegisterTable(s *schema.Schema, cascade, migrate bool) error
 	DropTable(*schema.Schema) error
 }
