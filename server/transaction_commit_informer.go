@@ -22,6 +22,8 @@ import (
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/transaction"
 
+	"context"
+
 	"github.com/cloudwan/gohan/schema"
 )
 
@@ -42,6 +44,16 @@ type DbSyncWrapper struct {
 // Begin wraps transaction object with sync
 func (sw *DbSyncWrapper) Begin() (transaction.Transaction, error) {
 	tx, err := sw.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	return syncTransactionWrap(tx), nil
+}
+
+// Begin wraps transaction object with sync
+
+func (sw *DbSyncWrapper) BeginTx(ctx context.Context, options *transaction.TxOptions) (transaction.Transaction, error) {
+	tx, err := sw.DB.BeginTx(ctx, options)
 	if err != nil {
 		return nil, err
 	}

@@ -39,8 +39,13 @@ const (
 	//This is default value for read request
 	RepeatableRead Type = "REPEATABLE READ"
 	//Serializable is transaction type for Serializable
-	Serializable Type = "Serializable"
+	Serializable Type = "SERIALIZABLE"
 )
+
+// TxOptions represents transaction options
+type TxOptions struct {
+	IsolationLevel Type
+}
 
 //Filter represents db filter
 type Filter map[string]interface{}
@@ -67,7 +72,6 @@ type ListOptions struct {
 type Transaction interface {
 	Create(*schema.Resource) error
 	Update(*schema.Resource) error
-	SetIsolationLevel(Type) error
 	StateUpdate(*schema.Resource, *ResourceState) error
 	Delete(*schema.Schema, interface{}) error
 	Fetch(*schema.Schema, Filter) (*schema.Resource, error)
@@ -81,6 +85,7 @@ type Transaction interface {
 	Exec(query string, args ...interface{}) error
 	Close() error
 	Closed() bool
+	GetIsolationLevel() Type
 }
 
 // GetIsolationLevel returns isolation level for an action
