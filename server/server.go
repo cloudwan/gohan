@@ -18,6 +18,21 @@ package server
 import (
 	"crypto/tls"
 	"fmt"
+	"github.com/braintree/manners"
+	"github.com/cloudwan/gohan/db"
+	"github.com/cloudwan/gohan/db/migration"
+	"github.com/cloudwan/gohan/job"
+	l "github.com/cloudwan/gohan/log"
+	"github.com/cloudwan/gohan/metrics"
+	"github.com/cloudwan/gohan/schema"
+	"github.com/cloudwan/gohan/server/middleware"
+	"github.com/cloudwan/gohan/sync"
+	sync_util "github.com/cloudwan/gohan/sync/util"
+	"github.com/cloudwan/gohan/util"
+	"github.com/drone/routes"
+	"github.com/go-martini/martini"
+	"github.com/lestrrat/go-server-starter/listener"
+	"github.com/martini-contrib/staticbin"
 	"net"
 	"net/http"
 	"net/http/pprof"
@@ -29,21 +44,6 @@ import (
 	"strings"
 	"syscall"
 	"time"
-
-	"github.com/braintree/manners"
-	"github.com/cloudwan/gohan/db"
-	"github.com/cloudwan/gohan/db/migration"
-	"github.com/cloudwan/gohan/job"
-	l "github.com/cloudwan/gohan/log"
-	"github.com/cloudwan/gohan/schema"
-	"github.com/cloudwan/gohan/server/middleware"
-	"github.com/cloudwan/gohan/sync"
-	sync_util "github.com/cloudwan/gohan/sync/util"
-	"github.com/cloudwan/gohan/util"
-	"github.com/drone/routes"
-	"github.com/go-martini/martini"
-	"github.com/lestrrat/go-server-starter/listener"
-	"github.com/martini-contrib/staticbin"
 )
 
 type tlsConfig struct {
@@ -53,19 +53,19 @@ type tlsConfig struct {
 
 //Server is a struct for GohanAPIServer
 type Server struct {
-	address                 string
-	tls                     *tlsConfig
-	documentRoot            string
-	db                      db.DB
-	sync                    sync.Sync
-	running                 bool
-	martini                 *martini.ClassicMartini
-	extensions              []string
-	keystoneIdentity        middleware.IdentityService
-	queue                   *job.Queue
+	address          string
+	tls              *tlsConfig
+	documentRoot     string
+	db               db.DB
+	sync             sync.Sync
+	running          bool
+	martini          *martini.ClassicMartini
+	extensions       []string
+	keystoneIdentity middleware.IdentityService
+	queue            *job.Queue
 
-	stopChanProcessWatch    chan bool
-	respChanProcessWatch    chan *sync.Event
+	stopChanProcessWatch chan bool
+	respChanProcessWatch chan *sync.Event
 }
 
 func (server *Server) mapRoutes() {
@@ -126,7 +126,7 @@ func (server *Server) addOptionsRoute() {
 }
 
 func (server *Server) addPprofRoutes() {
-	server.martini.Group("/debug/pprof", func (r martini.Router) {
+	server.martini.Group("/debug/pprof", func(r martini.Router) {
 		r.Any("/", pprof.Index)
 		r.Any("/cmdline", pprof.Cmdline)
 		r.Any("/profile", pprof.Profile)
@@ -275,6 +275,10 @@ func NewServer(configFile string) (*Server, error) {
 
 	if !config.GetBool("database/no_init", false) {
 		server.initDB()
+	}
+
+	if err = metrics.SetupMetrics(config); err != nil {
+		return nil, err
 	}
 
 	if config.GetList("database/initial_data", nil) != nil {
@@ -495,6 +499,7 @@ func RunServer(configFile string) {
 	startAMQPProcess(server)
 	startSNMPProcess(server)
 	startCRONProcess(server)
+	metrics.StartMetricsProcess()
 	err = server.Start()
 	if err != nil {
 		log.Fatal(err)

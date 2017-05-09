@@ -31,6 +31,7 @@ import (
 	l "github.com/cloudwan/gohan/log"
 	gohan_sync "github.com/cloudwan/gohan/sync"
 	"github.com/cloudwan/gohan/util"
+	"github.com/cloudwan/gohan/metrics"
 )
 
 const (
@@ -251,8 +252,13 @@ func (server *Server) storeRevision(path string, revision int64) error {
 func StopSyncWatchProcess(server *Server) {
 }
 
+func measureSyncTime(timeStarted time.Time, action string) {
+	metrics.UpdateTimer(timeStarted, "sync.%s", action)
+}
+
 //Run extension on sync
 func runExtensionOnSync(server *Server, response *gohan_sync.Event, env extension.Environment) {
+	defer measureSyncTime(time.Now(), response.Action)
 	context := map[string]interface{}{
 		"action": response.Action,
 		"data":   response.Data,
