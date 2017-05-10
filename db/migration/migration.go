@@ -122,35 +122,32 @@ func Help() {
 	fmt.Println("missing subcommand: help, up, up-by-one, up-to, create, create-next, down, down-to, redo, status, version")
 }
 
-func Run(subCmd string, args []string) {
+func Run(subCmd string, args []string) error {
 	dbType, dbConnection, migrationsPath, _ := readGooseConfig()
 
 	if err := goose.SetDialect(dbType); err != nil {
 		fmt.Printf("error: failed to set goose dialect: %s\n", err)
-		os.Exit(1)
+		return err
 	}
 
 	db, err := sql.Open(dbType, dbConnection)
 
 	if err != nil {
 		fmt.Printf("error: failed to open db: %s\n", err)
-		os.Exit(1)
+		return err
 	}
 
 	if err = goose.LoadMigrationPlugins(migrationsPath); err != nil {
 		logger.Error("migration: failed to load migration plugins: %s", err)
-		return
-	}
-
-	if err != nil {
-		logger.Error("migration: failed to load runtime migrations: %s", err.Error())
-		return
+		return err
 	}
 
 	if err = goose.Run(subCmd, db, migrationsPath, args...); err != nil {
 		fmt.Printf("migration: failed to run: %s\n", err)
-		os.Exit(1)
+		return err
 	}
+
+	return nil
 }
 
 var modifiedSchemas = map[string]bool{}
