@@ -11,7 +11,7 @@ github release page.
 
 ## Build
 
-* Install GO >= 1.6
+* Install GO >= 1.8
 * go get github.com/cloudwan/gohan
 
 # Packages
