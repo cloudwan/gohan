@@ -54,6 +54,7 @@ var (
 	childrenPluralURL = baseURL + "/v1.0/children"
 	schoolsPluralURL  = baseURL + "/v1.0/schools"
 	citiesPluralURL   = baseURL + "/v1.0/cities"
+	pprofURL		  = "http://localhost:16123/debug/pprof"
 )
 
 var _ = Describe("Server package test", func() {
@@ -1264,6 +1265,14 @@ var _ = Describe("Server package test", func() {
 			It("should verify", func() {
 				Expect(nobodyResourceService.VerifyResourcePath("/unknown")).To(BeTrue())
 				Expect(nobodyResourceService.VerifyResourcePath("/test56")).To(BeTrue())
+			})
+		})
+	})
+
+	Describe("Profiling", func() {
+		Context("Checking pprof server works", func() {
+			It("should return 200", func() {
+				testURL("GET", pprofURL, "", nil, http.StatusOK)
 			})
 		})
 	})

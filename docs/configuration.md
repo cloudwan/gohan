@@ -59,6 +59,9 @@ Gohan server configuration uses YAML format.
   # CORS (Cross-origin resource sharing (CORS)) configuraion for javascript based client
   cors: "*"
 
+  # Enable pprof debugging endpoint at host:port
+  pprof: ":6123"
+
   # allowed levels  "CRITICAL", "ERROR", "WARNING", "NOTICE", "INFO", "DEBUG",
   logging:
       stderr:
@@ -229,6 +232,17 @@ Note: DO NOT USE * configuraion in production deployment.
 
 ```yaml
   cors: "*"
+```
+
+## Profiling
+
+Gohan can run pprof server for profiling. To start pprof server, you need to
+specify pprof address with host:port. If you do not specify an address or specify
+empty string, pprof server does not start.
+(For the detail of pprof, see https://golang.org/pkg/net/http/pprof/)
+
+```yaml
+  pprof: ":6123"
 ```
 
 ## Logging
