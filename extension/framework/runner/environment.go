@@ -195,12 +195,19 @@ func (env *Environment) addTestingAPI() {
 				isolationLevel = transaction.Type(call.Argument(1).String())
 			}
 			txOptions := &transaction.TxOptions{IsolationLevel: isolationLevel}
-			transactionValue, _ := call.Otto.ToValue(env.getTransaction(newTransaction, txOptions))
+			tx, err := env.getTransaction(newTransaction, txOptions)
+			if err != nil {
+				gohan_otto.ThrowOttoException(&call, err.Error())
+			}
+			transactionValue, _ := call.Otto.ToValue(tx)
 			return transactionValue
 		},
 		"CommitMockTransaction": func(call otto.FunctionCall) otto.Value {
 			txOptions := &transaction.TxOptions{IsolationLevel: transaction.RepeatableRead}
-			tx := env.getTransaction(false, txOptions)
+			tx, err := env.getTransaction(false, txOptions)
+			if err != nil {
+				gohan_otto.ThrowOttoException(&call, err.Error())
+			}
 			tx.Commit()
 			tx.Close()
 			return otto.Value{}
@@ -230,17 +237,20 @@ func (env *Environment) addTestingAPI() {
 	env.mockFunction("gohan_sync_watch")
 }
 
-func (env *Environment) getTransaction(isNew bool, options *transaction.TxOptions) transaction.Transaction {
+func (env *Environment) getTransaction(isNew bool, options *transaction.TxOptions) (transaction.Transaction, error) {
 	if !isNew {
 		for _, tx := range env.dbTransactions {
 			if !tx.Closed() {
-				return tx
+				if tx.GetIsolationLevel() == options.IsolationLevel {
+					return tx, nil
+				}
+				return nil, fmt.Errorf("Requested %s isolation level, got %s", options.IsolationLevel, tx.GetIsolationLevel())
 			}
 		}
 	}
 	tx, _ := env.dbConnection.BeginTx(context.Background(), options)
 	env.dbTransactions = append(env.dbTransactions, tx)
-	return tx
+	return tx, nil
 }
 
 func (env *Environment) mockFunction(functionName string) {
