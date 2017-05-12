@@ -258,6 +258,11 @@ func Authentication() martini.Handler {
 			return
 		}
 
+		if strings.HasPrefix(req.URL.Path, "/debug/pprof/") {
+			c.Next()
+			return
+		}
+
 		authToken := req.Header.Get("X-Auth-Token")
 
 		var targetIdentityService IdentityService

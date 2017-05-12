@@ -21,6 +21,9 @@ keystone:
     password: "gohan"
 cors: "*"
 
+profiling:
+  enabled: true
+
 logging:
   stderr:
     enabled: false

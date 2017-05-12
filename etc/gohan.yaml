@@ -51,6 +51,11 @@ keystone:
 # CORS (Cross-origin resource sharing (CORS)) configuraion for javascript based client
 # cors: "*"
 
+# Profiling configuration
+profiling:
+    # if true, gohan add routes /debug/pprof/ for pprof profiling
+    enabled: true
+
 # Generate webui config
 webui_config:
     # if true, gohan generates webui config.json
