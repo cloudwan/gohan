@@ -305,12 +305,14 @@ func (db *DB) Begin() (tx transaction.Transaction, err error) {
 	if db.sqlType == "sqlite3" {
 		rawTx.Exec("PRAGMA foreign_keys = ON;")
 	}
-	tx = &Transaction{
-		db:             db,
-		transaction:    rawTx,
-		closed:         false,
-		isolationLevel: transaction.RepeatableRead,
-	}
+	tx = transaction.NewRetryableTransaction(
+		&Transaction{
+			db:             db,
+			transaction:    rawTx,
+			closed:         false,
+			isolationLevel: transaction.RepeatableRead,
+		},
+	)
 	log.Debug("[%p] Created transaction %#v, isolation level: %s", rawTx, rawTx, tx.GetIsolationLevel())
 	return
 }
@@ -329,12 +331,14 @@ func (db *DB) BeginTx(ctx context.Context, options *transaction.TxOptions) (tx t
 	if db.sqlType == "sqlite3" {
 		rawTx.Exec("PRAGMA foreign_keys = ON;")
 	}
-	tx = &Transaction{
-		db:             db,
-		transaction:    rawTx,
-		closed:         false,
-		isolationLevel: options.IsolationLevel,
-	}
+	tx = transaction.NewRetryableTransaction(
+		&Transaction{
+			db:             db,
+			transaction:    rawTx,
+			closed:         false,
+			isolationLevel: options.IsolationLevel,
+		},
+	)
 	log.Debug("[%p] Created transaction %#v, isolation level %s", rawTx, rawTx, tx.GetIsolationLevel())
 	return
 }
