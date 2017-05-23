@@ -211,13 +211,12 @@ func (s *Sync) Lock(path string, block bool) error {
 				s.locks.Remove(path)
 			}()
 			for s.HasLock(path) {
-				ch, err := s.etcdClient.KeepAlive(s.withTimeout(), lease.ID)
+				_, err := s.etcdClient.KeepAliveOnce(s.withTimeout(), lease.ID)
 				if err != nil {
 					log.Notice("failed to keepalive lock for %s %s", path, err)
 					return
 				}
-				for range ch {
-				}
+				time.Sleep(masterTTL * time.Second / 3)
 			}
 		}()
 
