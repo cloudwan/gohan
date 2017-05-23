@@ -439,9 +439,9 @@ func (db *DB) GenTableDef(s *schema.Schema, cascade bool) (string, []string) {
 	if s.StateVersioning() {
 		cols = append(cols, quote(configVersionColumnName)+"int not null default 1")
 		cols = append(cols, quote(stateVersionColumnName)+"int not null default 0")
-		cols = append(cols, quote(stateErrorColumnName)+"text not null default ''")
-		cols = append(cols, quote(stateColumnName)+"text not null default ''")
-		cols = append(cols, quote(stateMonitoringColumnName)+"text not null default ''")
+		cols = append(cols, quote(stateErrorColumnName)+"text not null")
+		cols = append(cols, quote(stateColumnName)+"text not null")
+		cols = append(cols, quote(stateMonitoringColumnName)+"text not null")
 	}
 
 	cols = append(cols, relations...)
