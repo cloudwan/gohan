@@ -206,18 +206,13 @@ func (s *Sync) Lock(path string, block bool) error {
 		s.locks.Set(path, lease.ID)
 		//Refresh master token
 		go func() {
-			defer func() {
-				log.Notice("releasing keepalive lock for %s", path)
-				s.locks.Remove(path)
-			}()
 			for s.HasLock(path) {
-				ch, err := s.etcdClient.KeepAlive(s.withTimeout(), lease.ID)
-				if err != nil {
+				resp, err := s.etcdClient.KeepAliveOnce(s.withTimeout(), lease.ID)
+				if err != nil || resp.TTL <= 0 {
 					log.Notice("failed to keepalive lock for %s %s", path, err)
 					return
 				}
-				for range ch {
-				}
+				time.Sleep(masterTTL * time.Second / 3)
 			}
 		}()
 
@@ -233,6 +228,7 @@ func (s *Sync) Unlock(path string) error {
 	}
 	s.locks.Remove(path)
 	s.etcdClient.Revoke(s.withTimeout(), leaseID.(etcd.LeaseID))
+	s.etcdClient.Delete(s.withTimeout(), path)
 	log.Info("Unlocked path %s", path)
 	return nil
 }
