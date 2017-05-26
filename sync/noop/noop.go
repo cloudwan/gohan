@@ -55,8 +55,8 @@ func (sync *Sync) HasLock(path string) bool {
 }
 
 //Lock get lock for path
-func (sync *Sync) Lock(path string, block bool) error {
-	return nil
+func (sync *Sync) Lock(path string, block bool) (chan struct{}, error) {
+	return nil, nil
 }
 
 //Unlock unlocks paths

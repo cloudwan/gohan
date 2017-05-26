@@ -16,6 +16,7 @@
 package server_test
 
 import (
+	"context"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -26,18 +27,16 @@ import (
 )
 
 const (
-	lockPathPrefix = "/gohan/cluster/lock/watch"
-
+	lockPathPrefix    = "/gohan/cluster/lock/watch"
 	processPathPrefix = "/gohan/cluster/process"
-
-	masterTTL = 10
+	masterTTL         = 10
 )
 
-var _ = Describe("Sync watch test", func() {
+var _ = Describe("Sync watcher test", func() {
 	BeforeEach(func() {
-		// start process watcher and sync watcher
-		srv.StartProcessWatchProcess(server)
-		srv.StartSyncWatchProcess(server)
+		watcher := srv.NewSyncWatcherFromServer(server)
+		go watcher.Run(context.Background())
+		time.Sleep(time.Second)
 	})
 
 	AfterEach(func() {
@@ -121,8 +120,6 @@ var _ = Describe("Sync watch test", func() {
 			err = sync.Delete(processPathPrefix+"/"+newProcessUUID, false)
 			Expect(err).ToNot(HaveOccurred())
 
-			time.Sleep(time.Second)
-
 			// Now, process watcher detects two processes running
 			prn, err = sync.Fetch(processPathPrefix)
 			Expect(err).ToNot(HaveOccurred())
@@ -136,5 +133,4 @@ var _ = Describe("Sync watch test", func() {
 			Expect(len(wrn.Children)).To(Equal(3))
 		})
 	})
-
 })

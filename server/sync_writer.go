@@ -16,13 +16,15 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
 
+	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/pagination"
-	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/schema"
+	gohan_sync "github.com/cloudwan/gohan/sync"
 )
 
 const (
@@ -35,43 +37,89 @@ const (
 	eventPollingLimit = 10000
 )
 
-//Start sync Process
-func startSyncProcess(server *Server) {
+// SyncWriter copies data from the RDBMS to the sync layer.
+// All changes happens in the RDBMS will be synchronized into the
+// sync layer by SyncWriter.
+// SyncWriter gets items to sync from the event table.
+type SyncWriter struct {
+	sync    gohan_sync.Sync
+	db      db.DB
+	backoff time.Duration
+}
+
+// NewSyncWriter creates a new instance of SyncWriter.
+func NewSyncWriter(sync gohan_sync.Sync, db db.DB) *SyncWriter {
+	return &SyncWriter{
+		sync:    sync,
+		db:      db,
+		backoff: time.Second * 5,
+	}
+}
+
+// NewSyncWriterFromServer is a helper method for test.
+// Should be removes in the future.
+func NewSyncWriterFromServer(server *Server) *SyncWriter {
+	return NewSyncWriter(server.sync, server.db)
+}
+
+// Run starts a loop to keep running Sync().
+// This method blocks until the ctx is canceled.
+func (writer *SyncWriter) Run(ctx context.Context) error {
 	pollingTicker := time.Tick(eventPollingTime)
 	committed := transactionCommitInformer()
-	go func() {
-		defer l.LogFatalPanic(log)
-		recentlySynced := false
-		for server.running {
-			select {
-			case <-pollingTicker:
-				if recentlySynced {
-					recentlySynced = false
-					continue
-				}
-			case <-committed:
-				recentlySynced = true
+
+	recentlySynced := false
+	for {
+		err := func() error {
+			lost, err := writer.sync.Lock(syncPath, true)
+			if err != nil {
+				return err
 			}
-			server.sync.Lock(syncPath, true)
-			server.Sync()
+			defer writer.sync.Unlock(syncPath)
+
+			for {
+				select {
+				case <-lost:
+					return fmt.Errorf("lost lock for sync")
+				case <-ctx.Done():
+					return nil
+				case <-pollingTicker:
+					if recentlySynced {
+						recentlySynced = false
+						continue
+					}
+				case <-committed:
+					recentlySynced = true
+				}
+				err := writer.Sync()
+				if err != nil {
+					return err
+				}
+			}
+		}()
+
+		if err != nil {
+			log.Error("sync writer is intrupted: %s", err)
 		}
-		server.sync.Unlock(syncPath)
-	}()
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(writer.backoff):
+		}
+	}
 }
 
-//Stop Sync Process
-func stopSyncProcess(server *Server) {
-	server.sync.Unlock(syncPath)
-}
-
-//Sync to sync backend database table
-func (server *Server) Sync() error {
-	resourceList, err := server.listEvents()
+// Sync runs a synchronization iteration, which
+// executes requests in the event table.
+// todo: make private once tests are fixed
+func (writer *SyncWriter) Sync() error {
+	resourceList, err := writer.listEvents()
 	if err != nil {
 		return err
 	}
 	for _, resource := range resourceList {
-		err = server.syncEvent(resource)
+		err := writer.syncEvent(resource)
 		if err != nil {
 			return err
 		}
@@ -79,8 +127,8 @@ func (server *Server) Sync() error {
 	return nil
 }
 
-func (server *Server) listEvents() ([]*schema.Resource, error) {
-	tx, err := server.db.Begin()
+func (writer *SyncWriter) listEvents() ([]*schema.Resource, error) {
+	tx, err := writer.db.Begin()
 	if err != nil {
 		return nil, err
 	}
@@ -95,10 +143,10 @@ func (server *Server) listEvents() ([]*schema.Resource, error) {
 	return resourceList, nil
 }
 
-func (server *Server) syncEvent(resource *schema.Resource) error {
+func (writer *SyncWriter) syncEvent(resource *schema.Resource) error {
 	schemaManager := schema.GetManager()
 	eventSchema, _ := schemaManager.Schema("event")
-	tx, err := server.db.Begin()
+	tx, err := writer.db.Begin()
 	if err != nil {
 		return err
 	}
@@ -126,8 +174,7 @@ func (server *Server) syncEvent(resource *schema.Resource) error {
 		if syncProperty != "" {
 			err = json.Unmarshal(([]byte)(body), &data)
 			if err != nil {
-				log.Error(fmt.Sprintf("failed to unmarshal body on sync: %s", err))
-				return err
+				return fmt.Errorf("failed to unmarshal body on sync: %s", err)
 			}
 			target, ok := data[syncProperty]
 			if !ok {
@@ -153,16 +200,14 @@ func (server *Server) syncEvent(resource *schema.Resource) error {
 				"version": version,
 			})
 			if err != nil {
-				log.Error(fmt.Sprintf("When marshalling sync object: %s", err))
-				return err
+				return fmt.Errorf("failed to marshal marshalling sync object: %s", err)
 			}
 			content = string(data)
 		}
 
-		err = server.sync.Update(path, content)
+		err = writer.sync.Update(path, content)
 		if err != nil {
-			log.Error(fmt.Sprintf("%s on sync", err))
-			return err
+			return fmt.Errorf("Update() failed on sync: %s", err)
 		}
 	} else if eventType == "delete" {
 		log.Debug("delete %s", resourcePath)
@@ -173,33 +218,30 @@ func (server *Server) syncEvent(resource *schema.Resource) error {
 			json.Unmarshal(([]byte)(body), &data)
 			deletePath, err = resourceSchema.GenerateCustomPath(data)
 			if err != nil {
-				log.Error(fmt.Sprintf("Delete from sync failed %s - generating of custom path failed", err))
-				return err
+				return fmt.Errorf("Delete from sync failed %s - generating of custom path failed", err)
 			}
 		}
 		log.Debug("deleting %s", statePrefix+deletePath)
-		err = server.sync.Delete(statePrefix+deletePath, false)
+		err = writer.sync.Delete(statePrefix+deletePath, false)
 		if err != nil {
 			log.Error(fmt.Sprintf("Delete from sync failed %s", err))
 		}
 		log.Debug("deleting %s", monitoringPrefix+deletePath)
-		err = server.sync.Delete(monitoringPrefix+deletePath, false)
+		err = writer.sync.Delete(monitoringPrefix+deletePath, false)
 		if err != nil {
 			log.Error(fmt.Sprintf("Delete from sync failed %s", err))
 		}
 		log.Debug("deleting %s", resourcePath)
-		err = server.sync.Delete(path, false)
+		err = writer.sync.Delete(path, false)
 		if err != nil {
-			log.Error(fmt.Sprintf("Delete from sync failed %s", err))
-			return err
+			return fmt.Errorf("delete from sync failed %s", err)
 		}
 	}
 	log.Debug("delete event %d", resource.Get("id"))
 	id := resource.Get("id")
 	err = tx.Delete(eventSchema, id)
 	if err != nil {
-		log.Error(fmt.Sprintf("delete failed: %s", err))
-		return err
+		return fmt.Errorf("delete failed: %s", err)
 	}
 
 	err = tx.Commit()

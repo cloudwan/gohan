@@ -175,11 +175,8 @@ func (s *Sync) HasLock(path string) bool {
 
 // Lock locks resources on sync
 // This call blocks until you can get lock
-func (s *Sync) Lock(path string, block bool) error {
+func (s *Sync) Lock(path string, block bool) (chan struct{}, error) {
 	for {
-		if s.HasLock(path) {
-			return nil
-		}
 		var err error
 		lease, err := s.etcdClient.Grant(s.withTimeout(), masterTTL)
 		var resp *etcd.TxnResponse
@@ -195,41 +192,55 @@ func (s *Sync) Lock(path string, block bool) error {
 			}
 			log.Notice(msg)
 
-			s.locks.Remove(path)
 			if !block {
-				return errors.New(msg)
+				return nil, errors.New(msg)
 			}
 			time.Sleep(masterTTL * time.Second)
 			continue
 		}
-		log.Info("Locked %s", path)
 		s.locks.Set(path, lease.ID)
+		log.Info("Locked %s", path)
+
 		//Refresh master token
+		lost := make(chan struct{})
 		go func() {
+			defer s.abortLock(path)
+			defer close(lost)
+
 			for s.HasLock(path) {
 				resp, err := s.etcdClient.KeepAliveOnce(s.withTimeout(), lease.ID)
 				if err != nil || resp.TTL <= 0 {
 					log.Notice("failed to keepalive lock for %s %s", path, err)
 					return
 				}
-				time.Sleep(masterTTL * time.Second / 3)
+				time.Sleep(masterTTL / 2 * time.Second)
 			}
 		}()
 
-		return nil
+		return lost, nil
 	}
+}
+
+func (s *Sync) abortLock(path string) etcd.LeaseID {
+	leaseID, ok := s.locks.Get(path)
+	if !ok {
+		return 0
+	}
+	s.locks.Remove(path)
+	log.Info("Unlocked path %s", path)
+	return leaseID.(etcd.LeaseID)
 }
 
 //Unlock path
 func (s *Sync) Unlock(path string) error {
-	leaseID, ok := s.locks.Get(path)
-	if !ok {
-		return nil
+	leaseID := s.abortLock(path)
+	if leaseID > 0 {
+		s.etcdClient.Revoke(s.withTimeout(), leaseID)
+
+		cmp := etcd.Compare(etcd.Value(path), "=", s.processID)
+		del := etcd.OpDelete(path)
+		s.etcdClient.Txn(s.withTimeout()).If(cmp).Then(del).Commit()
 	}
-	s.locks.Remove(path)
-	s.etcdClient.Revoke(s.withTimeout(), leaseID.(etcd.LeaseID))
-	s.etcdClient.Delete(s.withTimeout(), path)
-	log.Info("Unlocked path %s", path)
 	return nil
 }
 

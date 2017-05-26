@@ -58,7 +58,7 @@ func startCRONProcess(server *Server) {
 		takeLock := func() error {
 			select {
 			case <-jobLocks[lockKey]:
-				err := server.sync.Lock(lockKey, false)
+				_, err := server.sync.Lock(lockKey, false)
 				if err != nil {
 					log.Debug("Failed to take ETCD lock")
 					jobLocks[lockKey] <- 1
