@@ -154,6 +154,10 @@ create data in db
 
 update data in db
 
+- gohan_db_update_with_nulls(transaction, schema_id, object, fields)
+
+update data in db with setting all fields to null
+
 - gohan_db_state_update(transaction, schema_id, object)
 
 update data in db without informing etcd

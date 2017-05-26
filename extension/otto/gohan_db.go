@@ -337,6 +337,36 @@ func init() {
 				value, _ := vm.ToValue(resource.Data())
 				return value
 			},
+			"gohan_db_update_with_nulls": func(call otto.FunctionCall) otto.Value {
+				VerifyCallArguments(&call, "gohan_db_update_with_nulls", 4)
+				transaction, needCommit, err := env.GetOrCreateTransaction(call.Argument(0))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+				if needCommit {
+					defer transaction.Close()
+				}
+				schemaID, err := GetString(call.Argument(1))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+				dataMap, err := GetMap(call.Argument(2))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+				fields, err := GetStringList(call.Argument(3))
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+
+				resource, err := GohanDbUpdateWithNulls(transaction, needCommit, schemaID, dataMap, fields)
+				if err != nil {
+					ThrowOttoException(&call, err.Error())
+				}
+
+				value, _ := vm.ToValue(resource.Data())
+				return value
+			},
 			"gohan_db_state_update": func(call otto.FunctionCall) otto.Value {
 				VerifyCallArguments(&call, "gohan_db_state_update", 3)
 				transaction, needCommit, err := env.GetOrCreateTransaction(call.Argument(0))
@@ -580,6 +610,15 @@ func GohanDbCreate(transaction transaction.Transaction, needCommit bool, schemaI
 		}
 	}
 	return resource, nil
+}
+
+//GohanDbUpdateWithNulls updates resource in database, setting all fields to null
+func GohanDbUpdateWithNulls(transaction transaction.Transaction, needCommit bool, schemaID string,
+	dataMap map[string]interface{}, fields []string) (*schema.Resource, error) {
+	for _, field := range fields {
+		dataMap[field] = nil
+	}
+	return GohanDbUpdate(transaction, needCommit, schemaID, dataMap)
 }
 
 //GohanDbUpdate updates resource in database

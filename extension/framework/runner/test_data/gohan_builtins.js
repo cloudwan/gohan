@@ -55,11 +55,21 @@ function testGohanBuiltins() {
   }
 
   network1.admin_state_up = true;
+  network1.status = 'status0';
   gohan_db_update(transaction, "network", network1);
   var resource = gohan_db_fetch(transaction, "network", "abc", "tenant");
 
   if (JSON.stringify(resource) !== JSON.stringify(network1)) {
-    FAIL("Invalid resource - expected %s, received %s",
+    Fail("Invalid resource - expected %s, received %s",
+        JSON.stringify(network1), JSON.stringify(resource));
+  }
+
+  gohan_db_update_with_nulls(transaction, "network", network1, ["status"]);
+  resource = gohan_db_fetch(transaction, "network", "abc", "tenant");
+  network1.status = undefined;
+
+  if (JSON.stringify(resource) !== JSON.stringify(network1)) {
+    Fail("Invalid resource - expected %s, received %s",
         JSON.stringify(network1), JSON.stringify(resource));
   }
 
