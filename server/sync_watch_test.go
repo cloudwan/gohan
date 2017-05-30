@@ -73,7 +73,8 @@ var _ = Describe("Sync watch test", func() {
 
 			// (Simulate) New process joined gohan cluster
 			newProcessUUID := "ffffffff-ffff-ffff-ffff-fffffffffffe"
-			err = sync.Update(processPathPrefix + "/" + newProcessUUID, newProcessUUID)
+			err = sync.Update(processPathPrefix+"/"+newProcessUUID, newProcessUUID)
+			defer sync.Delete(processPathPrefix+"/"+newProcessUUID, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			// Now, process watcher detects two processes running
@@ -99,7 +100,8 @@ var _ = Describe("Sync watch test", func() {
 
 			// (Simulate) One more process joined gohan cluster
 			newProcessUUID2 := "ffffffff-ffff-ffff-ffff-ffffffffffff"
-			err = sync.Update(processPathPrefix + "/" + newProcessUUID2, newProcessUUID2)
+			err = sync.Update(processPathPrefix+"/"+newProcessUUID2, newProcessUUID2)
+			defer sync.Delete(processPathPrefix+"/"+newProcessUUID2, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			// Now, process watcher detects three processes running
@@ -116,7 +118,7 @@ var _ = Describe("Sync watch test", func() {
 			Expect(len(wrn.Children)).To(Equal(2))
 
 			// (Simulate) One process of gohan cluster is down
-			err = sync.Delete(processPathPrefix + "/" + newProcessUUID, false)
+			err = sync.Delete(processPathPrefix+"/"+newProcessUUID, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			time.Sleep(time.Second)
