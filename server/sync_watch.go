@@ -79,7 +79,6 @@ func StartSyncWatchProcess(server *Server) {
 
 	go func() {
 		processList := []string{}
-		myPosition := -1
 		prevCancel := func() {}
 		prevWG := new(sync.WaitGroup)
 
@@ -113,6 +112,7 @@ func StartSyncWatchProcess(server *Server) {
 				}
 			}
 
+			myPosition := -1
 			for p, v := range processList {
 				if v == processPathPrefix+"/"+server.sync.GetProcessID() {
 					myPosition = p
@@ -120,45 +120,52 @@ func StartSyncWatchProcess(server *Server) {
 				}
 			}
 
-			log.Debug("Current cluster consists of following processes: %s, my poistion: %d", processList, myPosition)
+			if len(processList) > 0 {
+				log.Debug("Current cluster consists of following processes: %s, my poistion: %d", processList, myPosition)
 
-			// stop goroutines created by the previous iteration
-			prevCancel()
-			prevWG.Wait()
+				// stop goroutines created by the previous iteration
+				prevCancel()
+				prevWG.Wait()
 
-			ctx, cancel := context.WithCancel(context.TODO())
-			prevCancel = cancel
-			prevWG = new(sync.WaitGroup)
-			for idx, path := range watch {
-				prevWG.Add(1)
-				size := len(processList)
-				prio := (myPosition - (idx % size) + size) % size
-				log.Debug("SyncWatch Priority of `%s`: `%d`", watch, prio)
-
-				go func(ctx context.Context, idx int, path string, prio int) {
-					defer prevWG.Done()
-
-					backoff := time.NewTimer(time.Duration(prio*masterTTL) * time.Second)
-					select {
-					case <-backoff.C:
-					case <-ctx.Done():
-						return
+				ctx, cancel := context.WithCancel(context.TODO())
+				prevCancel = cancel
+				prevWG = new(sync.WaitGroup)
+				for idx, path := range watch {
+					prevWG.Add(1)
+					size := len(processList)
+					prio := size  // least priority
+					if myPosition > -1 {
+						prio = (myPosition - (idx % size) + size) % size
 					}
+					log.Debug("SyncWatch Priority of `%s`: `%d`", watch, prio)
 
-					for {
-						err := server.processSyncWatch(ctx, path, handler)
-						if err != nil && err != context.Canceled && err != lockFailedErr {
-							log.Error("Sync Watch on `%s` aborted, retrying...: %s", path, err)
-						}
+					go func(ctx context.Context, idx int, path string, prio int) {
+						defer prevWG.Done()
 
-						backoff := time.NewTimer(time.Second * masterTTL)
+						backoff := time.NewTimer(time.Duration(prio*masterTTL) * time.Second)
 						select {
 						case <-backoff.C:
 						case <-ctx.Done():
 							return
 						}
-					}
-				}(ctx, idx, path, prio)
+
+						for {
+							err := server.processSyncWatch(ctx, path, handler)
+							if err != nil && err != context.Canceled && err != lockFailedErr {
+								log.Error("Sync Watch on `%s` aborted, retrying...: %s", path, err)
+							}
+
+							backoff := time.NewTimer(time.Second * masterTTL)
+							select {
+							case <-backoff.C:
+							case <-ctx.Done():
+								return
+							}
+						}
+					}(ctx, idx, path, prio)
+				}
+			} else {
+				log.Error("No running gohan processes detected: please check networking to sync backend")
 			}
 		}
 	}()
