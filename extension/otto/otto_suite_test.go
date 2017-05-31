@@ -28,6 +28,7 @@ import (
 	"github.com/cloudwan/gohan/sync/etcdv3"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/cloudwan/gohan/db/options"
 )
 
 const (
@@ -90,7 +91,7 @@ var _ = Describe("Suite set up and tear down", func() {
 	var _ = BeforeSuite(func() {
 		var err error
 		Expect(os.Chdir(configDir)).To(Succeed())
-		testDB, err = db.ConnectDB(dbType, dbFile, db.DefaultMaxOpenConn)
+		testDB, err = db.ConnectDB(dbType, dbFile, db.DefaultMaxOpenConn, options.Default())
 		Expect(err).ToNot(HaveOccurred(), "Failed to connect database.")
 		testSync, err = etcdv3.NewSync([]string{testSyncEndpoint}, time.Second)
 		Expect(err).NotTo(HaveOccurred(), "Failed to connect to etcd")

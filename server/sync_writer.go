@@ -25,6 +25,7 @@ import (
 	"github.com/cloudwan/gohan/db/pagination"
 	"github.com/cloudwan/gohan/schema"
 	gohan_sync "github.com/cloudwan/gohan/sync"
+	"github.com/cloudwan/gohan/db/transaction"
 )
 
 const (
@@ -128,128 +129,126 @@ func (writer *SyncWriter) Sync() (synced int, err error) {
 }
 
 func (writer *SyncWriter) listEvents() ([]*schema.Resource, error) {
-	tx, err := writer.db.Begin()
-	if err != nil {
-		return nil, err
+	var resourceList []*schema.Resource
+	if dbErr := db.Within(writer.db, func (tx transaction.Transaction) error {
+		schemaManager := schema.GetManager()
+		eventSchema, _ := schemaManager.Schema("event")
+		paginator, _ := pagination.NewPaginator(eventSchema, "id", pagination.ASC, eventPollingLimit, 0)
+		res, _, err := tx.List(eventSchema, nil, nil, paginator)
+		resourceList = res
+		return err
+	}); dbErr != nil {
+		return nil, dbErr
 	}
-	defer tx.Close()
-	schemaManager := schema.GetManager()
-	eventSchema, _ := schemaManager.Schema("event")
-	paginator, _ := pagination.NewPaginator(eventSchema, "id", pagination.ASC, eventPollingLimit, 0)
-	resourceList, _, err := tx.List(eventSchema, nil, nil, paginator)
-	if err != nil {
-		return nil, err
-	}
+
 	return resourceList, nil
 }
 
 func (writer *SyncWriter) syncEvent(resource *schema.Resource) error {
 	schemaManager := schema.GetManager()
 	eventSchema, _ := schemaManager.Schema("event")
-	tx, err := writer.db.Begin()
-	if err != nil {
-		return err
-	}
-	defer tx.Close()
-	eventType := resource.Get("type").(string)
-	resourcePath := resource.Get("path").(string)
-	body := resource.Get("body").(string)
-	syncPlain := resource.Get("sync_plain").(bool)
-	syncProperty := resource.Get("sync_property").(string)
+	return db.Within(writer.db, func (tx transaction.Transaction) error {
+		var err error
+		eventType := resource.Get("type").(string)
+		resourcePath := resource.Get("path").(string)
+		body := resource.Get("body").(string)
+		syncPlain := resource.Get("sync_plain").(bool)
+		syncProperty := resource.Get("sync_property").(string)
 
-	path := generatePath(resourcePath, body)
+		path := generatePath(resourcePath, body)
 
-	version, ok := resource.Get("version").(int)
-	if !ok {
-		log.Debug("cannot cast version value in int for %s", path)
-	}
-	log.Debug("event %s", eventType)
-
-	if eventType == "create" || eventType == "update" {
-		log.Debug("set %s on sync", path)
-
-		content := body
-
-		var data map[string]interface{}
-		if syncProperty != "" {
-			err = json.Unmarshal(([]byte)(body), &data)
-			if err != nil {
-				return fmt.Errorf("failed to unmarshal body on sync: %s", err)
-			}
-			target, ok := data[syncProperty]
-			if !ok {
-				return fmt.Errorf("could not find property `%s`", syncProperty)
-			}
-			jsonData, err := json.Marshal(target)
-			if err != nil {
-				return err
-			}
-			content = string(jsonData)
+		version, ok := resource.Get("version").(int)
+		if !ok {
+			log.Debug("cannot cast version value in int for %s", path)
 		}
+		log.Debug("event %s", eventType)
 
-		if syncPlain {
-			var target interface{}
-			json.Unmarshal([]byte(content), &target)
-			switch target.(type) {
-			case string:
-				content = fmt.Sprintf("%v", target)
-			}
-		} else {
-			data, err := json.Marshal(map[string]interface{}{
-				"body":    content,
-				"version": version,
-			})
-			if err != nil {
-				return fmt.Errorf("failed to marshal marshalling sync object: %s", err)
-			}
-			content = string(data)
-		}
+		if eventType == "create" || eventType == "update" {
+			log.Debug("set %s on sync", path)
 
-		err = writer.sync.Update(path, content)
-		if err != nil {
-			return fmt.Errorf("Update() failed on sync: %s", err)
-		}
-	} else if eventType == "delete" {
-		log.Debug("delete %s", resourcePath)
-		deletePath := resourcePath
-		resourceSchema := schema.GetSchemaByURLPath(resourcePath)
-		if _, ok := resourceSchema.SyncKeyTemplate(); ok {
+			content := body
+
 			var data map[string]interface{}
-			json.Unmarshal(([]byte)(body), &data)
-			deletePath, err = resourceSchema.GenerateCustomPath(data)
+			if syncProperty != "" {
+				err = json.Unmarshal(([]byte)(body), &data)
+				if err != nil {
+					return fmt.Errorf("failed to unmarshal body on sync: %s", err)
+				}
+				target, ok := data[syncProperty]
+				if !ok {
+					return fmt.Errorf("could not find property `%s`", syncProperty)
+				}
+				jsonData, err := json.Marshal(target)
+				if err != nil {
+					return err
+				}
+				content = string(jsonData)
+			}
+
+			if syncPlain {
+				var target interface{}
+				json.Unmarshal([]byte(content), &target)
+				switch target.(type) {
+				case string:
+					content = fmt.Sprintf("%v", target)
+				}
+			} else {
+				data, err := json.Marshal(map[string]interface{}{
+					"body":    content,
+					"version": version,
+				})
+				if err != nil {
+					return fmt.Errorf("failed to marshal marshalling sync object: %s", err)
+				}
+				content = string(data)
+			}
+
+			err = writer.sync.Update(path, content)
 			if err != nil {
-				return fmt.Errorf("Delete from sync failed %s - generating of custom path failed", err)
+				return fmt.Errorf("Update() failed on sync: %s", err)
+			}
+		} else if eventType == "delete" {
+			log.Debug("delete %s", resourcePath)
+			deletePath := resourcePath
+			resourceSchema := schema.GetSchemaByURLPath(resourcePath)
+			if _, ok := resourceSchema.SyncKeyTemplate(); ok {
+				var data map[string]interface{}
+				json.Unmarshal(([]byte)(body), &data)
+				deletePath, err = resourceSchema.GenerateCustomPath(data)
+				if err != nil {
+					return fmt.Errorf("Delete from sync failed %s - generating of custom path failed", err)
+				}
+			}
+			log.Debug("deleting %s", statePrefix+deletePath)
+			err = writer.sync.Delete(statePrefix+deletePath, false)
+			if err != nil {
+				log.Error(fmt.Sprintf("Delete from sync failed %s", err))
+			}
+			log.Debug("deleting %s", monitoringPrefix+deletePath)
+			err = writer.sync.Delete(monitoringPrefix+deletePath, false)
+			if err != nil {
+				log.Error(fmt.Sprintf("Delete from sync failed %s", err))
+			}
+			log.Debug("deleting %s", resourcePath)
+			err = writer.sync.Delete(path, false)
+			if err != nil {
+				return fmt.Errorf("delete from sync failed %s", err)
 			}
 		}
-		log.Debug("deleting %s", statePrefix+deletePath)
-		err = writer.sync.Delete(statePrefix+deletePath, false)
+		log.Debug("delete event %d", resource.Get("id"))
+		id := resource.Get("id")
+		err = tx.Delete(eventSchema, id)
 		if err != nil {
-			log.Error(fmt.Sprintf("Delete from sync failed %s", err))
+			return fmt.Errorf("delete failed: %s", err)
 		}
-		log.Debug("deleting %s", monitoringPrefix+deletePath)
-		err = writer.sync.Delete(monitoringPrefix+deletePath, false)
-		if err != nil {
-			log.Error(fmt.Sprintf("Delete from sync failed %s", err))
-		}
-		log.Debug("deleting %s", resourcePath)
-		err = writer.sync.Delete(path, false)
-		if err != nil {
-			return fmt.Errorf("delete from sync failed %s", err)
-		}
-	}
-	log.Debug("delete event %d", resource.Get("id"))
-	id := resource.Get("id")
-	err = tx.Delete(eventSchema, id)
-	if err != nil {
-		return fmt.Errorf("delete failed: %s", err)
-	}
 
-	err = tx.Commit()
-	if err != nil {
-		log.Error(fmt.Sprintf("commit failed: %s", err))
-		return err
-	}
-	return nil
+		err = tx.Commit()
+		if err != nil {
+			log.Error(fmt.Sprintf("commit failed: %s", err))
+			return err
+		}
+		return nil
+	})
 }
 
 func generatePath(resourcePath string, body string) string {

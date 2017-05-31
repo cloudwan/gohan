@@ -22,10 +22,10 @@ import (
 	"strings"
 
 	"github.com/cloudwan/gohan/db"
+	"github.com/cloudwan/gohan/db/options"
 	. "github.com/cloudwan/gohan/db/sql"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -51,7 +51,7 @@ var _ = Describe("Sql", func() {
 		}
 
 		manager := schema.GetManager()
-		dbc, err := db.ConnectDB(dbType, conn, db.DefaultMaxOpenConn)
+		dbc, err := db.ConnectDB(dbType, conn, db.DefaultMaxOpenConn, options.Default())
 		sqlConn = dbc.(*DB)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manager.LoadSchemasFromFiles(
@@ -59,7 +59,7 @@ var _ = Describe("Sql", func() {
 		db.InitDBWithSchemas(dbType, conn, true, false, false)
 
 		// Insert fixture data
-		fixtureDB, err := db.ConnectDB("json", testFixtures, db.DefaultMaxOpenConn)
+		fixtureDB, err := db.ConnectDB("json", testFixtures, db.DefaultMaxOpenConn, options.Default())
 		Expect(err).ToNot(HaveOccurred())
 		db.CopyDBResources(fixtureDB, dbc, true)
 

@@ -29,6 +29,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/twinj/uuid"
+	"github.com/cloudwan/gohan/db"
+	"github.com/cloudwan/gohan/db/transaction"
 )
 
 var _ = Describe("Resource manager", func() {
@@ -101,19 +103,18 @@ var _ = Describe("Resource manager", func() {
 	})
 
 	AfterEach(func() {
-		tx, err := testDB.Begin()
-		Expect(err).ToNot(HaveOccurred(), "Failed to create transaction.")
-		environmentManager.UnRegisterEnvironment(schemaID)
-		defer tx.Close()
-		for _, schema := range schema.GetManager().Schemas() {
-			if whitelist[schema.ID] {
-				continue
+		Expect(db.Within(testDB, func (tx transaction.Transaction) error {
+
+			environmentManager.UnRegisterEnvironment(schemaID)
+			defer tx.Close()
+			for _, schema := range schema.GetManager().Schemas() {
+				if whitelist[schema.ID] {
+					continue
+				}
+				Expect(clearTable(tx, schema)).ToNot(HaveOccurred(), "Failed to clear table.")
 			}
-			err = clearTable(tx, schema)
-			Expect(err).ToNot(HaveOccurred(), "Failed to clear table.")
-		}
-		err = tx.Commit()
-		Expect(err).ToNot(HaveOccurred(), "Failed to commit transaction.")
+			return tx.Commit()
+		})).ToNot(HaveOccurred(), "Failed to create or commit transaction.")
 	})
 
 	Describe("Getting a schema", func() {

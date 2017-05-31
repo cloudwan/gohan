@@ -74,3 +74,15 @@ https://github.com/cloudwan/goose/blob/master/README.md
 
 By default, all migration scripts are stored in 'db/migrations'. This path can be overridden
 by a configuration setting 'db/migrations' field in yaml configuration.
+
+## Fuzzying database connection (for testing purposes)
+
+A developer can fuzz database connection so that each request to database will either
+fail with a deadlock or return the original value as there was no fuzzing at all.
+This is useful for simulating high load on database in which case it can occasionally
+return deadlocks, which is a normal situation.
+
+To enable fuzzing, set environment variable FUZZY_DB_TX to 'true' before gohan is run:
+``` bash
+FUZZY_DB_TX=true gohan [options]
+```

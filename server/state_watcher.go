@@ -71,7 +71,7 @@ func NewStateWatcherFromServer(server *Server) *StateWatcher {
 
 // Run starts the main loop of the watcher.
 // This method blocks until canceled by the ctx.
-// Errors are logged, but do not interupt the loop.
+// Errors are logged, but do not interrupt the loop.
 func (watcher *StateWatcher) Run(ctx context.Context) error {
 	for {
 		err := watcher.iterate(ctx)
@@ -159,75 +159,71 @@ func (watcher *StateWatcher) StateUpdate(event *gohan_sync.Event) error {
 	resourceID := curSchema.GetResourceIDFromPath(schemaPath)
 	log.Info("Started StateUpdate for %s %s %v", event.Action, event.Key, event.Data)
 
-	isolationLevel := transaction.GetIsolationLevel(curSchema, StateUpdateEventName)
-	tx, err := watcher.db.BeginTx(context.Background(), &transaction.TxOptions{IsolationLevel: isolationLevel})
-	if err != nil {
-		return err
-	}
-	defer tx.Close()
+	return db.WithinTx(watcher.db, context.Background(), &transaction.TxOptions{IsolationLevel: transaction.GetIsolationLevel(curSchema, StateUpdateEventName)},
+		func(tx transaction.Transaction) error {
+			curResource, err := tx.Fetch(curSchema, transaction.IDFilter(resourceID))
+			if err != nil {
+				return err
+			}
+			resourceState, err := tx.StateFetch(curSchema, transaction.IDFilter(resourceID))
+			if err != nil {
+				return err
+			}
+			if resourceState.StateVersion == resourceState.ConfigVersion {
+				return nil
+			}
+			stateVersion, ok := event.Data["version"].(float64)
+			if !ok {
+				return fmt.Errorf("No version in state information")
+			}
+			oldStateVersion := resourceState.StateVersion
+			resourceState.StateVersion = int64(stateVersion)
+			if resourceState.StateVersion < oldStateVersion {
+				return nil
+			}
+			if newError, ok := event.Data["error"].(string); ok {
+				resourceState.Error = newError
+			}
+			if newState, ok := event.Data["state"].(string); ok {
+				resourceState.State = newState
+			}
 
-	curResource, err := tx.Fetch(curSchema, transaction.IDFilter(resourceID))
-	if err != nil {
-		return err
-	}
-	resourceState, err := tx.StateFetch(curSchema, transaction.IDFilter(resourceID))
-	if err != nil {
-		return err
-	}
-	if resourceState.StateVersion == resourceState.ConfigVersion {
-		return nil
-	}
-	stateVersion, ok := event.Data["version"].(float64)
-	if !ok {
-		return fmt.Errorf("No version in state information")
-	}
-	oldStateVersion := resourceState.StateVersion
-	resourceState.StateVersion = int64(stateVersion)
-	if resourceState.StateVersion < oldStateVersion {
-		return nil
-	}
-	if newError, ok := event.Data["error"].(string); ok {
-		resourceState.Error = newError
-	}
-	if newState, ok := event.Data["state"].(string); ok {
-		resourceState.State = newState
-	}
+			environmentManager := extension.GetManager()
+			environment, haveEnvironment := environmentManager.GetEnvironment(curSchema.ID)
+			context := map[string]interface{}{}
 
-	environmentManager := extension.GetManager()
-	environment, haveEnvironment := environmentManager.GetEnvironment(curSchema.ID)
-	context := map[string]interface{}{}
+			if haveEnvironment {
+				serviceAuthorization, err := watcher.identity.GetServiceAuthorization()
+				if err != nil {
+					return err
+				}
 
-	if haveEnvironment {
-		serviceAuthorization, err := watcher.identity.GetServiceAuthorization()
-		if err != nil {
-			return err
-		}
+				context["catalog"] = serviceAuthorization.Catalog()
+				context["auth_token"] = serviceAuthorization.AuthToken()
+				context["resource"] = curResource.Data()
+				context["schema"] = curSchema
+				context["state"] = event.Data
+				context["config_version"] = resourceState.ConfigVersion
+				context["transaction"] = tx
 
-		context["catalog"] = serviceAuthorization.Catalog()
-		context["auth_token"] = serviceAuthorization.AuthToken()
-		context["resource"] = curResource.Data()
-		context["schema"] = curSchema
-		context["state"] = event.Data
-		context["config_version"] = resourceState.ConfigVersion
-		context["transaction"] = tx
+				if err := extension.HandleEvent(context, environment, "pre_state_update_in_transaction", curSchema.ID); err != nil {
+					return err
+				}
+			}
 
-		if err := extension.HandleEvent(context, environment, "pre_state_update_in_transaction", curSchema.ID); err != nil {
-			return err
-		}
-	}
+			err = tx.StateUpdate(curResource, &resourceState)
+			if err != nil {
+				return err
+			}
 
-	err = tx.StateUpdate(curResource, &resourceState)
-	if err != nil {
-		return err
-	}
+			if haveEnvironment {
+				if err := extension.HandleEvent(context, environment, "post_state_update_in_transaction", curSchema.ID); err != nil {
+					return err
+				}
+			}
 
-	if haveEnvironment {
-		if err := extension.HandleEvent(context, environment, "post_state_update_in_transaction", curSchema.ID); err != nil {
-			return err
-		}
-	}
-
-	return tx.Commit()
+			return tx.Commit()
+		})
 }
 
 //MonitoringUpdate updates the state in the db based on the sync event
@@ -244,71 +240,68 @@ func (watcher *StateWatcher) MonitoringUpdate(event *gohan_sync.Event) error {
 	resourceID := curSchema.GetResourceIDFromPath(schemaPath)
 	log.Info("Started MonitoringUpdate for %s %s %v", event.Action, event.Key, event.Data)
 
-	isolationLevel := transaction.GetIsolationLevel(curSchema, MonitoringUpdateEventName)
 
-	tx, err := watcher.db.BeginTx(context.Background(), &transaction.TxOptions{IsolationLevel: isolationLevel})
-	if err != nil {
-		return err
-	}
-	defer tx.Close()
+	return db.WithinTx(watcher.db, context.Background(), &transaction.TxOptions{IsolationLevel: transaction.GetIsolationLevel(curSchema, MonitoringUpdateEventName)},
+		func(tx transaction.Transaction) error {
+			curResource, err := tx.Fetch(curSchema, transaction.IDFilter(resourceID))
+			if err != nil {
+				return err
+			}
+			resourceState, err := tx.StateFetch(curSchema, transaction.IDFilter(resourceID))
+			if err != nil {
+				return err
+			}
 
-	curResource, err := tx.Fetch(curSchema, transaction.IDFilter(resourceID))
-	if err != nil {
-		return err
-	}
-	resourceState, err := tx.StateFetch(curSchema, transaction.IDFilter(resourceID))
-	if err != nil {
-		return err
-	}
+			if resourceState.ConfigVersion != resourceState.StateVersion {
+				log.Debug("Skipping MonitoringUpdate, because config version (%d) != state version (%d)",
+					resourceState.ConfigVersion, resourceState.StateVersion)
+				return nil
+			}
+			var ok bool
+			monitoringVersion, ok := event.Data["version"].(float64)
+			if !ok {
+				return fmt.Errorf("No version in monitoring information")
+			}
+			if resourceState.ConfigVersion != int64(monitoringVersion) {
+				log.Debug("Dropping MonitoringUpdate, because config version (%d) != input monitoring version (%d)",
+					resourceState.ConfigVersion, monitoringVersion)
+				return nil
+			}
+			resourceState.Monitoring, ok = event.Data["monitoring"].(string)
+			if !ok {
+				return fmt.Errorf("No monitoring in monitoring information")
+			}
 
-	if resourceState.ConfigVersion != resourceState.StateVersion {
-		log.Debug("Skipping MonitoringUpdate, because config version (%d) != state version (%d)",
-			resourceState.ConfigVersion, resourceState.StateVersion)
-		return nil
-	}
-	var ok bool
-	monitoringVersion, ok := event.Data["version"].(float64)
-	if !ok {
-		return fmt.Errorf("No version in monitoring information")
-	}
-	if resourceState.ConfigVersion != int64(monitoringVersion) {
-		log.Debug("Dropping MonitoringUpdate, because config version (%d) != input monitoring version (%d)",
-			resourceState.ConfigVersion, monitoringVersion)
-		return nil
-	}
-	resourceState.Monitoring, ok = event.Data["monitoring"].(string)
-	if !ok {
-		return fmt.Errorf("No monitoring in monitoring information")
-	}
+			environmentManager := extension.GetManager()
+			environment, haveEnvironment := environmentManager.GetEnvironment(curSchema.ID)
+			context := map[string]interface{}{}
+			context["resource"] = curResource.Data()
+			context["schema"] = curSchema
+			context["monitoring"] = resourceState.Monitoring
+			context["transaction"] = tx
 
-	environmentManager := extension.GetManager()
-	environment, haveEnvironment := environmentManager.GetEnvironment(curSchema.ID)
-	context := map[string]interface{}{}
-	context["resource"] = curResource.Data()
-	context["schema"] = curSchema
-	context["monitoring"] = resourceState.Monitoring
-	context["transaction"] = tx
+			if haveEnvironment {
+				if err := extension.HandleEvent(context, environment, "pre_monitoring_update_in_transaction", curSchema.ID); err != nil {
+					return err
+				}
+			}
 
-	if haveEnvironment {
-		if err := extension.HandleEvent(context, environment, "pre_monitoring_update_in_transaction", curSchema.ID); err != nil {
-			return err
-		}
-	}
+			err = tx.StateUpdate(curResource, &resourceState)
+			if err != nil {
+				return err
+			}
 
-	err = tx.StateUpdate(curResource, &resourceState)
-	if err != nil {
-		return err
-	}
+			if haveEnvironment {
+				if err := extension.HandleEvent(context, environment, "post_monitoring_update_in_transaction", curSchema.ID); err != nil {
+					return err
+				}
+			}
 
-	if haveEnvironment {
-		if err := extension.HandleEvent(context, environment, "post_monitoring_update_in_transaction", curSchema.ID); err != nil {
-			return err
-		}
-	}
-
-	return tx.Commit()
+			return tx.Commit()
+		})
 }
 
 func (watcher *StateWatcher) measureStateUpdateTime(timeStarted time.Time, event string, schemaId string) {
 	metrics.UpdateTimer(timeStarted, "state.%s.%s", schemaId, event)
 }
+

@@ -26,6 +26,7 @@ import (
 	"github.com/cloudwan/gohan/extension/gohanscript"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
+	"github.com/cloudwan/gohan/db/options"
 )
 
 func init() {
@@ -114,7 +115,7 @@ func GohanLoadSchema(src string) (interface{}, error) {
 
 //ConnectDB start connection to db
 func ConnectDB(dbType string, connection string, maxOpenConn int) (db.DB, error) {
-	return db.ConnectDB(dbType, connection, maxOpenConn)
+	return db.ConnectDB(dbType, connection, maxOpenConn, options.Default())
 }
 
 //InitDB initializes database using schema.
