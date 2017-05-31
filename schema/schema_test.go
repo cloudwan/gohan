@@ -102,6 +102,39 @@ var _ = Describe("Schema", func() {
 		})
 	})
 
+	Describe("Indexes", func() {
+		var todosSchema *Schema
+		BeforeEach(func() {
+			var exists bool
+			manager := GetManager()
+			schemaPath := "../tests/test_schema_indexes.yaml"
+			Expect(manager.LoadSchemaFromFile(schemaPath)).To(Succeed())
+			todosSchema, exists = manager.Schema("todo")
+			Expect(exists).To(BeTrue())
+		})
+
+		It("Parse indexes", func() {
+			for _, index := range todosSchema.Indexes {
+				if index.Type == Unique {
+					Expect(index.Columns).To(Equal([]string{"m1", "m2"}))
+					Expect(index.Name).To(Equal("unique_m1_m2"))
+				}
+				if index.Type == Spatial {
+					Expect(index.Columns).To(Equal([]string{"m2", "m3"}))
+					Expect(index.Name).To(Equal("spatial_m2_m3"))
+				}
+				if index.Type == FullText {
+					Expect(index.Columns).To(Equal([]string{"m1", "m3"}))
+					Expect(index.Name).To(Equal("fulltext_m1_m3"))
+				}
+				if index.Type == None {
+					Expect(index.Columns).To(Equal([]string{"m1", "m2", "m3"}))
+					Expect(index.Name).To(Equal("emptyType_m1_m2_m3"))
+				}
+			}
+		})
+	})
+
 	Describe("Metadata", func() {
 		var metadataSchema *Schema
 		var metadataFailedSchema *Schema

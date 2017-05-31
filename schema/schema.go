@@ -39,6 +39,7 @@ type Schema struct {
 	Metadata                       map[string]interface{}
 	Prefix                         string
 	Properties                     []Property
+	Indexes                        []Index
 	JSONSchema                     map[string]interface{}
 	JSONSchemaOnCreate             map[string]interface{}
 	JSONSchemaOnUpdate             map[string]interface{}
@@ -232,6 +233,7 @@ func (schema *Schema) Init() error {
 
 	required := util.MaybeStringList(jsonSchema["required"])
 	properties := util.MaybeMap(jsonSchema["properties"])
+	indexes := util.MaybeMap(jsonSchema["indexes"])
 	propertiesOrder := util.MaybeStringList(jsonSchema["propertiesOrder"])
 	if parent != "" && properties[FormatParentID(parent)] == nil {
 		properties[FormatParentID(parent)] = getParentPropertyObj(parent, parent)
@@ -252,6 +254,15 @@ func (schema *Schema) Init() error {
 			return fmt.Errorf("Invalid schema: Properties is missing %v", err)
 		}
 		schema.Properties = append(schema.Properties, *propertyObj)
+	}
+
+	schema.Indexes = []Index{}
+	for name, property := range indexes {
+		indexObj, err := NewIndexFromObj(name, property)
+		if err != nil {
+			return fmt.Errorf("Invalid schema: err: %v", err)
+		}
+		schema.Indexes = append(schema.Indexes, *indexObj)
 	}
 
 	order := PropertyOrder{propertiesOrder: propertiesOrder, properties: schema.Properties}
