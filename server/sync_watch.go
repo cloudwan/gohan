@@ -70,6 +70,7 @@ func StartSyncWatchProcess(server *Server) {
 		for _, event := range events {
 			//match extensions
 			if strings.HasPrefix(response.Key, "/"+event) {
+				log.Debug("Sync event is notified on Key `%s`", response.Key)
 				env := extensions[event]
 				runExtensionOnSync(server, response, env.Clone())
 				return
@@ -193,8 +194,11 @@ func (server *Server) processSyncWatch(ctx context.Context, path string, handler
 
 	for response := range respCh {
 		if response.Err != nil {
+			log.Error("Sync Watch Error: %v", response.Err)
 			return response.Err
 		}
+		log.Debug("Sync Change on Key `%s` with Action `%s`, Revision `%d` and Data `%v`",
+			response.Key, response.Action, response.Revision, response.Data)
 
 		server.queue.Add(job.NewJob(
 			func() {
