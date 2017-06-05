@@ -361,8 +361,15 @@ func GetSingleResourceInTransaction(context middleware.Context, resourceSchema *
 	}
 	object, err := mainTransaction.Fetch(resourceSchema, filter)
 
-	if err != nil || object == nil {
-		return ResourceError{err, "", NotFound}
+	if object == nil {
+		switch err {
+		case transaction.ErrResourceNotFound:
+			log.Info("Fetch failed: %v", err)
+			return ResourceError{err, "Resource not found", NotFound}
+		default:
+			log.Error("Fetch failed: %v", err)
+			return ResourceError{err, "Error when fetching resource", InternalServerError}
+		}
 	}
 
 	response := map[string]interface{}{}
@@ -728,8 +735,15 @@ func DeleteResource(context middleware.Context,
 	if err := extension.HandleEvent(context, environment, "pre_delete"); err != nil {
 		return err
 	}
-	if fetchErr != nil {
-		return ResourceError{err, "", NotFound}
+	if resource == nil {
+		switch fetchErr {
+		case transaction.ErrResourceNotFound:
+			log.Info("Fetch failed: %v", fetchErr)
+			return ResourceError{fetchErr, "Resource not found", NotFound}
+		default:
+			log.Error("Fetch failed: %v", fetchErr)
+			return ResourceError{fetchErr, "Error when fetching resource", InternalServerError}
+		}
 	}
 	if err := InTransaction(
 		context, dataStore,
