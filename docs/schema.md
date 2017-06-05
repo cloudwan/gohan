@@ -181,6 +181,12 @@ Developers can make a schema as abstract schema specifying type=abstract. The de
   - `skip_related` - locks the resource but leaves related resources unlocked
   - (empty): default, no locking
 
+- retry_create_on_duplicate_entry (boolean)
+
+  Whether create logic should be retried in case of "Duplicate Entry" on DB. Default to false.
+  Useful when pre_create logic is setting some generated data on column where unique index was applied.
+  3 retries are applied to create logic, when flag is turned on.
+
 ## Properties
 
 We need to define properties of a resource using following parameters.

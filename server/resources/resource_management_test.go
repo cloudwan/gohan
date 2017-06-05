@@ -1133,6 +1133,66 @@ var _ = Describe("Resource manager", func() {
 				Expect(ok).To(BeTrue())
 			})
 		})
+
+		Describe("Retry during creation", func() {
+			BeforeEach(func() {
+				events["pre_create"] =
+					`if (typeof this.counter =='undefined') {
+					     this.counter = 0;
+					}
+					context.resource.test_integer = this.counter++;`
+			})
+
+			It("Should retry when Duplicate Error is raised", func() {
+				adminResourceData["test_integer"] = 0
+				err := resources.CreateResource(context, testDB, fakeIdentity, currentSchema, adminResourceData)
+				Expect(err).NotTo(HaveOccurred())
+				adminResourceData["id"] = resourceID2
+				adminResourceData["test_integer"] = 0
+				err = resources.CreateResource(context, testDB, fakeIdentity, currentSchema, adminResourceData)
+				Expect(err).NotTo(HaveOccurred())
+				err = resources.GetSingleResource(context, testDB, currentSchema, resourceID2)
+				Expect(err).NotTo(HaveOccurred())
+				result := context["response"].(map[string]interface{})
+				theResource, ok := result[schemaID]
+				resource := theResource.(map[string]interface{})
+				Expect(ok).To(BeTrue())
+				Expect(resource).To(HaveKeyWithValue("test_integer", 1))
+			})
+		})
+
+		Describe("Use local copy of context after each retry", func() {
+			BeforeEach(func() {
+				events["pre_create"] =
+					`
+					if (context.magic != "Hello") {
+					    throw new CustomException("Context wasn't copied! magic:" + context.magic);
+					}
+					if (typeof this.counter == 'undefined') {
+					     this.counter = 0;
+					}
+					context.magic = "World";
+					context.resource.test_integer = this.counter++;`
+			})
+
+			It("Should retry when Duplicate Error is raised", func() {
+				adminResourceData["test_integer"] = 0
+				context["magic"] = "Hello"
+				err := resources.CreateResource(context, testDB, fakeIdentity, currentSchema, adminResourceData)
+				Expect(err).NotTo(HaveOccurred())
+				adminResourceData["id"] = resourceID2
+				adminResourceData["test_integer"] = 0
+				err = resources.CreateResource(context, testDB, fakeIdentity, currentSchema, adminResourceData)
+				Expect(err).NotTo(HaveOccurred())
+				err = resources.GetSingleResource(context, testDB, currentSchema, resourceID2)
+				Expect(err).NotTo(HaveOccurred())
+				result := context["response"].(map[string]interface{})
+				theResource, ok := result[schemaID]
+				resource := theResource.(map[string]interface{})
+				Expect(ok).To(BeTrue())
+				Expect(resource).To(HaveKeyWithValue("test_integer", 1))
+			})
+		})
 	})
 
 	Describe("Updating a resource", func() {
@@ -1589,5 +1649,9 @@ var _ = Describe("Resource manager", func() {
 			Expect(number).To(Equal(uint64(0)))
 			Expect(result).To(HaveKeyWithValue("tests", BeEmpty()))
 		})
+	})
+
+	Describe("Create retry", func() {
+		schemaID = "unique_pair"
 	})
 })

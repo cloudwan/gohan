@@ -397,7 +397,7 @@ func (db *DB) genTableCols(s *schema.Schema, cascade bool, exclude []string) ([]
 
 		if property.Indexed {
 			prefix := ""
-			if sqlDataType == "text" {
+			if sqlDataType == "text" && db.sqlType != "sqlite3" {
 				prefix = "(255)"
 			}
 			indices = append(indices, fmt.Sprintf("CREATE INDEX %s_%s_idx ON `%s`(`%s`%s);", s.Plural, property.ID,
@@ -486,7 +486,7 @@ func (db *DB) RegisterTable(s *schema.Schema, cascade, migrate bool) error {
 		return nil
 	}
 	_, err = db.DB.Exec(tableDef)
-	if err != nil && indices != nil {
+	if err == nil && indices != nil {
 		for _, indexSql := range indices {
 			_, err = db.DB.Exec(indexSql)
 			if err != nil {
@@ -512,7 +512,7 @@ func escapeID(ID string) string {
 }
 
 func (tx *Transaction) logQuery(sql string, args ...interface{}) {
-	sqlFormat := strings.Replace(sql, "?", "%s", -1)
+	sqlFormat := strings.Replace(sql, "?", "%v", -1)
 	query := fmt.Sprintf(sqlFormat, args...)
 	log.Debug("[%p] Executing SQL query '%s'", tx.transaction, query)
 }

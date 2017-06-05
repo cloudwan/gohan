@@ -26,6 +26,7 @@ import (
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
 
+	"github.com/cloudwan/gohan/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -219,16 +220,16 @@ var _ = Describe("Sql", func() {
 		Context("Index on multiple columns", func() {
 			It("Should create unique index on tenant_id and id", func() {
 				_, indices := sqlConn.GenTableDef(test, false)
-				Expect(indices).To(HaveLen(2))
-				Expect(indices[1]).To(ContainSubstring("CREATE UNIQUE INDEX unique_id_and_tenant_id ON `tests`(`id`,`tenant_id`);"))
+				Expect(indices).To(HaveLen(3))
+				Expect(util.ContainsString(indices, "CREATE UNIQUE INDEX unique_id_and_tenant_id ON `tests`(`id`,`tenant_id`);")).To(BeTrue())
 			})
 		})
 
 		Context("Index in schema", func() {
 			It("Should create index, if schema property should be indexed", func() {
 				_, indices := sqlConn.GenTableDef(test, false)
-				Expect(indices).To(HaveLen(2))
-				Expect(indices[0]).To(ContainSubstring("CREATE INDEX tests_tenant_id_idx ON `tests`(`tenant_id`(255));"))
+				Expect(indices).To(HaveLen(3))
+				Expect(util.ContainsString(indices, "CREATE INDEX tests_tenant_id_idx ON `tests`(`tenant_id`);")).To(BeTrue())
 			})
 		})
 

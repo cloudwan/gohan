@@ -69,6 +69,31 @@ var _ = Describe("Util functions", func() {
 			Expect(result).To(Equal([]string{"dolor", "ipsum", "Lorem", "sit"}))
 		})
 	})
+
+	Describe("Retry", func() {
+		var alwaysRetry = func(error) bool { return true }
+		var neverRetry = func(error) bool { return false }
+
+		It("Should retry given number of times", func() {
+			attempts := 3
+			called := 0
+			Retry(func() error {
+				called++
+				return nil
+			}, alwaysRetry, attempts)
+			Expect(called).To(Equal(attempts))
+		})
+
+		It("Should only when given predicate return true", func() {
+			attempts := 3
+			called := 0
+			Retry(func() error {
+				called++
+				return nil
+			}, neverRetry, attempts)
+			Expect(called).To(Equal(1))
+		})
+	})
 })
 
 func testFileUtil(file string) {
