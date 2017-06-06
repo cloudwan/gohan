@@ -69,6 +69,12 @@ Developers can make a schema as abstract schema specifying type=abstract. The de
           title: Tenant
           type: string
           unique: false
+      indexes:
+        unique_name_per_tenant_id:
+          columns:
+          - tenant_id
+          - name
+          type: "unique"
       propertiesOrder:
       - id
       - name
@@ -174,7 +180,7 @@ Developers can make a schema as abstract schema specifying type=abstract. The de
   - `lock_related` - locks the resource and related resources
   - `skip_related` - locks the resource but leaves related resources unlocked
   - (empty): default, no locking
-    
+
 ## Properties
 
 We need to define properties of a resource using following parameters.
@@ -345,6 +351,29 @@ eg.
           title: Provider Networks
           type: object
           unique: false
+```
+
+## Indexes
+
+Developer can specify on which columns index should be added.
+
+Each index has name and following options:
+
+- columns
+    List of column names to be indexed
+- type (optional)
+    Index type, available options are:
+    - mysql - "spatial", "fulltext", "unique"
+    - sqlite - "unique"
+
+eg.
+```yaml
+      indexes:
+        index_name:
+          columns:
+          - tenant_id
+          - name
+          type: "unique"
 ```
 
 Parent - child relationship

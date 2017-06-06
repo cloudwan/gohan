@@ -22,7 +22,7 @@ import (
 func deleteGohanExtendedProperties(node map[string]interface{}) {
 	extendedProperties := [...]string{"unique", "permission", "relation",
 		"relation_property", "view", "detail_view", "propertiesOrder",
-		"on_delete_cascade", "indexed", "relationColumn", "sql"}
+		"on_delete_cascade", "indexed", "relationColumn", "sql", "indexes"}
 
 	for _, extendedProperty := range extendedProperties {
 		delete(node, extendedProperty)
