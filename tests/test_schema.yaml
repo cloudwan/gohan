@@ -277,6 +277,12 @@ schemas:
   plural: tests
   prefix: /v2.0
   schema:
+    indexes:
+      unique_id_and_tenant_id:
+        columns:
+        - id
+        - tenant_id
+        type: "unique"
     properties:
       id:
         description: ID

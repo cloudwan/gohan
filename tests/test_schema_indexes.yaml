@@ -1,0 +1,51 @@
+schemas:
+- description: Todo schema
+  id: todo
+  plural: todos
+  schema:
+    indexes:
+      unique_m1_m2:
+        columns:
+        - m1
+        - m2
+        type: "unique"
+      spatial_m2_m3:
+        columns:
+        - m2
+        - m3
+        type: "spatial"
+      fulltext_m1_m3:
+        columns:
+        - m1
+        - m3
+        type: "fulltext"
+      emptyType_m1_m2_m3:
+        columns:
+        - m1
+        - m2
+        - m3
+    properties:
+      m1:
+        description: M1
+        title: M1
+        type: string
+        unique: false
+      m2:
+        description: M2
+        title: M2
+        type: boolean
+        unique: false
+        default: false
+      m3:
+        description: M3
+        title: M3
+        type: integer
+        unique: false
+        default: false
+    propertiesOrder:
+    - m1
+    - m2
+    - m3
+    type: object
+  singular: todo
+  title: Todos
