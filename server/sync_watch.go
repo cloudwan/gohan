@@ -156,7 +156,7 @@ func StartSyncWatchProcess(server *Server) {
 								log.Error("Sync Watch on `%s` aborted, retrying...: %s", path, err)
 							}
 
-							backoff := time.NewTimer(time.Second * masterTTL)
+							backoff := time.NewTimer(time.Duration(prio*masterTTL + 1) * time.Second)
 							select {
 							case <-backoff.C:
 							case <-ctx.Done():

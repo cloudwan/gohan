@@ -404,6 +404,23 @@ func (db *DB) genTableCols(s *schema.Schema, cascade bool, exclude []string) ([]
 				s.Plural, property.ID, prefix))
 		}
 	}
+
+	for _, index := range s.Indexes {
+		quotedColumns := make([]string, len(index.Columns))
+		for i, column := range index.Columns {
+			quotedColumns[i] = quote(column)
+		}
+
+		if db.sqlType == "sqlite3" && (index.Type == schema.Spatial || index.Type == schema.FullText) {
+			log.Error("index %s won't be created since sqlite doesn't support spatial and fulltext index types", index.Name)
+			continue
+		}
+
+		createIndexQuery := fmt.Sprintf(
+			"CREATE %s INDEX %s ON %s(%s);",
+			index.Type, index.Name, quote(s.GetDbTableName()), strings.Join(quotedColumns, ","))
+		indices = append(indices, createIndexQuery)
+	}
 	return cols, relations, indices
 }
 
