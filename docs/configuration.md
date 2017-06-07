@@ -30,6 +30,10 @@ Gohan server configuration uses YAML format.
       # auto_migrate: true
       # please set no_init true in the production env, so that gohan don't initialize table
       # no_init: true
+      transaction_retries:
+          attempts: 3                        # Number of attempts in case of error recognized by strategy
+          strategy: "deadlock"               # choosen strategy, only "deadlock" is implemented
+          interval_between_attempts: "100ms" # sleep between attemps, string with parsable (time.Duration) interval
       initial_data:
           - type: "yaml"
             connection: "./etc/examples/heat_template.yaml"
