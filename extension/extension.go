@@ -20,6 +20,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cloudwan/gohan/metrics"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/singleton"
 )
@@ -35,7 +36,7 @@ type Environment interface {
 //This is a singleton class.
 type Manager struct {
 	environments map[string]Environment
-	mu sync.RWMutex
+	mu           sync.RWMutex
 }
 
 //RegisterEnvironment registers a new environment for the given schema ID
@@ -95,8 +96,13 @@ type Error struct {
 	ExceptionInfo map[string]interface{}
 }
 
+func measureExtensionTime(timeStarted time.Time, event string, schemaId string) {
+	metrics.UpdateTimer(timeStarted, "ext.%s.%s", schemaId, event)
+}
+
 //HandleEvent handles the event in the given environment
-func HandleEvent(context map[string]interface{}, environment Environment, event string) error {
+func HandleEvent(context map[string]interface{}, environment Environment, event string, schemaId string) error {
+	defer measureExtensionTime(time.Now(), event, schemaId)
 	if err := environment.HandleEvent(event, context); err != nil {
 		return err
 	}

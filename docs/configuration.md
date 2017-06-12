@@ -343,6 +343,70 @@ You can select extension types you use.
     npm_path: .
 ```
 
+## Runtime metrics
+
+You can configure reporting various runtime metrics (event handling time, extension execution time, sync/state watch processing time).
+Currently only Graphite backend is supported.
+
+- enable collecting and reporting runtime metrics
+ 
+ Minimal configuration requires Graphite endpoints and enable flag, example:
+```yaml
+metrics:
+  enabled: true
+  graphite:
+    endpoints:
+      - "192.168.0.2:2003"  
+      - "192.168.0.3:2003"  
+```
+
+- flush interval
+ 
+ Interval of reports (in seconds), default: 60
+```yaml
+metrics:
+  graphite:
+    endpoints:
+      - "192.168.0.2:2003"
+    flush_interval_sec: 30  
+```
+ 
+- prefix
+ 
+ Prepended to all metrics names, default: gohan
+```yaml
+metrics:
+  graphite:
+    endpoints:
+      - "192.168.0.2:2003"
+    prefix: "region.hostname.gohan" 
+```   
+    
+- percentiles
+
+ Percentiles reported in histograms, default: 0.5, 0.75, 0.95, 0.99, 0.999
+
+```yaml
+metrics:
+  graphite:
+    endpoints:
+      - "192.168.0.2:2003"
+    percentiles: 
+      - "0.5"
+      - "0.9"
+```   
+
+- temporarily disable
+ 
+ If you want to disable collecting and reporting metrics, set enabled to false.
+```yaml
+metrics:
+  enabled: false
+  graphite:
+    endpoints:
+      - "192.168.0.2:2003"
+```
+
 ## Miscellaneous
 
 - address

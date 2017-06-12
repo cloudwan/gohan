@@ -270,7 +270,7 @@ var _ = Describe("Database operation test", func() {
 				It("Doesn't show related resources when fields is set and nothing is selected", func() {
 					list, num, err := tx.List(serverSchema, nil, &transaction.ListOptions{
 						Details: true,
-						Fields: []string{"id"},
+						Fields:  []string{"id"},
 					}, nil)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(num).To(Equal(uint64(1)))
@@ -283,7 +283,7 @@ var _ = Describe("Database operation test", func() {
 				It("Show related resources when fields is set and something is selected", func() {
 					list, num, err := tx.List(serverSchema, nil, &transaction.ListOptions{
 						Details: true,
-						Fields: []string{"id", "network.name"},
+						Fields:  []string{"id", "network.name"},
 					}, nil)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(num).To(Equal(uint64(1)))

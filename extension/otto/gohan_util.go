@@ -28,8 +28,8 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/xyproto/otto"
 	"github.com/twinj/uuid"
+	"github.com/xyproto/otto"
 
 	"os"
 	"strings"
