@@ -1,21 +1,21 @@
 package metrics
 
 import (
-	"github.com/cyberdelia/go-metrics-graphite"
-	"github.com/rcrowley/go-metrics"
 	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/util"
+	"github.com/cyberdelia/go-metrics-graphite"
+	"github.com/rcrowley/go-metrics"
 
-	"time"
 	"fmt"
 	"net"
 	"strconv"
+	"time"
 )
 
 var (
-	graphiteConfigs      []graphite.Config
-	monitoringEnabled    bool
-	log = l.NewLogger()
+	graphiteConfigs   []graphite.Config
+	monitoringEnabled bool
+	log               = l.NewLogger()
 )
 
 func getGraphitePercentiles(config *util.Config) (percentiles []float64, err error) {

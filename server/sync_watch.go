@@ -29,9 +29,9 @@ import (
 	"github.com/cloudwan/gohan/job"
 
 	l "github.com/cloudwan/gohan/log"
+	"github.com/cloudwan/gohan/metrics"
 	gohan_sync "github.com/cloudwan/gohan/sync"
 	"github.com/cloudwan/gohan/util"
-	"github.com/cloudwan/gohan/metrics"
 )
 
 const (
@@ -135,7 +135,7 @@ func StartSyncWatchProcess(server *Server) {
 				for idx, path := range watch {
 					prevWG.Add(1)
 					size := len(processList)
-					prio := size  // least priority
+					prio := size // least priority
 					if myPosition > -1 {
 						prio = (myPosition - (idx % size) + size) % size
 					}
@@ -157,7 +157,7 @@ func StartSyncWatchProcess(server *Server) {
 								log.Error("Sync Watch on `%s` aborted, retrying...: %s", path, err)
 							}
 
-							backoff := time.NewTimer(time.Duration(prio*masterTTL + 1) * time.Second)
+							backoff := time.NewTimer(time.Duration(prio*masterTTL+1) * time.Second)
 							select {
 							case <-backoff.C:
 							case <-ctx.Done():

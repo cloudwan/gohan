@@ -91,7 +91,7 @@ func Init() error {
 			if err != goose.ErrNoNextVersion {
 				return err
 			}
-			last = 0;
+			last = 0
 		} else {
 			last = m.Version
 		}

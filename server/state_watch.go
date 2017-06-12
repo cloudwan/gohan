@@ -28,8 +28,8 @@ import (
 	"context"
 
 	l "github.com/cloudwan/gohan/log"
-	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/metrics"
+	"github.com/cloudwan/gohan/schema"
 	gohan_sync "github.com/cloudwan/gohan/sync"
 )
 
@@ -136,7 +136,7 @@ func stopStateWatchProcess(server *Server) {
 }
 
 func measureStateUpdateTime(timeStarted time.Time, event string, schemaId string) {
-	metrics.UpdateTimer(timeStarted,"state.%s.%s", schemaId, event)
+	metrics.UpdateTimer(timeStarted, "state.%s.%s", schemaId, event)
 }
 
 //StateUpdate updates the state in the db based on the sync event

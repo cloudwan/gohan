@@ -31,8 +31,8 @@ import (
 
 	"time"
 
-	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/metrics"
+	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/server/middleware"
 	"github.com/twinj/uuid"
 )
@@ -75,7 +75,7 @@ type ExtensionError struct {
 }
 
 func measureRequestTime(timeStarted time.Time, requestType string, schemaId string) {
-	metrics.UpdateTimer(timeStarted,"req.%s.%s", schemaId, requestType)
+	metrics.UpdateTimer(timeStarted, "req.%s.%s", schemaId, requestType)
 }
 
 //InTransaction executes function in the db transaction and set it to the context

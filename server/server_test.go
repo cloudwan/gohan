@@ -54,7 +54,7 @@ var (
 	childrenPluralURL = baseURL + "/v1.0/children"
 	schoolsPluralURL  = baseURL + "/v1.0/schools"
 	citiesPluralURL   = baseURL + "/v1.0/cities"
-	profilingURL	  = baseURL + "/debug/pprof/"
+	profilingURL      = baseURL + "/debug/pprof/"
 )
 
 var _ = Describe("Server package test", func() {

@@ -361,7 +361,7 @@ func (gohanClientCLI *GohanClientCLI) getFieldsParam(prependQuestionMark bool) s
 			param = param + "&"
 		}
 
-		param  = param + "_fields=" + field
+		param = param + "_fields=" + field
 	}
 
 	return param

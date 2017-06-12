@@ -302,7 +302,7 @@ func getClosers(vm *otto.Otto) (closers []io.Closer, err error) {
 }
 
 func addCloser(vm *otto.Otto, closer io.Closer) error {
-	log.Debug("Registering closer %p in VM %p", closer, vm);
+	log.Debug("Registering closer %p in VM %p", closer, vm)
 	closers, err := getClosers(vm)
 	if err != nil {
 		return err
