@@ -34,8 +34,12 @@ import (
 	"github.com/cloudwan/gohan/metrics"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/server/middleware"
+	"github.com/cloudwan/gohan/util"
+	"github.com/mohae/deepcopy"
 	"github.com/twinj/uuid"
 )
+
+const DUPLICATE_ENTRY_RETRIES = 3
 
 //ResourceProblem describes the kind of problem that occurred during resource manipulation.
 type ResourceProblem int
@@ -486,57 +490,90 @@ func CreateResource(
 	if err != nil {
 		return ResourceError{err, err.Error(), Unauthorized}
 	}
+
+	retryOnDuplicateEntry, ok := resourceSchema.Metadata["retry_create_on_duplicate_entry"]
+	if !ok {
+		retryOnDuplicateEntry = false
+	}
+
 	context["resource"] = dataMap
-	if id, ok := dataMap["id"]; !ok || id == "" {
-		dataMap["id"] = uuid.NewV4().String()
-	}
-	context["id"] = dataMap["id"]
 
-	if err := extension.HandleEvent(context, environment, "pre_create", resourceSchema.ID); err != nil {
-		return err
+	handleCreate := func(context middleware.Context, dataMap map[string]interface{}) error {
+		if id, ok := dataMap["id"]; !ok || id == "" {
+			dataMap["id"] = uuid.NewV4().String()
+		}
+		context["id"] = dataMap["id"]
+
+		if err := extension.HandleEvent(context, environment, "pre_create", resourceSchema.ID); err != nil {
+			return err
+		}
+
+		if resourceData, ok := context["resource"].(map[string]interface{}); ok {
+			dataMap = resourceData
+		}
+		//Validation
+		err = resourceSchema.ValidateOnCreate(dataMap)
+		if err != nil {
+			return ResourceError{err, fmt.Sprintf("Validation error: %s", err), WrongData}
+		}
+
+		resource, err := manager.LoadResource(resourceSchema.ID, dataMap)
+		if err != nil {
+			return err
+		}
+
+		//Fillup default
+		err = resource.PopulateDefaults()
+		if err != nil {
+			return err
+		}
+
+		context["resource"] = resource.Data()
+
+		if err := InTransaction(
+			context, dataStore,
+			transaction.GetIsolationLevel(resourceSchema, schema.ActionCreate),
+			func() error {
+				return CreateResourceInTransaction(context, resource)
+			},
+		); err != nil {
+			return err
+		}
+
+		if err := extension.HandleEvent(context, environment, "post_create", resourceSchema.ID); err != nil {
+			return err
+		}
+
+		if err := ApplyPolicyForResource(context, resourceSchema); err != nil {
+			return ResourceError{err, "", Unauthorized}
+		}
+		return nil
 	}
 
-	if resourceData, ok := context["resource"].(map[string]interface{}); ok {
-		dataMap = resourceData
+	if retryOnDuplicateEntry.(bool) {
+		var dataMapCopy map[string]interface{}
+		var contextCopy middleware.Context
+		err = util.Retry(func() error {
+			contextCopy = deepcopy.Copy(context).(middleware.Context)
+			dataMapCopy = deepcopy.Copy(dataMap).(map[string]interface{})
+
+			return handleCreate(contextCopy, dataMapCopy)
+		}, func(err error) bool {
+			resourceErr, ok := err.(ResourceError)
+			if !ok {
+				return false
+			}
+
+			return db.IsDuplicateEntryError(resourceErr.error)
+		}, DUPLICATE_ENTRY_RETRIES)
+
+		context = contextCopy
+		dataMap = dataMapCopy
+	} else {
+		err = handleCreate(context, dataMap)
 	}
 
-	//Validation
-	err = resourceSchema.ValidateOnCreate(dataMap)
-	if err != nil {
-		return ResourceError{err, fmt.Sprintf("Validation error: %s", err), WrongData}
-	}
-
-	resource, err := manager.LoadResource(resourceSchema.ID, dataMap)
-	if err != nil {
-		return err
-	}
-
-	//Fillup default
-	err = resource.PopulateDefaults()
-	if err != nil {
-		return err
-	}
-
-	context["resource"] = resource.Data()
-
-	if err := InTransaction(
-		context, dataStore,
-		transaction.GetIsolationLevel(resourceSchema, schema.ActionCreate),
-		func() error {
-			return CreateResourceInTransaction(context, resource)
-		},
-	); err != nil {
-		return err
-	}
-
-	if err := extension.HandleEvent(context, environment, "post_create", resourceSchema.ID); err != nil {
-		return err
-	}
-
-	if err := ApplyPolicyForResource(context, resourceSchema); err != nil {
-		return ResourceError{err, "", Unauthorized}
-	}
-	return nil
+	return err
 }
 
 //CreateResourceInTransaction craete db resource model in transaction

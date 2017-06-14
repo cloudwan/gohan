@@ -274,6 +274,7 @@ schemas:
   id: test
   metadata:
     state_versioning: true
+    retry_create_on_duplicate_entry: true
   plural: tests
   prefix: /v2.0
   schema:
@@ -281,6 +282,11 @@ schemas:
       unique_id_and_tenant_id:
         columns:
         - id
+        - tenant_id
+        type: "unique"
+      unique_and_test_integer:
+        columns:
+        - test_integer
         - tenant_id
         type: "unique"
     properties:
