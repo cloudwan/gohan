@@ -16,20 +16,18 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 
+	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/extension"
-
-	"context"
-
-	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/metrics"
 	"github.com/cloudwan/gohan/schema"
+	"github.com/cloudwan/gohan/server/middleware"
 	gohan_sync "github.com/cloudwan/gohan/sync"
 )
 
@@ -38,124 +36,130 @@ const (
 	statePrefix      = stateWatchPrefix + "/state"
 	monitoringPrefix = stateWatchPrefix + "/monitoring"
 
-	bufferSize = 256
+	//StateUpdateEventName used in etcd path
+	StateUpdateEventName = "state_update"
+	//MonitoringUpdateEventName used in etcd path
+	MonitoringUpdateEventName = "monitoring_update"
 )
 
 var stateWatchTrimmer = regexp.MustCompile("^(" + statePrefix + "|" + monitoringPrefix + ")")
 
-//TODO(nati) integrate with watch process
-func startStateWatchProcess(server *Server) {
-	stateResponseChan := make(chan *gohan_sync.Event)
-	stateStopChan := make(chan bool)
+// StateWatcher handles Gohan's state update events from the sync layer.
+// Resources configured with `state_versioning: true` receives
+// monitoring_update and state_update events from StateWatcher when it
+// detects updates in the sync layer.
+type StateWatcher struct {
+	sync     gohan_sync.Sync
+	db       db.DB
+	identity middleware.IdentityService
+	backoff  time.Duration
+}
 
-	for _, toCreate := range []string{stateWatchPrefix, statePrefix, monitoringPrefix} {
-		if _, err := server.sync.Fetch(toCreate); err != nil {
-			server.sync.Update(toCreate, "")
+// NewStateWatcher creates a new instance of StateWatcher.
+func NewStateWatcher(sync gohan_sync.Sync, db db.DB, identity middleware.IdentityService) *StateWatcher {
+	return &StateWatcher{
+		sync:     sync,
+		db:       db,
+		identity: identity,
+		backoff:  time.Second * 5,
+	}
+}
+
+func NewStateWatcherFromServer(server *Server) *StateWatcher {
+	return NewStateWatcher(server.sync, server.db, server.keystoneIdentity)
+}
+
+// Run starts the main loop of the watcher.
+// This method blocks until canceled by the ctx.
+// Errors are logged, but do not interupt the loop.
+func (watcher *StateWatcher) Run(ctx context.Context) error {
+	for {
+		err := watcher.iterate(ctx)
+		if err != nil {
+			log.Error("state watch error: %s", err)
+		}
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(watcher.backoff):
 		}
 	}
+}
 
+func (watcher *StateWatcher) iterate(ctx context.Context) error {
+	lockKey := lockPath + "/state_watch"
+	lost, err := watcher.sync.Lock(lockKey, true)
+	if err != nil {
+		// lock failed, another process is running
+		return nil
+	}
+	defer watcher.sync.Unlock(lockKey)
+
+	watchCtx, watchCancel := context.WithCancel(ctx)
+	respCh, err := watcher.sync.WatchContext(watchCtx, lockKey, gohan_sync.RevisionCurrent)
+	if err != nil {
+		return fmt.Errorf("sync state watch error: %s", err)
+	}
+
+	watchErr := make(chan error, 1)
 	go func() {
-		defer l.LogFatalPanic(log)
-
-		for server.running {
-			func() {
-				lockKey := lockPath + "/state_watch"
-				err := server.sync.Lock(lockKey, true)
-				if err != nil {
-					log.Warning("Can't start state watch process due to lock", err)
-					time.Sleep(5 * time.Second)
-					return
+		watchErr <- func() error {
+			for response := range respCh {
+				if response.Err != nil {
+					return err
 				}
-				defer server.sync.Unlock(lockKey)
-
-				err = server.sync.Watch(stateWatchPrefix, stateResponseChan, stateStopChan,
-					gohan_sync.RevisionCurrent)
-				if err != nil {
-					log.Error(fmt.Sprintf("sync state watch error: %s", err))
-				}
-			}()
-		}
-	}()
-
-	go func() {
-		defer l.LogFatalPanic(log)
-
-		var bufferMutex sync.Mutex
-		buffers := make(map[string]chan *gohan_sync.Event)
-
-		for server.running {
-			response := <-stateResponseChan
-
-			key := stateWatchTrimmer.ReplaceAllLiteralString(response.Key, "")
-			bufferMutex.Lock()
-			buffer, ok := buffers[key]
-			if !ok {
-				buffer = make(chan *gohan_sync.Event, bufferSize)
-				buffers[key] = buffer
-
-				go func(buf chan *gohan_sync.Event, key string) {
-					for {
-						var resp *gohan_sync.Event
-
-						bufferMutex.Lock()
-						select {
-						case resp = <-buf:
-							bufferMutex.Unlock()
-						default:
-							close(buf)
-							delete(buffers, key)
-							bufferMutex.Unlock()
-							return
-						}
-
-						var err error
-						if strings.HasPrefix(resp.Key, statePrefix) {
-							err = StateUpdate(resp, server)
-							log.Info("Completed StateUpdate")
-						} else if strings.HasPrefix(resp.Key, monitoringPrefix) {
-							err = MonitoringUpdate(resp, server)
-							log.Info("Completed MonitoringUpdate")
-						}
-						if err != nil {
-							log.Warning(fmt.Sprintf("error during state update: %s", err))
-						}
-					}
-				}(buffer, key)
+				watcher.processEvent(response)
 			}
 
-			buffer <- response
-			bufferMutex.Unlock()
-		}
-
-		close(stateStopChan)
+			return nil
+		}()
 	}()
 
+	select {
+	case <-ctx.Done():
+		<-watchErr
+		return ctx.Err()
+	case <-lost:
+		watchCancel()
+		<-watchErr
+		return fmt.Errorf("state watch canceled as lock is lost")
+	case err := <-watchErr:
+		return err
+	}
 }
 
-func stopStateWatchProcess(server *Server) {
-}
-
-func measureStateUpdateTime(timeStarted time.Time, event string, schemaId string) {
-	metrics.UpdateTimer(timeStarted, "state.%s.%s", schemaId, event)
+func (watcher *StateWatcher) processEvent(event *gohan_sync.Event) {
+	var err error
+	if strings.HasPrefix(event.Key, statePrefix) {
+		err = watcher.StateUpdate(event)
+		log.Info("Completed StateUpdate")
+	} else if strings.HasPrefix(event.Key, monitoringPrefix) {
+		err = watcher.MonitoringUpdate(event)
+		log.Info("Completed MonitoringUpdate")
+	}
+	if err != nil {
+		log.Warning(fmt.Sprintf("error during state update: %s", err))
+	}
 }
 
 //StateUpdate updates the state in the db based on the sync event
-func StateUpdate(response *gohan_sync.Event, server *Server) error {
-	dataStore := server.db
-	schemaPath := strings.TrimPrefix(response.Key, statePrefix)
+// todo: make private once tests are fixed
+func (watcher *StateWatcher) StateUpdate(event *gohan_sync.Event) error {
+	schemaPath := strings.TrimPrefix(event.Key, statePrefix)
 	var curSchema = schema.GetSchemaByPath(schemaPath)
 	if curSchema == nil || !curSchema.StateVersioning() {
 		log.Debug("State update on unexpected path '%s'", schemaPath)
 		return nil
 	}
 
-	defer measureStateUpdateTime(time.Now(), "state_update", curSchema.ID)
+	defer watcher.measureStateUpdateTime(time.Now(), "state_update", curSchema.ID)
 
 	resourceID := curSchema.GetResourceIDFromPath(schemaPath)
-	log.Info("Started StateUpdate for %s %s %v", response.Action, response.Key, response.Data)
+	log.Info("Started StateUpdate for %s %s %v", event.Action, event.Key, event.Data)
 
 	isolationLevel := transaction.GetIsolationLevel(curSchema, StateUpdateEventName)
-	tx, err := dataStore.BeginTx(context.Background(), &transaction.TxOptions{IsolationLevel: isolationLevel})
+	tx, err := watcher.db.BeginTx(context.Background(), &transaction.TxOptions{IsolationLevel: isolationLevel})
 	if err != nil {
 		return err
 	}
@@ -172,7 +176,7 @@ func StateUpdate(response *gohan_sync.Event, server *Server) error {
 	if resourceState.StateVersion == resourceState.ConfigVersion {
 		return nil
 	}
-	stateVersion, ok := response.Data["version"].(float64)
+	stateVersion, ok := event.Data["version"].(float64)
 	if !ok {
 		return fmt.Errorf("No version in state information")
 	}
@@ -181,10 +185,10 @@ func StateUpdate(response *gohan_sync.Event, server *Server) error {
 	if resourceState.StateVersion < oldStateVersion {
 		return nil
 	}
-	if newError, ok := response.Data["error"].(string); ok {
+	if newError, ok := event.Data["error"].(string); ok {
 		resourceState.Error = newError
 	}
-	if newState, ok := response.Data["state"].(string); ok {
+	if newState, ok := event.Data["state"].(string); ok {
 		resourceState.State = newState
 	}
 
@@ -193,7 +197,7 @@ func StateUpdate(response *gohan_sync.Event, server *Server) error {
 	context := map[string]interface{}{}
 
 	if haveEnvironment {
-		serviceAuthorization, err := server.keystoneIdentity.GetServiceAuthorization()
+		serviceAuthorization, err := watcher.identity.GetServiceAuthorization()
 		if err != nil {
 			return err
 		}
@@ -202,7 +206,7 @@ func StateUpdate(response *gohan_sync.Event, server *Server) error {
 		context["auth_token"] = serviceAuthorization.AuthToken()
 		context["resource"] = curResource.Data()
 		context["schema"] = curSchema
-		context["state"] = response.Data
+		context["state"] = event.Data
 		context["config_version"] = resourceState.ConfigVersion
 		context["transaction"] = tx
 
@@ -226,22 +230,22 @@ func StateUpdate(response *gohan_sync.Event, server *Server) error {
 }
 
 //MonitoringUpdate updates the state in the db based on the sync event
-func MonitoringUpdate(response *gohan_sync.Event, server *Server) error {
-	dataStore := server.db
-	schemaPath := strings.TrimPrefix(response.Key, monitoringPrefix)
+// todo: make private once tests are fixed
+func (watcher *StateWatcher) MonitoringUpdate(event *gohan_sync.Event) error {
+	schemaPath := strings.TrimPrefix(event.Key, monitoringPrefix)
 	var curSchema = schema.GetSchemaByPath(schemaPath)
 	if curSchema == nil || !curSchema.StateVersioning() {
 		log.Debug("Monitoring update on unexpected path '%s'", schemaPath)
 		return nil
 	}
-	defer measureStateUpdateTime(time.Now(), "monitoring_update", curSchema.ID)
+	defer watcher.measureStateUpdateTime(time.Now(), "monitoring_update", curSchema.ID)
 
 	resourceID := curSchema.GetResourceIDFromPath(schemaPath)
-	log.Info("Started MonitoringUpdate for %s %s %v", response.Action, response.Key, response.Data)
+	log.Info("Started MonitoringUpdate for %s %s %v", event.Action, event.Key, event.Data)
 
 	isolationLevel := transaction.GetIsolationLevel(curSchema, MonitoringUpdateEventName)
 
-	tx, err := dataStore.BeginTx(context.Background(), &transaction.TxOptions{IsolationLevel: isolationLevel})
+	tx, err := watcher.db.BeginTx(context.Background(), &transaction.TxOptions{IsolationLevel: isolationLevel})
 	if err != nil {
 		return err
 	}
@@ -262,7 +266,7 @@ func MonitoringUpdate(response *gohan_sync.Event, server *Server) error {
 		return nil
 	}
 	var ok bool
-	monitoringVersion, ok := response.Data["version"].(float64)
+	monitoringVersion, ok := event.Data["version"].(float64)
 	if !ok {
 		return fmt.Errorf("No version in monitoring information")
 	}
@@ -271,7 +275,7 @@ func MonitoringUpdate(response *gohan_sync.Event, server *Server) error {
 			resourceState.ConfigVersion, monitoringVersion)
 		return nil
 	}
-	resourceState.Monitoring, ok = response.Data["monitoring"].(string)
+	resourceState.Monitoring, ok = event.Data["monitoring"].(string)
 	if !ok {
 		return fmt.Errorf("No monitoring in monitoring information")
 	}
@@ -302,4 +306,8 @@ func MonitoringUpdate(response *gohan_sync.Event, server *Server) error {
 	}
 
 	return tx.Commit()
+}
+
+func (watcher *StateWatcher) measureStateUpdateTime(timeStarted time.Time, event string, schemaId string) {
+	metrics.UpdateTimer(timeStarted, "state.%s.%s", schemaId, event)
 }

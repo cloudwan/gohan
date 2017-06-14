@@ -28,7 +28,7 @@ var log = l.NewLogger()
 //Sync is a interface for sync servers
 type Sync interface {
 	HasLock(path string) bool
-	Lock(path string, block bool) error
+	Lock(path string, block bool) (notifyLost chan struct{}, err error)
 	Unlock(path string) error
 	Fetch(path string) (*Node, error)
 	Update(path, json string) error

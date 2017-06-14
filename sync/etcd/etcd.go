@@ -115,31 +115,36 @@ func (s *Sync) recursiveFetch(node *etcd.Node) (*sync.Node, error) {
 //HasLock checks current process owns lock or not
 func (s *Sync) HasLock(path string) bool {
 	value, ok := s.locks.Get(path)
+	if !ok {
+		return false
+	}
 	isLocked, _ := value.(bool)
-	return isLocked && ok
+	return isLocked
 }
 
 // Lock locks resources on sync
 // This call blocks until you can get lock
-func (s *Sync) Lock(path string, block bool) error {
+func (s *Sync) Lock(path string, block bool) (chan struct{}, error) {
 	for {
-		if s.HasLock(path) {
-			return nil
-		}
 		_, err := s.etcdClient.Create(path, s.processID, masterTTL)
 		if err != nil {
 			log.Notice("failed to lock path %s: %s", path, err)
 			s.locks.Set(path, false)
 			if !block {
-				return err
+				return nil, err
 			}
 			time.Sleep(masterTTL * time.Second)
 			continue
 		}
-		log.Info("Locked %s", path)
 		s.locks.Set(path, true)
+		log.Info("Locked %s", path)
+
 		//Refresh master token
+		lost := make(chan struct{})
 		go func() {
+			defer s.abortLock(path)
+			defer close(lost)
+
 			for s.HasLock(path) {
 				_, err := s.etcdClient.CompareAndSwap(
 					path, s.processID, masterTTL, s.processID, 0)
@@ -151,13 +156,17 @@ func (s *Sync) Lock(path string, block bool) error {
 				time.Sleep(masterTTL / 2 * time.Second)
 			}
 		}()
-		return nil
+		return lost, nil
 	}
+}
+
+func (s *Sync) abortLock(path string) {
+	s.locks.Set(path, false)
 }
 
 //Unlock path
 func (s *Sync) Unlock(path string) error {
-	s.locks.Set(path, false)
+	s.abortLock(path)
 	s.etcdClient.CompareAndDelete(path, s.processID, 0)
 	log.Info("Unlocked path %s", path)
 	return nil
