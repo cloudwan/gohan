@@ -16,9 +16,8 @@
 package migration
 
 import (
-	"fmt"
-
 	"database/sql"
+	"fmt"
 	"os"
 	"path"
 
@@ -29,23 +28,18 @@ import (
 
 var logger = log.NewLogger()
 
-func LoadConfig(configFile string) (err error) {
+func LoadConfig(configFile string) error {
 	config := util.GetConfig()
 
-	err = config.ReadConfig(configFile)
-
-	if err != nil {
-		fmt.Printf("error: failed to load config: %s\n", err)
-		return
+	if err := config.ReadConfig(configFile); err != nil {
+		return fmt.Errorf("failed to load config: %s", err)
 	}
 
-	err = os.Chdir(path.Dir(configFile))
-	if err != nil {
-		fmt.Printf("error: chdir() failed: %s\n", err)
-		return
+	if err := os.Chdir(path.Dir(configFile)); err != nil {
+		return fmt.Errorf("chdir() failed: %s", err)
 	}
 
-	return
+	return nil
 }
 
 func readGooseConfig() (dbType, dbConnection, migrationsPath string, noInit bool) {
@@ -58,29 +52,29 @@ func readGooseConfig() (dbType, dbConnection, migrationsPath string, noInit bool
 }
 
 func Init() error {
-	logger.Info("migration: init")
+	logger.Info("init")
 
 	dbType, dbConnection, migrationsPath, noInit := readGooseConfig()
 
 	if err := goose.SetDialect(dbType); err != nil {
-		return fmt.Errorf("migration: failed to set goose dialect: %s", err)
+		return fmt.Errorf("failed to set goose dialect: %s", err)
 	}
 
 	db, err := sql.Open(dbType, dbConnection)
 
 	if err != nil {
-		return fmt.Errorf("migration: failed to open db: %s", err)
+		return fmt.Errorf("failed to open db: %s", err)
 	}
 
 	v, err := goose.EnsureDBVersion(db)
 	if err != nil {
-		return fmt.Errorf("migration: failed to ensure db version: %s", err)
+		return fmt.Errorf("failed to ensure db version: %s", err)
 	}
 
 	logger.Info("migration path: %q, version: %d", migrationsPath, v)
 
 	if err = goose.LoadMigrationPlugins(migrationsPath); err != nil {
-		return fmt.Errorf("migration: failed to load migration plugins: %s", err)
+		return fmt.Errorf("failed to load migration plugins: %s", err)
 	}
 
 	if noInit {
@@ -126,25 +120,51 @@ func Run(subCmd string, args []string) error {
 	dbType, dbConnection, migrationsPath, _ := readGooseConfig()
 
 	if err := goose.SetDialect(dbType); err != nil {
-		fmt.Printf("error: failed to set goose dialect: %s\n", err)
-		return err
+		return fmt.Errorf("failed to set goose dialect: %s", err)
 	}
 
 	db, err := sql.Open(dbType, dbConnection)
 
 	if err != nil {
-		fmt.Printf("error: failed to open db: %s\n", err)
-		return err
+		return fmt.Errorf("failed to open db: %s", err)
 	}
 
 	if err = goose.LoadMigrationPlugins(migrationsPath); err != nil {
-		logger.Error("migration: failed to load migration plugins: %s", err)
-		return err
+		return fmt.Errorf("failed to load migration plugins: %s", err)
 	}
 
-	if err = goose.Run(subCmd, db, migrationsPath, args...); err != nil {
-		fmt.Printf("migration: failed to run: %s\n", err)
-		return err
+	if err := lock(dbType, db); err != nil {
+		return fmt.Errorf("failed to acquire migration lock: %s", err)
+	}
+	defer unlock(dbType, db)
+
+	if err := goose.Run(subCmd, db, migrationsPath, args...); err != nil {
+		return fmt.Errorf("migration failed to run: %s", err)
+	}
+
+	return nil
+}
+
+// lock issues a lock on a shared mutex to avoid running migrations on the same
+// database in parallel, currently only supported on mysql.
+func lock(dbType string, db *sql.DB) error {
+	switch dbType {
+	case "mysql":
+		if _, err := db.Exec("LOCK TABLES `goose_db_version` WRITE"); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// unlock releases lock acquired by calling lock function.
+func unlock(dbType string, db *sql.DB) error {
+	switch dbType {
+	case "mysql":
+		if _, err := db.Exec("UNLOCK TABLES"); err != nil {
+			return err
+		}
 	}
 
 	return nil
