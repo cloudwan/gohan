@@ -543,11 +543,11 @@
 			"revisionTime": "2016-04-04T08:20:44Z"
 		},
 		{
-			"checksumSHA1": "BIY45G2IVrTttD4Rlk9tHwiIOCM=",
+			"checksumSHA1": "Gxf7/PBCJ8ZFfSfO2eslW8jPZT0=",
 			"comment": "v1.2-26-g9543750",
 			"path": "github.com/go-sql-driver/mysql",
-			"revision": "7ebe0a500653eeb1859664bed5e48dec1e164e73",
-			"revisionTime": "2016-04-11T07:50:31Z"
+			"revision": "d2a817549028fb5dc309dac04f2e695f56fb4ccf",
+			"revisionTime": "2017-06-16T01:19:47Z"
 		},
 		{
 			"checksumSHA1": "JSHl8b3nI8EWvzm+uyrIqj2Hiu4=",
