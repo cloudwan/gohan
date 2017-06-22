@@ -29,12 +29,12 @@ func TestNewPaginator(t *testing.T) {
 	Expect(err).ToNot(HaveOccurred())
 }
 
-func TestNewPaginatorDefaults(t *testing.T) {
+func TestNewPaginatorNoDefaults(t *testing.T) {
 	RegisterTestingT(t)
 	pg, err := NewPaginator(nil, "", "", 0, 0)
 	Expect(err).ToNot(HaveOccurred())
-	Expect(pg.Key).To(Equal(defaultSortKey))
-	Expect(pg.Order).To(Equal(ASC))
+	Expect(pg.Key).To(Equal(""))
+	Expect(pg.Order).To(Equal(""))
 }
 
 func TestUnknownSortOrder(t *testing.T) {
@@ -57,6 +57,23 @@ func TestFromURLQuery(t *testing.T) {
 	expected := &Paginator{
 		Key:    "asd",
 		Order:  "asc",
+		Limit:  123,
+		Offset: 456,
+	}
+	Expect(pg).To(Equal(expected))
+}
+
+func TestDefaultFromURLQuery(t *testing.T) {
+	RegisterTestingT(t)
+	values := url.Values{
+		"limit":  []string{"123"},
+		"offset": []string{"456"},
+	}
+	pg, err := FromURLQuery(nil, values)
+	Expect(err).ToNot(HaveOccurred())
+	expected := &Paginator{
+		Key:    defaultSortKey,
+		Order:  defaultSortOrder,
 		Limit:  123,
 		Offset: 456,
 	}
