@@ -323,7 +323,11 @@ func (schema *Schema) GetPluralURLWithParents() string {
 
 // GetDbTableName returns a name of DB table used for storing schema instances
 func (schema *Schema) GetDbTableName() string {
-	return schema.ID + "s"
+	config := util.GetConfig()
+	if config.GetBool("database/legacy", true) {
+		return schema.ID + "s"
+	}
+	return schema.Plural
 }
 
 // GetParentURL returns Parent URL
