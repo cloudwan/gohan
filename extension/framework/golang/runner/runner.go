@@ -18,6 +18,8 @@ package runner
 import (
 	"github.com/cloudwan/gohan/extension/goext"
 	"github.com/cloudwan/gohan/extension/golang"
+	"github.com/cloudwan/gohan/server/middleware"
+	"github.com/cloudwan/gohan/sync/noop"
 	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/schema"
 	. "github.com/onsi/ginkgo"
@@ -25,6 +27,8 @@ import (
 	"path/filepath"
 	"plugin"
 	"testing"
+	"github.com/cloudwan/gohan/db"
+	"fmt"
 )
 
 var log = l.NewLogger()
@@ -53,7 +57,12 @@ func (self *GoTestRunner) Run() (err error) {
 			return err
 		}
 
-		environment := golang.NewEnvironment("test", nil, nil, nil).ExtEnvironment()
+		dataStore, err := newDBConnection(memoryDbConn("test.db"))
+		if err != nil {
+			return err
+		}
+		env := golang.NewEnvironment("test"+testPath, dataStore, &middleware.FakeIdentity{}, noop.NewSync())
+		environment := env.ExtEnvironment()
 		directory := filepath.Dir(testPath)
 
 		//Load required schemas
@@ -94,6 +103,12 @@ func (self *GoTestRunner) Run() (err error) {
 			return err
 		}
 
+		err = db.InitDBWithSchemas("sqlite3", memoryDbConn("test.db"), true, false, false)
+		if err != nil {
+			schema.ClearManager()
+			return fmt.Errorf("Failed to init DB: %s", err)
+		}
+
 		//Setup test suite
 		Test, err := test.Lookup("Test")
 		if err != nil {
@@ -108,4 +123,16 @@ func (self *GoTestRunner) Run() (err error) {
 	RunSpecs(t, "Go Extensions Test Suite")
 
 	return nil
+}
+
+func memoryDbConn(name string) string {
+	return fmt.Sprintf("file:%s?mode=memory&cache=shared", name)
+}
+
+func newDBConnection(dbfilename string) (db.DB, error) {
+	connection, err := db.ConnectDB("sqlite3", dbfilename, db.DefaultMaxOpenConn)
+	if err != nil {
+		return nil, err
+	}
+	return connection, nil
 }

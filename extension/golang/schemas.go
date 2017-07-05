@@ -23,6 +23,8 @@ import (
 	"github.com/cloudwan/gohan/extension/goext"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/jmoiron/sqlx/reflectx"
+	"github.com/twinj/uuid"
+	"encoding/json"
 )
 
 type schemasBinder struct {
@@ -81,8 +83,15 @@ func (self *schemaBinder) structToResource(resource interface{}) (*schema.Resour
 
 	for _, property := range self.rawSchema.Properties {
 		field := property.ID
-		value := mapper.FieldByName(reflect.ValueOf(resource), property.ID).String()
-		fieldsMap[field] = value
+		v := mapper.FieldByName(reflect.ValueOf(resource), property.ID)
+		val := v.Interface()
+		if field == "id" && v.String() == "" {
+			id := uuid.NewV4().String()
+			fieldsMap[field] = id
+			v.SetString(id)
+		} else {
+			fieldsMap[field] = val
+		}
 	}
 
 	return schema.NewResource(self.rawSchema, fieldsMap)
@@ -150,7 +159,7 @@ func (self *schemaBinder) FetchRelated(resource interface{}, relatedResource int
 }
 
 //Fetch - retrieves resource by ID
-func (self *schemaBinder) Fetch(id string, resource interface{}) error {
+func (self *schemaBinder) Fetch(id string, res interface{}) error {
 	tx, err := self.rawEnvironment.DataStore.Begin()
 
 	if err != nil {
@@ -166,15 +175,42 @@ func (self *schemaBinder) Fetch(id string, resource interface{}) error {
 	if err != nil {
 		return err
 	}
-
-	mapper := reflectx.NewMapper("db")
-	mapped := mapper.FieldMap(reflect.ValueOf(resource))
-
-	for name, field := range mapped {
-		field.Set(reflect.ValueOf(data.Get(name)))
+	resourceTypePtr, ok := self.rawEnvironment.resourceTypes[self.rawSchema.ID]
+	if !ok {
+		return fmt.Errorf("No type registered for schema title: %s", self.rawSchema.ID)
 	}
+	resourceType := resourceTypePtr.Elem()
+	resource := reflect.ValueOf(res)
 
-	// self.fetchRelated(mapped)
+	for i := 0; i < resourceType.NumField(); i++ {
+		field := resource.Elem().Field(i)
+
+		fieldType := resourceType.Field(i)
+		propertyName := fieldType.Tag.Get("db")
+		property, err := self.rawSchema.GetPropertyByID(propertyName)
+		if err != nil {
+			return err
+		}
+		if fieldType.Type.Kind() == reflect.Struct {
+			mapJson, err := json.Marshal(data.Get(property.ID))
+			if err != nil {
+				return err
+			}
+			newField := reflect.New(field.Type())
+			fieldJson := string(mapJson)
+			fieldIface := newField.Interface()
+			err = json.Unmarshal([]byte(fieldJson), &fieldIface)
+			if err != nil {
+				return err
+			}
+			field.Set(newField.Elem())
+		} else {
+			value := reflect.ValueOf(data.Get(property.ID))
+			if value.IsValid() {
+				field.Set(value)
+			}
+		}
+	}
 
 	return nil
 }
