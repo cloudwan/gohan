@@ -120,6 +120,7 @@ func (resource *Resource) String() string {
 func (resource *Resource) Update(updateData map[string]interface{}) error {
 	data := resource.properties
 	err := resource.schema.ValidateOnUpdate(updateData)
+
 	if err != nil {
 		return err
 	}

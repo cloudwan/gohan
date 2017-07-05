@@ -1,0 +1,168 @@
+Running Suite: Resources Suite
+==============================
+Random Seed: [1m1499441662[0m
+Will run [1m2[0m of [1m75[0m specs
+
+17:34:25.143: gohan.schema INFO [0m Loading schema embed://etc/schema/gohan.json ...
+17:34:25.145: gohan.schema INFO [0m Loading schema ../tests/test_abstract_schema.yaml ...
+17:34:25.146: gohan.schema INFO [0m Loading schema ../tests/test_schema.yaml ...
+17:34:25.152: gohan.schema INFO [0m Loading schema ../tests/test_schema_sync.yaml ...
+17:34:25.155: gohan.schema INFO [0m Loading schema ../tests/test_two_same_relations_schema.yaml ...
+[36m17:34:25.158: gohan.db DEBUG [0m Registering schema namespace
+[36m17:34:25.158: gohan.db.sql DEBUG [0m Creating table: create table `namespaces` (`id` varchar(255) primary key,`name` text not null,`description` text not null,`prefix` text not null,`parent` text not null,`version` text not null,`metadata` text not null);
+[36m17:34:25.158: gohan.db.sql DEBUG [0m Creating indices: 
+[36m17:34:25.185: gohan.db DEBUG [0m Registering schema event
+[36m17:34:25.185: gohan.db.sql DEBUG [0m Creating table: create table `events` (`id` integer primary key autoincrement ,`sync_plain` boolean null,`sync_property` text null,`type` text not null,`path` text not null,`timestamp` numeric not null,`version` numeric null,`body` longtext null);
+[36m17:34:25.185: gohan.db.sql DEBUG [0m Creating indices: 
+[36m17:34:25.212: gohan.db DEBUG [0m Registering schema extension
+[36m17:34:25.212: gohan.db.sql DEBUG [0m Creating table: create table `extensions` (`id` varchar(255) primary key,`code_type` text not null,`url` text not null,`path` text null,`code` text not null);
+[36m17:34:25.212: gohan.db.sql DEBUG [0m Creating indices: 
+[36m17:34:25.237: gohan.db DEBUG [0m Registering schema policy
+[36m17:34:25.237: gohan.db.sql DEBUG [0m Creating table: create table `policys` (`id` varchar(255) primary key,`principal` text null,`resource` text null,`action` text null,`effect` text null,`condition` text not null);
+[36m17:34:25.237: gohan.db.sql DEBUG [0m Creating indices: 
+[36m17:34:25.257: gohan.db DEBUG [0m Registering schema schema
+[36m17:34:25.257: gohan.db.sql DEBUG [0m Creating table: create table `schemas` (`id` varchar(255) primary key,`singular` text not null,`plural` text not null,`title` text not null,`prefix` text not null,`schema` text not null,`description` text not null,`parent` text not null,`namespace` text not null,`metadata` text not null,`actions` text null,`isolation_level` text null,`on_parent_delete_cascade` boolean null,`extends` text null,`type` text null);
+[36m17:34:25.257: gohan.db.sql DEBUG [0m Creating indices: 
+[36m17:34:25.279: gohan.db DEBUG [0m Registering schema responder_parent
+[36m17:34:25.279: gohan.db.sql DEBUG [0m Creating table: create table `responder_parents` (`id` varchar(255) primary key);
+[36m17:34:25.279: gohan.db.sql DEBUG [0m Creating indices: 
+[36m17:34:25.302: gohan.db DEBUG [0m Registering schema responder
+[36m17:34:25.302: gohan.db.sql DEBUG [0m Creating table: create table `responders` (`id` varchar(255) primary key,`pattern` text null,`tenant_id` text null,`responder_parent_id` varchar(255) not null,constraint `responders_responder_parent_id_responder_parents_id` foreign key(`responder_parent_id`) REFERENCES `responder_parents`(id) );
+[36m17:34:25.302: gohan.db.sql DEBUG [0m Creating indices: 
+[36m17:34:25.323: gohan.db DEBUG [0m Registering schema admin_only
+[36m17:34:25.323: gohan.db.sql DEBUG [0m Creating table: create table `admin_onlys` (`id` varchar(255) primary key);
+[36m17:34:25.323: gohan.db.sql DEBUG [0m Creating indices: 
+[36m17:34:25.347: gohan.db DEBUG [0m Registering schema test
+[36m17:34:25.348: gohan.db.sql DEBUG [0m Creating table: create table `tests` (`id` varchar(255) primary key,`tenant_id` text null,`test_bool` boolean null,`test_integer` numeric null,`test_number` real null,`test_string` text null,`config_version`int not null default 1,`state_version`int not null default 0,`state_error`text not null default '',`state`text not null default '',`state_monitoring`text not null default '');
+[36m17:34:25.348: gohan.db.sql DEBUG [0m Creating indices: CREATE INDEX tests_tenant_id_idx ON `tests`(`tenant_id`(255));CREATE UNIQUE INDEX unique_id_and_tenant_id ON `tests`(`id`,`tenant_id`);
+[36m17:34:25.373: gohan.db DEBUG [0m Registering schema network
+[36m17:34:25.373: gohan.db.sql DEBUG [0m Creating table: create table `networks` (`id` varchar(255) primary key,`name` text null,`description` text not null,`tenant_id` text null,`providor_networks` text not null,`route_targets` text not null,`shared` boolean not null,`config_version`int not null default 1,`state_version`int not null default 0,`state_error`text not null default '',`state`text not null default '',`state_monitoring`text not null default '');
+[36m17:34:25.373: gohan.db.sql DEBUG [0m Creating indices: 
+[36m17:34:25.394: gohan.db DEBUG [0m Registering schema server
+[36m17:34:25.394: gohan.db.sql DEBUG [0m Creating table: create table `servers` (`id` varchar(255) primary key,`name` text null,`description` text not null,`tenant_id` text null,`network_id` varchar(255) null,`status` text null,`config_version`int not null default 1,`state_version`int not null default 0,`state_error`text not null default '',`state`text not null default '',`state_monitoring`text not null default '',constraint `servers_network_id_networks_id` foreign key(`network_id`) REFERENCES `networks`(id) on delete cascade);
+[36m17:34:25.394: gohan.db.sql DEBUG [0m Creating indices: 
+[36m17:34:25.414: gohan.db DEBUG [0m Registering schema subnet
+[36m17:34:25.415: gohan.db.sql DEBUG [0m Creating table: create table `subnets` (`id` varchar(255) primary key,`name` text null,`description` text not null,`tenant_id` text null,`cidr` text not null,`network_id` varchar(255) not null,`config_version`int not null default 1,`state_version`int not null default 0,`state_error`text not null default '',`state`text not null default '',`state_monitoring`text not null default '',constraint `subnets_network_id_networks_id` foreign key(`network_id`) REFERENCES `networks`(id) );
+[36m17:34:25.415: gohan.db.sql DEBUG [0m Creating indices: 
+[36m17:34:25.437: gohan.db DEBUG [0m Registering schema with_sync_plain_string
+[36m17:34:25.438: gohan.db.sql DEBUG [0m Creating table: create table `with_sync_plain_strings` (`id` varchar(255) primary key,`p0` text null,`config_version`int not null default 1,`state_version`int not null default 0,`state_error`text not null default '',`state`text not null default '',`state_monitoring`text not null default '');
+[36m17:34:25.438: gohan.db.sql DEBUG [0m Creating indices: 
+[36m17:34:25.464: gohan.db DEBUG [0m Registering schema with_sync_plain
+[36m17:34:25.464: gohan.db.sql DEBUG [0m Creating table: create table `with_sync_plains` (`id` varchar(255) primary key,`p0` text null,`config_version`int not null default 1,`state_version`int not null default 0,`state_error`text not null default '',`state`text not null default '',`state_monitoring`text not null default '');
+[36m17:34:25.464: gohan.db.sql DEBUG [0m Creating indices: 
+[36m17:34:25.490: gohan.db DEBUG [0m Registering schema with_sync_property
+[36m17:34:25.490: gohan.db.sql DEBUG [0m Creating table: create table `with_sync_propertys` (`id` varchar(255) primary key,`p0` text null,`config_version`int not null default 1,`state_version`int not null default 0,`state_error`text not null default '',`state`text not null default '',`state_monitoring`text not null default '');
+[36m17:34:25.490: gohan.db.sql DEBUG [0m Creating indices: 
+[36m17:34:25.512: gohan.db DEBUG [0m Registering schema city
+[36m17:34:25.512: gohan.db.sql DEBUG [0m Creating table: create table `citys` (`id` varchar(255) primary key,`name` text null);
+[36m17:34:25.512: gohan.db.sql DEBUG [0m Creating indices: 
+[36m17:34:25.530: gohan.db DEBUG [0m Registering schema school
+[36m17:34:25.530: gohan.db.sql DEBUG [0m Creating table: create table `schools` (`id` varchar(255) primary key,`name` text null,`city_id` varchar(255) null,constraint `schools_city_id_citys_id` foreign key(`city_id`) REFERENCES `citys`(id) );
+[36m17:34:25.530: gohan.db.sql DEBUG [0m Creating indices: 
+[36m17:34:25.549: gohan.db DEBUG [0m Registering schema child
+[36m17:34:25.549: gohan.db.sql DEBUG [0m Creating table: create table `childs` (`id` varchar(255) primary key,`school_id` varchar(255) null,constraint `childs_school_id_schools_id` foreign key(`school_id`) REFERENCES `schools`(id) );
+[36m17:34:25.549: gohan.db.sql DEBUG [0m Creating indices: 
+[36m17:34:25.571: gohan.db DEBUG [0m Registering schema parent
+[36m17:34:25.571: gohan.db.sql DEBUG [0m Creating table: create table `parents` (`id` varchar(255) primary key,`boy_id` varchar(255) null,`girl_id` varchar(255) null,constraint `parents_boy_id_childs_id` foreign key(`boy_id`) REFERENCES `childs`(id) ,constraint `parents_girl_id_childs_id` foreign key(`girl_id`) REFERENCES `childs`(id) );
+[36m17:34:25.571: gohan.db.sql DEBUG [0m Creating indices: 
+[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36m17:34:25.598: gohan.extension.resource_management_test DEBUG [0m REG: id=527b7cb2-e3a2-483f-9bee-22813a2fa039, type=pre_update, index=0
+[36m17:34:25.608: gohan.schema DEBUG [0m No properties in resource policy. Allowing all property access
+TEST
+[36m17:34:25.608: gohan.db.sql DEBUG [0m [0xc420c37d70] Created transaction &sqlx.Tx{Tx:(*sql.Tx)(0xc420573a80), driverName:"sqlite3", unsafe:false, Mapper:(*reflectx.Mapper)(0xc4202f12c0)}, isolation level: REPEATABLE READ
+[36m17:34:25.608: gohan.db.sql DEBUG [0m [0xc420c37d70] Executing SQL query 'SELECT admin_onlys.`id` as `admin_onlys__id` FROM `admin_onlys`'
+[36m17:34:25.609: gohan.db.sql DEBUG [0m [0xc420c37d70] Executing SQL query 'SELECT childs.`id` as `childs__id`, childs__school.`id` as `childs__school__id`, childs__school.`name` as `childs__school__name`, childs__school__city.`id` as `childs__school__city__id`, childs__school__city.`name` as `childs__school__city__name`, childs__school.`city_id` as `childs__school__city_id`, childs.`school_id` as `childs__school_id` FROM `childs` LEFT JOIN `schools` as `childs__school` on `childs`.`school_id` = `childs__school`.id LEFT JOIN `citys` as `childs__school__city` on `childs__school`.`city_id` = `childs__school__city`.id'
+[36m17:34:25.609: gohan.db.sql DEBUG [0m [0xc420c37d70] Executing SQL query 'SELECT with_sync_plains.`id` as `with_sync_plains__id`, with_sync_plains.`p0` as `with_sync_plains__p0` FROM `with_sync_plains`'
+[36m17:34:25.609: gohan.db.sql DEBUG [0m [0xc420c37d70] Executing SQL query 'SELECT subnets.`id` as `subnets__id`, subnets.`name` as `subnets__name`, subnets.`description` as `subnets__description`, subnets.`tenant_id` as `subnets__tenant_id`, subnets.`cidr` as `subnets__cidr`, subnets.`network_id` as `subnets__network_id` FROM `subnets`'
+[36m17:34:25.609: gohan.db.sql DEBUG [0m [0xc420c37d70] Executing SQL query 'SELECT networks.`id` as `networks__id`, networks.`name` as `networks__name`, networks.`description` as `networks__description`, networks.`tenant_id` as `networks__tenant_id`, networks.`providor_networks` as `networks__providor_networks`, networks.`route_targets` as `networks__route_targets`, networks.`shared` as `networks__shared` FROM `networks`'
+[36m17:34:25.609: gohan.db.sql DEBUG [0m [0xc420c37d70] Executing SQL query 'SELECT with_sync_plain_strings.`id` as `with_sync_plain_strings__id`, with_sync_plain_strings.`p0` as `with_sync_plain_strings__p0` FROM `with_sync_plain_strings`'
+[36m17:34:25.609: gohan.db.sql DEBUG [0m [0xc420c37d70] Executing SQL query 'SELECT events.`id` as `events__id`, events.`sync_plain` as `events__sync_plain`, events.`sync_property` as `events__sync_property`, events.`type` as `events__type`, events.`path` as `events__path`, events.`timestamp` as `events__timestamp`, events.`version` as `events__version`, events.`body` as `events__body` FROM `events`'
+[36m17:34:25.610: gohan.db.sql DEBUG [0m [0xc420c37d70] Executing SQL query 'SELECT servers.`id` as `servers__id`, servers.`name` as `servers__name`, servers.`description` as `servers__description`, servers.`tenant_id` as `servers__tenant_id`, servers__network.`id` as `servers__network__id`, servers__network.`name` as `servers__network__name`, servers__network.`description` as `servers__network__description`, servers__network.`tenant_id` as `servers__network__tenant_id`, servers__network.`providor_networks` as `servers__network__providor_networks`, servers__network.`route_targets` as `servers__network__route_targets`, servers__network.`shared` as `servers__network__shared`, servers.`network_id` as `servers__network_id`, servers.`status` as `servers__status` FROM `servers` LEFT JOIN `networks` as `servers__network` on `servers`.`network_id` = `servers__network`.id'
+[36m17:34:25.610: gohan.db.sql DEBUG [0m [0xc420c37d70] Executing SQL query 'SELECT schools.`id` as `schools__id`, schools.`name` as `schools__name`, schools__city.`id` as `schools__city__id`, schools__city.`name` as `schools__city__name`, schools.`city_id` as `schools__city_id` FROM `schools` LEFT JOIN `citys` as `schools__city` on `schools`.`city_id` = `schools__city`.id'
+[36m17:34:25.610: gohan.db.sql DEBUG [0m [0xc420c37d70] Executing SQL query 'SELECT responders.`id` as `responders__id`, responders.`pattern` as `responders__pattern`, responders.`tenant_id` as `responders__tenant_id`, responders.`responder_parent_id` as `responders__responder_parent_id` FROM `responders`'
+[36m17:34:25.610: gohan.db.sql DEBUG [0m [0xc420c37d70] Executing SQL query 'SELECT tests.`id` as `tests__id`, tests.`tenant_id` as `tests__tenant_id`, tests.`test_bool` as `tests__test_bool`, tests.`test_integer` as `tests__test_integer`, tests.`test_number` as `tests__test_number`, tests.`test_string` as `tests__test_string` FROM `tests`'
+[36m17:34:25.610: gohan.db.sql DEBUG [0m [0xc420c37d70] Executing SQL query 'SELECT responders.`id` as `responders__id`, responders.`pattern` as `responders__pattern`, responders.`tenant_id` as `responders__tenant_id`, responders.`responder_parent_id` as `responders__responder_parent_id` FROM `responders`'
+[36m17:34:25.610: gohan.db.sql DEBUG [0m [0xc420c37d70] Executing SQL query 'SELECT responder_parents.`id` as `responder_parents__id` FROM `responder_parents`'
+[36m17:34:25.610: gohan.db.sql DEBUG [0m [0xc420c37d70] Executing SQL query 'SELECT with_sync_propertys.`id` as `with_sync_propertys__id`, with_sync_propertys.`p0` as `with_sync_propertys__p0` FROM `with_sync_propertys`'
+[36m17:34:25.610: gohan.db.sql DEBUG [0m [0xc420c37d70] Executing SQL query 'SELECT parents.`id` as `parents__id`, parents__boy.`id` as `parents__boy__id`, parents__boy__school.`id` as `parents__boy__school__id`, parents__boy__school.`name` as `parents__boy__school__name`, parents__boy__school__city.`id` as `parents__boy__school__city__id`, parents__boy__school__city.`name` as `parents__boy__school__city__name`, parents__boy__school.`city_id` as `parents__boy__school__city_id`, parents__boy.`school_id` as `parents__boy__school_id`, parents.`boy_id` as `parents__boy_id`, parents__girl.`id` as `parents__girl__id`, parents__girl__school.`id` as `parents__girl__school__id`, parents__girl__school.`name` as `parents__girl__school__name`, parents__girl__school__city.`id` as `parents__girl__school__city__id`, parents__girl__school__city.`name` as `parents__girl__school__city__name`, parents__girl__school.`city_id` as `parents__girl__school__city_id`, parents__girl.`school_id` as `parents__girl__school_id`, parents.`girl_id` as `parents__girl_id` FROM `parents` LEFT JOIN `childs` as `parents__boy` on `parents`.`boy_id` = `parents__boy`.id LEFT JOIN `schools` as `parents__boy__school` on `parents__boy`.`school_id` = `parents__boy__school`.id LEFT JOIN `citys` as `parents__boy__school__city` on `parents__boy__school`.`city_id` = `parents__boy__school__city`.id LEFT JOIN `childs` as `parents__girl` on `parents`.`girl_id` = `parents__girl`.id LEFT JOIN `schools` as `parents__girl__school` on `parents__girl`.`school_id` = `parents__girl__school`.id LEFT JOIN `citys` as `parents__girl__school__city` on `parents__girl__school`.`city_id` = `parents__girl__school__city`.id'
+[36m17:34:25.610: gohan.db.sql DEBUG [0m [0xc420c37d70] Executing SQL query 'SELECT subnets.`id` as `subnets__id`, subnets.`name` as `subnets__name`, subnets.`description` as `subnets__description`, subnets.`tenant_id` as `subnets__tenant_id`, subnets.`cidr` as `subnets__cidr`, subnets.`network_id` as `subnets__network_id` FROM `subnets`'
+[36m17:34:25.610: gohan.db.sql DEBUG [0m [0xc420c37d70] Executing SQL query 'SELECT citys.`id` as `citys__id`, citys.`name` as `citys__name` FROM `citys`'
+[36m17:34:25.610: gohan.db.sql DEBUG [0m [0xc420c37d70] Committing transaction &sql.Transaction{transaction:(*sqlx.Tx)(0xc420c37d70), db:(*sql.DB)(0xc4202f1200), closed:false, isolationLevel:"REPEATABLE READ"}
+[36m17:34:25.610: gohan.db.sql DEBUG [0m [0xc420c37d70] Closing transaction &sql.Transaction{transaction:(*sqlx.Tx)(0xc420c37d70), db:(*sql.DB)(0xc4202f1200), closed:true, isolationLevel:"REPEATABLE READ"}
+
+[90m------------------------------[0m
+[91m[1m•! Panic [0.020 seconds][0m
+Resource manager
+[90m/home/andrii/go/src/github.com/cloudwan/gohan/server/resources/resource_management_test.go:1622[0m
+  Updating a resource
+  [90m/home/andrii/go/src/github.com/cloudwan/gohan/server/resources/resource_management_test.go:1407[0m
+    When there are no resources in the database
+    [90m/home/andrii/go/src/github.com/cloudwan/gohan/server/resources/resource_management_test.go:1264[0m
+      With extensions
+      [90m/home/andrii/go/src/github.com/cloudwan/gohan/server/resources/resource_management_test.go:1263[0m
+        Only pre_update
+        [90m/home/andrii/go/src/github.com/cloudwan/gohan/server/resources/resource_management_test.go:1220[0m
+          [91m[1mShould run the extension [It][0m
+          [90m/home/andrii/go/src/github.com/cloudwan/gohan/server/resources/resource_management_test.go:1219[0m
+
+          [91m[1mTest Panicked[0m
+          [91mruntime error: invalid memory address or nil pointer dereference[0m
+          /usr/local/go/src/runtime/panic.go:489
+
+          [91mFull Stack Trace[0m
+          	/usr/local/go/src/runtime/panic.go:489 +0x2cf
+          github.com/cloudwan/gohan/server/resources.(*ResourceError).Error(0xc420c37c20, 0x4, 0x1bf6578)
+          	<autogenerated>:1 +0x3b
+          github.com/cloudwan/gohan/server/resources_test.glob..func1.9.3.2.1.2()
+          	/home/andrii/go/src/github.com/cloudwan/gohan/server/resources/resource_management_test.go:1213 +0x1a3
+          github.com/cloudwan/gohan/vendor/github.com/onsi/ginkgo/internal/leafnodes.(*runner).runSync(0xc4201cad20, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, ...)
+          	/home/andrii/go/src/github.com/cloudwan/gohan/server/resources/resources_suite_test.go:86 +0x64
+          testing.tRunner(0xc42006e1a0, 0x13a8370)
+          	/usr/local/go/src/testing/testing.go:657 +0x96
+          created by testing.(*T).Run
+          	/usr/local/go/src/testing/testing.go:697 +0x2ca
+          
+[90m------------------------------[0m
+[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36m17:34:25.618: gohan.extension.resource_management_test DEBUG [0m REG: id=bdb9cd02-4436-48c0-af65-82882180e23a, type=pre_update, index=0
+[36m17:34:25.619: gohan.db.sql DEBUG [0m [0xc420f43cb0] Created transaction &sqlx.Tx{Tx:(*sql.Tx)(0xc420f3ca80), driverName:"sqlite3", unsafe:false, Mapper:(*reflectx.Mapper)(0xc4202f12c0)}, isolation level: REPEATABLE READ
+[36m17:34:25.619: gohan.db.sql DEBUG [0m [0xc420f43cb0] Executing SQL query 'INSERT INTO `tests` (`id`,`tenant_id`,`test_bool`,`test_integer`,`test_number`,`test_string`) VALUES (6660fbf8-ca60-4cb0-a42e-9a913beafbaf,fc394f2ab2df4114bde39905f800dc57,%!s(bool=false),%!s(int=1),%!s(float64=0.5),Steloj estas en ordo.)'
+[36m17:34:25.619: gohan.db.sql DEBUG [0m [0xc420f43cb0] Executing SQL query 'INSERT INTO `tests` (`id`,`tenant_id`,`test_bool`,`test_integer`,`test_number`,`test_string`) VALUES (6660fbf8-ca60-4cb0-a42e-9a913beafbae,acf5662bbff44060b93ac3db3c25a590,%!s(bool=false),%!s(int=1),%!s(float64=0.5),Mi estas la pordo, mi estas la sxlosilo.)'
+[36m17:34:25.619: gohan.db.sql DEBUG [0m [0xc420f43cb0] Committing transaction &sql.Transaction{transaction:(*sqlx.Tx)(0xc420f43cb0), db:(*sql.DB)(0xc4202f1200), closed:false, isolationLevel:"REPEATABLE READ"}
+[36m17:34:25.640: gohan.db.sql DEBUG [0m [0xc420f43cb0] Closing transaction &sql.Transaction{transaction:(*sqlx.Tx)(0xc420f43cb0), db:(*sql.DB)(0xc4202f1200), closed:true, isolationLevel:"REPEATABLE READ"}
+[36m17:34:25.649: gohan.schema DEBUG [0m No properties in resource policy. Allowing all property access
+[36m17:34:25.649: gohan.extension.resource_management_test.pre_update DEBUG [0m [c58ed4dc-b352-4a99-9fc7-c8a7a5c52df2] BEGIN: id=bdb9cd02-4436-48c0-af65-82882180e23a, type=pre_update
+[36m17:34:25.649: gohan.extension.otto DEBUG [0m Closers for vm 0xc420356750: []
+[36m17:34:25.649: gohan.db.sql DEBUG [0m [0xc4202c2bd0] Created transaction &sqlx.Tx{Tx:(*sql.Tx)(0xc4202b9580), driverName:"sqlite3", unsafe:false, Mapper:(*reflectx.Mapper)(0xc4202f12c0)}, isolation level: REPEATABLE READ
+[36m17:34:25.649: gohan.db.sql DEBUG [0m [0xc4202c2bd0] Executing SQL query 'SELECT subnets.`id` as `subnets__id`, subnets.`name` as `subnets__name`, subnets.`description` as `subnets__description`, subnets.`tenant_id` as `subnets__tenant_id`, subnets.`cidr` as `subnets__cidr`, subnets.`network_id` as `subnets__network_id` FROM `subnets`'
+[36m17:34:25.650: gohan.db.sql DEBUG [0m [0xc4202c2bd0] Executing SQL query 'SELECT networks.`id` as `networks__id`, networks.`name` as `networks__name`, networks.`description` as `networks__description`, networks.`tenant_id` as `networks__tenant_id`, networks.`providor_networks` as `networks__providor_networks`, networks.`route_targets` as `networks__route_targets`, networks.`shared` as `networks__shared` FROM `networks`'
+[36m17:34:25.650: gohan.db.sql DEBUG [0m [0xc4202c2bd0] Executing SQL query 'SELECT with_sync_plain_strings.`id` as `with_sync_plain_strings__id`, with_sync_plain_strings.`p0` as `with_sync_plain_strings__p0` FROM `with_sync_plain_strings`'
+[36m17:34:25.650: gohan.db.sql DEBUG [0m [0xc4202c2bd0] Executing SQL query 'SELECT with_sync_plains.`id` as `with_sync_plains__id`, with_sync_plains.`p0` as `with_sync_plains__p0` FROM `with_sync_plains`'
+[36m17:34:25.650: gohan.db.sql DEBUG [0m [0xc4202c2bd0] Executing SQL query 'SELECT with_sync_propertys.`id` as `with_sync_propertys__id`, with_sync_propertys.`p0` as `with_sync_propertys__p0` FROM `with_sync_propertys`'
+[36m17:34:25.650: gohan.db.sql DEBUG [0m [0xc4202c2bd0] Executing SQL query 'SELECT schools.`id` as `schools__id`, schools.`name` as `schools__name`, schools__city.`id` as `schools__city__id`, schools__city.`name` as `schools__city__name`, schools.`city_id` as `schools__city_id` FROM `schools` LEFT JOIN `citys` as `schools__city` on `schools`.`city_id` = `schools__city`.id'
+[36m17:34:25.650: gohan.db.sql DEBUG [0m [0xc4202c2bd0] Executing SQL query 'SELECT events.`id` as `events__id`, events.`sync_plain` as `events__sync_plain`, events.`sync_property` as `events__sync_property`, events.`type` as `events__type`, events.`path` as `events__path`, events.`timestamp` as `events__timestamp`, events.`version` as `events__version`, events.`body` as `events__body` FROM `events`'
+[36m17:34:25.650: gohan.db.sql DEBUG [0m [0xc4202c2bd0] Executing SQL query 'SELECT subnets.`id` as `subnets__id`, subnets.`name` as `subnets__name`, subnets.`description` as `subnets__description`, subnets.`tenant_id` as `subnets__tenant_id`, subnets.`cidr` as `subnets__cidr`, subnets.`network_id` as `subnets__network_id` FROM `subnets`'
+[36m17:34:25.650: gohan.db.sql DEBUG [0m [0xc4202c2bd0] Executing SQL query 'SELECT tests.`id` as `tests__id`, tests.`tenant_id` as `tests__tenant_id`, tests.`test_bool` as `tests__test_bool`, tests.`test_integer` as `tests__test_integer`, tests.`test_number` as `tests__test_number`, tests.`test_string` as `tests__test_string` FROM `tests`'
+[36m17:34:25.650: gohan.db.sql DEBUG [0m [0xc4202c2bd0] Executing SQL query 'DELETE FROM `tests` WHERE id = 6660fbf8-ca60-4cb0-a42e-9a913beafbaf'
+[36m17:34:25.650: gohan.db.sql DEBUG [0m [0xc4202c2bd0] Executing SQL query 'DELETE FROM `tests` WHERE id = 6660fbf8-ca60-4cb0-a42e-9a913beafbae'
+[36m17:34:25.650: gohan.db.sql DEBUG [0m [0xc4202c2bd0] Executing SQL query 'SELECT admin_onlys.`id` as `admin_onlys__id` FROM `admin_onlys`'
+[36m17:34:25.651: gohan.db.sql DEBUG [0m [0xc4202c2bd0] Executing SQL query 'SELECT childs.`id` as `childs__id`, childs__school.`id` as `childs__school__id`, childs__school.`name` as `childs__school__name`, childs__school__city.`id` as `childs__school__city__id`, childs__school__city.`name` as `childs__school__city__name`, childs__school.`city_id` as `childs__school__city_id`, childs.`school_id` as `childs__school_id` FROM `childs` LEFT JOIN `schools` as `childs__school` on `childs`.`school_id` = `childs__school`.id LEFT JOIN `citys` as `childs__school__city` on `childs__school`.`city_id` = `childs__school__city`.id'
+[36m17:34:25.651: gohan.db.sql DEBUG [0m [0xc4202c2bd0] Executing SQL query 'SELECT parents.`id` as `parents__id`, parents__boy.`id` as `parents__boy__id`, parents__boy__school.`id` as `parents__boy__school__id`, parents__boy__school.`name` as `parents__boy__school__name`, parents__boy__school__city.`id` as `parents__boy__school__city__id`, parents__boy__school__city.`name` as `parents__boy__school__city__name`, parents__boy__school.`city_id` as `parents__boy__school__city_id`, parents__boy.`school_id` as `parents__boy__school_id`, parents.`boy_id` as `parents__boy_id`, parents__girl.`id` as `parents__girl__id`, parents__girl__school.`id` as `parents__girl__school__id`, parents__girl__school.`name` as `parents__girl__school__name`, parents__girl__school__city.`id` as `parents__girl__school__city__id`, parents__girl__school__city.`name` as `parents__girl__school__city__name`, parents__girl__school.`city_id` as `parents__girl__school__city_id`, parents__girl.`school_id` as `parents__girl__school_id`, parents.`girl_id` as `parents__girl_id` FROM `parents` LEFT JOIN `childs` as `parents__boy` on `parents`.`boy_id` = `parents__boy`.id LEFT JOIN `schools` as `parents__boy__school` on `parents__boy`.`school_id` = `parents__boy__school`.id LEFT JOIN `citys` as `parents__boy__school__city` on `parents__boy__school`.`city_id` = `parents__boy__school__city`.id LEFT JOIN `childs` as `parents__girl` on `parents`.`girl_id` = `parents__girl`.id LEFT JOIN `schools` as `parents__girl__school` on `parents__girl`.`school_id` = `parents__girl__school`.id LEFT JOIN `citys` as `parents__girl__school__city` on `parents__girl__school`.`city_id` = `parents__girl__school__city`.id'
+[36m17:34:25.651: gohan.db.sql DEBUG [0m [0xc4202c2bd0] Executing SQL query 'SELECT responders.`id` as `responders__id`, responders.`pattern` as `responders__pattern`, responders.`tenant_id` as `responders__tenant_id`, responders.`responder_parent_id` as `responders__responder_parent_id` FROM `responders`'
+[36m17:34:25.651: gohan.db.sql DEBUG [0m [0xc4202c2bd0] Executing SQL query 'SELECT citys.`id` as `citys__id`, citys.`name` as `citys__name` FROM `citys`'
+[36m17:34:25.651: gohan.db.sql DEBUG [0m [0xc4202c2bd0] Executing SQL query 'SELECT responders.`id` as `responders__id`, responders.`pattern` as `responders__pattern`, responders.`tenant_id` as `responders__tenant_id`, responders.`responder_parent_id` as `responders__responder_parent_id` FROM `responders`'
+[36m17:34:25.651: gohan.db.sql DEBUG [0m [0xc4202c2bd0] Executing SQL query 'SELECT responder_parents.`id` as `responder_parents__id` FROM `responder_parents`'
+[36m17:34:25.651: gohan.db.sql DEBUG [0m [0xc4202c2bd0] Executing SQL query 'SELECT servers.`id` as `servers__id`, servers.`name` as `servers__name`, servers.`description` as `servers__description`, servers.`tenant_id` as `servers__tenant_id`, servers__network.`id` as `servers__network__id`, servers__network.`name` as `servers__network__name`, servers__network.`description` as `servers__network__description`, servers__network.`tenant_id` as `servers__network__tenant_id`, servers__network.`providor_networks` as `servers__network__providor_networks`, servers__network.`route_targets` as `servers__network__route_targets`, servers__network.`shared` as `servers__network__shared`, servers.`network_id` as `servers__network_id`, servers.`status` as `servers__status` FROM `servers` LEFT JOIN `networks` as `servers__network` on `servers`.`network_id` = `servers__network`.id'
+[36m17:34:25.651: gohan.db.sql DEBUG [0m [0xc4202c2bd0] Committing transaction &sql.Transaction{transaction:(*sqlx.Tx)(0xc4202c2bd0), db:(*sql.DB)(0xc4202f1200), closed:false, isolationLevel:"REPEATABLE READ"}
+[36m17:34:25.670: gohan.db.sql DEBUG [0m [0xc4202c2bd0] Closing transaction &sql.Transaction{transaction:(*sqlx.Tx)(0xc4202c2bd0), db:(*sql.DB)(0xc4202f1200), closed:true, isolationLevel:"REPEATABLE READ"}
+[32m•[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m[36mS[0m
+
+[91m[1mSummarizing 1 Failure:[0m
+
+[91m[1m[Panic!] [0m[90mResource manager [0m[0mUpdating a resource [0m[90mWhen there are no resources in the database [0m[0mWith extensions [0m[90mOnly pre_update [0m[91m[1m[It] Should run the extension [0m
+[37m/usr/local/go/src/runtime/panic.go:489[0m
+
+[1m[91mRan 2 of 75 Specs in 0.530 seconds[0m
+[1m[91mFAIL![0m -- [32m[1m1 Passed[0m | [91m[1m1 Failed[0m | [33m[1m0 Pending[0m | [36m[1m73 Skipped[0m --- FAIL: TestResources (0.53s)
+FAIL
+
+Ginkgo ran 1 suite in 2.992930974s
+Test Suite Failed
