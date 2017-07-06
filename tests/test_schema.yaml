@@ -158,6 +158,9 @@ schemas:
   id: network
   extends:
   - base
+  isolation_level:
+    read: REPEATABLE READ
+    update: SERIALIZABLE
   plural: networks
   schema:
     properties:

@@ -242,6 +242,39 @@ var _ = Describe("Schema", func() {
 		})
 	})
 
+	Describe("IsolationLevel", func() {
+		var netSchema *Schema
+
+		BeforeEach(func() {
+			var exists bool
+			manager := GetManager()
+			basePath := "../tests/test_abstract_schema.yaml"
+			Expect(manager.LoadSchemaFromFile(basePath)).To(Succeed())
+
+			schemaPath := "../tests/test_schema.yaml"
+			Expect(manager.LoadSchemaFromFile(schemaPath)).To(Succeed())
+			netSchema, exists = manager.Schema("network")
+			Expect(exists).To(BeTrue())
+		})
+
+		It("Direct Setting", func() {
+			Expect(netSchema.IsolationLevel["read"]).To(Equal("REPEATABLE READ"))
+		})
+
+		It("Inherit Base", func() {
+			Expect(netSchema.IsolationLevel["delete"]).To(Equal("READ COMMITTED"))
+		})
+
+		It("Override Base", func() {
+			Expect(netSchema.IsolationLevel["update"]).To(Equal("SERIALIZABLE"))
+		})
+
+		AfterEach(func() {
+			ClearManager()
+		})
+
+	})
+
 	Describe("Formatters", func() {
 		var netSchema *Schema
 
