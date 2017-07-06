@@ -99,7 +99,8 @@ func GetIsolationLevel(s *schema.Schema, action string) Type {
 			return Serializable
 		}
 	}
-	return level.(Type)
+	levelStr := level.(string)
+	return Type(levelStr)
 }
 
 //IDFilter create filter for specific ID
