@@ -16,19 +16,20 @@
 package runner
 
 import (
-	"github.com/cloudwan/gohan/extension/goext"
-	"github.com/cloudwan/gohan/extension/golang"
-	"github.com/cloudwan/gohan/server/middleware"
-	"github.com/cloudwan/gohan/sync/noop"
-	l "github.com/cloudwan/gohan/log"
-	"github.com/cloudwan/gohan/schema"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"fmt"
 	"path/filepath"
 	"plugin"
 	"testing"
+
 	"github.com/cloudwan/gohan/db"
-	"fmt"
+	"github.com/cloudwan/gohan/extension/goext"
+	"github.com/cloudwan/gohan/extension/golang"
+	l "github.com/cloudwan/gohan/log"
+	"github.com/cloudwan/gohan/schema"
+	"github.com/cloudwan/gohan/server/middleware"
+	"github.com/cloudwan/gohan/sync/noop"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 var log = l.NewLogger()
@@ -43,7 +44,7 @@ func NewGoTestRunner(tests []string) *GoTestRunner {
 	}
 }
 
-func (self *GoTestRunner) Run() (err error) {
+func (self *GoTestRunner) Run() error {
 	log.Notice("Running Go extensions tests")
 
 	t := &testing.T{}
@@ -61,20 +62,30 @@ func (self *GoTestRunner) Run() (err error) {
 		if err != nil {
 			return err
 		}
+
 		env := golang.NewEnvironment("test"+testPath, dataStore, &middleware.FakeIdentity{}, noop.NewSync())
 		environment := env.ExtEnvironment()
 		directory := filepath.Dir(testPath)
 
 		//Load required schemas
 		Schemas, err := test.Lookup("Schemas")
+
+		var mgr *schema.Manager = nil
+
 		if err == nil {
-			f := Schemas.(func() []string)
+			schemasFn := Schemas.(func() []string)
+			schemas := schemasFn()
 
-			mgr := schema.GetManager()
+			mgr = schema.GetManager()
 
-			for _, schemaPath := range f() {
-				mgr.LoadSchemaFromFile(directory + "/" + schemaPath)
+			for _, schemaPath := range schemas {
+				if err = mgr.LoadSchemaFromFile(directory + "/" + schemaPath); err != nil {
+					log.Error("Failed to load schema: %s", err)
+					return err
+				}
 			}
+		} else {
+			log.Notice("plugin %s does not require any schemas", testPath)
 		}
 
 		//Load plugin

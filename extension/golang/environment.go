@@ -89,10 +89,35 @@ func (environment *Environment) Load(source, code string) error {
 		return fmt.Errorf("Failed to load golang extension: %s", err)
 	}
 
+	// Schemas
+	SchemasFnRaw, err := p.Lookup("Schemas")
+
+	mgr := schema.GetManager()
+
+	if err != nil {
+		return fmt.Errorf("Golang extension does not export Schemas: %s", err)
+	}
+
+	schemasFn, ok := SchemasFnRaw.(func() []string)
+
+	if !ok {
+		log.Error("Invalid signature of Schemas function in golang extension: %s", source)
+		return err
+	}
+
+	schemas := schemasFn()
+
+	for _, schemaPath := range schemas {
+		if err = mgr.LoadSchemaFromFile(filepath.Dir(source) + "/" + schemaPath); err != nil {
+			return fmt.Errorf("Failed to load schema: %s", err)
+		}
+	}
+
+	// Init
 	ifn, err := p.Lookup("Init")
 
 	if err != nil {
-		return fmt.Errorf("Golang extension does not export extensionInit: %s", err)
+		return fmt.Errorf("Golang extension does not export Init: %s", err)
 	}
 
 	log.Debug("Init golang extension: %s", source)
