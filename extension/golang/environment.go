@@ -247,7 +247,7 @@ func (self *Environment) schemaIdToResource(schemaID string, context map[string]
 		for i := 0; i < resourceType.NumField(); i++ {
 			field := resource.Elem().Field(i)
 			fieldType := resourceType.Field(i)
-			propertyName := fieldType.Tag.Get("yaml")
+			propertyName := fieldType.Tag.Get("db")
 			property, err := rawSchema.GetPropertyByID(propertyName)
 			if err != nil {
 				return nil, err

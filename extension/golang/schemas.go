@@ -76,7 +76,7 @@ func (self *schemaBinder) Env() *goext.Environment {
 	return &self.rawEnvironment.extEnvironment
 }
 
-func (self *schemaBinder) structToResource(resource interface{}) (*schema.Resource, error) {
+func (self *schemaBinder) structToMap(resource interface{}) map[string]interface{} {
 	fieldsMap := map[string]interface{}{}
 
 	mapper := reflectx.NewMapper("db")
@@ -94,6 +94,11 @@ func (self *schemaBinder) structToResource(resource interface{}) (*schema.Resour
 		}
 	}
 
+	return fieldsMap
+}
+
+func (self *schemaBinder) structToResource(resource interface{}) (*schema.Resource, error) {
+	fieldsMap := self.structToMap(resource)
 	return schema.NewResource(self.rawSchema, fieldsMap)
 }
 
@@ -175,11 +180,10 @@ func (self *schemaBinder) Fetch(id string, res interface{}) error {
 	if err != nil {
 		return err
 	}
-	resourceTypePtr, ok := self.rawEnvironment.resourceTypes[self.rawSchema.ID]
+	resourceType, ok := self.rawEnvironment.resourceTypes[self.rawSchema.ID]
 	if !ok {
 		return fmt.Errorf("No type registered for schema title: %s", self.rawSchema.ID)
 	}
-	resourceType := resourceTypePtr.Elem()
 	resource := reflect.ValueOf(res)
 
 	for i := 0; i < resourceType.NumField(); i++ {
@@ -217,6 +221,9 @@ func (self *schemaBinder) Fetch(id string, res interface{}) error {
 
 //Create - creates resource
 func (self *schemaBinder) Create(resource interface{}) error { //resource should be already created
+	context := make(map[string]interface{})
+	context["resource"] = self.structToMap(resource)
+	self.rawEnvironment.HandleEvent(goext.PRE_CREATE_TX, context)
 	tx, err := self.rawEnvironment.DataStore.Begin()
 
 	if err != nil {
@@ -237,7 +244,11 @@ func (self *schemaBinder) Create(resource interface{}) error { //resource should
 		return err
 	}
 
-	return tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+	return self.rawEnvironment.HandleEvent(goext.POST_CREATE_TX, context)
 }
 
 //Update - updates resource
