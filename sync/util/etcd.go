@@ -14,24 +14,23 @@ import (
 var log = l.NewLogger()
 
 // CreateFromConfig creates etcd sync from config
-func CreateFromConfig(config *util.Config) (s sync.Sync, err error) {
+func CreateFromConfig(config *util.Config) (etcdSync sync.Sync, err error) {
 	syncType := config.GetString("sync", "etcd")
+	etcdServers := config.GetStringList("etcd", nil)
+	if etcdServers == nil {
+		err = fmt.Errorf("no etcd found in config file")
+		return
+	}
 	switch syncType {
 	case "etcd":
-		etcdServers := config.GetStringList("etcd", nil)
-		if etcdServers != nil {
-			log.Info("etcd servers: %s", etcdServers)
-			s = etcd.NewSync(etcdServers)
-		}
+		log.Info("etcd servers: %s", etcdServers)
+		etcdSync = etcd.NewSync(etcdServers)
 	case "etcdv3":
-		etcdServers := config.GetStringList("etcd", nil)
-		if etcdServers != nil {
-			log.Info("etcd servers: %s", etcdServers)
-			s, err = etcdv3.NewSync(etcdServers, time.Second)
-			if err != nil {
-				err = fmt.Errorf("failed to connect to etcd servers: %s", err)
-				return
-			}
+		log.Info("etcd servers: %s", etcdServers)
+		etcdSync, err = etcdv3.NewSync(etcdServers, time.Second)
+		if err != nil {
+			err = fmt.Errorf("failed to connect to etcd servers: %s", err)
+			return
 		}
 	default:
 		err = fmt.Errorf("invalid sync type: %s", syncType)
