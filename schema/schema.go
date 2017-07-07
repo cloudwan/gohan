@@ -587,6 +587,7 @@ MergeAction:
 		schema.Actions = append(schema.Actions, action)
 	}
 	schema.Metadata = util.ExtendMap(schema.Metadata, fromSchema.Metadata)
+	schema.IsolationLevel = util.ExtendMap(schema.IsolationLevel, fromSchema.IsolationLevel)
 	return schema.Init()
 }
 
