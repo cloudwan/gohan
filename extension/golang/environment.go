@@ -286,6 +286,9 @@ func (thisEnvironment *Environment) schemaIDToResource(schemaID string, context 
 			field := resource.Elem().Field(i)
 			fieldType := resourceType.Field(i)
 			propertyName := fieldType.Tag.Get("db")
+			if propertyName == "" {
+				return nil, fmt.Errorf("Missing tag 'db' for resource %s field %s", resourceType.Name(), fieldType.Name)
+			}
 			property, err := rawSchema.GetPropertyByID(propertyName)
 			if err != nil {
 				return nil, err

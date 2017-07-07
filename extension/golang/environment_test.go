@@ -24,12 +24,8 @@ import (
 	"github.com/cloudwan/gohan/schema"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/cloudwan/gohan/extension/golang/test_data/ext_good/test"
 )
-
-type TestResource struct {
-	ID          string `yaml:"id"`
-	Description string `yaml:"description"`
-}
 
 var _ = Describe("Environment", func() {
 	var (
@@ -107,6 +103,11 @@ var _ = Describe("Environment", func() {
 	})
 
 	Describe("Running event handlers", func() {
+		BeforeEach(func () {
+			// Load a good test plugin
+			Expect(env.Load("test_data/ext_good/ext_good.so", "")).To(BeNil())
+		})
+
 		It("should run event handlers registered on environment", func() {
 			var someEventRunCount int = 0
 			var someOtherEventRunCount int = 0
@@ -159,7 +160,6 @@ var _ = Describe("Environment", func() {
 
 			schema.RegisterEventHandler("some_event", someEventHandler, goext.PRIORITY_DEFAULT)
 			schema.RegisterEventHandler("some_other_event", someOtherEventHandler, goext.PRIORITY_DEFAULT)
-			schema.RegisterResourceType(TestResource{})
 
 			env.HandleEvent("some_event", make(map[string]interface{}))
 
@@ -173,7 +173,7 @@ var _ = Describe("Environment", func() {
 		})
 
 		It("should pass data from context to handler", func() {
-			var returnedResource *TestResource
+			var returnedResource *test.Test
 
 			mgr := schema.GetManager()
 			mgr.LoadSchemaFromFile("test_data/test_schema.yaml")
@@ -182,12 +182,11 @@ var _ = Describe("Environment", func() {
 			Expect(schema).To(Not(BeNil()))
 
 			eventHandler := func(context goext.Context, resource goext.Resource, environment *goext.Environment) error {
-				returnedResource = resource.(*TestResource)
+				returnedResource = resource.(*test.Test)
 				return nil
 			}
 
 			schema.RegisterEventHandler("some_event", eventHandler, goext.PRIORITY_DEFAULT)
-			schema.RegisterResourceType(TestResource{})
 
 			context := make(goext.Context)
 			resource := make(map[string]interface{})

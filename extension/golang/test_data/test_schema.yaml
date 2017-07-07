@@ -2,7 +2,7 @@ extensions:
 - id: test_ext_init
   code_type: go
   path: ""
-  url: file://test_ext_init.so
+  url: file://ext_good/ext_good.so
 networks: []
 policies:
 - action: '*'
@@ -37,4 +37,4 @@ schemas:
     - description
     type: object
   singular: test
-  title: TestResource
+  title: Test

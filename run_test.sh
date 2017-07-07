@@ -12,10 +12,12 @@ DATA_DIR=`mktemp -d 2>/dev/null || mktemp -d -t 'mytmpdir'`
 etcd -data-dir $DATA_DIR --listen-peer-urls http://:2380 --listen-client-urls http://:2379 --advertise-client-urls http://127.0.0.1:2379 &
 ETCD_PID=$!
 
+./tools/build_go_tests.sh -race
+
 echo "mode: count" > profile.cov
 
 # Standard go tooling behavior is to ignore dirs with leading underscors
-for dir in $(find . -maxdepth 10 -not -path './.git*' -not -path '*/_*' -not -path './vendor/*' -type d);
+for dir in $(find . -maxdepth 10 -not -path './.git*' -not -path '*/_*' -not -path './vendor/*' -not -path '*/test_data/*' -not -path '*/go_extension/*' -type d);
 do
 if ls $dir/*.go &> /dev/null; then
     go test -race -covermode=atomic -coverprofile=$dir/profile.tmp $dir

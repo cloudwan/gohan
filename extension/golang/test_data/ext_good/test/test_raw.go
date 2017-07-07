@@ -13,23 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package test
 
-import (
-	"github.com/cloudwan/gohan/extension/goext"
-	"github.com/cloudwan/gohan/extension/golang/test_data/ext_good/test"
-)
-
-// Schemas returns a list of required schemas
-func Schemas() []string {
-	return []string{
-		"../test_schema.yaml",
-	}
-}
-
-// Init initializes a golang plugin
-func Init(env *goext.Environment) error {
-	testSchema := env.Schemas.Find("test")
-	testSchema.RegisterResourceType(test.Test{})
-	return nil
+// Test is a test resource
+type Test struct {
+    ID string `db:"id"`
+    Description string `db:"description"`
 }
