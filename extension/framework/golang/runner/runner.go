@@ -49,10 +49,10 @@ func (self *GoTestRunner) Run() error {
 
 	t := &testing.T{}
 
-	for _, testPath := range self.tests {
-		log.Notice("Loading test: %s", testPath)
+	for _, pluginFileName := range self.tests {
+		log.Notice("Loading test: %s", pluginFileName)
 
-		test, err := plugin.Open(testPath)
+		test, err := plugin.Open(pluginFileName)
 
 		if err != nil {
 			return err
@@ -63,71 +63,75 @@ func (self *GoTestRunner) Run() error {
 			return err
 		}
 
-		env := golang.NewEnvironment("test"+testPath, dataStore, &middleware.FakeIdentity{}, noop.NewSync())
-		environment := env.ExtEnvironment()
-		directory := filepath.Dir(testPath)
+		golangEnv := golang.NewEnvironment("test"+pluginFileName, dataStore, &middleware.FakeIdentity{}, noop.NewSync())
+		extEnv := golangEnv.ExtEnvironment()
+		pluginPath := filepath.Dir(pluginFileName)
 
-		//Load required schemas
-		Schemas, err := test.Lookup("Schemas")
+		// Schemas
+		schemasFnRaw, err := test.Lookup("Schemas")
 
-		var mgr *schema.Manager = nil
+		mgr := schema.GetManager()
 
-		if err == nil {
-			schemasFn := Schemas.(func() []string)
-			schemas := schemasFn()
-
-			mgr = schema.GetManager()
-
-			for _, schemaPath := range schemas {
-				if err = mgr.LoadSchemaFromFile(directory + "/" + schemaPath); err != nil {
-					log.Error("Failed to load schema: %s", err)
-					return err
-				}
-			}
-		} else {
-			log.Notice("plugin %s does not require any schemas", testPath)
+		if err != nil {
+			return fmt.Errorf("Golang extension test does not export Schemas: %s", err)
 		}
 
-		//Load plugin
-		Binary, err := test.Lookup("Binary")
-		if err == nil {
-			f := Binary.(func() string)
+		schemasFn, ok := schemasFnRaw.(func() []string)
 
-			plug, err := plugin.Open(directory + "/" + f())
-
-			if err != nil {
-				return err
-			}
-
-			Init, err := plug.Lookup("Init")
-
-			if err != nil {
-				return err
-			}
-
-			err = Init.(func(*goext.Environment) error)(&environment)
-
-			if err != nil {
-				return err
-			}
-		} else {
+		if !ok {
+			log.Error("Invalid signature of Schemas function in golang extension test: %s", pluginFileName)
 			return err
 		}
 
+		schemas := schemasFn()
+
+		for _, schemaPath := range schemas {
+			if err = mgr.LoadSchemaFromFile(pluginPath + "/" + schemaPath); err != nil {
+				return fmt.Errorf("Failed to load schema: %s", err)
+			}
+		}
+
+		// Binary
+		binaryFnRaw, err := test.Lookup("Binary")
+
+		if err != nil {
+			return err
+		}
+
+		binaryFn, ok := binaryFnRaw.(func() string)
+
+		if !ok {
+			log.Error("Invalid signature of Binary function in golang extension test: %s", pluginFileName)
+			return err
+		}
+
+		binary := binaryFn()
+		golangEnv.Load(binary, "")
+
+		// DB
 		err = db.InitDBWithSchemas("sqlite3", memoryDbConn("test.db"), true, false, false)
+
 		if err != nil {
 			schema.ClearManager()
 			return fmt.Errorf("Failed to init DB: %s", err)
 		}
 
 		//Setup test suite
-		Test, err := test.Lookup("Test")
+		testFnRaw, err := test.Lookup("Test")
+
 		if err != nil {
 			return err
 		}
 
-		f := Test.(func(*goext.Environment))
-		f(&environment)
+		testFn, ok := testFnRaw.(func(*goext.Environment))
+
+		if !ok {
+			log.Error("Invalid signature of Test function in golang extension test: %s", pluginFileName)
+			return err
+		}
+		
+		// Run test
+		testFn(&extEnv)
 	}
 
 	RegisterFailHandler(Fail)
