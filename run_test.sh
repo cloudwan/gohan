@@ -12,7 +12,7 @@ DATA_DIR=`mktemp -d 2>/dev/null || mktemp -d -t 'mytmpdir'`
 etcd -data-dir $DATA_DIR --listen-peer-urls http://:2380 --listen-client-urls http://:2379 --advertise-client-urls http://127.0.0.1:2379 &
 ETCD_PID=$!
 
-./tools/build_go_tests.sh -race
+( exec ./tools/build_go_tests.sh -race )
 
 echo "mode: count" > profile.cov
 
