@@ -24,7 +24,7 @@ import (
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/extension/goext"
 	"github.com/cloudwan/gohan/extension/golang"
-	l "github.com/cloudwan/gohan/log"
+	logPkg "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/server/middleware"
 	"github.com/cloudwan/gohan/sync/noop"
@@ -32,81 +32,106 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var log = l.NewLogger()
+var log = logPkg.NewLogger()
 
 type GoTestRunner struct {
-	tests []string
+	pluginFileNames []string
 }
 
-func NewGoTestRunner(tests []string) *GoTestRunner {
+func NewGoTestRunner(pluginFileNames []string) *GoTestRunner {
 	return &GoTestRunner{
-		tests: tests,
+		pluginFileNames: pluginFileNames,
 	}
 }
 
-func (self *GoTestRunner) Run() error {
+type GoTestSuite struct {
+	plugin  *plugin.Plugin
+	db      db.DB
+	goEnv   *golang.Environment
+	extEnv  goext.Environment
+	path    string
+	manager *schema.Manager
+
+	schemasFnRaw plugin.Symbol
+	schemasFn    func() [] string
+	schemas      []string
+
+	binaryFnRaw plugin.Symbol
+	binaryFn    func() string
+	binary      string
+
+	testFnRaw plugin.Symbol
+	testFn    func(*goext.Environment)
+}
+
+func (goTestRunner *GoTestRunner) Run() error {
 	log.Notice("Running Go extensions tests")
 
-	t := &testing.T{}
+	// note: must hold refs to go tests so that they are available at the time of being run by ginkgo
+	goTestSuites := []*GoTestSuite{}
 
-	for _, pluginFileName := range self.tests {
+	for _, pluginFileName := range goTestRunner.pluginFileNames {
 		log.Notice("Loading test: %s", pluginFileName)
 
-		test, err := plugin.Open(pluginFileName)
+		var err error
+		var ok bool
+		goTestSuite := &GoTestSuite{}
+
+		goTestSuite.plugin, err = plugin.Open(pluginFileName)
 
 		if err != nil {
 			return err
 		}
 
-		dataStore, err := newDBConnection(memoryDbConn("test.db"))
+		goTestSuite.db, err = newDBConnection(memoryDbConn("test.db"))
 		if err != nil {
 			return err
 		}
 
-		golangEnv := golang.NewEnvironment("test"+pluginFileName, dataStore, &middleware.FakeIdentity{}, noop.NewSync())
-		extEnv := golangEnv.ExtEnvironment()
-		pluginPath := filepath.Dir(pluginFileName)
+		goTestSuite.goEnv = golang.NewEnvironment("test"+pluginFileName, goTestSuite.db, &middleware.FakeIdentity{}, noop.NewSync())
+		goTestSuite.extEnv = goTestSuite.goEnv.ExtEnvironment()
+		goTestSuite.path = filepath.Dir(pluginFileName)
 
 		// Schemas
-		schemasFnRaw, err := test.Lookup("Schemas")
+		goTestSuite.schemasFnRaw, err = goTestSuite.plugin.Lookup("Schemas")
 
-		mgr := schema.GetManager()
+		goTestSuite.manager = schema.GetManager()
 
 		if err != nil {
 			return fmt.Errorf("Golang extension test does not export Schemas: %s", err)
 		}
 
-		schemasFn, ok := schemasFnRaw.(func() []string)
+		goTestSuite.schemasFn, ok = goTestSuite.schemasFnRaw.(func() []string)
 
 		if !ok {
 			log.Error("Invalid signature of Schemas function in golang extension test: %s", pluginFileName)
 			return err
 		}
 
-		schemas := schemasFn()
+		goTestSuite.schemas = goTestSuite.schemasFn()
 
-		for _, schemaPath := range schemas {
-			if err = mgr.LoadSchemaFromFile(pluginPath + "/" + schemaPath); err != nil {
+		for _, schemaPath := range goTestSuite.schemas {
+			if err = goTestSuite.manager.LoadSchemaFromFile(goTestSuite.path + "/" + schemaPath); err != nil {
 				return fmt.Errorf("Failed to load schema: %s", err)
 			}
 		}
 
 		// Binary
-		binaryFnRaw, err := test.Lookup("Binary")
+		goTestSuite.binaryFnRaw, err = goTestSuite.plugin.Lookup("Binary")
 
 		if err != nil {
 			return err
 		}
 
-		binaryFn, ok := binaryFnRaw.(func() string)
+		goTestSuite.binaryFn, ok = goTestSuite.binaryFnRaw.(func() string)
 
 		if !ok {
 			log.Error("Invalid signature of Binary function in golang extension test: %s", pluginFileName)
 			return err
 		}
 
-		binary := binaryFn()
-		golangEnv.Load(binary, "")
+		goTestSuite.binary = goTestSuite.binaryFn()
+		goTestSuite.goEnv.Load(goTestSuite.binary, "")
 
 		// DB
 		err = db.InitDBWithSchemas("sqlite3", memoryDbConn("test.db"), true, false, false)
@@ -117,24 +142,29 @@ func (self *GoTestRunner) Run() error {
 		}
 
 		//Setup test suite
-		testFnRaw, err := test.Lookup("Test")
+		goTestSuite.testFnRaw, err = goTestSuite.plugin.Lookup("Test")
 
 		if err != nil {
 			return err
 		}
 
-		testFn, ok := testFnRaw.(func(*goext.Environment))
+		goTestSuite.testFn, ok = goTestSuite.testFnRaw.(func(*goext.Environment))
 
 		if !ok {
 			log.Error("Invalid signature of Test function in golang extension test: %s", pluginFileName)
 			return err
 		}
-		
+
+		// Hold a reference to test
+		goTestSuites = append(goTestSuites, goTestSuite)
+
 		// Run test
-		testFn(&extEnv)
+		goTestSuite.testFn(&goTestSuite.extEnv)
 	}
 
 	RegisterFailHandler(Fail)
+
+	t := &testing.T{}
 	RunSpecs(t, "Go Extensions Test Suite")
 
 	return nil
