@@ -133,6 +133,20 @@ func (goTestRunner *GoTestRunner) Run() error {
 		goTestSuite.binary = goTestSuite.binaryFn()
 		goTestSuite.goEnv.Load(goTestSuite.binary, "")
 
+		// Run init from loader
+		directory := filepath.Dir(pluginFileName)
+		plug, err := plugin.Open(directory + "/" + goTestSuite.binary)
+		if err != nil {
+			return nil
+		}
+		initFn, err := plug.Lookup("Init")
+		if err != nil {
+			return err
+		}
+		if err := initFn.(func(environment *goext.Environment) error)(&goTestSuite.extEnv); err != nil {
+			return err
+		}
+
 		// DB
 		err = db.InitDBWithSchemas("sqlite3", memoryDbConn("test.db"), true, false, false)
 
