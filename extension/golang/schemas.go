@@ -35,16 +35,16 @@ func bindSchemas(rawEnvironment *Environment) goext.SchemasInterface {
 	return &schemasBinder{rawEnvironment: rawEnvironment}
 }
 
-func (self *schemasBinder) List() []goext.Schema {
+func (thisSchemasBinder *schemasBinder) List() []goext.Schema {
 	manager := schema.GetManager()
 	result := []goext.Schema{}
 	for _, rawSchema := range manager.OrderedSchemas() {
-		result = append(result, bindSchema(self.rawEnvironment, rawSchema))
+		result = append(result, bindSchema(thisSchemasBinder.rawEnvironment, rawSchema))
 	}
 	return result
 }
 
-func (self *schemasBinder) Find(id string) goext.Schema {
+func (thisSchemasBinder *schemasBinder) Find(id string) goext.Schema {
 	manager := schema.GetManager()
 	schema, ok := manager.Schema(id)
 
@@ -52,11 +52,11 @@ func (self *schemasBinder) Find(id string) goext.Schema {
 		return nil
 	}
 
-	return bindSchema(self.rawEnvironment, schema)
+	return bindSchema(thisSchemasBinder.rawEnvironment, schema)
 }
 
-func (self *schemasBinder) Env() *goext.Environment {
-	return &self.rawEnvironment.extEnvironment
+func (thisSchemasBinder *schemasBinder) Env() *goext.Environment {
+	return &thisSchemasBinder.rawEnvironment.extEnv
 }
 
 type schemaBinder struct {
@@ -68,20 +68,20 @@ func bindSchema(rawEnvironment *Environment, rawSchema *schema.Schema) goext.Sch
 	return &schemaBinder{rawEnvironment: rawEnvironment, rawSchema: rawSchema}
 }
 
-func (self *schemaBinder) ID() string {
-	return self.rawSchema.ID
+func (thisSchemasBinder *schemaBinder) ID() string {
+	return thisSchemasBinder.rawSchema.ID
 }
 
-func (self *schemaBinder) Env() *goext.Environment {
-	return &self.rawEnvironment.extEnvironment
+func (thisSchemasBinder *schemaBinder) Env() *goext.Environment {
+	return &thisSchemasBinder.rawEnvironment.extEnv
 }
 
-func (self *schemaBinder) structToMap(resource interface{}) map[string]interface{} {
+func (thisSchemasBinder *schemaBinder) structToMap(resource interface{}) map[string]interface{} {
 	fieldsMap := map[string]interface{}{}
 
 	mapper := reflectx.NewMapper("db")
 
-	for _, property := range self.rawSchema.Properties {
+	for _, property := range thisSchemasBinder.rawSchema.Properties {
 		field := property.ID
 		v := mapper.FieldByName(reflect.ValueOf(resource), property.ID)
 		val := v.Interface()
@@ -97,13 +97,13 @@ func (self *schemaBinder) structToMap(resource interface{}) map[string]interface
 	return fieldsMap
 }
 
-func (self *schemaBinder) structToResource(resource interface{}) (*schema.Resource, error) {
-	fieldsMap := self.structToMap(resource)
-	return schema.NewResource(self.rawSchema, fieldsMap)
+func (thisSchemasBinder *schemaBinder) structToResource(resource interface{}) (*schema.Resource, error) {
+	fieldsMap := thisSchemasBinder.structToMap(resource)
+	return schema.NewResource(thisSchemasBinder.rawSchema, fieldsMap)
 }
 
 //List - lists resources
-func (self *schemaBinder) List(resources interface{}) error {
+func (thisSchemasBinder *schemaBinder) List(resources interface{}) error {
 	slicePtrValue := reflect.ValueOf(resources)
 	slicePtrType := reflect.TypeOf(resources)
 	sliceValue := slicePtrValue.Elem()
@@ -112,7 +112,7 @@ func (self *schemaBinder) List(resources interface{}) error {
 
 	sliceValue.SetLen(0)
 
-	tx, err := self.rawEnvironment.DataStore.Begin()
+	tx, err := thisSchemasBinder.rawEnvironment.DataStore.Begin()
 
 	if err != nil {
 		return err
@@ -120,7 +120,7 @@ func (self *schemaBinder) List(resources interface{}) error {
 
 	defer tx.Close()
 
-	data, _, err := tx.List(self.rawSchema, transaction.Filter{}, nil, nil)
+	data, _, err := tx.List(thisSchemasBinder.rawSchema, transaction.Filter{}, nil, nil)
 
 	if err != nil {
 		return err
@@ -142,19 +142,19 @@ func (self *schemaBinder) List(resources interface{}) error {
 	return nil
 }
 
-func (self *schemaBinder) FetchRelated(resource interface{}, relatedResource interface{}) error {
-	for _, property := range self.rawSchema.Properties {
+func (thisSchemasBinder *schemaBinder) FetchRelated(resource interface{}, relatedResource interface{}) error {
+	for _, property := range thisSchemasBinder.rawSchema.Properties {
 		if property.Relation != "" {
 			relatedSchema, ok := schema.GetManager().Schema(property.Relation)
 
 			if !ok {
-				return fmt.Errorf("Could not get related schema: %s for: %s", property.Relation, self.rawSchema.ID)
+				return fmt.Errorf("Could not get related schema: %s for: %s", property.Relation, thisSchemasBinder.rawSchema.ID)
 			}
 
 			mapper := reflectx.NewMapper("db")
 			id := mapper.FieldByName(reflect.ValueOf(resource), property.ID).String()
 
-			bindSchema(self.rawEnvironment, relatedSchema).Fetch(id, relatedResource)
+			bindSchema(thisSchemasBinder.rawEnvironment, relatedSchema).Fetch(id, relatedResource)
 
 			return nil
 		}
@@ -164,8 +164,8 @@ func (self *schemaBinder) FetchRelated(resource interface{}, relatedResource int
 }
 
 //Fetch - retrieves resource by ID
-func (self *schemaBinder) Fetch(id string, res interface{}) error {
-	tx, err := self.rawEnvironment.DataStore.Begin()
+func (thisSchemasBinder *schemaBinder) Fetch(id string, res interface{}) error {
+	tx, err := thisSchemasBinder.rawEnvironment.DataStore.Begin()
 
 	if err != nil {
 		return err
@@ -175,14 +175,14 @@ func (self *schemaBinder) Fetch(id string, res interface{}) error {
 
 	filter := transaction.Filter{"id": id}
 
-	data, err := tx.Fetch(self.rawSchema, filter)
+	data, err := tx.Fetch(thisSchemasBinder.rawSchema, filter)
 
 	if err != nil {
 		return err
 	}
-	resourceType, ok := self.rawEnvironment.resourceTypes[self.rawSchema.ID]
+	resourceType, ok := thisSchemasBinder.rawEnvironment.resourceTypes[thisSchemasBinder.rawSchema.ID]
 	if !ok {
-		return fmt.Errorf("No type registered for schema title: %s", self.rawSchema.ID)
+		return fmt.Errorf("No type registered for schema title: %s", thisSchemasBinder.rawSchema.ID)
 	}
 	resource := reflect.ValueOf(res)
 
@@ -191,19 +191,19 @@ func (self *schemaBinder) Fetch(id string, res interface{}) error {
 
 		fieldType := resourceType.Field(i)
 		propertyName := fieldType.Tag.Get("db")
-		property, err := self.rawSchema.GetPropertyByID(propertyName)
+		property, err := thisSchemasBinder.rawSchema.GetPropertyByID(propertyName)
 		if err != nil {
 			return err
 		}
 		if fieldType.Type.Kind() == reflect.Struct {
-			mapJson, err := json.Marshal(data.Get(property.ID))
+			mapJSON, err := json.Marshal(data.Get(property.ID))
 			if err != nil {
 				return err
 			}
 			newField := reflect.New(field.Type())
-			fieldJson := string(mapJson)
-			fieldIface := newField.Interface()
-			err = json.Unmarshal([]byte(fieldJson), &fieldIface)
+			fieldJSON := string(mapJSON)
+			fieldInterface := newField.Interface()
+			err = json.Unmarshal([]byte(fieldJSON), &fieldInterface)
 			if err != nil {
 				return err
 			}
@@ -220,11 +220,11 @@ func (self *schemaBinder) Fetch(id string, res interface{}) error {
 }
 
 //Create - creates resource
-func (self *schemaBinder) Create(resource interface{}) error { //resource should be already created
+func (thisSchemasBinder *schemaBinder) Create(resource interface{}) error { //resource should be already created
 	context := make(map[string]interface{})
-	context["resource"] = self.structToMap(resource)
-	self.rawEnvironment.HandleEvent(goext.PRE_CREATE_TX, context)
-	tx, err := self.rawEnvironment.DataStore.Begin()
+	context["resource"] = thisSchemasBinder.structToMap(resource)
+	thisSchemasBinder.rawEnvironment.HandleEvent(goext.PRE_CREATE_TX, context)
+	tx, err := thisSchemasBinder.rawEnvironment.DataStore.Begin()
 
 	if err != nil {
 		return err
@@ -232,7 +232,7 @@ func (self *schemaBinder) Create(resource interface{}) error { //resource should
 
 	defer tx.Close()
 
-	resourceData, err := self.structToResource(resource)
+	resourceData, err := thisSchemasBinder.structToResource(resource)
 
 	if err != nil {
 		return err
@@ -248,12 +248,12 @@ func (self *schemaBinder) Create(resource interface{}) error { //resource should
 	if err != nil {
 		return err
 	}
-	return self.rawEnvironment.HandleEvent(goext.POST_CREATE_TX, context)
+	return thisSchemasBinder.rawEnvironment.HandleEvent(goext.POST_CREATE_TX, context)
 }
 
 //Update - updates resource
-func (self *schemaBinder) Update(resource interface{}) error {
-	tx, err := self.rawEnvironment.DataStore.Begin()
+func (thisSchemasBinder *schemaBinder) Update(resource interface{}) error {
+	tx, err := thisSchemasBinder.rawEnvironment.DataStore.Begin()
 
 	if err != nil {
 		return err
@@ -261,7 +261,7 @@ func (self *schemaBinder) Update(resource interface{}) error {
 
 	defer tx.Close()
 
-	resourceData, err := self.structToResource(resource)
+	resourceData, err := thisSchemasBinder.structToResource(resource)
 
 	if err != nil {
 		return err
@@ -277,8 +277,8 @@ func (self *schemaBinder) Update(resource interface{}) error {
 }
 
 //Delete - deletes resource by ID
-func (self *schemaBinder) Delete(id string) error {
-	tx, err := self.rawEnvironment.DataStore.Begin()
+func (thisSchemasBinder *schemaBinder) Delete(id string) error {
+	tx, err := thisSchemasBinder.rawEnvironment.DataStore.Begin()
 
 	if err != nil {
 		return err
@@ -286,7 +286,7 @@ func (self *schemaBinder) Delete(id string) error {
 
 	defer tx.Close()
 
-	err = tx.Delete(self.rawSchema, id)
+	err = tx.Delete(thisSchemasBinder.rawSchema, id)
 
 	if err != nil {
 		return err
@@ -295,10 +295,10 @@ func (self *schemaBinder) Delete(id string) error {
 	return tx.Commit()
 }
 
-func (self *schemaBinder) RegisterEventHandler(eventName string, handler func(context goext.Context, resource goext.Resource, environment *goext.Environment) error, priority goext.Priority) {
-	self.rawEnvironment.RegisterSchemaEventHandler(self.rawSchema.ID, eventName, handler, priority)
+func (thisSchemasBinder *schemaBinder) RegisterEventHandler(eventName string, handler func(context goext.Context, resource goext.Resource, environment *goext.Environment) error, priority goext.Priority) {
+	thisSchemasBinder.rawEnvironment.RegisterSchemaEventHandler(thisSchemasBinder.rawSchema.ID, eventName, handler, priority)
 }
 
-func (self *schemaBinder) RegisterResourceType(typeValue interface{}) {
-	self.rawEnvironment.RegisterResourceType(self.rawSchema.ID, typeValue)
+func (thisSchemasBinder *schemaBinder) RegisterResourceType(typeValue interface{}) {
+	thisSchemasBinder.rawEnvironment.RegisterResourceType(thisSchemasBinder.rawSchema.ID, typeValue)
 }

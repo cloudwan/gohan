@@ -13,22 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package golang_test
+package main
 
-import (
-	"os/exec"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
-	"testing"
-)
-
-func TestGolang(t *testing.T) {
-	cmd := exec.Command("make") //compile required "plugins"
-	cmd.Dir = "test_data"
-	cmd.Run()
-
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Golang Suite")
+// Schemas returns a list of required schemas
+func Schemas() []string {
+	return []string{}
 }

@@ -82,7 +82,6 @@ func TestGoExtensions(c *cli.Context) {
 
 	if err := r.Run(); err != nil {
 		panic(err.Error())
-		os.Exit(1)
 	}
 }
 

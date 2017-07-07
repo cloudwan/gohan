@@ -92,10 +92,10 @@ func (goTestRunner *GoTestRunner) Run() error {
 		goTestSuite.extEnv = goTestSuite.goEnv.ExtEnvironment()
 		goTestSuite.path = filepath.Dir(pluginFileName)
 
+		goTestSuite.manager = schema.GetManager()
+
 		// Schemas
 		goTestSuite.schemasFnRaw, err = goTestSuite.plugin.Lookup("Schemas")
-
-		goTestSuite.manager = schema.GetManager()
 
 		if err != nil {
 			return fmt.Errorf("Golang extension test does not export Schemas: %s", err)

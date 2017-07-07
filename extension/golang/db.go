@@ -1,4 +1,4 @@
-// Copyright (C) 2015 NTT Innovation Institute, Inc.
+// Copyright (C) 2017 NTT Innovation Institute, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,13 +17,13 @@ package golang
 
 import (
 	"github.com/cloudwan/gohan/db/transaction"
-//	"github.com/cloudwan/gohan/extension/golang"
 )
 
-func DbTransaction(env *Environment) transaction.Transaction {
+// DbTransaction returns
+func DbTransaction(thisEnvironment *Environment) transaction.Transaction {
 	//tx, err := rawEnvironment.Env.(golang.Environment).DataStore.Begin()
 	//if err != nil {
-		//ThrowOttoException(&call, "failed to start a transaction: %s", err.Error())
+	//ThrowOttoException(&call, "failed to start a transaction: %s", err.Error())
 	//}
 	//return tx
 	return nil

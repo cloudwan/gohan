@@ -1,4 +1,4 @@
-// Copyright (C) 2015 NTT Innovation Institute, Inc.
+// Copyright (C) 2017 NTT Innovation Institute, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,23 +25,21 @@ type coreBinder struct {
 	rawEnvironment *Environment
 }
 
-func (core *coreBinder) RegisterSchemaEventHandler(schemaID string, eventName string, handler func(context goext.Context, resource goext.Resource, environment *goext.Environment) error, priority goext.Priority) {
-	core.rawEnvironment.RegisterSchemaEventHandler(schemaID, eventName, handler, priority)
+func (thisCoreBinder *coreBinder) RegisterSchemaEventHandler(schemaID string, eventName string, handler func(context goext.Context, resource goext.Resource, environment *goext.Environment) error, priority goext.Priority) {
+	thisCoreBinder.rawEnvironment.RegisterSchemaEventHandler(schemaID, eventName, handler, priority)
 }
 
-func (core *coreBinder) RegisterEventHandler(eventName string, handler func(context goext.Context, environment *goext.Environment) error, priority goext.Priority) {
-	core.rawEnvironment.RegisterEventHandler(eventName, handler, priority)
+func (thisCoreBinder *coreBinder) RegisterEventHandler(eventName string, handler func(context goext.Context, environment *goext.Environment) error, priority goext.Priority) {
+	thisCoreBinder.rawEnvironment.RegisterEventHandler(eventName, handler, priority)
 }
 
-/**
- * Causes the given event to be handled in all environments (across different-language extensions)
- */
-func (core *coreBinder) TriggerEvent(event string, context goext.Context) {
+// TriggerEvent Causes the given event to be handled in all environments (across different-language extensions)
+func (thisCoreBinder *coreBinder) TriggerEvent(event string, context goext.Context) {
 	schemaID := ""
 
 	if s, ok := context["schema"]; ok {
 		schemaID = s.(*schema.Schema).ID
-	}else{
+	} else {
 		log.Panic("TriggerEvent: schema not found")
 	}
 
@@ -49,11 +47,9 @@ func (core *coreBinder) TriggerEvent(event string, context goext.Context) {
 	envManager.HandleEventInAllEnvironments(context, event, schemaID)
 }
 
-/**
- * Causes the given event to be handled within the same environment
- */
-func (core *coreBinder) HandleEvent(event string, context goext.Context) {
-	core.rawEnvironment.HandleEvent(event, context)
+// HandleEvent Causes the given event to be handled within the same environment
+func (thisCoreBinder *coreBinder) HandleEvent(event string, context goext.Context) {
+	thisCoreBinder.rawEnvironment.HandleEvent(event, context)
 }
 
 func bindCore(rawEnvironment *Environment) goext.CoreInterface {

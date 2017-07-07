@@ -33,6 +33,7 @@ lint:
 build: deps
 	@echo "$(OK_COLOR)==> Building$(NO_COLOR)"
 	./tools/build.sh
+	./tools/build_go_tests.sh
 
 install:
 	@echo "$(OK_COLOR)==> Installing$(NO_COLOR)"

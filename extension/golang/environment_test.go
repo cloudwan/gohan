@@ -17,12 +17,13 @@ package golang_test
 
 import (
 	"fmt"
+	"reflect"
+
 	"github.com/cloudwan/gohan/extension/goext"
 	"github.com/cloudwan/gohan/extension/golang"
 	"github.com/cloudwan/gohan/schema"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"reflect"
 )
 
 type TestResource struct {
@@ -51,12 +52,16 @@ var _ = Describe("Environment", func() {
 		})
 
 		Context("File paths are valid", func() {
-			It("should load plugin which does export Init function", func() {
-				Expect(env.Load("test_data/ext_init.so", "")).To(BeNil())
+			It("should load plugin which does export Init and Schemas functions", func() {
+				Expect(env.Load("test_data/ext_good/ext_good.so", "")).To(BeNil())
 			})
 
 			It("should not load plugin which does not export Init function", func() {
-				Expect(env.Load("test_data/ext_no_init.so", "").Error()).To(ContainSubstring("symbol Init not found"))
+				Expect(env.Load("test_data/ext_no_init/ext_no_init.so", "").Error()).To(ContainSubstring("symbol Init not found"))
+			})
+
+			It("should not load plugin which does not export Schemas function", func() {
+				Expect(env.Load("test_data/ext_no_schemas/ext_no_schemas.so", "").Error()).To(ContainSubstring("symbol Schemas not found"))
 			})
 		})
 	})
@@ -174,6 +179,8 @@ var _ = Describe("Environment", func() {
 			mgr.LoadSchemaFromFile("test_data/test_schema.yaml")
 			schema := env.ExtEnvironment().Schemas.Find("test")
 
+			Expect(schema).To(Not(BeNil()))
+
 			eventHandler := func(context goext.Context, resource goext.Resource, environment *goext.Environment) error {
 				returnedResource = resource.(*TestResource)
 				return nil
@@ -182,8 +189,9 @@ var _ = Describe("Environment", func() {
 			schema.RegisterEventHandler("some_event", eventHandler, goext.PRIORITY_DEFAULT)
 			schema.RegisterResourceType(TestResource{})
 
-			context := make(map[string]interface{})
+			context := make(goext.Context)
 			resource := make(map[string]interface{})
+
 			resource["id"] = "some-id"
 			resource["description"] = "some description"
 
@@ -191,6 +199,7 @@ var _ = Describe("Environment", func() {
 
 			env.HandleEvent("some_event", context)
 
+			Expect(returnedResource).To(Not(BeNil()))
 			Expect(returnedResource.ID).To(Equal("some-id"))
 			Expect(returnedResource.Description).To(Equal("some description"))
 		})

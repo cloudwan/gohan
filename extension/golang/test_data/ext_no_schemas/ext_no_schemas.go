@@ -13,22 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package golang_test
+package main
 
 import (
-	"os/exec"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
-	"testing"
+	"github.com/cloudwan/gohan/extension/goext"
 )
 
-func TestGolang(t *testing.T) {
-	cmd := exec.Command("make") //compile required "plugins"
-	cmd.Dir = "test_data"
-	cmd.Run()
-
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Golang Suite")
+// Init initializes a golang plugin
+func Init(env *goext.Environment) error {
+	return nil
 }
