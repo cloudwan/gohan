@@ -131,7 +131,13 @@ func (goTestRunner *GoTestRunner) Run() error {
 		}
 
 		goTestSuite.binary = goTestSuite.binaryFn()
-		goTestSuite.goEnv.Load(goTestSuite.binary, "")
+
+		err = goTestSuite.goEnv.Load(goTestSuite.path + "/" + goTestSuite.binary, "")
+
+		if err != nil {
+			log.Error("Failed to load golang extension test dependant plugin: %s; error: %s", pluginFileName, err)
+			return err
+		}
 
 		// Run init from loader
 		directory := filepath.Dir(pluginFileName)
