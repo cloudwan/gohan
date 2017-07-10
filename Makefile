@@ -22,7 +22,7 @@ gen:
 	etc/templates/... \
 	public/...
 
-test:
+test: build
 	@echo "$(OK_COLOR)==> Testing$(NO_COLOR)"
 	./run_test.sh
 
