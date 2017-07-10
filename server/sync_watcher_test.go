@@ -83,7 +83,7 @@ var _ = Describe("Sync watcher test", func() {
 
 			time.Sleep(masterTTL / 2 * time.Second)
 
-			// Watched pathes should be load balanced
+			// Watched paths should be load balanced
 			// So, this process started watching half of them based on priority
 			wrn, err = sync.Fetch(lockPathPrefix + "/watch/key")
 			Expect(err).ToNot(HaveOccurred())
