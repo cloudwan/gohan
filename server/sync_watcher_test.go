@@ -120,8 +120,6 @@ var _ = Describe("Sync watcher test", func() {
 			err = sync.Delete(processPathPrefix+"/"+newProcessUUID, false)
 			Expect(err).ToNot(HaveOccurred())
 
-			time.Sleep(time.Second)
-
 			// Now, process watcher detects two processes running
 			prn, err = sync.Fetch(processPathPrefix)
 			Expect(err).ToNot(HaveOccurred())
