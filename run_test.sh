@@ -12,8 +12,8 @@ DATA_DIR=`mktemp -d 2>/dev/null || mktemp -d -t 'mytmpdir'`
 etcd -data-dir $DATA_DIR --listen-peer-urls http://:2380 --listen-client-urls http://:2379 --advertise-client-urls http://127.0.0.1:2379 &
 ETCD_PID=$!
 
-#( exec ./tools/build_go_tests.sh -race )
-( exec ./tools/build_go_tests.sh  )
+# rebuild tests with -race flag set
+( exec ./tools/build_go_tests.sh -race )
 
 echo "mode: count" > profile.cov
 
@@ -21,8 +21,7 @@ echo "mode: count" > profile.cov
 for dir in $(find . -maxdepth 10 -not -path './.git*' -not -path '*/_*' -not -path './vendor/*' -not -path '*/test_data/*' -not -path '*/go_extension' -type d);
 do
 if ls $dir/*.go &> /dev/null; then
-    #go test -race -covermode=atomic -coverprofile=$dir/profile.tmp $dir
-    go test $dir
+    go test -race -covermode=atomic -coverprofile=$dir/profile.tmp $dir
     result=$?
     if [ -f $dir/profile.tmp ]
     then

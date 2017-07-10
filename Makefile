@@ -11,7 +11,6 @@ deps:
 
 format:
 	@echo "$(OK_COLOR)==> Formatting$(NO_COLOR)"
-
 	govendor fmt +local
 
 gen:
