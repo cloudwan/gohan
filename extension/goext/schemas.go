@@ -1,4 +1,4 @@
-// Copyright (C) 2015 NTT Innovation Institute, Inc.
+// Copyright (C) 2017 NTT Innovation Institute, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,10 +20,11 @@ type Resource interface{}
 type Resources []Resource
 type Priority int
 
-const PRIORITY_DEFAULT Priority = 0
+const PriorityDefault Priority = 0
 
-type Schema interface {
-	EnvContainer
+// ISchema is an interface representing a single schema in Gohan
+type ISchema interface {
+	IEnvironmentSupport
 
 	// properties
 	ID() string
@@ -40,9 +41,10 @@ type Schema interface {
 	RegisterResourceType(typeValue interface{})
 }
 
-type SchemasInterface interface {
-	EnvContainer
+// ISchemas is an interface to schemas manager in Gohan
+type ISchemas interface {
+	IEnvironmentSupport
 
-	List() []Schema
-	Find(id string) Schema
+	List() []ISchema
+	Find(id string) ISchema
 }

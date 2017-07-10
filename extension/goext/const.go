@@ -1,4 +1,4 @@
-// Copyright (C) 2015 NTT Innovation Institute, Inc.
+// Copyright (C) 2017 NTT Innovation Institute, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,27 +15,29 @@
 
 package goext
 
-const PRE_CREATE = "pre_create"
-const PRE_CREATE_TX = "pre_create_in_transaction"
-const POST_CREATE_TX = "post_create_in_transaction"
-const POST_CREATE = "post_create"
+const (
+	PreCreate    = "pre_create"
+	PreCreateTx  = "pre_create_in_transaction"
+	PostCreateTx = "post_create_in_transaction"
+	PostCreate   = "post_create"
 
-const PRE_UPDATE = "pre_update"
-const PRE_UPDATE_TX = "pre_update_in_transaction"
-const POST_UPDATE_TX = "post_update_in_transaction"
-const POST_UPDATE = "post_update"
+	PreUpdate    = "pre_update"
+	PreUpdateTx  = "pre_update_in_transaction"
+	PostUpdateTx = "post_update_in_transaction"
+	PostUpdate   = "post_update"
 
-const PRE_SHOW = "pre_show"
-const PRE_SHOW_TX = "pre_show_in_transaction"
-const POST_SHOW_TX = "post_show_in_transaction"
-const POST_SHOW = "post_show"
+	PreShow    = "pre_show"
+	PreShowTx  = "pre_show_in_transaction"
+	PostShowTx = "post_show_in_transaction"
+	PostShow   = "post_show"
 
-const PRE_LIST = "pre_list"
-const PRE_LIST_TX = "pre_list_in_transaction"
-const POST_LIST_TX = "post_list_in_transaction"
-const POST_LIST = "post_list"
+	PreList    = "pre_list"
+	PreListTx  = "pre_list_in_transaction"
+	PostListTx = "post_list_in_transaction"
+	PostList   = "post_list"
 
-const PRE_DELETE = "pre_delete"
-const PRE_DELETE_TX = "pre_delete_in_transaction"
-const POST_DELETE_TX = "post_delete_in_transaction"
-const POST_DELETE = "post_delete"
+	PreDelete    = "pre_delete"
+	PreDeleteTx  = "pre_delete_in_transaction"
+	PostDeleteTx = "post_delete_in_transaction"
+	PostDelete   = "post_delete"
+)

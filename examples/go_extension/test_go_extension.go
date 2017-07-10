@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-// Returns list of schemas that this test depends on
+// Schemas returns a list of schemas that this test depends on
 // @optional
 func Schemas() []string {
 	return []string{
@@ -30,7 +30,7 @@ func Schemas() []string {
 	}
 }
 
-// Returns path to the plugin's binary that this test depends on
+// Binary returns a path to the plugin's binary that this test depends on
 // @required
 func Binary() string {
 	return "go_extension.so"
@@ -45,7 +45,7 @@ func Test(env *goext.Environment) {
 		It("Should react on events", func() {
 			context := make(map[string]interface{})
 
-			env.Core.HandleEvent(goext.POST_UPDATE, context) //this will run extension's event handler
+			env.Core.HandleEvent(goext.PostUpdate, context) //this will run extension's event handler
 
 			handled, ok := context["example_event_handled"]
 

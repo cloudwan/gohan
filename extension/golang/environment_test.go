@@ -70,12 +70,12 @@ var _ = Describe("Environment", func() {
 
 			Expect(len(env.ExtEnvironment().Handlers)).To(Equal(0))
 
-			env.RegisterEventHandler("some_event", handler, goext.PRIORITY_DEFAULT)
+			env.RegisterEventHandler("some_event", handler, goext.PriorityDefault)
 
-			Expect(len(env.ExtEnvironment().Handlers["some_event"][goext.PRIORITY_DEFAULT])).To(Equal(1))
+			Expect(len(env.ExtEnvironment().Handlers["some_event"][goext.PriorityDefault])).To(Equal(1))
 
 			p1 := reflect.ValueOf(handler).Pointer()
-			p2 := reflect.ValueOf(env.ExtEnvironment().Handlers["some_event"][goext.PRIORITY_DEFAULT][0]).Pointer()
+			p2 := reflect.ValueOf(env.ExtEnvironment().Handlers["some_event"][goext.PriorityDefault][0]).Pointer()
 
 			Expect(p1).To(Equal(p2))
 		})
@@ -91,12 +91,12 @@ var _ = Describe("Environment", func() {
 
 			Expect(schema).NotTo(BeNil())
 
-			schema.RegisterEventHandler("some_event", handler, goext.PRIORITY_DEFAULT)
+			schema.RegisterEventHandler("some_event", handler, goext.PriorityDefault)
 
-			Expect(len(env.ExtEnvironment().HandlersSchema["some_event"]["test"][goext.PRIORITY_DEFAULT])).To(Equal(1))
+			Expect(len(env.ExtEnvironment().HandlersSchema["some_event"]["test"][goext.PriorityDefault])).To(Equal(1))
 
 			p1 := reflect.ValueOf(handler).Pointer()
-			p2 := reflect.ValueOf(env.ExtEnvironment().HandlersSchema["some_event"]["test"][goext.PRIORITY_DEFAULT][0]).Pointer()
+			p2 := reflect.ValueOf(env.ExtEnvironment().HandlersSchema["some_event"]["test"][goext.PriorityDefault][0]).Pointer()
 
 			Expect(p1).To(Equal(p2))
 		})
@@ -124,8 +124,8 @@ var _ = Describe("Environment", func() {
 				return nil
 			}
 
-			env.RegisterEventHandler("some_event", someEventHandler, goext.PRIORITY_DEFAULT)
-			env.RegisterEventHandler("some_other_event", someOtherEventHandler, goext.PRIORITY_DEFAULT)
+			env.RegisterEventHandler("some_event", someEventHandler, goext.PriorityDefault)
+			env.RegisterEventHandler("some_other_event", someOtherEventHandler, goext.PriorityDefault)
 
 			env.HandleEvent("some_event", make(map[string]interface{}))
 
@@ -158,8 +158,8 @@ var _ = Describe("Environment", func() {
 				return nil
 			}
 
-			schema.RegisterEventHandler("some_event", someEventHandler, goext.PRIORITY_DEFAULT)
-			schema.RegisterEventHandler("some_other_event", someOtherEventHandler, goext.PRIORITY_DEFAULT)
+			schema.RegisterEventHandler("some_event", someEventHandler, goext.PriorityDefault)
+			schema.RegisterEventHandler("some_other_event", someOtherEventHandler, goext.PriorityDefault)
 
 			env.HandleEvent("some_event", make(map[string]interface{}))
 
@@ -186,7 +186,7 @@ var _ = Describe("Environment", func() {
 				return nil
 			}
 
-			schema.RegisterEventHandler("some_event", eventHandler, goext.PRIORITY_DEFAULT)
+			schema.RegisterEventHandler("some_event", eventHandler, goext.PriorityDefault)
 
 			context := make(goext.Context)
 			resource := make(map[string]interface{})

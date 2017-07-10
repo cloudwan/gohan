@@ -1,4 +1,4 @@
-// Copyright (C) 2015 NTT Innovation Institute, Inc.
+// Copyright (C) 2017 NTT Innovation Institute, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,9 +26,8 @@ const (
 	LEVEL_DEBUG
 )
 
-type LoggerInterface interface {
-	Generic(module string, level Level, format string)
-	Genericf(module string, level Level, format string, args ...interface{})
+// ILogger is an interface to logging subsystem of Gohan
+type ILogger interface {
 	Critical(format string)
 	Criticalf(format string, args ...interface{})
 	Error(format string)

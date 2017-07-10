@@ -81,7 +81,8 @@ func TestGoExtensions(c *cli.Context) {
 	r := gorunner.NewGoTestRunner(testFiles)
 
 	if err := r.Run(); err != nil {
-		panic(err.Error())
+		log.Fatalf("%s", err.Error())
+		os.Exit(1)
 	}
 }
 

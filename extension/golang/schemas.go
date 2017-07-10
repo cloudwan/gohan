@@ -31,20 +31,20 @@ type schemasBinder struct {
 	rawEnvironment *Environment
 }
 
-func bindSchemas(rawEnvironment *Environment) goext.SchemasInterface {
+func bindSchemas(rawEnvironment *Environment) goext.ISchemas {
 	return &schemasBinder{rawEnvironment: rawEnvironment}
 }
 
-func (thisSchemasBinder *schemasBinder) List() []goext.Schema {
+func (thisSchemasBinder *schemasBinder) List() []goext.ISchema {
 	manager := schema.GetManager()
-	result := []goext.Schema{}
+	result := []goext.ISchema{}
 	for _, rawSchema := range manager.OrderedSchemas() {
 		result = append(result, bindSchema(thisSchemasBinder.rawEnvironment, rawSchema))
 	}
 	return result
 }
 
-func (thisSchemasBinder *schemasBinder) Find(id string) goext.Schema {
+func (thisSchemasBinder *schemasBinder) Find(id string) goext.ISchema {
 	manager := schema.GetManager()
 	schema, ok := manager.Schema(id)
 
@@ -64,7 +64,7 @@ type schemaBinder struct {
 	rawSchema      *schema.Schema
 }
 
-func bindSchema(rawEnvironment *Environment, rawSchema *schema.Schema) goext.Schema {
+func bindSchema(rawEnvironment *Environment, rawSchema *schema.Schema) goext.ISchema {
 	return &schemaBinder{rawEnvironment: rawEnvironment, rawSchema: rawSchema}
 }
 
@@ -223,7 +223,7 @@ func (thisSchemasBinder *schemaBinder) Fetch(id string, res interface{}) error {
 func (thisSchemasBinder *schemaBinder) Create(resource interface{}) error { //resource should be already created
 	context := make(map[string]interface{})
 	context["resource"] = thisSchemasBinder.structToMap(resource)
-	thisSchemasBinder.rawEnvironment.HandleEvent(goext.PRE_CREATE_TX, context)
+	thisSchemasBinder.rawEnvironment.HandleEvent(goext.PreCreateTx, context)
 	tx, err := thisSchemasBinder.rawEnvironment.DataStore.Begin()
 
 	if err != nil {
@@ -248,7 +248,7 @@ func (thisSchemasBinder *schemaBinder) Create(resource interface{}) error { //re
 	if err != nil {
 		return err
 	}
-	return thisSchemasBinder.rawEnvironment.HandleEvent(goext.POST_CREATE_TX, context)
+	return thisSchemasBinder.rawEnvironment.HandleEvent(goext.PostCreateTx, context)
 }
 
 //Update - updates resource

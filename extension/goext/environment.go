@@ -1,4 +1,4 @@
-// Copyright (C) 2015 NTT Innovation Institute, Inc.
+// Copyright (C) 2017 NTT Innovation Institute, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -34,11 +34,12 @@ type Environment struct {
 	HandlersSchema HandlersSchemaListOfEvents
 
 	// modules
-	Core    CoreInterface
-	Logger  LoggerInterface
-	Schemas SchemasInterface
+	Core    ICore
+	Logger  ILogger
+	Schemas ISchemas
 }
 
-type EnvContainer interface {
+// IEnvironmentSupport indicates that an object holds a reference to a valid environment
+type IEnvironmentSupport interface {
 	Env() *Environment
 }

@@ -52,6 +52,6 @@ func (thisCoreBinder *coreBinder) HandleEvent(event string, context goext.Contex
 	thisCoreBinder.rawEnvironment.HandleEvent(event, context)
 }
 
-func bindCore(rawEnvironment *Environment) goext.CoreInterface {
+func bindCore(rawEnvironment *Environment) goext.ICore {
 	return &coreBinder{rawEnvironment: rawEnvironment}
 }

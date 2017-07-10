@@ -68,14 +68,6 @@ func (thisLoggerBinder *loggerBinder) internalLogf(module string, level goext.Le
 	}
 }
 
-func (thisLoggerBinder *loggerBinder) Generic(module string, level goext.Level, format string) {
-	thisLoggerBinder.internalLog(module, level, format)
-}
-
-func (thisLoggerBinder *loggerBinder) Genericf(module string, level goext.Level, format string, args ...interface{}) {
-	thisLoggerBinder.internalLogf(module, level, format, args...)
-}
-
 func (thisLoggerBinder *loggerBinder) Critical(format string) {
 	thisLoggerBinder.internalLog(logModule, goext.LEVEL_CRITICAL, format)
 }
@@ -124,6 +116,6 @@ func (thisLoggerBinder *loggerBinder) Debugf(format string, args ...interface{})
 	thisLoggerBinder.internalLogf(logModule, goext.LEVEL_DEBUG, format, args...)
 }
 
-func bindLogger(rawEnvironment *Environment) goext.LoggerInterface {
+func bindLogger(rawEnvironment *Environment) goext.ILogger {
 	return &loggerBinder{rawEnvironment: rawEnvironment}
 }

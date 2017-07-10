@@ -16,6 +16,7 @@
 package sql
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -23,19 +24,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jmoiron/sqlx"
-	sq "github.com/lann/squirrel"
-	_ "github.com/mattn/go-sqlite3"
-	_ "github.com/go-sql-driver/mysql"
-	_ "github.com/nati/go-fakedb"
-
-	"context"
-
 	"github.com/cloudwan/gohan/db/pagination"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/jmoiron/sqlx"
+	sq "github.com/lann/squirrel"
 	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/nati/go-fakedb"
 )
 
 const retryDB = 50

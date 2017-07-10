@@ -1,4 +1,4 @@
-// Copyright (C) 2015 NTT Innovation Institute, Inc.
+// Copyright (C) 2017 NTT Innovation Institute, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,7 +15,8 @@
 
 package goext
 
-type CoreInterface interface {
+// ICore is an interface to core parts of Gohan: event triggering and registering
+type ICore interface {
 	TriggerEvent(event string, context Context)
 	HandleEvent(event string, context Context)
 	RegisterEventHandler(eventName string, handler func(context Context, environment *Environment) error, priority Priority)

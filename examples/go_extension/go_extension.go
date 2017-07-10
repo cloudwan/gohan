@@ -112,8 +112,8 @@ func Init(env *goext.Environment) error {
 	todoSchema.RegisterResourceType(Todo{})
 
 	// event handlers
-	env.Core.RegisterEventHandler("custom_event", customEventHandler, goext.PRIORITY_DEFAULT)
-	env.Core.RegisterEventHandler(goext.POST_UPDATE, updateContextOnEvent, goext.PRIORITY_DEFAULT)
+	env.Core.RegisterEventHandler("custom_event", customEventHandler, goext.PriorityDefault)
+	env.Core.RegisterEventHandler(goext.PostUpdate, updateContextOnEvent, goext.PriorityDefault)
 
 	return nil
 }

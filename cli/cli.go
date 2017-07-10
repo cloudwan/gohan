@@ -1,5 +1,4 @@
 // Copyright (C) 2015 NTT Innovation Institute, Inc.
-// Copyright (C) 2015 NTT Innovation Institute, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
