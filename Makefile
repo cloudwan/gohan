@@ -22,8 +22,10 @@ gen:
 	etc/templates/... \
 	public/...
 
-test: build
+test:
 	@echo "$(OK_COLOR)==> Testing$(NO_COLOR)"
+	./tools/build.sh
+	./tools/build_go_tests.sh
 	./run_test.sh
 
 lint:
