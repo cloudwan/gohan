@@ -17,6 +17,8 @@ package server_test
 
 import (
 	"context"
+	"sort"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -26,6 +28,7 @@ import (
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
 	srv "github.com/cloudwan/gohan/server"
+	"github.com/cloudwan/gohan/sync"
 )
 
 const (
@@ -132,4 +135,66 @@ var _ = Describe("Sync watcher test", func() {
 			Expect(len(wrn.Children)).To(Equal(3))
 		})
 	})
+
+	Describe("Sync watch job handling", func() {
+
+		It("should process sequentially for each watch key", func() {
+			sync := server.GetSync()
+
+			// this test extension will write watched key (e.g., '/watch/key/1/apple') as a value
+			// to a path '/test/<milisec_timestamp>' then sleep 5 seconds.
+			// Therefore, sorting fetched results by key means the order of called sync update extensions
+			watchKey1a := "/watch/key/1/apple"
+			err := sync.Update(watchKey1a, "{}")
+			watchKey2a := "/watch/key/2/apple"
+			err = sync.Update(watchKey2a, "{}")
+			watchKey1b := "/watch/key/1/banana"
+			err = sync.Update(watchKey1b, "{}")
+			watchKey1c := "/watch/key/1/cherry"
+			err = sync.Update(watchKey1c, "{}")
+
+			time.Sleep(1 * time.Second)
+
+			wrn, err := sync.Fetch("/test")
+			Expect(err).ToNot(HaveOccurred())
+			// 2 sync updates for path /watch/key/1/apple and /watch/key/2/apple are ongoing
+			Expect(len(wrn.Children)).To(Equal(2))
+
+			sort.Sort(ByValue(wrn.Children))
+			childrenValues := []string{wrn.Children[0].Value, wrn.Children[1].Value}
+			Expect(childrenValues).To(Equal([]string{watchKey1a, watchKey2a}))
+
+			time.Sleep(5 * time.Second)
+			// after 5 sec, another job for /watch/key/1/banana should start
+
+			wrn, err = sync.Fetch("/test")
+			Expect(err).ToNot(HaveOccurred())
+
+			sort.Sort(ByKey(wrn.Children))
+			Expect(len(wrn.Children)).To(Equal(3))
+			Expect(wrn.Children[2].Value).To(Equal(watchKey1b))
+
+			time.Sleep(5 * time.Second)
+			// after 5 sec, another job for /watch/key/1/cherry should start
+
+			wrn, err = sync.Fetch("/test")
+			Expect(err).ToNot(HaveOccurred())
+
+			sort.Sort(ByKey(wrn.Children))
+			Expect(len(wrn.Children)).To(Equal(4))
+			Expect(wrn.Children[3].Value).To(Equal(watchKey1c))
+		})
+	})
 })
+
+type ByKey []*sync.Node
+
+func (n ByKey) Len() int           { return len(n) }
+func (n ByKey) Swap(i, j int)      { n[i], n[j] = n[j], n[i] }
+func (n ByKey) Less(i, j int) bool { return strings.Compare(n[i].Key, n[j].Key) < 0 }
+
+type ByValue []*sync.Node
+
+func (n ByValue) Len() int           { return len(n) }
+func (n ByValue) Swap(i, j int)      { n[i], n[j] = n[j], n[i] }
+func (n ByValue) Less(i, j int) bool { return strings.Compare(n[i].Value, n[j].Value) < 0 }

@@ -26,7 +26,6 @@ import (
 	"time"
 
 	"github.com/cloudwan/gohan/extension"
-	"github.com/cloudwan/gohan/job"
 	"github.com/cloudwan/gohan/metrics"
 	gohan_sync "github.com/cloudwan/gohan/sync"
 	"github.com/cloudwan/gohan/util"
@@ -45,8 +44,7 @@ var errLockFailed = errors.New("failed to lock on sync backend")
 // The watcher implements a load balancing mechanism that uses
 // entries on the sync.
 type SyncWatcher struct {
-	sync  gohan_sync.Sync
-	queue *job.Queue
+	sync gohan_sync.Sync
 	// list of key names to watch
 	watchKeys []string
 	// list of event names
@@ -57,10 +55,9 @@ type SyncWatcher struct {
 }
 
 // NewSyncWatcher creates a new instance of syncWatcher
-func NewSyncWatcher(sync gohan_sync.Sync, queue *job.Queue, keys []string, events []string, extensions map[string]extension.Environment) *SyncWatcher {
+func NewSyncWatcher(sync gohan_sync.Sync, keys []string, events []string, extensions map[string]extension.Environment) *SyncWatcher {
 	return &SyncWatcher{
 		sync:            sync,
-		queue:           queue,
 		watchKeys:       keys,
 		watchEvents:     events,
 		watchExtensions: extensions,
@@ -83,7 +80,7 @@ func NewSyncWatcherFromServer(server *Server) *SyncWatcher {
 		extensions[event] = env
 	}
 
-	return NewSyncWatcher(server.sync, server.queue, keys, events, extensions)
+	return NewSyncWatcher(server.sync, keys, events, extensions)
 }
 
 // Run starts the main loop of the watcher.
@@ -100,11 +97,11 @@ func (watcher *SyncWatcher) Run(ctx context.Context) error {
 			defer watcher.sync.Unlock(lockKey)
 
 			watchCtx, watchCancel := context.WithCancel(ctx)
+			defer watchCancel()
 			events, err := watcher.sync.WatchContext(watchCtx, processPathPrefix, int64(gohan_sync.RevisionCurrent))
 			if err != nil {
 				return err
 			}
-			defer watchCancel()
 
 			watchErr := make(chan error, 1)
 			go func() {
@@ -247,7 +244,7 @@ func (watcher *SyncWatcher) runSyncWatches(ctx context.Context, size int, positi
 	}
 }
 
-// processSyncWatch handles events on a path with a handler using the server queue.
+// processSyncWatch handles events on a path with a handler.
 // Returns any error or context cancel.
 // This method gets a lock on the sync backend and returns with an error when fails.
 func (watcher *SyncWatcher) processSyncWatch(ctx context.Context, path string) error {
@@ -259,12 +256,12 @@ func (watcher *SyncWatcher) processSyncWatch(ctx context.Context, path string) e
 	defer watcher.sync.Unlock(lockKey)
 
 	watchCtx, watchCancel := context.WithCancel(ctx)
+	defer watchCancel()
 	fromRevision := watcher.fetchStoredRevision(path) + 1
 	respCh, err := watcher.sync.WatchContext(watchCtx, path, fromRevision)
 	if err != nil {
 		return err
 	}
-	defer watchCancel()
 
 	watchErr := make(chan error, 1)
 	go func() {
@@ -273,13 +270,8 @@ func (watcher *SyncWatcher) processSyncWatch(ctx context.Context, path string) e
 				if response.Err != nil {
 					return response.Err
 				}
+				watcher.watchExtensionHandler(response)
 
-				watcher.queue.Add(job.NewJob(
-					func() {
-						resp := response
-						watcher.watchExtensionHandler(resp)
-					},
-				))
 				err := watcher.storeRevision(path, response.Revision)
 				if err != nil {
 					return err

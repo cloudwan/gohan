@@ -1,0 +1,4 @@
+extensions:
+- id: test_sync_watch
+  path: .*
+  url: file://../tests/sync_watch_extension.js
