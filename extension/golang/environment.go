@@ -235,7 +235,7 @@ func (thisEnvironment *Environment) dispatchEvent(handlers goext.PriorityHandler
 	return
 }
 
-func (thisEnvironment *Environment) dispatchEventWithResource(schemaID string, handlers goext.HandlerSchemaListOfPriorities, event string, context map[string]interface{}) (err error) {
+func (thisEnvironment *Environment) dispatchEventWithResource(schemaID string, handlers goext.HandlerSchemaListOfPriorities, event string, context goext.Context) (err error) {
 	//@todo: it's a poor idea to sort the prioritized handlers each time the event is being handled.
 	priorities := []int{}
 	for priority := range handlers {
@@ -250,6 +250,8 @@ func (thisEnvironment *Environment) dispatchEventWithResource(schemaID string, h
 		return err
 	}
 
+	defer thisEnvironment.updateResourceInContext(context, resource)
+
 	for priority := range priorities {
 		for _, fn := range handlers[goext.Priority(priority)] {
 			err := fn(context, resource, &thisEnvironment.extEnv)
@@ -261,6 +263,36 @@ func (thisEnvironment *Environment) dispatchEventWithResource(schemaID string, h
 	}
 
 	return
+}
+
+func (thisEnvironment *Environment) updateResourceInContext(context goext.Context, resource interface{}) {
+	for key, value := range thisEnvironment.resourceToMap(resource).(map[string]interface{}) {
+		if _, ok := context["resource"].(map[string]interface{})[key]; ok {
+			context["resource"].(map[string]interface{})[key] = value
+		}
+	}
+}
+
+func (thisEnvironment *Environment) resourceToMap(res interface{}) interface{} {
+	val := reflect.ValueOf(res)
+	elem := val.Elem()
+	elemType := elem.Type()
+
+	if elemType.Kind() == reflect.Struct {
+		data := make(map[string]interface{})
+
+		for i := 0; i < elemType.NumField(); i++ {
+			fieldType := elemType.Field(i)
+			propertyName := fieldType.Tag.Get("db")
+			fieldValue := elem.Field(i).Interface()
+
+			data[propertyName] = thisEnvironment.resourceToMap(&fieldValue)
+		}
+
+		return data
+	}
+
+	return elem.Interface()
 }
 
 func (thisEnvironment *Environment) schemaIDToResource(schemaID string, context map[string]interface{}) (res goext.Resource, err error) {

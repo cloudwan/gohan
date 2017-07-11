@@ -23,6 +23,7 @@ import (
 
 func handleSchemaEvent(ctx goext.Context, res goext.Resource, env *goext.Environment) error {
 	todo := res.(*Todo)
+	todo.Name = "name changed in pre_update event"
 	env.Logger.Warningf("Example log from goext extension (SCHEMA CALLBACK), %v      (ID: %v)", todo, todo.ID)
 	updateContextOnEvent(ctx, env)
 
@@ -106,10 +107,17 @@ func customEventHandler(ctx goext.Context, env *goext.Environment) error {
 	return nil
 }
 
+func Schemas() []string {
+ 	return []string {
+ 		"todo.yaml",
+ 	}
+}
+
 func Init(env *goext.Environment) error {
 	// register runtime types for this extension
 	todoSchema := env.Schemas.Find("todo")
 	todoSchema.RegisterResourceType(Todo{})
+	todoSchema.RegisterEventHandler(goext.PreUpdate, handleSchemaEvent, goext.PriorityDefault)
 
 	// event handlers
 	env.Core.RegisterEventHandler("custom_event", customEventHandler, goext.PriorityDefault)
