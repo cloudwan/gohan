@@ -16,6 +16,28 @@
 package goext
 
 type Context map[string]interface{}
+
+func MakeContext() (ctx Context) {
+	return make(map[string]interface{})
+}
+
+func (ctx Context) WithSchema(schemaId string) Context {
+	ctx["schema"] = schemaId
+	return ctx
+}
+
+func (ctx Context) WithResource(resource string) Context {
+	ctx["resource"] = resource
+	return ctx
+}
+
+
+func main() {
+	ctx := MakeContext().WithSchema("mySchema").WithResource("myResource")
+
+	fmt.Println(ctx["schema"], ctx["resource"])
+}
+
 type Resource interface{}
 type Resources []Resource
 type Priority int

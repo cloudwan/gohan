@@ -19,7 +19,7 @@ for dir in $(find . -maxdepth 10 -not -path './.git*' -not -path '*/_*' -not -pa
 do
 if ls $dir/*.go &> /dev/null; then
     #go test -race -covermode=atomic -coverprofile=$dir/profile.tmp $dir
-    go test -covermode=atomic -coverprofile=$dir/profile.tmp $dir
+    go test -coverprofile=$dir/profile.tmp $dir
     result=$?
     if [ -f $dir/profile.tmp ]
     then
