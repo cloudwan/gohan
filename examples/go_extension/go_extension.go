@@ -21,31 +21,31 @@ import (
 	"github.com/cloudwan/gohan/extension/goext"
 )
 
-func handleSchemaEvent(ctx goext.Context, res goext.Resource, env *goext.Environment) error {
+func handleSchemaEvent(ctx goext.Context, res goext.Resource, env goext.IEnvironment) error {
 	todo := res.(*Todo)
 	todo.Name = "name changed in pre_update event"
-	env.Logger.Warningf("Example log from goext extension (SCHEMA CALLBACK), %v      (ID: %v)", todo, todo.ID)
+	env.Logger().Warningf("Example log from goext extension (SCHEMA CALLBACK), %v      (ID: %v)", todo, todo.ID)
 	updateContextOnEvent(ctx, env)
 
 	return nil
 }
 
-func updateContextOnEvent(context goext.Context, env *goext.Environment) error {
+func updateContextOnEvent(context goext.Context, env goext.IEnvironment) error {
 	context["example_event_handled"] = true
 	return nil
 }
 
-func customEventHandler(ctx goext.Context, env *goext.Environment) error {
-	env.Logger.Info("Example log from goext extension")
+func customEventHandler(ctx goext.Context, env goext.IEnvironment) error {
+	env.Logger().Info("Example log from goext extension")
 
-	schemas := env.Schemas.List()
-	env.Logger.Infof("Number of schemas: %d", len(schemas))
+	schemas := env.Schemas().List()
+	env.Logger().Infof("Number of schemas: %d", len(schemas))
 
 	for _, s := range schemas {
-		env.Logger.Debugf("Found schema: %s", s.ID())
+		env.Logger().Debugf("Found schema: %s", s.ID())
 	}
 
-	todoSchema := env.Schemas.Find("todo")
+	todoSchema := env.Schemas().Find("todo")
 
 	if todoSchema == nil {
 		return fmt.Errorf("schema todo not found")
@@ -58,10 +58,10 @@ func customEventHandler(ctx goext.Context, env *goext.Environment) error {
 		return err
 	}
 
-	env.Logger.Infof("Found %d TODO resources", len(todos))
+	env.Logger().Infof("Found %d TODO resources", len(todos))
 
 	for _, todo := range todos {
-		env.Logger.Warningf("Resource TODO: id = %s, name = %s", todo.ID, todo.Name)
+		env.Logger().Warningf("Resource TODO: id = %s, name = %s", todo.ID, todo.Name)
 	}
 
 	todoSchema.Delete("1001")
@@ -98,10 +98,10 @@ func customEventHandler(ctx goext.Context, env *goext.Environment) error {
 		return err
 	}
 
-	env.Logger.Infof("Found %d TODO resources", len(todos))
+	env.Logger().Infof("Found %d TODO resources", len(todos))
 
 	for _, todo := range todos {
-		env.Logger.Warningf("Resource TODO: id = %s, name = %s", todo.ID, todo.Name)
+		env.Logger().Warningf("Resource TODO: id = %s, name = %s", todo.ID, todo.Name)
 	}
 
 	return nil
@@ -113,15 +113,15 @@ func Schemas() []string {
  	}
 }
 
-func Init(env *goext.Environment) error {
+func Init(env goext.IEnvironment) error {
 	// register runtime types for this extension
-	todoSchema := env.Schemas.Find("todo")
+	todoSchema := env.Schemas().Find("todo")
 	todoSchema.RegisterResourceType(Todo{})
 	todoSchema.RegisterEventHandler(goext.PreUpdate, handleSchemaEvent, goext.PriorityDefault)
 
 	// event handlers
-	env.Core.RegisterEventHandler("custom_event", customEventHandler, goext.PriorityDefault)
-	env.Core.RegisterEventHandler(goext.PostUpdate, updateContextOnEvent, goext.PriorityDefault)
+	env.Core().RegisterEventHandler("custom_event", customEventHandler, goext.PriorityDefault)
+	env.Core().RegisterEventHandler(goext.PostUpdate, updateContextOnEvent, goext.PriorityDefault)
 
 	return nil
 }

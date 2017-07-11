@@ -38,14 +38,14 @@ func Binary() string {
 
 // Defines the test suite
 // @required
-func Test(env *goext.Environment) {
-	env.Logger.Notice("Running go_extension test suite")
+func Test(env goext.IEnvironment) {
+	env.Logger().Notice("Running go_extension test suite")
 
 	Describe("Tests extension", func() {
 		It("Should react on events", func() {
 			context := make(map[string]interface{})
 
-			env.Core.HandleEvent(goext.PostUpdate, context) //this will run extension's event handler
+			env.Core().HandleEvent(goext.PostUpdate, context) //this will run extension's event handler
 
 			handled, ok := context["example_event_handled"]
 
