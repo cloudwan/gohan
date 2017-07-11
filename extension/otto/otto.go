@@ -280,7 +280,7 @@ func (env *Environment) HandleEvent(event string, context map[string]interface{}
 	if err != nil {
 		return err
 	}
-	
+
 	return err
 }
 

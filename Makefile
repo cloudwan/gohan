@@ -23,8 +23,8 @@ gen:
 
 test:
 	@echo "$(OK_COLOR)==> Testing$(NO_COLOR)"
-	./tools/build.sh -race
-	./tools/build_go_tests.sh -race
+	./tools/build.sh
+	./tools/build_go_tests.sh
 	./run_test.sh
 
 lint:
