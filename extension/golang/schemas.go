@@ -65,20 +65,20 @@ func NewSchema(environment *Environment, rawSchema *schema.Schema) goext.ISchema
 	return &Schema{environment: environment, rawSchema: rawSchema}
 }
 
-func (thisSchemas *Schema) ID() string {
-	return thisSchemas.rawSchema.ID
+func (thisSchema *Schema) ID() string {
+	return thisSchema.rawSchema.ID
 }
 
-func (thisSchemas *Schema) Environment() goext.IEnvironment {
-	return thisSchemas.environment
+func (thisSchema *Schema) Environment() goext.IEnvironment {
+	return thisSchema.environment
 }
 
-func (thisSchemas *Schema) structToMap(resource interface{}) map[string]interface{} {
+func (thisSchema *Schema) structToMap(resource interface{}) map[string]interface{} {
 	fieldsMap := map[string]interface{}{}
 
 	mapper := reflectx.NewMapper("db")
 
-	for _, property := range thisSchemas.rawSchema.Properties {
+	for _, property := range thisSchema.rawSchema.Properties {
 		field := property.ID
 		v := mapper.FieldByName(reflect.ValueOf(resource), property.ID)
 		val := v.Interface()
@@ -94,13 +94,13 @@ func (thisSchemas *Schema) structToMap(resource interface{}) map[string]interfac
 	return fieldsMap
 }
 
-func (thisSchemas *Schema) structToResource(resource interface{}) (*schema.Resource, error) {
-	fieldsMap := thisSchemas.structToMap(resource)
-	return schema.NewResource(thisSchemas.rawSchema, fieldsMap)
+func (thisSchema *Schema) structToResource(resource interface{}) (*schema.Resource, error) {
+	fieldsMap := thisSchema.structToMap(resource)
+	return schema.NewResource(thisSchema.rawSchema, fieldsMap)
 }
 
 //List - lists resources
-func (thisSchemas *Schema) List(resources interface{}) error {
+func (thisSchema *Schema) List(resources interface{}) error {
 	slicePtrValue := reflect.ValueOf(resources)
 	slicePtrType := reflect.TypeOf(resources)
 	sliceValue := slicePtrValue.Elem()
@@ -109,7 +109,7 @@ func (thisSchemas *Schema) List(resources interface{}) error {
 
 	sliceValue.SetLen(0)
 
-	tx, err := thisSchemas.environment.dataStore.Begin()
+	tx, err := thisSchema.environment.dataStore.Begin()
 
 	if err != nil {
 		return err
@@ -117,7 +117,7 @@ func (thisSchemas *Schema) List(resources interface{}) error {
 
 	defer tx.Close()
 
-	data, _, err := tx.List(thisSchemas.rawSchema, transaction.Filter{}, nil, nil)
+	data, _, err := tx.List(thisSchema.rawSchema, transaction.Filter{}, nil, nil)
 
 	if err != nil {
 		return err
@@ -139,19 +139,19 @@ func (thisSchemas *Schema) List(resources interface{}) error {
 	return nil
 }
 
-func (thisSchemas *Schema) FetchRelated(resource interface{}, relatedResource interface{}) error {
-	for _, property := range thisSchemas.rawSchema.Properties {
+func (thisSchema *Schema) FetchRelated(resource interface{}, relatedResource interface{}) error {
+	for _, property := range thisSchema.rawSchema.Properties {
 		if property.Relation != "" {
 			relatedSchema, ok := schema.GetManager().Schema(property.Relation)
 
 			if !ok {
-				return fmt.Errorf("Could not get related schema: %s for: %s", property.Relation, thisSchemas.rawSchema.ID)
+				return fmt.Errorf("Could not get related schema: %s for: %s", property.Relation, thisSchema.rawSchema.ID)
 			}
 
 			mapper := reflectx.NewMapper("db")
 			id := mapper.FieldByName(reflect.ValueOf(resource), property.ID).String()
 
-			NewSchema(thisSchemas.environment, relatedSchema).Fetch(id, relatedResource)
+			NewSchema(thisSchema.environment, relatedSchema).Fetch(id, relatedResource)
 
 			return nil
 		}
@@ -161,8 +161,8 @@ func (thisSchemas *Schema) FetchRelated(resource interface{}, relatedResource in
 }
 
 //Fetch - retrieves resource by ID
-func (thisSchemas *Schema) Fetch(id string, res interface{}) error {
-	tx, err := thisSchemas.environment.dataStore.Begin()
+func (thisSchema *Schema) Fetch(id string, res interface{}) error {
+	tx, err := thisSchema.environment.dataStore.Begin()
 
 	if err != nil {
 		return err
@@ -172,14 +172,14 @@ func (thisSchemas *Schema) Fetch(id string, res interface{}) error {
 
 	filter := transaction.Filter{"id": id}
 
-	data, err := tx.Fetch(thisSchemas.rawSchema, filter)
+	data, err := tx.Fetch(thisSchema.rawSchema, filter)
 
 	if err != nil {
 		return err
 	}
-	resourceType, ok := thisSchemas.environment.resourceTypes[thisSchemas.rawSchema.ID]
+	resourceType, ok := thisSchema.environment.resourceTypes[thisSchema.rawSchema.ID]
 	if !ok {
-		return fmt.Errorf("No type registered for schema title: %s", thisSchemas.rawSchema.ID)
+		return fmt.Errorf("No type registered for schema title: %s", thisSchema.rawSchema.ID)
 	}
 	resource := reflect.ValueOf(res)
 
@@ -188,7 +188,7 @@ func (thisSchemas *Schema) Fetch(id string, res interface{}) error {
 
 		fieldType := resourceType.Field(i)
 		propertyName := fieldType.Tag.Get("db")
-		property, err := thisSchemas.rawSchema.GetPropertyByID(propertyName)
+		property, err := thisSchema.rawSchema.GetPropertyByID(propertyName)
 		if err != nil {
 			return err
 		}
@@ -216,88 +216,148 @@ func (thisSchemas *Schema) Fetch(id string, res interface{}) error {
 	return nil
 }
 
-//Create - creates resource
-func (thisSchemas *Schema) Create(resource interface{}) error { //resource should be already created
-	context := make(map[string]interface{})
-	context["resource"] = thisSchemas.structToMap(resource)
-	thisSchemas.environment.HandleEvent(goext.PreCreateTx, context)
-	tx, err := thisSchemas.environment.dataStore.Begin()
+// Create creates a resource
+func (thisSchema *Schema) Create(resource interface{}) error {
+	var tx transaction.Transaction
+	var resourceData *schema.Resource
+	var err error
 
-	if err != nil {
+	context := goext.MakeContext().
+		WithResource(thisSchema.structToMap(resource)).
+		WithSchemaID(thisSchema.ID())
+
+	if err = thisSchema.environment.HandleEvent(goext.PreCreate, context); err != nil {
+		return err
+	}
+
+	if tx, err = thisSchema.environment.dataStore.Begin(); err != nil {
+		return err
+	}
+
+	if err = thisSchema.environment.HandleEvent(goext.PreCreateTx, context); err != nil {
 		return err
 	}
 
 	defer tx.Close()
 
-	resourceData, err := thisSchemas.structToResource(resource)
-
-	if err != nil {
+	if resourceData, err = thisSchema.structToResource(resource); err != nil {
 		return err
 	}
 
-	err = tx.Create(resourceData)
-
-	if err != nil {
+	if err = tx.Create(resourceData); err != nil {
 		return err
 	}
 
-	err = tx.Commit()
-	if err != nil {
+	if err = thisSchema.environment.HandleEvent(goext.PostCreateTx, context); err != nil {
 		return err
 	}
-	return thisSchemas.environment.HandleEvent(goext.PostCreateTx, context)
+
+	if err = tx.Commit(); err != nil {
+		return err
+	}
+
+	if err = tx.Close(); err != nil {
+		return err
+	}
+
+	return thisSchema.environment.HandleEvent(goext.PostCreate, context)
 }
 
-//Update - updates resource
-func (thisSchemas *Schema) Update(resource interface{}) error {
-	tx, err := thisSchemas.environment.dataStore.Begin()
+// Update updates a resource
+func (thisSchema *Schema) Update(resource interface{}) error {
+	var tx transaction.Transaction
+	var resourceData *schema.Resource
+	var err error
 
-	if err != nil {
+	context := goext.MakeContext().
+		WithResource(thisSchema.structToMap(resource)).
+		WithSchemaID(thisSchema.ID())
+
+	if err = thisSchema.environment.HandleEvent(goext.PreUpdate, context); err != nil {
+		return err
+	}
+
+	if tx, err = thisSchema.environment.dataStore.Begin(); err != nil {
+		return err
+	}
+
+	if err = thisSchema.environment.HandleEvent(goext.PreUpdateTx, context); err != nil {
 		return err
 	}
 
 	defer tx.Close()
 
-	resourceData, err := thisSchemas.structToResource(resource)
-
-	if err != nil {
+	if resourceData, err = thisSchema.structToResource(resource); err != nil {
 		return err
 	}
 
-	err = tx.Update(resourceData)
-
-	if err != nil {
+	if err = tx.Update(resourceData); err != nil {
 		return err
 	}
 
-	return tx.Commit()
+	if err = thisSchema.environment.HandleEvent(goext.PostUpdateTx, context); err != nil {
+		return err
+	}
+
+	if err = tx.Commit(); err != nil {
+		return err
+	}
+
+	if err = tx.Close(); err != nil {
+		return err
+	}
+
+	return thisSchema.environment.HandleEvent(goext.PostUpdate, context)
 }
 
-//Delete - deletes resource by ID
-func (thisSchemas *Schema) Delete(id string) error {
-	tx, err := thisSchemas.environment.dataStore.Begin()
+// Delete deletes resource by ID
+func (thisSchema *Schema) Delete(resourceID string) error {
+	var tx transaction.Transaction
+	var err error
 
-	if err != nil {
+	context := goext.MakeContext().
+		WithResourceID(resourceID).
+		WithSchemaID(thisSchema.ID())
+
+	if err = thisSchema.environment.HandleEvent(goext.PreDelete, context); err != nil {
+		return err
+	}
+
+	if tx, err = thisSchema.environment.dataStore.Begin(); err != nil {
+		return err
+	}
+
+	if err = thisSchema.environment.HandleEvent(goext.PreDeleteTx, context); err != nil {
 		return err
 	}
 
 	defer tx.Close()
 
-	err = tx.Delete(thisSchemas.rawSchema, id)
-
-	if err != nil {
+	if err = tx.Delete(thisSchema.rawSchema, resourceID); err != nil {
 		return err
 	}
 
-	return tx.Commit()
+	if err = thisSchema.environment.HandleEvent(goext.PostDeleteTx, context); err != nil {
+		return err
+	}
+
+	if err = tx.Commit(); err != nil {
+		return err
+	}
+
+	if err = tx.Close(); err != nil {
+		return err
+	}
+
+	return thisSchema.environment.HandleEvent(goext.PostDelete, context)
 }
 
-func (thisSchemas *Schema) RegisterEventHandler(eventName string, handler func(context goext.Context, resource goext.Resource, environment goext.IEnvironment) error, priority goext.Priority) {
-	thisSchemas.environment.RegisterSchemaEventHandler(thisSchemas.rawSchema.ID, eventName, handler, priority)
+func (thisSchema *Schema) RegisterEventHandler(event string, handler func(context goext.Context, resource goext.Resource, environment goext.IEnvironment) error, priority goext.Priority) {
+	thisSchema.environment.RegisterSchemaEventHandler(thisSchema.rawSchema.ID, event, handler, priority)
 }
 
-func (thisSchemas *Schema) RegisterResourceType(typeValue interface{}) {
-	thisSchemas.environment.RegisterResourceType(thisSchemas.rawSchema.ID, typeValue)
+func (thisSchema *Schema) RegisterResourceType(typeValue interface{}) {
+	thisSchema.environment.RegisterResourceType(thisSchema.rawSchema.ID, typeValue)
 }
 
 // NewSchemas returns a new implementation of schemas interface

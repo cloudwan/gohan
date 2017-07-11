@@ -166,15 +166,14 @@ var _ = Describe("Environment", func() {
 			testSchema.RegisterEventHandler("some_other_event", someOtherEventHandler, goext.PriorityDefault)
 
 			Expect(env.HandleEvent("some_event", goext.MakeContext())).To(Succeed())
-			/*
-				Expect(someEventRunCount).To(Equal(1))
-				Expect(someOtherEventRunCount).To(Equal(0))
 
-				Expect(env.HandleEvent("some_other_event", goext.MakeContext())).To(Succeed())
+			Expect(someEventRunCount).To(Equal(1))
+			Expect(someOtherEventRunCount).To(Equal(0))
 
-				Expect(someEventRunCount).To(Equal(1))
-				Expect(someOtherEventRunCount).To(Equal(1))
-			*/
+			Expect(env.HandleEvent("some_other_event", goext.MakeContext())).To(Succeed())
+
+			Expect(someEventRunCount).To(Equal(1))
+			Expect(someOtherEventRunCount).To(Equal(1))
 		})
 
 		It("should pass data from context to handler", func() {

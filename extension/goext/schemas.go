@@ -15,24 +15,30 @@
 
 package goext
 
+type Resource interface{}
+type Resources []Resource
+
 type Context map[string]interface{}
 
 func MakeContext() (ctx Context) {
 	return make(map[string]interface{})
 }
 
-func (ctx Context) WithSchema(schemaId string) Context {
-	ctx["schema"] = schemaId
+func (ctx Context) WithSchemaID(schemaId string) Context {
+	ctx["schema_id"] = schemaId
 	return ctx
 }
 
-func (ctx Context) WithResource(resource interface{}) Context {
+func (ctx Context) WithResource(resource Resource) Context {
 	ctx["resource"] = resource
 	return ctx
 }
 
-type Resource interface{}
-type Resources []Resource
+func (ctx Context) WithResourceID(resourceID string) Context {
+	ctx["resource_id"] = resourceID
+	return ctx
+}
+
 type Priority int
 
 const PriorityDefault Priority = 0
@@ -50,10 +56,10 @@ type ISchema interface {
 	FetchRelated(resource interface{}, relatedResource interface{}) error
 	Create(resource interface{}) error
 	Update(resource interface{}) error
-	Delete(id string) error
+	Delete(resourceID string) error
 
 	// events
-	RegisterEventHandler(eventName string, handler func(context Context, resource Resource, environment IEnvironment) error, priority Priority)
+	RegisterEventHandler(event string, handler func(context Context, resource Resource, environment IEnvironment) error, priority Priority)
 	RegisterResourceType(typeValue interface{})
 }
 

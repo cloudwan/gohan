@@ -21,7 +21,6 @@ import (
 	"path/filepath"
 	"plugin"
 	"reflect"
-	"sort"
 	"strings"
 	"time"
 
@@ -197,7 +196,7 @@ func (thisEnvironment *Environment) LoadExtensionsForPath(extensions []*schema.E
 				continue
 			}
 			if extension.URL == "" {
-				log.Warning("Found golang extension without plugin - ignored")
+				log.Warning("found golang extension without plugin - ignored")
 				continue
 			}
 			url := strings.TrimPrefix(extension.URL, "file://")
@@ -217,88 +216,64 @@ func (thisEnvironment *Environment) LoadExtensionsForPath(extensions []*schema.E
 	return nil
 }
 
-// HandleEvent handles an event
-func (thisEnvironment *Environment) HandleEvent(event string, context map[string]interface{}) (err error) {
-	context["event_type"] = event
-
-	if err = thisEnvironment.dispatchEvent(event, context); err != nil {
-		log.Error("failed to dispatch event: %s", err)
-		return err
-	}
-
-	schemasHandlersList, ok := thisEnvironment.SchemaHandlers[event]
-
-	if ok {
-		for schemaID, handlers := range schemasHandlersList {
-			err = thisEnvironment.dispatchEventWithResource(schemaID, handlers, event, context)
-
-			if err != nil {
-				log.Error("dispatchEventWithResource Error: %s", err)
-				return err
+func (thisEnvironment *Environment) dispatchSchemaEvent(prioritizedSchemaHandlers PrioritizedSchemaHandlers, schemaID string, event string, context map[string]interface{}) error {
+	if resource, err := thisEnvironment.resourceFromContext(schemaID, context); err == nil {
+		for priority, schemaEventHandlers := range prioritizedSchemaHandlers {
+			for index, schemaEventHandler := range schemaEventHandlers {
+				if err := schemaEventHandler(context, resource, thisEnvironment); err != nil {
+					return fmt.Errorf("failed to dispatch schema event '%s' to schema '%s' at priority '%d' with index '%d': %s",
+						event, schemaID, priority, index, err)
+				}
 			}
 		}
-	}
-
-	return
-}
-
-//@todo: this and below function (dispatchEventWithResource) should be somehow unified because they're very similar but operates on different types
-func (thisEnvironment *Environment) dispatchEvent(event string, context goext.Context) error {
-	handlers, hasHandlers := thisEnvironment.Handlers[event]
-
-	if !hasHandlers {
-		return nil
-	}
-
-	//@todo: it's a poor idea to sort the prioritized handlers each time the event is being handled.
-	priorities := []int{}
-	for priority := range handlers {
-		priorities = append(priorities, int(priority))
-	}
-
-	sort.Ints(priorities)
-
-	for priority := range priorities {
-		for _, fn := range handlers[goext.Priority(priority)] {
-			err := fn(context, thisEnvironment)
-
-			if err != nil {
-				return err
-			}
-		}
+	} else {
+		return fmt.Errorf("failed to parse resource from context with schema '%s' for event '%s': %s",
+			schemaID, event, err)
 	}
 
 	return nil
 }
 
-func (thisEnvironment *Environment) dispatchEventWithResource(schemaID string, handlers PrioritizedSchemaHandlers, event string, context goext.Context) (err error) {
-	//@todo: it's a poor idea to sort the prioritized handlers each time the event is being handled.
-	priorities := []int{}
-	for priority := range handlers {
-		priorities = append(priorities, int(priority))
-	}
+// HandleEvent handles an event
+func (thisEnvironment *Environment) HandleEvent(event string, context map[string]interface{}) error {
+	context["event_type"] = event
 
-	sort.Ints(priorities)
-
-	resource, err := thisEnvironment.schemaIDToResource(schemaID, context)
-
-	if err != nil {
-		return err
-	}
-
-	//defer thisEnvironment.updateResourceInContext(context, resource)
-
-	for priority := range priorities {
-		for _, fn := range handlers[goext.Priority(priority)] {
-			err := fn(context, resource, thisEnvironment)
-
-			if err != nil {
-				return err
+	// dispatch to schema handlers
+	if rawSchemaID, ok := context["schema_id"]; ok {
+		if schemaID, ok := rawSchemaID.(string); ok {
+			if schemaPrioritizedSchemaHandlers, ok := thisEnvironment.SchemaHandlers[event]; ok {
+				if prioritizedSchemaHandlers, ok := schemaPrioritizedSchemaHandlers[schemaID]; ok {
+					if err := thisEnvironment.dispatchSchemaEvent(prioritizedSchemaHandlers, schemaID, event, context); err != nil {
+						return nil
+					}
+				}
+			}
+		} else {
+			return fmt.Errorf("failed to parse schema id from context for event '%s'", event)
+		}
+	} else {
+		if schemaPrioritizedSchemaHandlers, ok := thisEnvironment.SchemaHandlers[event]; ok {
+			for schemaID, prioritizedSchemaHandlers := range schemaPrioritizedSchemaHandlers {
+				if err := thisEnvironment.dispatchSchemaEvent(prioritizedSchemaHandlers, schemaID, event, context); err != nil {
+					return nil
+				}
 			}
 		}
 	}
 
-	return
+	// dispatch to generic handlers
+	if prioritizedEventHandlers, ok := thisEnvironment.Handlers[event]; ok {
+		for priority, eventHandlers := range prioritizedEventHandlers {
+			for index, eventHandler := range eventHandlers {
+				if err := eventHandler(context, thisEnvironment); err != nil {
+					return fmt.Errorf("failed to dispatch event '%s' at priority '%d' with index '%d': %s",
+						event, priority, index, err)
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 func (thisEnvironment *Environment) updateResourceInContext(context goext.Context, resource interface{}) {
@@ -331,7 +306,7 @@ func (thisEnvironment *Environment) resourceToMap(res interface{}) interface{} {
 	return elem.Interface()
 }
 
-func (thisEnvironment *Environment) schemaIDToResource(schemaID string, context map[string]interface{}) (res goext.Resource, err error) {
+func (thisEnvironment *Environment) resourceFromContext(schemaID string, context map[string]interface{}) (res goext.Resource, err error) {
 	manager := schema.GetManager()
 	rawSchema, ok := manager.Schema(schemaID)
 
@@ -388,46 +363,42 @@ func (thisEnvironment *Environment) schemaIDToResource(schemaID string, context 
 }
 
 // RegisterEventHandler registers an event handler
-func (thisEnvironment *Environment) RegisterEventHandler(eventName string, handler func(context goext.Context, environment goext.IEnvironment) error, priority goext.Priority) {
+func (thisEnvironment *Environment) RegisterEventHandler(event string, handler func(context goext.Context, environment goext.IEnvironment) error, priority goext.Priority) {
 	if thisEnvironment.Handlers == nil {
 		thisEnvironment.Handlers = EventPrioritizedHandlers{}
 	}
 
-	if thisEnvironment.Handlers[eventName] == nil {
-		thisEnvironment.Handlers[eventName] = PrioritizedHandlers{}
+	if thisEnvironment.Handlers[event] == nil {
+		thisEnvironment.Handlers[event] = PrioritizedHandlers{}
 	}
 
-	if thisEnvironment.Handlers[eventName][priority] == nil {
-		thisEnvironment.Handlers[eventName][priority] = Handlers{}
+	if thisEnvironment.Handlers[event][priority] == nil {
+		thisEnvironment.Handlers[event][priority] = Handlers{}
 	}
 
-	thisEnvironment.Handlers[eventName][priority] = append(thisEnvironment.Handlers[eventName][priority], handler)
-
-	return
+	thisEnvironment.Handlers[event][priority] = append(thisEnvironment.Handlers[event][priority], handler)
 }
 
 // RegisterSchemaEventHandler register an event handler for a schema
-func (thisEnvironment *Environment) RegisterSchemaEventHandler(schemaID string, eventName string, handler func(context goext.Context, resource goext.Resource, environment goext.IEnvironment) error, priority goext.Priority) {
+func (thisEnvironment *Environment) RegisterSchemaEventHandler(schemaID string, event string, handler func(context goext.Context, resource goext.Resource, environment goext.IEnvironment) error, priority goext.Priority) {
 
 	if thisEnvironment.SchemaHandlers == nil {
 		thisEnvironment.SchemaHandlers = EventSchemaPrioritizedSchemaHandlers{}
 	}
 
-	if thisEnvironment.SchemaHandlers[eventName] == nil {
-		thisEnvironment.SchemaHandlers[eventName] = SchemaPrioritizedSchemaHandlers{}
+	if thisEnvironment.SchemaHandlers[event] == nil {
+		thisEnvironment.SchemaHandlers[event] = SchemaPrioritizedSchemaHandlers{}
 	}
 
-	if thisEnvironment.SchemaHandlers[eventName][schemaID] == nil {
-		thisEnvironment.SchemaHandlers[eventName][schemaID] = PrioritizedSchemaHandlers{}
+	if thisEnvironment.SchemaHandlers[event][schemaID] == nil {
+		thisEnvironment.SchemaHandlers[event][schemaID] = PrioritizedSchemaHandlers{}
 	}
 
-	if thisEnvironment.SchemaHandlers[eventName][schemaID][priority] == nil {
-		thisEnvironment.SchemaHandlers[eventName][schemaID][priority] = SchemaHandlers{}
+	if thisEnvironment.SchemaHandlers[event][schemaID][priority] == nil {
+		thisEnvironment.SchemaHandlers[event][schemaID][priority] = SchemaHandlers{}
 	}
 
-	thisEnvironment.SchemaHandlers[eventName][schemaID][priority] = append(thisEnvironment.SchemaHandlers[eventName][schemaID][priority], handler)
-
-	return
+	thisEnvironment.SchemaHandlers[event][schemaID][priority] = append(thisEnvironment.SchemaHandlers[event][schemaID][priority], handler)
 }
 
 // RegisterResourceType registers a runtime type for a given name
