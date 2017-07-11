@@ -47,8 +47,7 @@ func NewGoTestRunner(pluginFileNames []string) *GoTestRunner {
 type GoTestSuite struct {
 	plugin  *plugin.Plugin
 	db      db.DB
-	goEnv   *golang.Environment
-	extEnv  goext.Environment
+	env     *golang.Environment
 	path    string
 	manager *schema.Manager
 
@@ -61,7 +60,7 @@ type GoTestSuite struct {
 	binary      string
 
 	testFnRaw plugin.Symbol
-	testFn    func(*goext.Environment)
+	testFn    func(goext.IEnvironment)
 }
 
 func (goTestRunner *GoTestRunner) Run() error {
@@ -88,8 +87,7 @@ func (goTestRunner *GoTestRunner) Run() error {
 			return err
 		}
 
-		goTestSuite.goEnv = golang.NewEnvironment("test"+pluginFileName, goTestSuite.db, &middleware.FakeIdentity{}, noop.NewSync())
-		goTestSuite.extEnv = goTestSuite.goEnv.ExtEnvironment()
+		goTestSuite.env = golang.NewEnvironment("test"+pluginFileName, goTestSuite.db, &middleware.FakeIdentity{}, noop.NewSync())
 		goTestSuite.path = filepath.Dir(pluginFileName)
 
 		goTestSuite.manager = schema.GetManager()
@@ -132,7 +130,7 @@ func (goTestRunner *GoTestRunner) Run() error {
 
 		goTestSuite.binary = goTestSuite.binaryFn()
 
-		err = goTestSuite.goEnv.Load(goTestSuite.path + "/" + goTestSuite.binary, "")
+		err = goTestSuite.env.Load(goTestSuite.path + "/" + goTestSuite.binary, "")
 
 		if err != nil {
 			log.Error("Failed to load golang extension test dependant plugin: %s; error: %s", pluginFileName, err)
@@ -154,7 +152,7 @@ func (goTestRunner *GoTestRunner) Run() error {
 			return err
 		}
 
-		goTestSuite.testFn, ok = goTestSuite.testFnRaw.(func(*goext.Environment))
+		goTestSuite.testFn, ok = goTestSuite.testFnRaw.(func(goext.IEnvironment))
 
 		if !ok {
 			log.Error("Invalid signature of Test function in golang extension test: %s", pluginFileName)
@@ -165,7 +163,7 @@ func (goTestRunner *GoTestRunner) Run() error {
 		goTestSuites = append(goTestSuites, goTestSuite)
 
 		// Run test
-		goTestSuite.testFn(&goTestSuite.extEnv)
+		goTestSuite.testFn(goTestSuite.env)
 	}
 
 	RegisterFailHandler(Fail)

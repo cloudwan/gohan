@@ -26,7 +26,7 @@ func (ctx Context) WithSchema(schemaId string) Context {
 	return ctx
 }
 
-func (ctx Context) WithResource(resource string) Context {
+func (ctx Context) WithResource(resource interface{}) Context {
 	ctx["resource"] = resource
 	return ctx
 }
@@ -52,7 +52,8 @@ type ISchema interface {
 	Update(resource interface{}) error
 	Delete(id string) error
 
-	RegisterEventHandler(eventName string, handler func(context Context, resource Resource, environment *Environment) error, priority Priority)
+	// events
+	RegisterEventHandler(eventName string, handler func(context Context, resource Resource, environment IEnvironment) error, priority Priority)
 	RegisterResourceType(typeValue interface{})
 }
 

@@ -21,20 +21,20 @@ import (
 	"github.com/cloudwan/gohan/schema"
 )
 
-type coreBinder struct {
-	rawEnvironment *Environment
+type Core struct {
+	environment *Environment
 }
 
-func (thisCoreBinder *coreBinder) RegisterSchemaEventHandler(schemaID string, eventName string, handler func(context goext.Context, resource goext.Resource, environment *goext.Environment) error, priority goext.Priority) {
-	thisCoreBinder.rawEnvironment.RegisterSchemaEventHandler(schemaID, eventName, handler, priority)
+func (thisCore *Core) RegisterSchemaEventHandler(schemaID string, eventName string, handler func(context goext.Context, resource goext.Resource, environment goext.IEnvironment) error, priority goext.Priority) {
+	thisCore.environment.RegisterSchemaEventHandler(schemaID, eventName, handler, priority)
 }
 
-func (thisCoreBinder *coreBinder) RegisterEventHandler(eventName string, handler func(context goext.Context, environment *goext.Environment) error, priority goext.Priority) {
-	thisCoreBinder.rawEnvironment.RegisterEventHandler(eventName, handler, priority)
+func (thisCore *Core) RegisterEventHandler(eventName string, handler func(context goext.Context, environment goext.IEnvironment) error, priority goext.Priority) {
+	thisCore.environment.RegisterEventHandler(eventName, handler, priority)
 }
 
 // TriggerEvent Causes the given event to be handled in all environments (across different-language extensions)
-func (thisCoreBinder *coreBinder) TriggerEvent(event string, context goext.Context) {
+func (thisCore *Core) TriggerEvent(event string, context goext.Context) {
 	schemaID := ""
 
 	if s, ok := context["schema"]; ok {
@@ -48,10 +48,11 @@ func (thisCoreBinder *coreBinder) TriggerEvent(event string, context goext.Conte
 }
 
 // HandleEvent Causes the given event to be handled within the same environment
-func (thisCoreBinder *coreBinder) HandleEvent(event string, context goext.Context) {
-	thisCoreBinder.rawEnvironment.HandleEvent(event, context)
+func (thisCore *Core) HandleEvent(event string, context goext.Context) {
+	thisCore.environment.HandleEvent(event, context)
 }
 
-func bindCore(rawEnvironment *Environment) goext.ICore {
-	return &coreBinder{rawEnvironment: rawEnvironment}
+// New core creates a new Core implementation
+func NewCore(environment *Environment) goext.ICore {
+	return &Core{environment: environment}
 }

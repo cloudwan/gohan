@@ -19,6 +19,7 @@ package goext
 type ICore interface {
 	TriggerEvent(event string, context Context)
 	HandleEvent(event string, context Context)
-	RegisterEventHandler(eventName string, handler func(context Context, environment *Environment) error, priority Priority)
-	RegisterSchemaEventHandler(schemaID string, eventName string, handler func(context Context, resource Resource, environment *Environment) error, priority Priority)
+
+	RegisterEventHandler(eventName string, handler func(context Context, environment IEnvironment) error, priority Priority)
+	RegisterSchemaEventHandler(schemaID string, eventName string, handler func(context Context, resource Resource, environment IEnvironment) error, priority Priority)
 }

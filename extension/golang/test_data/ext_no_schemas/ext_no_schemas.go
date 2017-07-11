@@ -20,6 +20,6 @@ import (
 )
 
 // Init initializes a golang plugin
-func Init(env *goext.Environment) error {
+func Init(env goext.IEnvironment) error {
 	return nil
 }

@@ -28,8 +28,8 @@ func Schemas() []string {
 }
 
 // Init initializes a golang plugin
-func Init(env *goext.Environment) error {
-	testSchema := env.Schemas.Find("test")
+func Init(env goext.IEnvironment) error {
+	testSchema := env.Schemas().Find("test")
 	testSchema.RegisterResourceType(test.Test{})
 	return nil
 }

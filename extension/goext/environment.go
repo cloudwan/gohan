@@ -15,31 +15,15 @@
 
 package goext
 
-type Handler func(context Context, environment *Environment) error
-type HandlerList []Handler
-type PriorityHandlerList map[Priority]HandlerList
-type EventPriorityHandlerList map[string]PriorityHandlerList
-
-type HandlerSchema func(context Context, resource Resource, environment *Environment) error
-type HandlerSchemaListOfHandlers []HandlerSchema
-type HandlerSchemaListOfPriorities map[Priority]HandlerSchemaListOfHandlers
-type HandlerSchemaListOfSchemas map[string]HandlerSchemaListOfPriorities
-type HandlersSchemaListOfEvents map[string]HandlerSchemaListOfSchemas
-
-// Environment is the only scope of gohan available for a golang extension
-// no other packages must not be imported and used
-type Environment struct {
-	// event handlers (event -> priority -> list -> handler)
-	Handlers       EventPriorityHandlerList
-	HandlersSchema HandlersSchemaListOfEvents
-
-	// modules
-	Core    ICore
-	Logger  ILogger
-	Schemas ISchemas
+// IEnvironment is the only scope of Gohan available for a golang extensions;
+// other packages must not be imported nor used
+type IEnvironment interface {
+	Core() ICore
+	Logger() ILogger
+	Schemas() ISchemas
 }
 
 // IEnvironmentSupport indicates that an object holds a reference to a valid environment
 type IEnvironmentSupport interface {
-	Env() *Environment
+	Environment() IEnvironment
 }

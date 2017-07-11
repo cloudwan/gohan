@@ -1,4 +1,4 @@
-// Copyright (C) 2015 NTT Innovation Institute, Inc.
+// Copyright (C) 2017 NTT Innovation Institute, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,11 +22,11 @@ import (
 
 const logModule = "[goext]"
 
-type loggerBinder struct {
-	rawEnvironment *Environment
+type Logger struct {
+	environment *Environment
 }
 
-func (thisLoggerBinder *loggerBinder) internalLog(module string, level goext.Level, format string) {
+func (thisLogger *Logger) internalLog(module string, level goext.Level, format string) {
 	logger := l.NewLoggerForModule(module)
 
 	switch level {
@@ -47,7 +47,7 @@ func (thisLoggerBinder *loggerBinder) internalLog(module string, level goext.Lev
 	}
 }
 
-func (thisLoggerBinder *loggerBinder) internalLogf(module string, level goext.Level, format string, args ...interface{}) {
+func (thisLogger *Logger) internalLogf(module string, level goext.Level, format string, args ...interface{}) {
 	logger := l.NewLoggerForModule(module)
 
 	switch level {
@@ -68,54 +68,55 @@ func (thisLoggerBinder *loggerBinder) internalLogf(module string, level goext.Le
 	}
 }
 
-func (thisLoggerBinder *loggerBinder) Critical(format string) {
-	thisLoggerBinder.internalLog(logModule, goext.LEVEL_CRITICAL, format)
+func (thisLogger *Logger) Critical(format string) {
+	thisLogger.internalLog(logModule, goext.LEVEL_CRITICAL, format)
 }
 
-func (thisLoggerBinder *loggerBinder) Criticalf(format string, args ...interface{}) {
-	thisLoggerBinder.internalLogf(logModule, goext.LEVEL_CRITICAL, format, args...)
+func (thisLogger *Logger) Criticalf(format string, args ...interface{}) {
+	thisLogger.internalLogf(logModule, goext.LEVEL_CRITICAL, format, args...)
 }
 
-func (thisLoggerBinder *loggerBinder) Error(format string) {
-	thisLoggerBinder.internalLog(logModule, goext.LEVEL_ERROR, format)
+func (thisLogger *Logger) Error(format string) {
+	thisLogger.internalLog(logModule, goext.LEVEL_ERROR, format)
 }
 
-func (thisLoggerBinder *loggerBinder) Errorf(format string, args ...interface{}) {
-	thisLoggerBinder.internalLogf(logModule, goext.LEVEL_ERROR, format, args...)
+func (thisLogger *Logger) Errorf(format string, args ...interface{}) {
+	thisLogger.internalLogf(logModule, goext.LEVEL_ERROR, format, args...)
 }
 
-func (thisLoggerBinder *loggerBinder) Warning(format string) {
-	thisLoggerBinder.internalLog(logModule, goext.LEVEL_WARNING, format)
+func (thisLogger *Logger) Warning(format string) {
+	thisLogger.internalLog(logModule, goext.LEVEL_WARNING, format)
 }
 
-func (thisLoggerBinder *loggerBinder) Warningf(format string, args ...interface{}) {
-	thisLoggerBinder.internalLogf(logModule, goext.LEVEL_WARNING, format, args...)
+func (thisLogger *Logger) Warningf(format string, args ...interface{}) {
+	thisLogger.internalLogf(logModule, goext.LEVEL_WARNING, format, args...)
 }
 
-func (thisLoggerBinder *loggerBinder) Notice(format string) {
-	thisLoggerBinder.internalLog(logModule, goext.LEVEL_NOTICE, format)
+func (thisLogger *Logger) Notice(format string) {
+	thisLogger.internalLog(logModule, goext.LEVEL_NOTICE, format)
 }
 
-func (thisLoggerBinder *loggerBinder) Noticef(format string, args ...interface{}) {
-	thisLoggerBinder.internalLogf(logModule, goext.LEVEL_NOTICE, format, args...)
+func (thisLogger *Logger) Noticef(format string, args ...interface{}) {
+	thisLogger.internalLogf(logModule, goext.LEVEL_NOTICE, format, args...)
 }
 
-func (thisLoggerBinder *loggerBinder) Info(format string) {
-	thisLoggerBinder.internalLog(logModule, goext.LEVEL_INFO, format)
+func (thisLogger *Logger) Info(format string) {
+	thisLogger.internalLog(logModule, goext.LEVEL_INFO, format)
 }
 
-func (thisLoggerBinder *loggerBinder) Infof(format string, args ...interface{}) {
-	thisLoggerBinder.internalLogf(logModule, goext.LEVEL_INFO, format, args...)
+func (thisLogger *Logger) Infof(format string, args ...interface{}) {
+	thisLogger.internalLogf(logModule, goext.LEVEL_INFO, format, args...)
 }
 
-func (thisLoggerBinder *loggerBinder) Debug(format string) {
-	thisLoggerBinder.internalLog(logModule, goext.LEVEL_DEBUG, format)
+func (thisLogger *Logger) Debug(format string) {
+	thisLogger.internalLog(logModule, goext.LEVEL_DEBUG, format)
 }
 
-func (thisLoggerBinder *loggerBinder) Debugf(format string, args ...interface{}) {
-	thisLoggerBinder.internalLogf(logModule, goext.LEVEL_DEBUG, format, args...)
+func (thisLogger *Logger) Debugf(format string, args ...interface{}) {
+	thisLogger.internalLogf(logModule, goext.LEVEL_DEBUG, format, args...)
 }
 
-func bindLogger(rawEnvironment *Environment) goext.ILogger {
-	return &loggerBinder{rawEnvironment: rawEnvironment}
+// NewLogger return a new implementation of a logger interface
+func NewLogger(environment *Environment) goext.ILogger {
+	return &Logger{environment: environment}
 }
