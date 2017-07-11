@@ -286,7 +286,7 @@ func (thisEnvironment *Environment) dispatchEventWithResource(schemaID string, h
 		return err
 	}
 
-	defer thisEnvironment.updateResourceInContext(context, resource)
+	//defer thisEnvironment.updateResourceInContext(context, resource)
 
 	for priority := range priorities {
 		for _, fn := range handlers[goext.Priority(priority)] {
