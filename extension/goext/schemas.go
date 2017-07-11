@@ -31,13 +31,6 @@ func (ctx Context) WithResource(resource string) Context {
 	return ctx
 }
 
-
-func main() {
-	ctx := MakeContext().WithSchema("mySchema").WithResource("myResource")
-
-	fmt.Println(ctx["schema"], ctx["resource"])
-}
-
 type Resource interface{}
 type Resources []Resource
 type Priority int
