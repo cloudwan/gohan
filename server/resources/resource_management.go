@@ -611,16 +611,21 @@ func UpdateResource(
 	if err != nil {
 		return ResourceError{err, err.Error(), Unauthorized}
 	}
-	context["resource"] = dataMap
-
+	var dataMapCopy = make(map[string]interface{})
+	for key, value := range dataMap {
+		dataMapCopy[key] = value
+	}
+	dataMapCopy["id"] = resourceID
+	context["resource"] = dataMapCopy
 	if err := extension.HandleEvent(context, environment, "pre_update", resourceSchema.ID); err != nil {
 		return err
 	}
 
 	if resourceData, ok := context["resource"].(map[string]interface{}); ok {
+		delete(resourceData, "id")
 		dataMap = resourceData
 	}
-
+	log.Critical("I am here")
 	if err := InTransaction(
 		context, dataStore,
 		transaction.GetIsolationLevel(resourceSchema, schema.ActionUpdate),
@@ -686,7 +691,10 @@ func UpdateResourceInTransaction(
 	if err != nil {
 		return ResourceError{err, err.Error(), WrongData}
 	}
-	context["resource"] = resource.Data()
+
+	resourceData := resource.Data()
+	resourceData["id"] = resourceID
+	context["resource"] = resourceData
 
 	if err := extension.HandleEvent(context, environment, "pre_update_in_transaction", resourceSchema.ID); err != nil {
 		return err

@@ -55,6 +55,7 @@ var _ = Describe("Resource manager", func() {
 	)
 
 	BeforeEach(func() {
+
 		manager = schema.GetManager()
 
 		adminAuth = schema.NewAuthorization(adminTenantID, "admin", adminTokenID, []string{"admin"}, nil)
@@ -69,6 +70,7 @@ var _ = Describe("Resource manager", func() {
 	environmentManager := extension.GetManager()
 
 	JustBeforeEach(func() {
+
 		var ok bool
 		currentSchema, ok = manager.Schema(schemaID)
 		Expect(ok).To(BeTrue())
@@ -531,6 +533,7 @@ var _ = Describe("Resource manager", func() {
 			)
 
 			BeforeEach(func() {
+
 				adminResourceData = map[string]interface{}{
 					"id":           resourceID1,
 					"tenant_id":    adminTenantID,
@@ -550,6 +553,7 @@ var _ = Describe("Resource manager", func() {
 			})
 
 			JustBeforeEach(func() {
+
 				adminResource, err := manager.LoadResource(currentSchema.ID, adminResourceData)
 				Expect(err).NotTo(HaveOccurred())
 				memberResource, err := manager.LoadResource(currentSchema.ID, memberResourceData)
@@ -1163,6 +1167,29 @@ var _ = Describe("Resource manager", func() {
 			fakeIdentity = &middleware.FakeIdentity{}
 		})
 
+		Describe("Whether id is not empty during update and update_in_transaction", func() {
+			BeforeEach(func() {
+				javascriptCode := `if (context.resource.id == undefined || context.resource.id == ""){
+					throw new CustomException();
+				}`
+
+				events["pre_update"] = javascriptCode
+				events["pre_update_in_transaction"] = javascriptCode
+			})
+			It("Should receive id and tenat_id but should not update them", func() {
+				err := resources.CreateResource(
+					context, testDB, fakeIdentity, currentSchema, adminResourceData)
+				Expect(err).To(Succeed())
+				delete(adminResourceData, "id")
+				delete(adminResourceData, "tenant_id")
+
+				err = resources.UpdateResource(
+					context, testDB, fakeIdentity, currentSchema, resourceID1, adminResourceData)
+				Expect(err).To(Succeed())
+
+			})
+		})
+
 		Describe("When there are no resources in the database", func() {
 			It("Should return an informative error", func() {
 				err := resources.UpdateResource(
@@ -1202,8 +1229,8 @@ var _ = Describe("Resource manager", func() {
 						_, ok := err.(resources.ResourceError)
 						Expect(ok).To(BeTrue())
 					})
-				})
 
+				})
 				Context("Only post_update_in_transaction", func() {
 					BeforeEach(func() {
 						events["post_update_in_transaction"] = `throw new CustomException("tre malbona", 390);`
