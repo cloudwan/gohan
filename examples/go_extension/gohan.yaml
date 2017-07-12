@@ -9,14 +9,14 @@ database:
     type: "sqlite3"
     # connection string
     # it is file path for yaml, json and sqlite3 backend
-    connection: "file.db"
-    no_init: false
-
+    connection: "./gohan.db"
+    drop_on_create: true
 # schema path
 schemas:
     - "embed://etc/schema/gohan.json"
-    - "./todo.yaml"
-    - "./todo_related.yaml"
+    - "embed://etc/extensions/gohan_extension.yaml"
+    - "todo.yaml"
+    - "todo_related.yaml"
 
 # listen address for gohan
 address: ":9091"

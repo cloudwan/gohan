@@ -3,14 +3,25 @@ extensions:
   code_type: go
   path: ""
   url: file://go_extension.so
-networks: []
-policies:
-- action: '*'
+- action: read
   effect: allow
-  id: admin_statement
-  principal: admin
+  id: member_schema
+  principal: Member
   resource:
-    path: .*
+    path: /gohan/v0.1/schemas*
+- action: '*'
+  condition:
+  - is_owner
+  effect: allow
+  id: member_policy
+  principal: Member
+  resource:
+    path: /v0.1/member_resources*
+    properties:
+    - id
+    - name
+    - description
+    - tenant_id
 schemas:
 - description: Todo
   id: todo
@@ -53,6 +64,7 @@ schemas:
     - id
     - name
     - description
+    - tenant_id
     type: object
   singular: todo
   title: Todo

@@ -1,6 +1,6 @@
 SCHEMAS = todo.go todo_related.go
 BUILD = go build -buildmode=plugin
-PLUGINS = go_extension.so test_go_extension.so
+PLUGINS = go_extension.so
 
 all: $(PLUGINS)
 	@echo "finished"

@@ -25,8 +25,8 @@ import (
 // @optional
 func Schemas() []string {
 	return []string{
-		"todo.yaml",
-		"todo_related.yaml",
+		"../todo.yaml",
+		"../todo_related.yaml",
 	}
 }
 
