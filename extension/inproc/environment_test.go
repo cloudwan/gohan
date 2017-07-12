@@ -16,15 +16,13 @@
 package inproc_test
 
 import (
-	"github.com/cloudwan/gohan/extension/golang"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
 	"time"
 
 	"github.com/cloudwan/gohan/extension"
+	"github.com/cloudwan/gohan/extension/inproc"
 	"github.com/cloudwan/gohan/schema"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Gohanscript extension manager", func() {
@@ -53,7 +51,7 @@ var _ = Describe("Gohanscript extension manager", func() {
 				})
 				Expect(err).ToNot(HaveOccurred())
 				extensions := []*schema.Extension{extension}
-				env := golang.NewEnvironment()
+				env := inproc.NewEnvironment()
 				Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
 
 				context := map[string]interface{}{
@@ -66,4 +64,3 @@ var _ = Describe("Gohanscript extension manager", func() {
 	})
 
 })
-
