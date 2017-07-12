@@ -65,10 +65,6 @@ func NewSchema(environment *Environment, rawSchema *schema.Schema) goext.ISchema
 	return &Schema{environment: environment, rawSchema: rawSchema}
 }
 
-func (thisSchema *Schema) RawSchema() interface{} {
-	return thisSchema.rawSchema
-}
-
 func (thisSchema *Schema) ID() string {
 	return thisSchema.rawSchema.ID
 }

@@ -61,8 +61,6 @@ type ISchema interface {
 	// events
 	RegisterEventHandler(event string, handler func(context Context, resource Resource, environment IEnvironment) error, priority Priority)
 	RegisterResourceType(typeValue interface{})
-
-	RawSchema() interface{}
 }
 
 // ISchemas is an interface to schemas manager in Gohan

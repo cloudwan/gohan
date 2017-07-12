@@ -18,7 +18,6 @@ package golang
 import (
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/extension/goext"
-	"github.com/cloudwan/gohan/schema"
 )
 
 type Core struct {
@@ -38,7 +37,7 @@ func (thisCore *Core) TriggerEvent(event string, context goext.Context) {
 	schemaID := ""
 
 	if s, ok := context["schema"]; ok {
-		schemaID = s.(*schema.Schema).ID
+		schemaID = s.(goext.ISchema).ID()
 	} else {
 		log.Panic("TriggerEvent: schema not found")
 	}
