@@ -100,7 +100,9 @@ func (server *Server) mapRoutes() {
 	if err != nil {
 		log.Info(err.Error())
 	}
-	schemaManager.LoadExtensions(extensionList)
+	if err := schemaManager.LoadExtensions(extensionList); err != nil {
+		log.Warning("failed to load extensions: %s", err)
+	}
 
 	namespaceSchema, _ := schemaManager.Schema("namespace")
 	if namespaceSchema == nil {
@@ -226,6 +228,7 @@ func NewServer(configFile string) (*Server, error) {
 		"javascript",
 		"gohanscript",
 		"go",
+		"inproc",
 	})
 	schema.DefaultExtension = config.GetString("extension/default", "javascript")
 

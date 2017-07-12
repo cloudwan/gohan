@@ -43,7 +43,7 @@ cors: "*"
 logging:
     stderr:
         enabled: true
-        level: INFO
+        level: DEBUG 
     file:
         enabled: true
         level: INFO

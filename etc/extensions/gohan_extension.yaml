@@ -1,5 +1,5 @@
 extensions:
     - id: schema
-      code_type: go
+      code_type: inproc
       code: handle_schema
       path: /gohan/v0.1/schem.*

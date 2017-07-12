@@ -5,7 +5,7 @@ Extensions has properties:
 
 - id identity of the code
 - code contents of a code
-- code_type javascript, go and Gohan script (DSL) are supported
+- code_type javascript, go, inproc and Gohan script (DSL) are supported
 - URL placement of code. Currently, file://, http:// and https:// schemes are supported
 - path resource path to execute code
 

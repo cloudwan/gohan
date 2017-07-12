@@ -196,7 +196,7 @@ func (thisEnvironment *Environment) LoadExtensionsForPath(extensions []*schema.E
 				continue
 			}
 			if extension.URL == "" {
-				log.Warning("found golang extension without plugin - ignored")
+				log.Warning("found golang extension '%s' without plugin - ignored", extension.ID)
 				continue
 			}
 			url := strings.TrimPrefix(extension.URL, "file://")

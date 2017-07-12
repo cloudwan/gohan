@@ -37,6 +37,7 @@ import (
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/extension/gohanscript"
 	"github.com/cloudwan/gohan/extension/golang"
+	"github.com/cloudwan/gohan/extension/inproc"
 	"github.com/cloudwan/gohan/extension/otto"
 	"github.com/cloudwan/gohan/schema"
 )
@@ -51,6 +52,8 @@ func (server *Server) newEnvironment(name string) extension.Environment {
 			envs = append(envs, gohanscript.NewEnvironment())
 		case "go":
 			envs = append(envs, golang.NewEnvironment(name, server.db, server.keystoneIdentity, server.sync))
+		case "inproc":
+			envs = append(envs, inproc.NewEnvironment())
 		}
 	}
 	return extension.NewEnvironment(envs)

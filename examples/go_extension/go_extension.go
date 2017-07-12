@@ -21,21 +21,21 @@ import (
 	"github.com/cloudwan/gohan/extension/goext"
 )
 
-func handleSchemaEvent(ctx goext.Context, res goext.Resource, env goext.IEnvironment) error {
+func handlePreUpdateEvent(ctx goext.Context, res goext.Resource, env goext.IEnvironment) error {
 	todo := res.(*Todo)
 	todo.Name = "name changed in pre_update event"
-	env.Logger().Warningf("Example log from goext extension (SCHEMA CALLBACK), %v      (ID: %v)", todo, todo.ID)
-	updateContextOnEvent(ctx, env)
+	env.Logger().Warningf("Example log from goext extension (SCHEMA CALLBACK), %v (ID: %v)", todo, todo.ID)
+	handlePostUpdate(ctx, env)
 
 	return nil
 }
 
-func updateContextOnEvent(context goext.Context, env goext.IEnvironment) error {
+func handlePostUpdate(context goext.Context, env goext.IEnvironment) error {
 	context["example_event_handled"] = true
 	return nil
 }
 
-func customEventHandler(ctx goext.Context, env goext.IEnvironment) error {
+func handleCustomEvent(ctx goext.Context, env goext.IEnvironment) error {
 	env.Logger().Info("Example log from goext extension")
 
 	schemas := env.Schemas().List()
@@ -108,20 +108,21 @@ func customEventHandler(ctx goext.Context, env goext.IEnvironment) error {
 }
 
 func Schemas() []string {
- 	return []string {
- 		"todo.yaml",
- 	}
+	return []string {
+		"todo.yaml",
+	}
 }
 
 func Init(env goext.IEnvironment) error {
-	// register runtime types for this extension
 	todoSchema := env.Schemas().Find("todo")
 	todoSchema.RegisterResourceType(Todo{})
-	todoSchema.RegisterEventHandler(goext.PreUpdate, handleSchemaEvent, goext.PriorityDefault)
 
-	// event handlers
-	env.Core().RegisterEventHandler("custom_event", customEventHandler, goext.PriorityDefault)
-	env.Core().RegisterEventHandler(goext.PostUpdate, updateContextOnEvent, goext.PriorityDefault)
+	// schema handlers
+	todoSchema.RegisterEventHandler(goext.PreUpdate, handlePreUpdateEvent, goext.PriorityDefault)
+
+	// general handlers
+	env.Core().RegisterEventHandler("custom_event", handleCustomEvent, goext.PriorityDefault)
+	env.Core().RegisterEventHandler(goext.PostUpdate, handlePostUpdate, goext.PriorityDefault)
 
 	return nil
 }
