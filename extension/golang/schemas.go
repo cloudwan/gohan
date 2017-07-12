@@ -65,6 +65,10 @@ func NewSchema(environment *Environment, rawSchema *schema.Schema) goext.ISchema
 	return &Schema{environment: environment, rawSchema: rawSchema}
 }
 
+func (thisSchema *Schema) RawSchema() interface{} {
+	return thisSchema.rawSchema
+}
+
 func (thisSchema *Schema) ID() string {
 	return thisSchema.rawSchema.ID
 }
@@ -269,8 +273,13 @@ func (thisSchema *Schema) Update(resource interface{}) error {
 	var resourceData *schema.Resource
 	var err error
 
+	if resourceData, err = thisSchema.structToResource(resource); err != nil {
+		return err
+	}
+
 	context := goext.MakeContext().
 		WithResource(thisSchema.structToMap(resource)).
+		WithResourceID(resourceData.ID()).
 		WithSchemaID(thisSchema.ID())
 
 	if err = thisSchema.environment.HandleEvent(goext.PreUpdate, context); err != nil {
@@ -286,10 +295,6 @@ func (thisSchema *Schema) Update(resource interface{}) error {
 	}
 
 	defer tx.Close()
-
-	if resourceData, err = thisSchema.structToResource(resource); err != nil {
-		return err
-	}
 
 	if err = tx.Update(resourceData); err != nil {
 		return err
