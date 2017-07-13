@@ -177,7 +177,7 @@ func (thisSchema *Schema) Fetch(id string, res interface{}) error {
 	if err != nil {
 		return err
 	}
-	resourceType, ok := thisSchema.environment.resourceTypes[thisSchema.rawSchema.ID]
+	resourceType, ok := GlobResourceTypes[thisSchema.rawSchema.ID]
 	if !ok {
 		return fmt.Errorf("No type registered for schema title: %s", thisSchema.rawSchema.ID)
 	}

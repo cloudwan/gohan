@@ -20,7 +20,7 @@ type Resources []Resource
 
 type Context map[string]interface{}
 
-func MakeContext() (ctx Context) {
+func MakeContext() Context {
 	return make(map[string]interface{})
 }
 
@@ -60,7 +60,7 @@ type ISchema interface {
 
 	// events
 	RegisterEventHandler(event string, handler func(context Context, resource Resource, environment IEnvironment) error, priority Priority)
-	RegisterResourceType(typeValue interface{})
+	RegisterResourceType(resourceType interface{})
 }
 
 // ISchemas is an interface to schemas manager in Gohan

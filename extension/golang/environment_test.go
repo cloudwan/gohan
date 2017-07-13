@@ -80,12 +80,12 @@ var _ = Describe("Environment", func() {
 				return nil
 			}
 
-			Expect(len(env.Handlers)).To(Equal(0))
+			Expect(len(golang.GlobHandlers)).To(Equal(0))
 			env.RegisterEventHandler("some_event", handler, goext.PriorityDefault)
-			Expect(len(env.Handlers["some_event"][goext.PriorityDefault])).To(Equal(1))
+			Expect(len(golang.GlobHandlers["some_event"][goext.PriorityDefault])).To(Equal(1))
 
 			p1 := reflect.ValueOf(handler).Pointer()
-			p2 := reflect.ValueOf(env.Handlers["some_event"][goext.PriorityDefault][0]).Pointer()
+			p2 := reflect.ValueOf(golang.GlobHandlers["some_event"][goext.PriorityDefault][0]).Pointer()
 
 			Expect(p1).To(Equal(p2))
 		})
@@ -96,10 +96,10 @@ var _ = Describe("Environment", func() {
 			}
 
 			testSchema.RegisterEventHandler("some_event", handler, goext.PriorityDefault)
-			Expect(len(env.SchemaHandlers["some_event"]["test"][goext.PriorityDefault])).To(Equal(1))
+			Expect(len(golang.GlobSchemaHandlers["some_event"]["test"][goext.PriorityDefault])).To(Equal(1))
 
 			p1 := reflect.ValueOf(handler).Pointer()
-			p2 := reflect.ValueOf(env.SchemaHandlers["some_event"]["test"][goext.PriorityDefault][0]).Pointer()
+			p2 := reflect.ValueOf(golang.GlobSchemaHandlers["some_event"]["test"][goext.PriorityDefault][0]).Pointer()
 
 			Expect(p1).To(Equal(p2))
 		})
