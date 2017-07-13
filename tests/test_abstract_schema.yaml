@@ -6,6 +6,9 @@ schemas:
     state_versioning: true
   plural: bases
   prefix: /v2.0
+  isolation_level:
+    delete: READ COMMITTED
+    update: READ COMMITTED
   schema:
     properties:
       description:
