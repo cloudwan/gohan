@@ -30,6 +30,7 @@ import (
 	"github.com/cloudwan/gohan/sync/noop"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"reflect"
 )
 
 var log = logPkg.NewLogger()
@@ -70,6 +71,11 @@ func (goTestRunner *GoTestRunner) Run() error {
 	goTestSuites := []*GoTestSuite{}
 
 	for _, pluginFileName := range goTestRunner.pluginFileNames {
+		golang.GlobHandlers = nil
+		golang.GlobSchemaHandlers = nil
+		golang.GlobResourceTypes = make(map[string]reflect.Type)
+		golang.GlobRegistry = map[string]bool{}
+
 		log.Notice("Loading test: %s", pluginFileName)
 
 		var err error
@@ -164,6 +170,9 @@ func (goTestRunner *GoTestRunner) Run() error {
 
 		// Run test
 		goTestSuite.testFn(goTestSuite.env)
+
+		// Clear manager
+		schema.ClearManager()
 	}
 
 	RegisterFailHandler(Fail)

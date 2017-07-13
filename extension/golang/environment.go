@@ -246,14 +246,29 @@ func (thisEnvironment *Environment) HandleEvent(event string, context map[string
 
 	// dispatch to schema handlers
 	if schemaPrioritizedSchemaHandlers, ok := GlobSchemaHandlers[event]; ok {
-		for schemaID, prioritizedSchemaHandlers := range schemaPrioritizedSchemaHandlers {
-			if iSchema := thisEnvironment.Schemas().Find(schemaID); iSchema != nil {
-				sch := iSchema.(*Schema)
-				if err := thisEnvironment.dispatchSchemaEvent(prioritizedSchemaHandlers, *sch, event, context); err != nil {
-					return err
+		if iSchemaID, ok := context["schema_id"]; ok {
+			schemaID := iSchemaID.(string)
+			if prioritizedSchemaHandlers, ok := schemaPrioritizedSchemaHandlers[schemaID]; ok {
+				if iSchema := thisEnvironment.Schemas().Find(schemaID); iSchema != nil {
+					sch := iSchema.(*Schema)
+					if err := thisEnvironment.dispatchSchemaEvent(prioritizedSchemaHandlers, *sch, event, context); err != nil {
+						return err
+					}
 				}
 			} else {
 				return fmt.Errorf("could not find schema: %s", schemaID)
+			}
+		} else {
+			// all
+			for schemaID, prioritizedSchemaHandlers := range schemaPrioritizedSchemaHandlers {
+				if iSchema := thisEnvironment.Schemas().Find(schemaID); iSchema != nil {
+					sch := iSchema.(*Schema)
+					if err := thisEnvironment.dispatchSchemaEvent(prioritizedSchemaHandlers, *sch, event, context); err != nil {
+						return err
+					}
+				} else {
+					return fmt.Errorf("could not find schema: %s", schemaID)
+				}
 			}
 		}
 	}
