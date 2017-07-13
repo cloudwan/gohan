@@ -244,7 +244,7 @@ func (thisEnvironment *Environment) HandleEvent(event string, context map[string
 			if schemaPrioritizedSchemaHandlers, ok := thisEnvironment.SchemaHandlers[event]; ok {
 				if prioritizedSchemaHandlers, ok := schemaPrioritizedSchemaHandlers[schemaID]; ok {
 					if err := thisEnvironment.dispatchSchemaEvent(prioritizedSchemaHandlers, schemaID, event, context); err != nil {
-						return nil
+						return err
 					}
 				}
 			}
