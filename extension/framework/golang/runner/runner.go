@@ -30,7 +30,6 @@ import (
 	"github.com/cloudwan/gohan/sync/noop"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"reflect"
 )
 
 var log = logPkg.NewLogger()
@@ -53,7 +52,7 @@ type GoTestSuite struct {
 	manager *schema.Manager
 
 	schemasFnRaw plugin.Symbol
-	schemasFn    func() [] string
+	schemasFn    func() []string
 	schemas      []string
 
 	binaryFnRaw plugin.Symbol
@@ -71,10 +70,10 @@ func (goTestRunner *GoTestRunner) Run() error {
 	goTestSuites := []*GoTestSuite{}
 
 	for _, pluginFileName := range goTestRunner.pluginFileNames {
-		golang.GlobHandlers = nil
-		golang.GlobSchemaHandlers = nil
-		golang.GlobResourceTypes = make(map[string]reflect.Type)
-		golang.GlobRegistry = map[string]bool{}
+		//golang.GlobHandlers = nil
+		//golang.GlobSchemaHandlers = nil
+		//golang.GlobResourceTypes = make(map[string]reflect.Type)
+		//golang.GlobRegistry = map[string]bool{}
 
 		log.Notice("Loading test: %s", pluginFileName)
 
@@ -120,6 +119,14 @@ func (goTestRunner *GoTestRunner) Run() error {
 			}
 		}
 
+		// DB
+		err = db.InitDBWithSchemas("sqlite3", memoryDbConn("test.db"), true, false, false)
+
+		if err != nil {
+			schema.ClearManager()
+			return fmt.Errorf("Failed to init DB: %s", err)
+		}
+
 		// Binary
 		goTestSuite.binaryFnRaw, err = goTestSuite.plugin.Lookup("Binary")
 
@@ -136,22 +143,14 @@ func (goTestRunner *GoTestRunner) Run() error {
 
 		goTestSuite.binary = goTestSuite.binaryFn()
 
-		err = goTestSuite.env.Load(goTestSuite.path + "/" + goTestSuite.binary, "")
+		err = goTestSuite.env.Load(goTestSuite.path+"/"+goTestSuite.binary, "")
 
 		if err != nil {
 			log.Error("Failed to load golang extension test dependant plugin: %s; error: %s", pluginFileName, err)
 			return err
 		}
 
-		// DB
-		err = db.InitDBWithSchemas("sqlite3", memoryDbConn("test.db"), true, false, false)
-
-		if err != nil {
-			schema.ClearManager()
-			return fmt.Errorf("Failed to init DB: %s", err)
-		}
-
-		//Setup test suite
+		// Setup test suite
 		goTestSuite.testFnRaw, err = goTestSuite.plugin.Lookup("Test")
 
 		if err != nil {
@@ -172,7 +171,7 @@ func (goTestRunner *GoTestRunner) Run() error {
 		goTestSuite.testFn(goTestSuite.env)
 
 		// Clear manager
-		schema.ClearManager()
+		//schema.ClearManager()
 	}
 
 	RegisterFailHandler(Fail)

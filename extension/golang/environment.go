@@ -255,8 +255,6 @@ func (thisEnvironment *Environment) HandleEvent(event string, context map[string
 						return err
 					}
 				}
-			} else {
-				return fmt.Errorf("could not find schema: %s", schemaID)
 			}
 		} else {
 			// all
