@@ -91,7 +91,7 @@ func (writer *SyncWriter) Run(ctx context.Context) error {
 				case <-committed:
 					recentlySynced = true
 				}
-				err := writer.Sync()
+				_, err := writer.Sync()
 				if err != nil {
 					return err
 				}
@@ -112,19 +112,19 @@ func (writer *SyncWriter) Run(ctx context.Context) error {
 
 // Sync runs a synchronization iteration, which
 // executes requests in the event table.
-// todo: make private once tests are fixed
-func (writer *SyncWriter) Sync() error {
+func (writer *SyncWriter) Sync() (synced int, err error) {
 	resourceList, err := writer.listEvents()
 	if err != nil {
-		return err
+		return
 	}
 	for _, resource := range resourceList {
-		err := writer.syncEvent(resource)
+		err = writer.syncEvent(resource)
 		if err != nil {
-			return err
+			return
 		}
+		synced += 1
 	}
-	return nil
+	return
 }
 
 func (writer *SyncWriter) listEvents() ([]*schema.Resource, error) {

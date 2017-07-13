@@ -29,16 +29,16 @@ func TestGetSchema(t *testing.T) {
 	defer schema.ClearManager()
 
 	if err := manager.LoadSchemaFromFile("embed://etc/schema/gohan.json"); err != nil {
-		panic(err)
+		t.Error(err)
 	}
 	if err := manager.LoadSchemaFromFile("../tests/test_schema_member.yaml"); err != nil {
-		panic(err)
+		t.Error(err)
 	}
 
 	a := schema.NewAuthorization("member", "member", "member", []string{"Member"}, nil)
 	s, ok := manager.Schema("member_resource")
 	if !ok {
-		panic("Could not find schema")
+		t.Error("Could not find schema")
 	}
 
 	r, err := GetSchema(s, a)

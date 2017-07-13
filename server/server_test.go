@@ -36,6 +36,8 @@ import (
 	"github.com/cloudwan/gohan/schema"
 	srv "github.com/cloudwan/gohan/server"
 	"github.com/cloudwan/gohan/server/middleware"
+	"github.com/cloudwan/gohan/sync"
+	sync_util "github.com/cloudwan/gohan/sync/util"
 	"github.com/cloudwan/gohan/util"
 )
 
@@ -757,6 +759,79 @@ var _ = Describe("Server package test", func() {
 			It("should return 200", func() {
 				testURL("GET", profilingURL, "", nil, http.StatusOK)
 			})
+		})
+	})
+
+	Describe("Resync command test", func() {
+		It("Should resync syncable resources", func() {
+			var err error
+			config := util.GetConfig()
+			manager := schema.GetManager()
+
+			syncConn, err := sync_util.CreateFromConfig(config)
+			if err != nil {
+				Fail(err.Error())
+			}
+			networkSchema, _ := manager.Schema("network")
+			subnetSchema, _ := manager.Schema("subnet")
+
+			tx, err := testDB.Begin()
+			if err != nil {
+				Fail(err.Error())
+			}
+			net1, err := schema.NewResource(networkSchema, map[string]interface{}{
+				"id":                "resync-test-net1",
+				"route_targets":     []string{"123", "345"},
+				"name":              "test-net1-name",
+				"providor_networks": map[string]interface{}{"segmentation_id": 12, "segmentation_type": "vlan"},
+				"description":       "",
+				"shared":            false,
+				"tenant_id":         "tenant1",
+			})
+
+			net2, err := schema.NewResource(networkSchema, map[string]interface{}{
+				"id":                "resync-test-net2",
+				"route_targets":     []string{},
+				"name":              "test-net2-name",
+				"providor_networks": map[string]interface{}{"segmentation_id": 12, "segmentation_type": "vlan"},
+				"description":       "",
+				"shared":            false,
+				"tenant_id":         "tenant2",
+			})
+
+			subnet1, err := schema.NewResource(subnetSchema, map[string]interface{}{
+				"id":          "test-subnet1-id",
+				"name":        "test-subnet1-name",
+				"description": "",
+				"network_id":  "resync-test-net1",
+				"cidr":        "10.11.23.0/24",
+				"tenant_id":   "tenant1",
+			})
+			Expect(tx.Create(net1)).To(Succeed())
+			Expect(tx.Create(subnet1)).To(Succeed())
+			Expect(tx.Create(net2)).To(Succeed())
+			Expect(tx.Commit()).To(Succeed())
+
+			if err != nil {
+				Fail(err.Error())
+			}
+
+			var _ *sync.Node
+			_, err = syncConn.Fetch("/config/v2.0/networks/resync-test-net1")
+			Expect(err).Should(HaveOccurred())
+			_, err = syncConn.Fetch("/config/v2.0/networks/resync-test-net2")
+			Expect(err).Should(HaveOccurred())
+			_, err = syncConn.Fetch("/config/v2.0/subnets/test-subnet1-id")
+			Expect(err).Should(HaveOccurred())
+
+			srv.Resync(testDB, syncConn)
+
+			_, err = syncConn.Fetch("/config/v2.0/networks/resync-test-net1")
+			Expect(err).ShouldNot(HaveOccurred())
+			_, err = syncConn.Fetch("/config/v2.0/networks/resync-test-net2")
+			Expect(err).ShouldNot(HaveOccurred())
+			_, err = syncConn.Fetch("/config/v2.0/subnets/test-subnet1-id")
+			Expect(err).ShouldNot(HaveOccurred())
 		})
 	})
 })

@@ -44,7 +44,7 @@ var _ = Describe("Server package test", func() {
 			tx.Close()
 
 			writer := srv.NewSyncWriterFromServer(server)
-			Expect(writer.Sync()).To(Succeed())
+			Expect(writer.Sync()).To(Equal(1))
 
 			sync, err := gohan_etcd.NewSync([]string{"http://127.0.0.1:2379"}, time.Second)
 			Expect(err).ToNot(HaveOccurred())
@@ -69,7 +69,7 @@ var _ = Describe("Server package test", func() {
 			Expect(tx.Commit()).To(Succeed())
 			tx.Close()
 
-			Expect(writer.Sync()).To(Succeed())
+			Expect(writer.Sync()).To(Equal(1))
 
 			_, err = sync.Fetch(networkResource.Path())
 			Expect(err).To(HaveOccurred(), "Failed to sync db resource deletion to sync backend")
@@ -92,7 +92,7 @@ var _ = Describe("Server package test", func() {
 				tx.Close()
 
 				writer := srv.NewSyncWriterFromServer(server)
-				Expect(writer.Sync()).To(Succeed())
+				Expect(writer.Sync()).To(Equal(1))
 
 				sync, err := gohan_etcd.NewSync([]string{"http://127.0.0.1:2379"}, time.Second)
 				Expect(err).ToNot(HaveOccurred())
@@ -117,7 +117,7 @@ var _ = Describe("Server package test", func() {
 				Expect(tx.Commit()).To(Succeed())
 				tx.Close()
 
-				Expect(writer.Sync()).To(Succeed())
+				Expect(writer.Sync()).To(Equal(1))
 
 				_, err = sync.Fetch(resource.Path())
 				Expect(err).To(HaveOccurred(), "Failed to sync db resource deletion to sync backend")
@@ -141,7 +141,7 @@ var _ = Describe("Server package test", func() {
 				tx.Close()
 
 				writer := srv.NewSyncWriterFromServer(server)
-				Expect(writer.Sync()).To(Succeed())
+				Expect(writer.Sync()).To(Equal(1))
 
 				sync, err := gohan_etcd.NewSync([]string{"http://127.0.0.1:2379"}, time.Second)
 				Expect(err).ToNot(HaveOccurred())
@@ -160,7 +160,7 @@ var _ = Describe("Server package test", func() {
 				Expect(tx.Commit()).To(Succeed())
 				tx.Close()
 
-				Expect(writer.Sync()).To(Succeed())
+				Expect(writer.Sync()).To(Equal(1))
 
 				_, err = sync.Fetch(resource.Path())
 				Expect(err).To(HaveOccurred(), "Failed to sync db resource deletion to sync backend")
@@ -184,7 +184,7 @@ var _ = Describe("Server package test", func() {
 				tx.Close()
 
 				writer := srv.NewSyncWriterFromServer(server)
-				Expect(writer.Sync()).To(Succeed())
+				Expect(writer.Sync()).To(Equal(1))
 
 				sync, err := gohan_etcd.NewSync([]string{"http://127.0.0.1:2379"}, time.Second)
 				Expect(err).ToNot(HaveOccurred())
@@ -199,7 +199,7 @@ var _ = Describe("Server package test", func() {
 				Expect(tx.Commit()).To(Succeed())
 				tx.Close()
 
-				Expect(writer.Sync()).To(Succeed())
+				Expect(writer.Sync()).To(Equal(1))
 
 				_, err = sync.Fetch(resource.Path())
 				Expect(err).To(HaveOccurred(), "Failed to sync db resource deletion to sync backend")
