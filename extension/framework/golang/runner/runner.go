@@ -73,7 +73,7 @@ func (goTestRunner *GoTestRunner) Run() error {
 		log.Notice("Loading test: %s", pluginFileName)
 
 		var err error
-		var ok bool
+		var ok, loaded bool
 		goTestSuite := &GoTestSuite{}
 
 		goTestSuite.plugin, err = plugin.Open(pluginFileName)
@@ -124,7 +124,7 @@ func (goTestRunner *GoTestRunner) Run() error {
 
 		goTestSuite.binary = goTestSuite.binaryFn()
 
-		err = goTestSuite.env.Load(goTestSuite.path + "/" + goTestSuite.binary, func() error {
+		loaded, err = goTestSuite.env.Load(goTestSuite.path + "/" + goTestSuite.binary, func() error {
 			// initial schemas
 			for _, schemaPath := range goTestSuite.schemas {
 				if err = goTestSuite.manager.LoadSchemaFromFile(goTestSuite.path + "/" + schemaPath); err != nil {
@@ -147,11 +147,13 @@ func (goTestRunner *GoTestRunner) Run() error {
 			return err
 		}
 
-		err = goTestSuite.env.Start()
+		if loaded {
+			err = goTestSuite.env.Start()
 
-		if err != nil {
-			log.Error("failed to load start extension test dependant plugin: %s; error: %s", pluginFileName, err)
-			return err
+			if err != nil {
+				log.Error("failed to load start extension test dependant plugin: %s; error: %s", pluginFileName, err)
+				return err
+			}
 		}
 
 		// Setup test suite

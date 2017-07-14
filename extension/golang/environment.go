@@ -108,10 +108,14 @@ func (thisEnvironment *Environment) Schemas() goext.ISchemas {
 	return thisEnvironment.extSchemas
 }
 
-var GlobRegistry = map[string]bool{}
+var GlobRegistry = map[string]*Environment{}
 
 // Load loads script into the environment
 func (thisEnvironment *Environment) Start() error {
+	if thisEnvironment.source == "" {
+		panic("golang extension is not loaded")
+	}
+
 	log.Debug("Starting golang environment: %s", thisEnvironment.source)
 
 	thisEnvironment.extCore = NewCore(thisEnvironment)
@@ -153,11 +157,39 @@ func (thisEnvironment *Environment) Start() error {
 }
 
 // Load loads script into the environment
-func (thisEnvironment *Environment) Load(source string, beforeStartInit func() error) error {
-	if _, ok := GlobRegistry[source]; ok {
-		return nil
+func (thisEnvironment *Environment) Load(source string, beforeStartInit func() error) (bool, error) {
+	if existingEnvironment, ok := GlobRegistry[source]; ok {
+		log.Debug("Golang extension already in registry: %s", source)
+
+		// link to existing
+		thisEnvironment.source = existingEnvironment.source
+		thisEnvironment.beforeStartInit = existingEnvironment.beforeStartInit
+
+		// extension
+		thisEnvironment.extCore = existingEnvironment.extCore
+		thisEnvironment.extLogger = existingEnvironment.extLogger
+		thisEnvironment.extSchemas = existingEnvironment.extSchemas
+
+		// internals
+		thisEnvironment.name = existingEnvironment.name
+		thisEnvironment.dataStore = existingEnvironment.dataStore
+		thisEnvironment.identityService = existingEnvironment.identityService
+		thisEnvironment.sync = existingEnvironment.sync
+
+		// plugin related
+		thisEnvironment.manager = existingEnvironment.manager
+		thisEnvironment.plugin = existingEnvironment.plugin
+
+		thisEnvironment.schemasFnRaw = existingEnvironment.schemasFnRaw
+		thisEnvironment.schemasFn = existingEnvironment.schemasFn
+		thisEnvironment.schemas = existingEnvironment.schemas
+
+		thisEnvironment.initFnRaw = existingEnvironment.initFnRaw
+		thisEnvironment.initFn = existingEnvironment.initFn
+
+		return false, nil
 	}
-	GlobRegistry[source] = true
+	GlobRegistry[source] = thisEnvironment
 
 	log.Debug("Loading golang extension: %s", source)
 
@@ -168,26 +200,26 @@ func (thisEnvironment *Environment) Load(source string, beforeStartInit func() e
 	var ok bool
 
 	if filepath.Ext(source) != ".so" {
-		return fmt.Errorf("golang extensions source code must be a *.so file, source: %s", source)
+		return false, fmt.Errorf("golang extensions source code must be a *.so file, source: %s", source)
 	}
 
 	thisEnvironment.plugin, err = plugin.Open(source)
 
 	if err != nil {
-		return fmt.Errorf("failed to load golang extension: %s", err)
+		return false, fmt.Errorf("failed to load golang extension: %s", err)
 	}
 
 	// Schemas
 	thisEnvironment.schemasFnRaw, err = thisEnvironment.plugin.Lookup("Schemas")
 
 	if err != nil {
-		return fmt.Errorf("golang extension does not export Schemas: %s", err)
+		return false, fmt.Errorf("golang extension does not export Schemas: %s", err)
 	}
 
 	thisEnvironment.schemasFn, ok = thisEnvironment.schemasFnRaw.(func() []string)
 
 	if !ok {
-		return fmt.Errorf("invalid signature of Schemas function in golang extension: %s", source)
+		return false, fmt.Errorf("invalid signature of Schemas function in golang extension: %s", source)
 	}
 
 	thisEnvironment.schemas = thisEnvironment.schemasFn()
@@ -196,16 +228,16 @@ func (thisEnvironment *Environment) Load(source string, beforeStartInit func() e
 	thisEnvironment.initFnRaw, err = thisEnvironment.plugin.Lookup("Init")
 
 	if err != nil {
-		return fmt.Errorf("golang extension does not export Init: %s", err)
+		return false, fmt.Errorf("golang extension does not export Init: %s", err)
 	}
 
 	thisEnvironment.initFn, ok = thisEnvironment.initFnRaw.(func(goext.IEnvironment) error)
 
 	if !ok {
-		return fmt.Errorf("invalid signature of Init function in golang extension: %s", source)
+		return false, fmt.Errorf("invalid signature of Init function in golang extension: %s", source)
 	}
 
-	return nil
+	return true, nil
 }
 
 //LoadExtensionsForPath for returns extensions for specific path
@@ -215,26 +247,23 @@ func (thisEnvironment *Environment) LoadExtensionsForPath(extensions []*schema.E
 			if extension.CodeType != "go" {
 				continue
 			}
-			if extension.URL == "" {
-				log.Warning("found golang extension '%s' without plugin - ignored", extension.ID)
+			url := strings.TrimPrefix(extension.URL, "file://")
+			if url == "" {
+				log.Warning("ignore golang extension '%s' without plugin", extension.ID)
 				continue
 			}
-			url := strings.TrimPrefix(extension.URL, "file://")
-			if err := thisEnvironment.Load(url, nil); err != nil {
+			if loaded, err := thisEnvironment.Load(url, nil); err != nil {
 				return err
-			}
-			if err := thisEnvironment.Start(); err != nil {
-				return err
+			} else {
+				if loaded {
+					if err := thisEnvironment.Start(); err != nil {
+						return err
+					}
+				}
 			}
 		}
 	}
-	// setup time limits for matching extensions
-	//thisEnvironment.timeLimit = timeLimit
-	//for _, timeLimit := range timeLimits {
-	//	if timeLimit.Match(path) {
-	//		thisEnvironment.timeLimits = append(thisEnvironment.timeLimits, schema.NewEventTimeLimit(timeLimit.EventRegex, timeLimit.TimeDuration))
-	//	}
-	//}
+
 	return nil
 }
 
@@ -507,7 +536,7 @@ func (thisEnvironment *Environment) Stop() {
 	GlobHandlers = nil
 	GlobSchemaHandlers = nil
 	GlobResourceTypes = make(map[string]reflect.Type)
-	GlobRegistry = map[string]bool{}
+	GlobRegistry = map[string]*Environment{}
 
 	// reset locals
 	thisEnvironment.extCore = nil
