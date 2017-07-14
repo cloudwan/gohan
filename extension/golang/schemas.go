@@ -131,7 +131,10 @@ func (thisSchema *Schema) List(resources interface{}) error {
 		mapped := mapper.FieldMap(resource)
 
 		for name, field := range mapped {
-			field.Set(reflect.ValueOf(data[i].Get(name)))
+			value := data[i].Get(name)
+			if value != nil {
+				field.Set(reflect.ValueOf(value))
+			}
 		}
 
 		sliceValue.Set(reflect.Append(sliceValue, resource.Elem()))
