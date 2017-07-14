@@ -140,6 +140,17 @@ func (tl *transactionEventLogger) Update(resource *schema.Resource) error {
 	return tl.logEvent("update", resource, state.ConfigVersion)
 }
 
+func (tl *transactionEventLogger) Resync(resource *schema.Resource) error {
+	if !resource.Schema().StateVersioning() {
+		return tl.logEvent("update", resource, 0)
+	}
+	state, err := tl.StateFetch(resource.Schema(), transaction.IDFilter(resource.ID()))
+	if err != nil {
+		return err
+	}
+	return tl.logEvent("update", resource, state.ConfigVersion)
+}
+
 func (tl *transactionEventLogger) Delete(s *schema.Schema, resourceID interface{}) error {
 	resource, err := tl.Fetch(s, transaction.IDFilter(resourceID))
 	if err != nil {

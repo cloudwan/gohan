@@ -21,32 +21,30 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
 
-	"github.com/cloudwan/gohan/schema"
-	"github.com/cloudwan/gohan/util"
+	"github.com/codegangsta/cli"
 	"github.com/lestrrat/go-server-starter"
 
 	"github.com/cloudwan/gohan/cli/client"
 	"github.com/cloudwan/gohan/db"
-	"github.com/cloudwan/gohan/extension/framework"
-	"github.com/cloudwan/gohan/server"
-	"github.com/codegangsta/cli"
-
-	"github.com/cloudwan/gohan/extension/gohanscript"
-	//Import gohan script lib
-
 	"github.com/cloudwan/gohan/db/migration"
 	"github.com/cloudwan/gohan/db/sql"
 	"github.com/cloudwan/gohan/extension"
+	"github.com/cloudwan/gohan/extension/framework"
+	"github.com/cloudwan/gohan/extension/gohanscript"
 	_ "github.com/cloudwan/gohan/extension/gohanscript/autogen"
 	"github.com/cloudwan/gohan/extension/otto"
 	l "github.com/cloudwan/gohan/log"
+	"github.com/cloudwan/gohan/schema"
+	"github.com/cloudwan/gohan/server"
 	"github.com/cloudwan/gohan/server/middleware"
 	sync_util "github.com/cloudwan/gohan/sync/util"
+	"github.com/cloudwan/gohan/util"
 )
 
 var log = l.NewLogger()
@@ -71,6 +69,7 @@ func Run(name, usage, version string) {
 		getServerCommand(),
 		getTestExtesionsCommand(),
 		getMigrateCommand(),
+		getResyncCommand(),
 		getTemplateCommand(),
 		getRunCommand(),
 		getTestCommand(),
@@ -305,6 +304,52 @@ Useful for development purposes.`,
 			}
 
 			fmt.Println("Conversion complete")
+		},
+	}
+}
+
+func getResyncCommand() cli.Command {
+	return cli.Command{
+		Name:  "resync",
+		Usage: "Resync all syncable resources to sync (etcd) backend",
+		Flags: []cli.Flag{
+			cli.StringFlag{Name: "config-file", Value: defaultConfigFile, Usage: "Server config File"},
+		},
+		Action: func(c *cli.Context) {
+			configFile := c.String("config-file")
+
+			config := util.GetConfig()
+			if configFile == "" {
+				log.Fatal("Need to provide server config file")
+			}
+			if err := config.ReadConfig(configFile); err != nil {
+				log.Fatalf("Error while loading server config file: %s", err)
+			}
+			if err := os.Chdir(path.Dir(configFile)); err != nil {
+				log.Fatalf("Chdir error: %s", err)
+			}
+
+			dbConn, err := db.CreateFromConfig(config)
+			sync, err := sync_util.CreateFromConfig(config)
+			if err != nil {
+				log.Fatalf("Failed to create sync, err: %s", err)
+
+			}
+
+			schemaManager := schema.GetManager()
+
+			schemaFiles := config.GetStringList("schemas", nil)
+			if schemaFiles == nil {
+				log.Fatal("No schema specified in configuration")
+			} else {
+				log.Info("Loading schemas %s", schemaFiles)
+				err = schemaManager.LoadSchemasFromFiles(schemaFiles...)
+				if err != nil {
+					log.Fatalf("Error when loading schemas: %s", err)
+				}
+			}
+
+			server.Resync(dbConn, sync)
 		},
 	}
 }
