@@ -344,9 +344,17 @@ func (thisEnvironment *Environment) updateResourceFromContextR(resource interfac
 		resourceField := resourceElem.Field(i)
 
 		if resourceFieldType.Type.Kind() == reflect.Struct {
-			thisEnvironment.updateResourceFromContextR(resourceField.Interface(), resourceData[resourceFieldTagDB].(map[string]interface{}))
+			if _, ok := resourceData[resourceFieldTagDB].(map[string]interface{}); ok {
+				thisEnvironment.updateResourceFromContextR(resourceField.Interface(), resourceData[resourceFieldTagDB].(map[string]interface{}))
+			} else {
+				resourceField.Set(reflect.ValueOf(resourceData[resourceFieldTagDB]))
+			}
 		} else {
-			resourceField.Set(reflect.ValueOf(resourceData[resourceFieldTagDB]))
+			val := reflect.ValueOf(resourceData[resourceFieldTagDB])
+
+			if val.IsValid() {
+				resourceField.Set(val)
+			}
 		}
 	}
 

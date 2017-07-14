@@ -274,6 +274,10 @@ func (thisSchema *Schema) Update(resource interface{}) error {
 	var resourceData *schema.Resource
 	var err error
 
+	if resourceData, err = thisSchema.structToResource(resource); err != nil {
+		return err
+	}
+
 	context := goext.MakeContext().
 		WithResource(thisSchema.structToMap(resource)).
 		WithResourceID(resourceData.ID()).
