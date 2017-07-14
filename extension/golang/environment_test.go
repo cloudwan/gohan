@@ -38,27 +38,37 @@ var _ = Describe("Environment", func() {
 	Describe("Loading an extension", func() {
 		Context("File paths are corrupted", func() {
 			It("should not load plugin with wrong file extension", func() {
-				Expect(env.Load("/wrong/extension.not-so", nil)).To(Equal(fmt.Errorf("golang extensions source code must be a *.so file, source: /wrong/extension.not-so")))
+				loaded, err := env.Load("/wrong/extension.not-so", nil)
+				Expect(loaded).To(BeFalse())
+				Expect(err).To(Equal(fmt.Errorf("golang extensions source code must be a *.so file, source: /wrong/extension.not-so")))
 			})
 
 			It("should not load plugin from non-existing file", func() {
-				Expect(env.Load("/non/existing-plugin.so", nil)).To(Equal(fmt.Errorf("failed to load golang extension: plugin.Open(/non/existing-plugin.so): realpath failed")))
+				loaded, err := env.Load("/non/existing-plugin.so", nil)
+				Expect(loaded).To(BeFalse())
+				Expect(err).To(Equal(fmt.Errorf("failed to load golang extension: plugin.Open(/non/existing-plugin.so): realpath failed")))
 			})
 		})
 
 		Context("File paths are valid", func() {
 			It("should load, start and stop plugin which does export Init and Schemas functions", func() {
-				Expect(env.Load("test_data/ext_good/ext_good.so", nil)).To(BeNil())
+				loaded, err := env.Load("test_data/ext_good/ext_good.so", nil)
+				Expect(loaded).To(BeTrue())
+				Expect(err).To(BeNil())
 				Expect(env.Start()).To(Succeed())
 				env.Stop()
 			})
 
 			It("should not load plugin which does not export Init function", func() {
-				Expect(env.Load("test_data/ext_no_init/ext_no_init.so", nil).Error()).To(ContainSubstring("symbol Init not found"))
+				loaded, err := env.Load("test_data/ext_no_init/ext_no_init.so", nil)
+				Expect(loaded).To(BeFalse())
+				Expect(err.Error()).To(ContainSubstring("symbol Init not found"))
 			})
 
 			It("should not load plugin which does not export Schemas function", func() {
-				Expect(env.Load("test_data/ext_no_schemas/ext_no_schemas.so", nil).Error()).To(ContainSubstring("symbol Schemas not found"))
+				loaded, err := env.Load("test_data/ext_no_schemas/ext_no_schemas.so", nil)
+				Expect(loaded).To(BeFalse())
+				Expect(err.Error()).To(ContainSubstring("symbol Schemas not found"))
 			})
 		})
 	})
@@ -69,7 +79,9 @@ var _ = Describe("Environment", func() {
 		)
 
 		BeforeEach(func() {
-			Expect(env.Load("test_data/ext_good/ext_good.so", nil)).To(BeNil())
+			loaded, err := env.Load("test_data/ext_good/ext_good.so", nil)
+			Expect(loaded).To(BeTrue())
+			Expect(err).To(BeNil())
 			Expect(env.Start()).To(Succeed())
 			testSchema = env.Schemas().Find("test")
 			Expect(testSchema).To(Not(BeNil()))
@@ -115,7 +127,9 @@ var _ = Describe("Environment", func() {
 		)
 
 		BeforeEach(func() {
-			Expect(env.Load("test_data/ext_good/ext_good.so", nil)).To(BeNil())
+			loaded, err := env.Load("test_data/ext_good/ext_good.so", nil)
+			Expect(loaded).To(BeTrue())
+			Expect(err).To(BeNil())
 			Expect(env.Start()).To(Succeed())
 			testSchema = env.Schemas().Find("test")
 			Expect(testSchema).To(Not(BeNil()))
