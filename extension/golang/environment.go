@@ -127,11 +127,11 @@ func (thisEnvironment *Environment) Start() error {
 	thisEnvironment.manager = schema.GetManager()
 
 	// Schemas
-	//for _, schemaPath := range thisEnvironment.schemas {
-	//	if err = thisEnvironment.manager.LoadSchemaFromFile(filepath.Dir(thisEnvironment.source) + "/" + schemaPath); err != nil {
-	//		return fmt.Errorf("Failed to load schema: %s", err)
-	//	}
-	//}
+	for _, schemaPath := range thisEnvironment.schemas {
+		if err = thisEnvironment.manager.LoadSchemaFromFile(filepath.Dir(thisEnvironment.source) + "/" + schemaPath); err != nil {
+			return fmt.Errorf("Failed to load schema: %s", err)
+		}
+	}
 
 	// Before start init
 	if thisEnvironment.beforeStartInit != nil {
