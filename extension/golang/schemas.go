@@ -240,11 +240,15 @@ func (thisSchema *Schema) Create(resource interface{}) error {
 
 	defer tx.Close()
 
-	if resourceData, err = thisSchema.structToResource(resource); err != nil {
+	if resourceData, err = schema.NewResource(thisSchema.rawSchema, context["resource"].(map[string]interface{})); err != nil {
 		return err
 	}
 
 	if err = tx.Create(resourceData); err != nil {
+		return err
+	}
+
+	if err = thisSchema.environment.updateResourceFromContext(resource, context); err != nil {
 		return err
 	}
 
@@ -269,10 +273,6 @@ func (thisSchema *Schema) Update(resource interface{}) error {
 	var resourceData *schema.Resource
 	var err error
 
-	if resourceData, err = thisSchema.structToResource(resource); err != nil {
-		return err
-	}
-
 	context := goext.MakeContext().
 		WithResource(thisSchema.structToMap(resource)).
 		WithResourceID(resourceData.ID()).
@@ -292,7 +292,15 @@ func (thisSchema *Schema) Update(resource interface{}) error {
 
 	defer tx.Close()
 
+	if resourceData, err = schema.NewResource(thisSchema.rawSchema, context["resource"].(map[string]interface{})); err != nil {
+		return err
+	}
+
 	if err = tx.Update(resourceData); err != nil {
+		return err
+	}
+
+	if err = thisSchema.environment.updateResourceFromContext(resource, context); err != nil {
 		return err
 	}
 

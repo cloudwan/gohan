@@ -230,7 +230,7 @@ func (thisEnvironment *Environment) dispatchSchemaEvent(prioritizedSchemaHandler
 					return fmt.Errorf("failed to dispatch schema event '%s' to schema '%s' at priority '%d' with index '%d': %s",
 						event, sch.ID(), priority, index, err)
 				}
-				thisEnvironment.updateResourceInContext(context, resource)
+				thisEnvironment.updateContextFromResource(context, resource)
 			}
 		}
 	} else {
@@ -286,7 +286,7 @@ func (thisEnvironment *Environment) HandleEvent(event string, context map[string
 	return nil
 }
 
-func (thisEnvironment *Environment) updateResourceInContext(context goext.Context, resource interface{}) error {
+func (thisEnvironment *Environment) updateContextFromResource(context goext.Context, resource interface{}) error {
 	if resource == nil {
 		context["resource"] = nil
 		return nil
@@ -297,7 +297,7 @@ func (thisEnvironment *Environment) updateResourceInContext(context goext.Contex
 	}
 
 	if _, ok := context["resource"].(map[string]interface{}); !ok {
-		return fmt.Errorf("failed to convert context resource to map during update in context")
+		return fmt.Errorf("failed to convert context resource to map during update context from resource")
 	}
 
 	if resourceMap, ok := thisEnvironment.resourceToMap(resource).(map[string]interface{}); ok {
@@ -307,32 +307,72 @@ func (thisEnvironment *Environment) updateResourceInContext(context goext.Contex
 			}
 		}
 	} else {
-		return fmt.Errorf("failed to convert resource to map during update in context")
+		return fmt.Errorf("failed to convert resource to map during update context from resource")
 	}
 
 	return nil
 }
 
-func (thisEnvironment *Environment) resourceToMap(res interface{}) interface{} {
-	val := reflect.ValueOf(res)
-	elem := val.Elem()
-	elemType := elem.Type()
+func (thisEnvironment *Environment) updateResourceFromContextR(resource interface{}, resourceData map[string]interface{}) error {
+	resourceValue := reflect.ValueOf(resource)
+	resourceElem := resourceValue.Elem()
+	resourceElemType := resourceElem.Type()
 
-	if elemType.Kind() == reflect.Struct {
+	if resourceElemType.Kind() != reflect.Struct {
+		panic("resource must be a struct")
+	}
+
+	for i := 0; i < resourceElemType.NumField(); i++ {
+		resourceFieldType := resourceElemType.Field(i)
+		resourceFieldTagDB := resourceFieldType.Tag.Get("db")
+		resourceField := resourceElem.Field(i)
+
+		if resourceFieldType.Type.Kind() == reflect.Struct {
+			thisEnvironment.updateResourceFromContextR(resourceField.Interface(), resourceData[resourceFieldTagDB].(map[string]interface{}))
+		} else {
+			resourceField.Set(reflect.ValueOf(resourceData[resourceFieldTagDB]))
+		}
+	}
+
+	return nil
+}
+
+func (thisEnvironment *Environment) updateResourceFromContext(resource interface{}, context goext.Context) error {
+	if resource == nil {
+		return nil
+	}
+
+	if _, ok := context["resource"]; !ok {
+		return nil
+	}
+
+	if resourceData, ok := context["resource"].(map[string]interface{}); ok {
+		return thisEnvironment.updateResourceFromContextR(resource, resourceData)
+	}
+
+	return fmt.Errorf("failed to convert context resource to map during update resource from context")
+}
+
+func (thisEnvironment *Environment) resourceToMap(resource interface{}) interface{} {
+	resourceValue := reflect.ValueOf(resource)
+	resourceElem := resourceValue.Elem()
+	resourceElemType := resourceElem.Type()
+
+	if resourceElemType.Kind() == reflect.Struct {
 		data := make(map[string]interface{})
 
-		for i := 0; i < elemType.NumField(); i++ {
-			fieldType := elemType.Field(i)
-			propertyName := fieldType.Tag.Get("db")
-			fieldValue := elem.Field(i).Interface()
+		for i := 0; i < resourceElemType.NumField(); i++ {
+			resourceFieldType := resourceElemType.Field(i)
+			resourceFieldTagDB := resourceFieldType.Tag.Get("db")
+			resourceFieldInterface := resourceElem.Field(i).Interface()
 
-			data[propertyName] = thisEnvironment.resourceToMap(&fieldValue)
+			data[resourceFieldTagDB] = thisEnvironment.resourceToMap(&resourceFieldInterface)
 		}
 
 		return data
 	}
 
-	return elem.Interface()
+	return resourceElem.Interface()
 }
 
 func (thisEnvironment *Environment) resourceFromContext(sch Schema, context map[string]interface{}) (res goext.Resource, err error) {
