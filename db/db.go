@@ -129,7 +129,7 @@ func CreateFromConfig(config *util.Config) (DB, error) {
 	return dbConn, nil
 }
 
-//InitDBWithSchemas initializes database using schemas stored in Manager
+// InitDBWithSchemas initializes database using schemas stored in Manager
 func InitDBWithSchemas(dbType, dbConnection string, dropOnCreate, cascade, migrate bool) error {
 	aDb, err := ConnectDB(dbType, dbConnection, DefaultMaxOpenConn)
 	if err != nil {
@@ -146,10 +146,10 @@ func InitDBWithSchemas(dbType, dbConnection string, dropOnCreate, cascade, migra
 			if s.IsAbstract() {
 				continue
 			}
-			log.Debug("Dropping table '%s'", s.Plural)
+			log.Debug("Dropping table '%s':", s.Plural)
 			err = aDb.DropTable(s)
 			if err != nil {
-				log.Fatal("Error during deleting table:", err.Error())
+				log.Warning("Error during deleting table '%s': %s", s.Plural, err.Error())
 			}
 		}
 	}

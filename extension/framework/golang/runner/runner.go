@@ -70,11 +70,6 @@ func (goTestRunner *GoTestRunner) Run() error {
 	goTestSuites := []*GoTestSuite{}
 
 	for _, pluginFileName := range goTestRunner.pluginFileNames {
-		//golang.GlobHandlers = nil
-		//golang.GlobSchemaHandlers = nil
-		//golang.GlobResourceTypes = make(map[string]reflect.Type)
-		//golang.GlobRegistry = map[string]bool{}
-
 		log.Notice("Loading test: %s", pluginFileName)
 
 		var err error
@@ -101,31 +96,17 @@ func (goTestRunner *GoTestRunner) Run() error {
 		goTestSuite.schemasFnRaw, err = goTestSuite.plugin.Lookup("Schemas")
 
 		if err != nil {
-			return fmt.Errorf("Golang extension test does not export Schemas: %s", err)
+			return fmt.Errorf("golang extension test does not export Schemas: %s", err)
 		}
 
 		goTestSuite.schemasFn, ok = goTestSuite.schemasFnRaw.(func() []string)
 
 		if !ok {
-			log.Error("Invalid signature of Schemas function in golang extension test: %s", pluginFileName)
+			log.Error("invalid signature of Schemas function in golang extension test: %s", pluginFileName)
 			return err
 		}
 
 		goTestSuite.schemas = goTestSuite.schemasFn()
-
-		for _, schemaPath := range goTestSuite.schemas {
-			if err = goTestSuite.manager.LoadSchemaFromFile(goTestSuite.path + "/" + schemaPath); err != nil {
-				return fmt.Errorf("Failed to load schema: %s", err)
-			}
-		}
-
-		// DB
-		err = db.InitDBWithSchemas("sqlite3", memoryDbConn("test.db"), true, false, false)
-
-		if err != nil {
-			schema.ClearManager()
-			return fmt.Errorf("Failed to init DB: %s", err)
-		}
 
 		// Binary
 		goTestSuite.binaryFnRaw, err = goTestSuite.plugin.Lookup("Binary")
@@ -137,16 +118,39 @@ func (goTestRunner *GoTestRunner) Run() error {
 		goTestSuite.binaryFn, ok = goTestSuite.binaryFnRaw.(func() string)
 
 		if !ok {
-			log.Error("Invalid signature of Binary function in golang extension test: %s", pluginFileName)
+			log.Error("invalid signature of Binary function in golang extension test: %s", pluginFileName)
 			return err
 		}
 
 		goTestSuite.binary = goTestSuite.binaryFn()
 
-		err = goTestSuite.env.Load(goTestSuite.path+"/"+goTestSuite.binary, "")
+		err = goTestSuite.env.Load(goTestSuite.path + "/" + goTestSuite.binary, func() error {
+			// initial schemas
+			for _, schemaPath := range goTestSuite.schemas {
+				if err = goTestSuite.manager.LoadSchemaFromFile(goTestSuite.path + "/" + schemaPath); err != nil {
+					return fmt.Errorf("failed to load schema: %s", err)
+				}
+			}
+
+			// DB
+			err = db.InitDBWithSchemas("sqlite3", memoryDbConn("test.db"), true, true, false)
+
+			if err != nil {
+				return fmt.Errorf("failed to init DB: %s", err)
+			}
+
+			return nil
+		})
 
 		if err != nil {
-			log.Error("Failed to load golang extension test dependant plugin: %s; error: %s", pluginFileName, err)
+			log.Error("failed to load golang extension test dependant plugin: %s; error: %s", pluginFileName, err)
+			return err
+		}
+
+		err = goTestSuite.env.Start()
+
+		if err != nil {
+			log.Error("failed to load start extension test dependant plugin: %s; error: %s", pluginFileName, err)
 			return err
 		}
 
@@ -160,7 +164,7 @@ func (goTestRunner *GoTestRunner) Run() error {
 		goTestSuite.testFn, ok = goTestSuite.testFnRaw.(func(goext.IEnvironment))
 
 		if !ok {
-			log.Error("Invalid signature of Test function in golang extension test: %s", pluginFileName)
+			log.Error("invalid signature of Test function in golang extension test: %s", pluginFileName)
 			return err
 		}
 
@@ -169,9 +173,6 @@ func (goTestRunner *GoTestRunner) Run() error {
 
 		// Run test
 		goTestSuite.testFn(goTestSuite.env)
-
-		// Clear manager
-		//schema.ClearManager()
 	}
 
 	RegisterFailHandler(Fail)

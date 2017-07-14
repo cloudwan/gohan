@@ -21,6 +21,8 @@ type IEnvironment interface {
 	Core() ICore
 	Logger() ILogger
 	Schemas() ISchemas
+
+	Reset()
 }
 
 // IEnvironmentSupport indicates that an object holds a reference to a valid environment

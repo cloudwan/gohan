@@ -46,6 +46,7 @@ func (thisSchemasBinder *Schemas) Find(id string) goext.ISchema {
 	schema, ok := manager.Schema(id)
 
 	if !ok {
+		log.Warning("cannot find schema '%s'", id)
 		return nil
 	}
 

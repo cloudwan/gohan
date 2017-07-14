@@ -55,6 +55,9 @@ var GlobResourceTypes = make(map[string]reflect.Type)
 
 // Environment golang based rawEnvironment for gohan extension
 type Environment struct {
+	// initial
+	source          string
+	beforeStartInit func() error
 
 	// extension
 	extCore    goext.ICore
@@ -64,8 +67,6 @@ type Environment struct {
 	// internals
 	name            string
 	dataStore       db.DB
-	timeLimit       time.Duration
-	timeLimits      []*schema.EventTimeLimit
 	identityService middleware.IdentityService
 	sync            sync.Sync
 
@@ -83,23 +84,13 @@ type Environment struct {
 
 // NewEnvironment create new gohan extension rawEnvironment based on context
 func NewEnvironment(name string, dataStore db.DB, identityService middleware.IdentityService, sync sync.Sync) *Environment {
-	environment := &Environment{
+	newEnvironment := &Environment{
 		name:            name,
 		dataStore:       dataStore,
 		identityService: identityService,
 		sync:            sync,
 	}
-	environment.SetUp()
-	return environment
-}
-
-// SetUp initialize rawEnvironment
-func (thisEnvironment *Environment) SetUp() {
-	GlobHandlers = EventPrioritizedHandlers{}
-
-	thisEnvironment.extCore = NewCore(thisEnvironment)
-	thisEnvironment.extLogger = NewLogger(thisEnvironment)
-	thisEnvironment.extSchemas = NewSchemas(thisEnvironment)
+	return newEnvironment
 }
 
 // Core returns an implementation to Core interface
@@ -120,7 +111,49 @@ func (thisEnvironment *Environment) Schemas() goext.ISchemas {
 var GlobRegistry = map[string]bool{}
 
 // Load loads script into the environment
-func (thisEnvironment *Environment) Load(source, code string) error {
+func (thisEnvironment *Environment) Start() error {
+	log.Debug("Starting golang environment: %s", thisEnvironment.source)
+
+	thisEnvironment.extCore = NewCore(thisEnvironment)
+	thisEnvironment.extLogger = NewLogger(thisEnvironment)
+	thisEnvironment.extSchemas = NewSchemas(thisEnvironment)
+
+	var err error
+
+	thisEnvironment.manager = schema.GetManager()
+
+	// Schemas
+	for _, schemaPath := range thisEnvironment.schemas {
+		if err = thisEnvironment.manager.LoadSchemaFromFile(filepath.Dir(thisEnvironment.source) + "/" + schemaPath); err != nil {
+			return fmt.Errorf("Failed to load schema: %s", err)
+		}
+	}
+
+	// Before start init
+	if thisEnvironment.beforeStartInit != nil {
+		if err = thisEnvironment.beforeStartInit(); err != nil {
+			log.Error("Failed to before start init golang extension: %s; error: %s", thisEnvironment.source, err)
+			return err
+		}
+	}
+
+	// Init
+	log.Debug("Start golang extension: %s", thisEnvironment.source)
+
+	err = thisEnvironment.initFn(thisEnvironment)
+
+	if err != nil {
+		log.Error("Failed to start golang extension: %s; error: %s", thisEnvironment.source, err)
+		return err
+	}
+
+	log.Debug("Golang extension started: %s", thisEnvironment.source)
+
+	return nil
+}
+
+// Load loads script into the environment
+func (thisEnvironment *Environment) Load(source string, beforeStartInit func() error) error {
 	if _, ok := GlobRegistry[source]; ok {
 		return nil
 	}
@@ -128,67 +161,49 @@ func (thisEnvironment *Environment) Load(source, code string) error {
 
 	log.Debug("Loading golang extension: %s", source)
 
+	thisEnvironment.source = source
+	thisEnvironment.beforeStartInit = beforeStartInit
+
 	var err error
 	var ok bool
 
 	if filepath.Ext(source) != ".so" {
-		return fmt.Errorf("Golang extensions source code must be a *.so file, source: %s", source)
+		return fmt.Errorf("golang extensions source code must be a *.so file, source: %s", source)
 	}
 
 	thisEnvironment.plugin, err = plugin.Open(source)
 
 	if err != nil {
-		return fmt.Errorf("Failed to load golang extension: %s", err)
+		return fmt.Errorf("failed to load golang extension: %s", err)
 	}
-
-	thisEnvironment.manager = schema.GetManager()
 
 	// Schemas
 	thisEnvironment.schemasFnRaw, err = thisEnvironment.plugin.Lookup("Schemas")
 
 	if err != nil {
-		return fmt.Errorf("Golang extension does not export Schemas: %s", err)
+		return fmt.Errorf("golang extension does not export Schemas: %s", err)
 	}
 
 	thisEnvironment.schemasFn, ok = thisEnvironment.schemasFnRaw.(func() []string)
 
 	if !ok {
-		log.Error("Invalid signature of Schemas function in golang extension: %s", source)
-		return err
+		return fmt.Errorf("invalid signature of Schemas function in golang extension: %s", source)
 	}
 
 	thisEnvironment.schemas = thisEnvironment.schemasFn()
-
-	for _, schemaPath := range thisEnvironment.schemas {
-		if err = thisEnvironment.manager.LoadSchemaFromFile(filepath.Dir(source) + "/" + schemaPath); err != nil {
-			return fmt.Errorf("Failed to load schema: %s", err)
-		}
-	}
 
 	// Init
 	thisEnvironment.initFnRaw, err = thisEnvironment.plugin.Lookup("Init")
 
 	if err != nil {
-		return fmt.Errorf("Golang extension does not export Init: %s", err)
+		return fmt.Errorf("golang extension does not export Init: %s", err)
 	}
-
-	log.Debug("Init golang extension: %s", source)
 
 	thisEnvironment.initFn, ok = thisEnvironment.initFnRaw.(func(goext.IEnvironment) error)
 
 	if !ok {
-		log.Error("Invalid signature of Init function in golang extension: %s", source)
-		return err
+		return fmt.Errorf("invalid signature of Init function in golang extension: %s", source)
 	}
-
-	err = thisEnvironment.initFn(thisEnvironment)
-
-	if err != nil {
-		log.Error("Failed to initialize golang extension: %s; error: %s", source, err)
-		return err
-	}
-
-	log.Debug("Golang extension initialized: %s", source)
 
 	return nil
 }
@@ -197,7 +212,6 @@ func (thisEnvironment *Environment) Load(source, code string) error {
 func (thisEnvironment *Environment) LoadExtensionsForPath(extensions []*schema.Extension, timeLimit time.Duration, timeLimits []*schema.PathEventTimeLimit, path string) error {
 	for _, extension := range extensions {
 		if extension.Match(path) {
-			code := extension.Code
 			if extension.CodeType != "go" {
 				continue
 			}
@@ -206,19 +220,21 @@ func (thisEnvironment *Environment) LoadExtensionsForPath(extensions []*schema.E
 				continue
 			}
 			url := strings.TrimPrefix(extension.URL, "file://")
-			err := thisEnvironment.Load(url, code)
-			if err != nil {
+			if err := thisEnvironment.Load(url, nil); err != nil {
+				return err
+			}
+			if err := thisEnvironment.Start(); err != nil {
 				return err
 			}
 		}
 	}
 	// setup time limits for matching extensions
-	thisEnvironment.timeLimit = timeLimit
-	for _, timeLimit := range timeLimits {
-		if timeLimit.Match(path) {
-			thisEnvironment.timeLimits = append(thisEnvironment.timeLimits, schema.NewEventTimeLimit(timeLimit.EventRegex, timeLimit.TimeDuration))
-		}
-	}
+	//thisEnvironment.timeLimit = timeLimit
+	//for _, timeLimit := range timeLimits {
+	//	if timeLimit.Match(path) {
+	//		thisEnvironment.timeLimits = append(thisEnvironment.timeLimits, schema.NewEventTimeLimit(timeLimit.EventRegex, timeLimit.TimeDuration))
+	//	}
+	//}
 	return nil
 }
 
@@ -475,9 +491,37 @@ func (thisEnvironment *Environment) ResourceType(name string) reflect.Type {
 	return GlobResourceTypes[name]
 }
 
+// Stop stops the environment to its initial state
+func (thisEnvironment *Environment) Stop() {
+	log.Info("Stop environment")
+
+	// reset globals
+	GlobHandlers = nil
+	GlobSchemaHandlers = nil
+	GlobResourceTypes = make(map[string]reflect.Type)
+	GlobRegistry = map[string]bool{}
+
+	// reset locals
+	thisEnvironment.extCore = nil
+	thisEnvironment.extLogger = nil
+	thisEnvironment.extSchemas = nil
+
+	// reset state
+	schema.ClearManager()
+}
+
+// Reset clear the environment to its initial state
+func (thisEnvironment *Environment) Reset() {
+	thisEnvironment.Stop()
+	thisEnvironment.Start()
+}
+
 // Clone makes a clone of the rawEnvironment
 func (thisEnvironment *Environment) Clone() extension.Environment {
 	return &Environment{
+		source:          thisEnvironment.source,
+		beforeStartInit: thisEnvironment.beforeStartInit,
+
 		// extension
 		extCore:    thisEnvironment.extCore,
 		extLogger:  thisEnvironment.extLogger,
@@ -486,8 +530,6 @@ func (thisEnvironment *Environment) Clone() extension.Environment {
 		// internals
 		name:            thisEnvironment.name,
 		dataStore:       thisEnvironment.dataStore,
-		timeLimit:       thisEnvironment.timeLimit,
-		timeLimits:      thisEnvironment.timeLimits,
 		identityService: thisEnvironment.identityService,
 		sync:            thisEnvironment.sync,
 
