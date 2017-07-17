@@ -125,6 +125,7 @@ func (watcher *StateWatcher) iterate(ctx context.Context) error {
 		<-watchErr
 		return fmt.Errorf("state watch canceled as lock is lost")
 	case err := <-watchErr:
+		watchCancel()
 		return err
 	}
 }
