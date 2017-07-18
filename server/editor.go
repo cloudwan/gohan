@@ -18,7 +18,7 @@ package server
 import (
 	"fmt"
 
-	"github.com/cloudwan/gohan/extension/golang"
+	"github.com/cloudwan/gohan/extension/inproc"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
 	"github.com/mohae/deepcopy"
@@ -111,7 +111,7 @@ func setupEditor(server *Server) {
 	manager := schema.GetManager()
 	config := util.GetConfig()
 	editableSchemaFile := config.GetString("editable_schema", "")
-	golang.RegisterGoCallback("handle_schema",
+	inproc.RegisterHandler("handle_schema",
 		func(event string, context map[string]interface{}) error {
 			auth := context["auth"].(schema.Authorization)
 			if event == "pre_list" {

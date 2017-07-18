@@ -1,0 +1,43 @@
+networks: []
+policies:
+- action: '*'
+  effect: allow
+  id: admin_statement
+  principal: admin
+  resource:
+    path: .*
+schemas:
+- description: TodoRelated
+  id: todo_related
+  plural: todos_related
+  prefix: /v0.1
+  schema:
+    properties:
+      id:
+        description: ID
+        permission:
+        - create
+        title: ID
+        type: string
+      todo_id:
+        relation: todo
+        description: Relation to todo
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: false
+      name:
+        description: Name
+        permission:
+        - create
+        - update
+        title: Name
+        type: string
+        unique: false
+    propertiesOrder:
+    - id
+    - name
+    type: object
+  singular: todo_related
+  title: Todo-Related

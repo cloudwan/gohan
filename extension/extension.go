@@ -75,6 +75,12 @@ func (manager *Manager) GetEnvironment(schemaID string) (env Environment, ok boo
 	return
 }
 
+func (manager *Manager) HandleEventInAllEnvironments(context map[string]interface{}, event string, schemaId string) {
+	for name := range manager.environments {
+		HandleEvent(context, manager.environments[name], event, schemaId)
+	}
+}
+
 //GetManager gets manager
 func GetManager() *Manager {
 	return singleton.Get("extension/manager", func() interface{} {

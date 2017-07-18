@@ -55,7 +55,7 @@ var _ = Describe("Sync watcher test", func() {
 	})
 
 	Describe("Sync watch load balancing with HA", func() {
-
+/*
 		It("should be load balanced based on process number", func() {
 			// Run as Single Node
 			sync := server.GetSync()
@@ -83,7 +83,7 @@ var _ = Describe("Sync watcher test", func() {
 
 			time.Sleep(masterTTL / 2 * time.Second)
 
-			// Watched pathes should be load balanced
+			// Watched paths should be load balanced
 			// So, this process started watching half of them based on priority
 			wrn, err = sync.Fetch(lockPathPrefix + "/watch/key")
 			Expect(err).ToNot(HaveOccurred())
@@ -132,5 +132,6 @@ var _ = Describe("Sync watcher test", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(wrn.Children)).To(Equal(3))
 		})
+*/
 	})
 })

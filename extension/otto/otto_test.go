@@ -287,8 +287,8 @@ var _ = Describe("Otto extension manager", func() {
 			})
 		})
 
-		Context("When extension is running too long after default timelimit overriden", func() {
-			It("should be aborted in the middle of extension with overriden time limit", func() {
+		Context("When extension is running too long after default timelimit overridden", func() {
+			It("should be aborted in the middle of extension with overridden time limit", func() {
 				timeoutExtension, err := schema.NewExtension(map[string]interface{}{
 					"id": "timeout_extension",
 					"code": `gohan_register_handler("test_event", function(context) {
@@ -324,7 +324,7 @@ var _ = Describe("Otto extension manager", func() {
 				Expect(timeDuration).Should(BeNumerically("<", time.Millisecond*200))
 			})
 
-			It("should not be aborted in the middle of extension with overriden time limit if the override is for a different event", func() {
+			It("should not be aborted in the middle of extension with overridden time limit if the override is for a different event", func() {
 				timeoutExtension, err := schema.NewExtension(map[string]interface{}{
 					"id": "timeout_extension",
 					"code": `gohan_register_handler("test_event", function(context) {

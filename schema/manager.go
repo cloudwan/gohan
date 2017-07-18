@@ -350,7 +350,6 @@ func (manager *Manager) loadSchemaFromFile(filePath string) error {
 	if err != nil {
 		return err
 	}
-
 	namespaces, _ := schemas["namespaces"].([]interface{})
 	for _, namespaceData := range namespaces {
 		namespace, err := NewNamespace(namespaceData)

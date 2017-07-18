@@ -11,7 +11,6 @@ deps:
 
 format:
 	@echo "$(OK_COLOR)==> Formatting$(NO_COLOR)"
-
 	govendor fmt +local
 
 gen:
@@ -24,6 +23,8 @@ gen:
 
 test:
 	@echo "$(OK_COLOR)==> Testing$(NO_COLOR)"
+	./tools/build.sh
+	./tools/build_go_tests.sh
 	./run_test.sh
 
 lint:
@@ -33,6 +34,7 @@ lint:
 build: deps
 	@echo "$(OK_COLOR)==> Building$(NO_COLOR)"
 	./tools/build.sh
+	./tools/build_go_tests.sh
 
 install:
 	@echo "$(OK_COLOR)==> Installing$(NO_COLOR)"
