@@ -30,6 +30,7 @@ import (
 	"github.com/cloudwan/gohan/db/transaction"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/cloudwan/gohan/db/options"
 )
 
 var _ = Describe("Mysql", func() {
@@ -48,7 +49,7 @@ var _ = Describe("Mysql", func() {
 		dbType := "mysql"
 
 		manager := schema.GetManager()
-		dbc, err := db.ConnectDB(dbType, conn, db.DefaultMaxOpenConn)
+		dbc, err := db.ConnectDB(dbType, conn, db.DefaultMaxOpenConn, options.Default())
 		sqlConn = dbc.(*DB)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manager.LoadSchemasFromFiles(

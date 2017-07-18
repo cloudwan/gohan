@@ -47,6 +47,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"github.com/cloudwan/gohan/db/transaction"
+	"github.com/cloudwan/gohan/db/options"
 )
 
 type tlsConfig struct {
@@ -77,48 +79,49 @@ func (server *Server) mapRoutes() {
 	MapNamespacesRoutes(server.martini)
 	MapRouteBySchemas(server, server.db)
 
-	tx, err := server.db.Begin()
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer tx.Close()
-	coreSchema, _ := schemaManager.Schema("schema")
-	if coreSchema == nil {
-		log.Fatal("Gohan core schema not found")
-		return
-	}
+	if txErr := db.Within(server.db, func(tx transaction.Transaction) error {
+		coreSchema, _ := schemaManager.Schema("schema")
+		if coreSchema == nil {
+			log.Fatal("Gohan core schema not found")
+			return nil
+		}
 
-	policySchema, _ := schemaManager.Schema("policy")
-	policyList, _, err := tx.List(policySchema, nil, nil, nil)
-	if err != nil {
-		log.Info(err.Error())
-	}
-	schemaManager.LoadPolicies(policyList)
+		policySchema, _ := schemaManager.Schema("policy")
+		policyList, _, err := tx.List(policySchema, nil, nil, nil)
+		if err != nil {
+			log.Info(err.Error())
+		}
+		schemaManager.LoadPolicies(policyList)
 
-	extensionSchema, _ := schemaManager.Schema("extension")
-	extensionList, _, err := tx.List(extensionSchema, nil, nil, nil)
-	if err != nil {
-		log.Info(err.Error())
-	}
-	schemaManager.LoadExtensions(extensionList)
+		extensionSchema, _ := schemaManager.Schema("extension")
+		extensionList, _, err := tx.List(extensionSchema, nil, nil, nil)
+		if err != nil {
+			log.Info(err.Error())
+		}
+		schemaManager.LoadExtensions(extensionList)
 
-	namespaceSchema, _ := schemaManager.Schema("namespace")
-	if namespaceSchema == nil {
-		log.Error("No gohan schema. Disabling schema editing mode")
-		return
-	}
-	namespaceList, _, err := tx.List(namespaceSchema, nil, nil, nil)
-	if err != nil {
-		log.Info(err.Error())
-	}
-	err = tx.Commit()
-	if err != nil {
-		log.Info(err.Error())
-	}
-	schemaManager.LoadNamespaces(namespaceList)
+		namespaceSchema, _ := schemaManager.Schema("namespace")
+		if namespaceSchema == nil {
+			log.Error("No gohan schema. Disabling schema editing mode")
+			return nil
+		}
+		namespaceList, _, err := tx.List(namespaceSchema, nil, nil, nil)
+		if err != nil {
+			log.Info(err.Error())
+		}
+		err = tx.Commit()
+		if err != nil {
+			log.Info(err.Error())
+		}
+		schemaManager.LoadNamespaces(namespaceList)
 
-	if config.GetBool("keystone/fake", false) {
-		middleware.FakeKeystone(server.martini)
+		if config.GetBool("keystone/fake", false) {
+			middleware.FakeKeystone(server.martini)
+		}
+
+		return nil
+	}); txErr != nil {
+		log.Fatal(txErr)
 	}
 }
 
@@ -291,7 +294,7 @@ func NewServer(configFile string) (*Server, error) {
 			inType := initialDataConfig["type"].(string)
 			inConnection := initialDataConfig["connection"].(string)
 			log.Info("Importing data from %s ...", inConnection)
-			inDB, err := db.ConnectDB(inType, inConnection, db.DefaultMaxOpenConn)
+			inDB, err := db.ConnectDB(inType, inConnection, db.DefaultMaxOpenConn, options.Default())
 			if err != nil {
 				log.Fatal(err)
 			}

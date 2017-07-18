@@ -35,6 +35,8 @@ import (
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
+	"github.com/cloudwan/gohan/db/options"
+	"os"
 )
 
 const retryDB = 50
@@ -53,6 +55,9 @@ type DB struct {
 	sqlType, connectionString string
 	handlers                  map[string]propertyHandler
 	DB                        *sqlx.DB
+
+	// options
+	options options.Options
 }
 
 //Transaction is sql implementation of Transaction
@@ -83,7 +88,7 @@ func mapTxOptions(options *transaction.TxOptions) (*sql.TxOptions, error) {
 }
 
 //NewDB constructor
-func NewDB() *DB {
+func NewDB(options options.Options) *DB {
 	handlers := make(map[string]propertyHandler)
 	//TODO(nati) dynamic configuration
 	handlers["string"] = &stringHandler{}
@@ -92,7 +97,12 @@ func NewDB() *DB {
 	handlers["object"] = &jsonHandler{}
 	handlers["array"] = &jsonHandler{}
 	handlers["boolean"] = &boolHandler{}
-	return &DB{handlers: handlers}
+	return &DB{handlers: handlers, options: options}
+}
+
+//Return DB options
+func (db *DB) Options() options.Options {
+	return db.options
 }
 
 //propertyHandler for each propertys
@@ -310,6 +320,10 @@ func (db *DB) Begin() (tx transaction.Transaction, err error) {
 		transaction:    rawTx,
 		closed:         false,
 		isolationLevel: transaction.RepeatableRead,
+	}
+	if os.Getenv("FUZZY_DB_TX") == "true" {
+		log.Notice("FUZZY_DB_TX is enabled")
+		tx = &transaction.FuzzyTransaction{Tx: tx}
 	}
 	log.Debug("[%p] Created transaction %#v, isolation level: %s", rawTx, rawTx, tx.GetIsolationLevel())
 	return

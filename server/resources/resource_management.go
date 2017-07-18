@@ -78,31 +78,43 @@ func measureRequestTime(timeStarted time.Time, requestType string, schemaId stri
 	metrics.UpdateTimer(timeStarted, "req.%s.%s", schemaId, requestType)
 }
 
-//InTransaction executes function in the db transaction and set it to the context
-func InTransaction(ctx middleware.Context, dataStore db.DB, level transaction.Type, f func() error) error {
+//resourceTransactionWithContext executes function in the db transaction and set it to the context
+func resourceTransactionWithContext(ctx middleware.Context, dataStore db.DB, level transaction.Type, fn func() error) error {
 	if ctx["transaction"] != nil {
 		return fmt.Errorf("cannot create nested transaction")
 	}
 
-	aTransaction, err := dataStore.BeginTx(context.Background(), &transaction.TxOptions{IsolationLevel: level})
-	if err != nil {
-		return fmt.Errorf("cannot create transaction: %v", err)
-	}
-	defer aTransaction.Close()
+	// note:
+	// context must stay the same for each retried transaction
+	// so it is stored in a temporary variable and restored before each iteration
+	originalCtx := middleware.Context{}
 
-	ctx["transaction"] = aTransaction
-
-	err = f()
-	if err != nil {
-		return err
+	for k, v := range ctx {
+		originalCtx[k] = v
 	}
 
-	err = aTransaction.Commit()
-	if err != nil {
-		return fmt.Errorf("commit error : %s", err)
-	}
-	delete(ctx, "transaction")
-	return nil
+	return db.WithinTx(dataStore, context.Background(), &transaction.TxOptions{IsolationLevel: level}, func(tx transaction.Transaction) error {
+		for k, _ := range ctx {
+			delete(ctx, k)
+		}
+
+		for k, v := range originalCtx {
+			ctx[k] = v
+		}
+
+		ctx["transaction"] = tx
+
+		if err := fn(); err != nil {
+			return err
+		}
+
+		if err := tx.Commit(); err != nil {
+			return err
+		}
+
+		delete(ctx, "transaction")
+		return nil
+	})
 }
 
 // ApplyPolicyForResources applies policy filtering for response
@@ -159,7 +171,7 @@ func ApplyPolicyForResource(context middleware.Context, resourceSchema *schema.S
 //GetResources returns specified resources without calling non in_transaction events
 func GetResources(context middleware.Context, dataStore db.DB, resourceSchema *schema.Schema, filter map[string]interface{}, paginator *pagination.Paginator) error {
 	defer measureRequestTime(time.Now(), "get.resources", resourceSchema.ID)
-	return InTransaction(
+	return resourceTransactionWithContext(
 		context, dataStore,
 		transaction.GetIsolationLevel(resourceSchema, schema.ActionRead),
 		func() error {
@@ -330,7 +342,7 @@ func GetSingleResource(context middleware.Context, dataStore db.DB, resourceSche
 		return fmt.Errorf("extension returned invalid JSON: %v", rawResponse)
 	}
 
-	if err := InTransaction(
+	if err := resourceTransactionWithContext(
 		context, dataStore,
 		transaction.GetIsolationLevel(resourceSchema, schema.ActionRead),
 		func() error {
@@ -413,20 +425,24 @@ func CreateOrUpdateResource(
 		return false, err
 	}
 
-	preTransaction, err := dataStore.Begin()
-	if err != nil {
-		return false, fmt.Errorf("cannot create transaction: %v", err)
-	}
-	tenantIDs := policy.GetTenantIDFilter(schema.ActionUpdate, auth.TenantID())
-	filter := transaction.IDFilter(resourceID)
-	if tenantIDs != nil {
-		filter["tenant_id"] = tenantIDs
+	var exists bool
+
+	if preTxErr := db.Within(dataStore, func(preTransaction transaction.Transaction) error {
+		tenantIDs := policy.GetTenantIDFilter(schema.ActionUpdate, auth.TenantID())
+		filter := transaction.IDFilter(resourceID)
+
+		if tenantIDs != nil {
+			filter["tenant_id"] = tenantIDs
+		}
+
+		_, fetchErr := preTransaction.Fetch(resourceSchema, filter)
+		exists = fetchErr == nil
+		return nil
+	}); preTxErr != nil {
+		return false, preTxErr
 	}
 
-	_, fetchErr := preTransaction.Fetch(resourceSchema, filter)
-	preTransaction.Close()
-
-	if fetchErr != nil {
+	if !exists {
 		dataMap["id"] = resourceID
 		if err := CreateResource(context, dataStore, identityService, resourceSchema, dataMap); err != nil {
 			return false, err
@@ -519,7 +535,7 @@ func CreateResource(
 
 	context["resource"] = resource.Data()
 
-	if err := InTransaction(
+	if err := resourceTransactionWithContext(
 		context, dataStore,
 		transaction.GetIsolationLevel(resourceSchema, schema.ActionCreate),
 		func() error {
@@ -539,7 +555,7 @@ func CreateResource(
 	return nil
 }
 
-//CreateResourceInTransaction craete db resource model in transaction
+//CreateResourceInTransaction create db resource model in transaction
 func CreateResourceInTransaction(context middleware.Context, resource *schema.Resource) error {
 	defer measureRequestTime(time.Now(), "create.in_tx", resource.Schema().ID)
 	resourceSchema := resource.Schema()
@@ -621,7 +637,7 @@ func UpdateResource(
 		dataMap = resourceData
 	}
 
-	if err := InTransaction(
+	if err := resourceTransactionWithContext(
 		context, dataStore,
 		transaction.GetIsolationLevel(resourceSchema, schema.ActionUpdate),
 		func() error {
@@ -736,17 +752,21 @@ func DeleteResource(context middleware.Context,
 		return err
 	}
 	context["policy"] = policy
-	preTransaction, err := dataStore.Begin()
-	if err != nil {
-		return fmt.Errorf("cannot create transaction: %v", err)
+
+	var resource *schema.Resource
+	var fetchErr error
+
+	if errPreTx := db.Within(dataStore, func (preTransaction transaction.Transaction) error {
+		tenantIDs := policy.GetTenantIDFilter(schema.ActionDelete, auth.TenantID())
+		filter := transaction.IDFilter(resourceID)
+		if tenantIDs != nil {
+			filter["tenant_id"] = tenantIDs
+		}
+		resource, fetchErr = preTransaction.Fetch(resourceSchema, filter)
+		return nil
+	}); errPreTx != nil {
+		return err
 	}
-	tenantIDs := policy.GetTenantIDFilter(schema.ActionDelete, auth.TenantID())
-	filter := transaction.IDFilter(resourceID)
-	if tenantIDs != nil {
-		filter["tenant_id"] = tenantIDs
-	}
-	resource, fetchErr := preTransaction.Fetch(resourceSchema, filter)
-	preTransaction.Close()
 
 	if resource != nil {
 		context["resource"] = resource.Data()
@@ -765,7 +785,7 @@ func DeleteResource(context middleware.Context,
 			return ResourceError{fetchErr, "Error when fetching resource", InternalServerError}
 		}
 	}
-	if err := InTransaction(
+	if err := resourceTransactionWithContext(
 		context, dataStore,
 		transaction.GetIsolationLevel(resourceSchema, schema.ActionDelete),
 		func() error {

@@ -27,12 +27,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/codegangsta/cli"
-	"github.com/lestrrat/go-server-starter"
-
 	"github.com/cloudwan/gohan/cli/client"
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/migration"
+	db_opts "github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/sql"
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/extension/framework"
@@ -45,6 +43,8 @@ import (
 	"github.com/cloudwan/gohan/server/middleware"
 	sync_util "github.com/cloudwan/gohan/sync/util"
 	"github.com/cloudwan/gohan/util"
+	"github.com/codegangsta/cli"
+	"github.com/lestrrat/go-server-starter"
 )
 
 var log = l.NewLogger()
@@ -289,11 +289,11 @@ Useful for development purposes.`,
 				util.ExitFatal("Error loading schema:", err)
 			}
 
-			inDB, err := db.ConnectDB(inType, in, db.DefaultMaxOpenConn)
+			inDB, err := db.ConnectDB(inType, in, db.DefaultMaxOpenConn, db_opts.Default())
 			if err != nil {
 				util.ExitFatal(err)
 			}
-			outDB, err := db.ConnectDB(outType, out, db.DefaultMaxOpenConn)
+			outDB, err := db.ConnectDB(outType, out, db.DefaultMaxOpenConn, db_opts.Default())
 			if err != nil {
 				util.ExitFatal(err)
 			}
@@ -576,7 +576,7 @@ func getCreateInitialMigrationCommand() cli.Command {
 			path := filepath.Join(c.String("path"), version)
 			var sqlString = bytes.NewBuffer(make([]byte, 0, 100))
 			fmt.Printf("Generating goose migration file to %s ...\n", path)
-			sqlDB := sql.NewDB()
+			sqlDB := sql.NewDB(db_opts.Default())
 			schemas := manager.OrderedSchemas()
 			sqlString.WriteString("\n")
 			sqlString.WriteString("-- +goose Up\n")

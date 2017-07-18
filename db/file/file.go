@@ -28,6 +28,7 @@ import (
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
+	"github.com/cloudwan/gohan/db/options"
 )
 
 //DB is yaml implementation of DB
@@ -35,6 +36,9 @@ import (
 type DB struct {
 	filePath string
 	data     map[string]interface{}
+
+	// options
+	options options.Options
 }
 
 //Transaction is yaml implementation of DB
@@ -44,8 +48,13 @@ type Transaction struct {
 }
 
 //NewDB constructor
-func NewDB() *DB {
-	return &DB{}
+func NewDB(options options.Options) *DB {
+	return &DB{options: options}
+}
+
+//Return DB options
+func (db *DB) Options() options.Options {
+	return db.options
 }
 
 //Connect connec to the db

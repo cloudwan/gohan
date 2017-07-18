@@ -18,13 +18,13 @@ package extension_test
 import (
 	"os"
 	"testing"
+	"time"
 
 	"github.com/cloudwan/gohan/db"
-
+	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/sync/etcdv3"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"time"
 )
 
 var (
@@ -47,9 +47,9 @@ var _ = Describe("Suite set up and tear down", func() {
 
 	var _ = BeforeSuite(func() {
 		var err error
-		testDB1, err = db.ConnectDB("sqlite3", testDBFile1, db.DefaultMaxOpenConn)
+		testDB1, err = db.ConnectDB("sqlite3", testDBFile1, db.DefaultMaxOpenConn, options.Default())
 		Expect(err).ToNot(HaveOccurred(), "Failed to connect database.")
-		testDB2, err = db.ConnectDB("sqlite3", testDBFile2, db.DefaultMaxOpenConn)
+		testDB2, err = db.ConnectDB("sqlite3", testDBFile2, db.DefaultMaxOpenConn, options.Default())
 		Expect(err).ToNot(HaveOccurred(), "Failed to connect database.")
 		testSync, err = etcdv3.NewSync([]string{testSyncEndpoint}, time.Second)
 		Expect(err).ToNot(HaveOccurred(), "Failed to connect to etcd")

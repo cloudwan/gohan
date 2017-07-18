@@ -24,6 +24,8 @@ import (
 
 	"github.com/cloudwan/gohan/schema"
 	srv "github.com/cloudwan/gohan/server"
+	"github.com/cloudwan/gohan/db/transaction"
+	"github.com/cloudwan/gohan/db"
 )
 
 const (
@@ -40,18 +42,15 @@ var _ = Describe("Sync watcher test", func() {
 	})
 
 	AfterEach(func() {
-		tx, err := testDB.Begin()
-		Expect(err).ToNot(HaveOccurred(), "Failed to create transaction.")
-		defer tx.Close()
-		for _, schema := range schema.GetManager().Schemas() {
-			if whitelist[schema.ID] {
-				continue
+		Expect(db.Within(testDB, func (tx transaction.Transaction) error {
+			for _, schema := range schema.GetManager().Schemas() {
+				if whitelist[schema.ID] {
+					continue
+				}
+				Expect(clearTable(tx, schema)).ToNot(HaveOccurred(), "Failed to clear table.")
 			}
-			err = clearTable(tx, schema)
-			Expect(err).ToNot(HaveOccurred(), "Failed to clear table.")
-		}
-		err = tx.Commit()
-		Expect(err).ToNot(HaveOccurred(), "Failed to commit transaction.")
+			return tx.Commit()
+		})).ToNot(HaveOccurred(), "Failed to create or commit transaction.")
 	})
 
 	Describe("Sync watch load balancing with HA", func() {

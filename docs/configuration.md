@@ -163,6 +163,25 @@ Disable auto migrations, set `auto_migrate: false` so that gohan don't alter dat
 > If you do not set this parameter, *gohan migrate status* does not work as expected.
 > See: https://bitbucket.org/liamstask/goose/issues/62/scan-error-on-column-index-0-unsupported
 
+#### Automatic retry of deadlocked transactions
+
+Gohan supports automatic retry of database transactions that have failed due to
+a database deadlock. Under some circumstances (heavy load, multiple clients)
+it is possible that a deadlock occurs in the database and by default,
+Gohan returns an error via API. To override this behaviour configure
+automatic retry of transactions: set retry count to a value greater than 0
+and optionally configure retry intverval in milliseconds.
+
+```yaml
+database:
+    deadlock_retry_tx:
+        count: 5
+        interval_msec: 100
+```
+Retryable transactions are disabled by default (count is set to zero).
+See https://dev.mysql.com/doc/refman/5.7/en/innodb-deadlocks-handling.html for
+more reading on this topic.
+
 ## Schema
 
 Gohan works based on schema definitions.

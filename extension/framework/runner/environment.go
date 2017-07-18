@@ -35,6 +35,7 @@ import (
 	"context"
 
 	gohan_otto "github.com/cloudwan/gohan/extension/otto"
+	"github.com/cloudwan/gohan/db/options"
 )
 
 const (
@@ -155,7 +156,7 @@ func (env *Environment) CheckAllMockCallsMade() error {
 }
 
 func newDBConnection(dbfilename string) (db.DB, error) {
-	connection, err := db.ConnectDB("sqlite3", dbfilename, db.DefaultMaxOpenConn)
+	connection, err := db.ConnectDB("sqlite3", dbfilename, db.DefaultMaxOpenConn, options.Default())
 	if err != nil {
 		return nil, err
 	}
