@@ -19,6 +19,7 @@ import (
 	"github.com/cloudwan/gohan/sync"
 	"github.com/xyproto/otto"
 	"time"
+	"fmt"
 )
 
 func convertSyncEvent(event *sync.Event) map[string]interface{} {
@@ -173,18 +174,19 @@ func init() {
 
 				select {
 				case interrupt := <-call.Otto.Interrupt:
-					log.Debug("Received otto interrupt in gohan_sync_watch")
+					log.Debug("Received otto interrupt in gohan_sync_watch when watching on %s since revision %d", path, revision)
 					interrupt()
 				case event := <-eventChan:
 					if value, err = vm.ToValue(convertSyncEvent(event)); err == nil {
 						return value
 					}
 				case <-time.NewTimer(time.Duration(timeoutMsec) * time.Millisecond).C:
+					log.Debug("Watch on %s since revision %d timed out after %d [ms]", path, revision, timeoutMsec)
 					if value, err = vm.ToValue(map[string]interface{}{}); err == nil {
 						return value
 					}
 				case err := <-errorChan:
-					ThrowOttoException(&call, "Sync watch ex failed: "+err.Error())
+					ThrowOttoException(&call, fmt.Sprintf("Watching on %s since revision %d failed: %s", path, revision, err.Error()))
 				}
 				return otto.NullValue()
 			},
