@@ -41,6 +41,7 @@ import (
 const (
 	noContextMessage                 = "No context provided"
 	unknownSchemaErrorMesssageFormat = "Unknown schema '%s'"
+	defaultHTTPRequestTimeout        = 3000
 )
 
 func init() {
@@ -53,7 +54,7 @@ func init() {
 					call.ArgumentList = append(call.ArgumentList, defaultOpaque)
 				}
 				if len(call.ArgumentList) == 5 {
-					defaultTimeout, _ := otto.ToValue(0)
+					defaultTimeout, _ := otto.ToValue(defaultHTTPRequestTimeout)
 					call.ArgumentList = append(call.ArgumentList, defaultTimeout)
 				}
 				VerifyCallArguments(&call, "gohan_http", 6)
@@ -147,7 +148,7 @@ func init() {
 				if err != nil {
 					ThrowOttoException(&call, err.Error())
 				}
-				req.WithContext(ctx)
+				req = req.WithContext(ctx)
 
 				// set headers
 				for header, rawValue := range rawHeaders {
@@ -388,7 +389,7 @@ func gohanHTTP(ctx context.Context, method, rawURL string, headers map[string]in
 	if err != nil {
 		return 0, http.Header{}, "", err
 	}
-	req.WithContext(ctx)
+	req = req.WithContext(ctx)
 
 	if headers != nil {
 		for key, value := range headers {
