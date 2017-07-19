@@ -211,14 +211,14 @@ var _ = Describe("CLI functions", func() {
 				os.Unsetenv("OS_USERNAME")
 				provider, err = getProviderClient()
 				Expect(provider).To(BeNil())
-				Expect(err).To(MatchError("Environment variable OS_USERNAME needs to be set."))
+				Expect(err).To(MatchError("Environment variable OS_USERNAME, OS_USERID, or OS_TOKEN needs to be set."))
 			})
 
 			It("Should show error - OS_PASSWORD not set", func() {
 				os.Unsetenv("OS_PASSWORD")
 				provider, err = getProviderClient()
 				Expect(provider).To(BeNil())
-				Expect(err).To(MatchError("Environment variable OS_PASSWORD needs to be set."))
+				Expect(err).To(MatchError("Environment variable OS_PASSWORD or OS_TOKEN needs to be set."))
 			})
 
 			It("Should show error - domain not specified", func() {
