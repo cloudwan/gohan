@@ -35,9 +35,9 @@ type Sync interface {
 	Delete(path string, prefix bool) error
 	// Watch monitors changes on path and emits Events to responseChan.
 	// Close stopChan to cancel.
-	// You can specify the reivision to start watching,
-	// give ReivisionCurrent when you want to start from the current reivision.
-	// Returnes an error when gets any error including connection failures.
+	// You can specify the revision to start watching,
+	// give RevisionCurrent when you want to start from the current revision.
+	// Returns an error when gets any error including connection failures.
 	Watch(path string, responseChan chan *Event, stopChan chan bool, revision int64) error
 	//WatchContext keep watch update under the path until context is canceled.
 	WatchContext(ctx context.Context, path string, revision int64) (<-chan *Event, error)
