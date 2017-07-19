@@ -288,7 +288,7 @@ func TestWatchWithRevision(t *testing.T) {
 func newSync(t *testing.T) *Sync {
 	sync, err := NewSync(endpoints, time.Millisecond*100)
 	if err != nil {
-		t.Errorf("unexpected error")
+		t.Fatalf("unexpected error: %s", err)
 	}
 	return sync
 }
