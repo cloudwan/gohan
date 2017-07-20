@@ -508,15 +508,14 @@ func (manager *Manager) ClearExtensions() {
 }
 
 var (
-	gohanFormatsRegistered bool
+	gohanFormatsRegisteredOnce sync.Once
 )
 
 //GetManager get manager
 func GetManager() *Manager {
-	if !gohanFormatsRegistered {
+	gohanFormatsRegisteredOnce.Do(func() {
 		registerGohanFormats(gojsonschema.FormatCheckers)
-		gohanFormatsRegistered = true
-	}
+	})
 
 	return singleton.Get("schema/manager", func() interface{} {
 		return &Manager{
