@@ -6,28 +6,6 @@ import (
 	"github.com/rackspace/gophercloud/pagination"
 )
 
-// Project Project struct
-type Project struct {
-	// The ID of the domain for the project.
-	DomainID string `mapstructure:"domain_id" json:"domain_id"`
-
-	// The ID of the parent project.
-	ParentID string `mapstructure:"parent_id" json:"parent_id"`
-
-	// Enables or disables a project.
-	// Set to true to enable the project or false to disable the project. Default is true.
-	Enabled bool `mapstructure:"enabled" json:"enabled"`
-
-	// The ID for the project.
-	ID string `mapstructure:"id" json:"id"`
-
-	// The project name.
-	Name string `mapstructure:"name" json:"name"`
-
-	// The project description.
-	Description string `mapstructure:"description" json:"description"`
-}
-
 type commonResult struct {
 	gophercloud.Result
 }
@@ -38,7 +16,7 @@ func (r commonResult) Extract() (*Project, error) {
 	}
 
 	var response struct {
-		Project Project `json:"project"`
+		Project `json:"project"`
 	}
 
 	err := mapstructure.Decode(r.Body, &response)
@@ -46,24 +24,34 @@ func (r commonResult) Extract() (*Project, error) {
 	return &response.Project, err
 }
 
-// CreateResult represents the result of a create operation.
+// CreateResult Project create result
 type CreateResult struct {
 	commonResult
 }
 
-// GetResult represents the result of a get operation.
+// GetResult Project details result
 type GetResult struct {
 	commonResult
 }
 
-// UpdateResult represents the result of a update operation.
+// UpdateResult Project update result
 type UpdateResult struct {
 	commonResult
 }
 
-// DeleteResult represents the result of a delete operation.
+// DeleteResult Project delete result
 type DeleteResult struct {
-	gophercloud.ErrResult
+	commonResult
+}
+
+// Project Project struct
+type Project struct {
+	DomainID    string `mapstructure:"domain_id" json:"domain_id"`
+	ParentID    string `mapstructure:"parent_id" json:"parent_id"`
+	Enabled     bool   `mapstructure:"enabled" json:"enabled"`
+	ID          string `mapstructure:"id" json:"id"`
+	Name        string `mapstructure:"name" json:"name"`
+	Description string `mapstructure:"description" json:"description"`
 }
 
 // ProjectPage Page containing projects
