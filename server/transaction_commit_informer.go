@@ -50,8 +50,7 @@ func (sw *DbSyncWrapper) Begin() (transaction.Transaction, error) {
 	return syncTransactionWrap(tx), nil
 }
 
-// Begin wraps transaction object with sync
-
+// BeginTx wraps transaction object with sync
 func (sw *DbSyncWrapper) BeginTx(ctx context.Context, options *transaction.TxOptions) (transaction.Transaction, error) {
 	tx, err := sw.DB.BeginTx(ctx, options)
 	if err != nil {

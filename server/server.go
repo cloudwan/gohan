@@ -23,6 +23,8 @@ import (
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/migration"
 
+	"github.com/cloudwan/gohan/db/options"
+	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/job"
 	l "github.com/cloudwan/gohan/log"
@@ -47,8 +49,6 @@ import (
 	"strings"
 	"syscall"
 	"time"
-	"github.com/cloudwan/gohan/db/transaction"
-	"github.com/cloudwan/gohan/db/options"
 )
 
 type tlsConfig struct {

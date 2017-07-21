@@ -265,6 +265,7 @@ func (s *Sync) WatchContext(ctx context.Context, path string, revision int64) (<
 	return responseChan, nil
 }
 
+// Close closes sync
 func (s *Sync) Close() {
 	// nothing to do
 }

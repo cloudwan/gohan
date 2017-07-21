@@ -110,7 +110,7 @@ func (gohanClientCLI *GohanClientCLI) getGetCommand(s *schema.Schema) gohanComma
 					buffer.WriteString(childSchema.Title)
 					buffer.WriteString("\n")
 					parentSchemaPropertyID := childSchema.ParentSchemaPropertyID()
-					url := fmt.Sprintf("%s%s?%s=%s", gohanClientCLI.opts.gohanEndpointURL, childSchema.URL, parentSchemaPropertyID, id, gohanClientCLI.getFieldsParam(false))
+					url := fmt.Sprintf("%s%s?%s=%s%s", gohanClientCLI.opts.gohanEndpointURL, childSchema.URL, parentSchemaPropertyID, id, gohanClientCLI.getFieldsParam(false))
 					result, err := gohanClientCLI.request("GET", url, nil)
 					if err != nil {
 						return "", err

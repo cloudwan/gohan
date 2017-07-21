@@ -114,6 +114,7 @@ type IdentityService interface {
 	GetClient() *gophercloud.ServiceClient
 }
 
+// CreateIdentityServiceFromConfig creates keystone identity from config
 func CreateIdentityServiceFromConfig(config *util.Config) (IdentityService, error) {
 	//TODO(marcin) remove this
 	if config.GetBool("keystone/use_keystone", false) {
@@ -123,20 +124,19 @@ func CreateIdentityServiceFromConfig(config *util.Config) (IdentityService, erro
 			log.Info("Debug Mode with Fake Keystone Server")
 			return &FakeIdentity{}, nil
 
-		} else {
-			log.Info("Keystone backend server configured")
-			keystoneIdentity, err := cloud.NewKeystoneIdentity(
-				config.GetString("keystone/auth_url", "http://localhost:35357/v3"),
-				config.GetString("keystone/user_name", "admin"),
-				config.GetString("keystone/password", "password"),
-				config.GetString("keystone/domain_name", "Default"),
-				config.GetString("keystone/tenant_name", "admin"),
-				config.GetString("keystone/version", ""))
-			if err != nil {
-				log.Fatal("Failed to create keystone identity service, err: %s", err)
-			}
-			return keystoneIdentity, nil
 		}
+		log.Info("Keystone backend server configured")
+		keystoneIdentity, err := cloud.NewKeystoneIdentity(
+			config.GetString("keystone/auth_url", "http://localhost:35357/v3"),
+			config.GetString("keystone/user_name", "admin"),
+			config.GetString("keystone/password", "password"),
+			config.GetString("keystone/domain_name", "Default"),
+			config.GetString("keystone/tenant_name", "admin"),
+			config.GetString("keystone/version", ""))
+		if err != nil {
+			log.Fatal(fmt.Sprintf("Failed to create keystone identity service, err: %s", err))
+		}
+		return keystoneIdentity, nil
 	}
 	return nil, fmt.Errorf("No identity service defined in config")
 }
@@ -146,10 +146,12 @@ type NobodyResourceService interface {
 	VerifyResourcePath(string) bool
 }
 
+// DefaultNobodyResourceService contains a definition of default nobody resources
 type DefaultNobodyResourceService struct {
 	resourcePathRegexes []*regexp.Regexp
 }
 
+// VerifyResourcePath verifies resource path
 func (nrs *DefaultNobodyResourceService) VerifyResourcePath(resourcePath string) bool {
 	for _, regex := range nrs.resourcePathRegexes {
 		if regex.MatchString(resourcePath) {
@@ -159,6 +161,7 @@ func (nrs *DefaultNobodyResourceService) VerifyResourcePath(resourcePath string)
 	return false
 }
 
+// NewNobodyResourceService is a constructor for NobodyResourceService
 func NewNobodyResourceService(nobodyResourcePathRegexes []*regexp.Regexp) NobodyResourceService {
 	return &DefaultNobodyResourceService{resourcePathRegexes: nobodyResourcePathRegexes}
 }

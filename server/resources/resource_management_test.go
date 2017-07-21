@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/cloudwan/gohan/db"
+	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/extension/otto"
 	"github.com/cloudwan/gohan/schema"
@@ -29,8 +31,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/twinj/uuid"
-	"github.com/cloudwan/gohan/db"
-	"github.com/cloudwan/gohan/db/transaction"
 )
 
 var _ = Describe("Resource manager", func() {
@@ -103,7 +103,7 @@ var _ = Describe("Resource manager", func() {
 	})
 
 	AfterEach(func() {
-		Expect(db.Within(testDB, func (tx transaction.Transaction) error {
+		Expect(db.Within(testDB, func(tx transaction.Transaction) error {
 
 			environmentManager.UnRegisterEnvironment(schemaID)
 			defer tx.Close()

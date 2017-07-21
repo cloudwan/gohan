@@ -115,7 +115,7 @@ func RunTests(testFiles []string, printAllLogs bool, testFilter string, workers 
 	for workers > 0 {
 		wg.Add(1)
 		go worker()
-		workers -= 1
+		workers--
 	}
 	wg.Wait()
 

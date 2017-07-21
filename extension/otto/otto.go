@@ -32,11 +32,11 @@ import (
 	"github.com/xyproto/otto"
 
 	"reflect"
-	//Import otto underscore lib
 	"regexp"
 
 	"strings"
 
+	//Import otto underscore lib
 	_ "github.com/xyproto/otto/underscore"
 )
 
@@ -53,9 +53,8 @@ func RequireModule(name string) (interface{}, error) {
 	v, ok := modules[name]
 	if ok {
 		return v, nil
-	} else {
-		return nil, fmt.Errorf("Module %s not found in Otto", name)
 	}
+	return nil, fmt.Errorf("Module %s not found in Otto", name)
 }
 
 //Environment javascript based environment for gohan extension
@@ -349,6 +348,7 @@ func (env *Environment) GetOrCreateTransaction(value otto.Value) (transaction.Tr
 	return tx, true, nil
 }
 
+// ClearEnvironment closes sync and db in env
 func (env *Environment) ClearEnvironment() {
 	env.Sync.Close()
 	env.DataStore.Close()

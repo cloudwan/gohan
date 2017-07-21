@@ -28,7 +28,7 @@ type Job struct {
 
 //Run executes one Job
 func (job *Job) Run() {
-	defer l.LogPanic(log)
+	defer l.Panic(log)
 	job.task()
 }
 
@@ -56,7 +56,7 @@ func NewWorker(queue *Queue) *Worker {
 //Start consuming task
 func (worker *Worker) Start() {
 	go func() {
-		l.LogPanic(log)
+		l.Panic(log)
 		for {
 			select {
 			case job := <-worker.queue.queue:

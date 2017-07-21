@@ -20,8 +20,11 @@ import (
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// IndexType type of index
 type IndexType string
 
+// Index types
+// Unique, FullText, Spatial, None
 const (
 	Unique   IndexType = "UNIQUE"
 	FullText           = "FULLTEXT"
@@ -29,14 +32,14 @@ const (
 	None               = ""
 )
 
-//Property is a definition of each Property
+// Index is a definition of each Index
 type Index struct {
 	Name    string
 	Columns []string
 	Type    IndexType
 }
 
-//NewProperty is a constructor for Property type
+//NewIndex is a constructor for Index type
 func NewIndex(name string, columns []string, indexType IndexType) Index {
 	return Index{
 		Name:    name,
@@ -55,7 +58,7 @@ func mapIndexType(rawIndexType string) (IndexType, error) {
 	}
 }
 
-//NewPropertyFromObj make Index  from obj
+//NewIndexFromObj make Index  from obj
 func NewIndexFromObj(name string, rawTypeData interface{}) (*Index, error) {
 	typeData := rawTypeData.(map[string]interface{})
 	rawIndexType, ok := typeData["type"]

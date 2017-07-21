@@ -25,10 +25,10 @@ import (
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
 
+	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/sync/etcdv3"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/cloudwan/gohan/db/options"
 )
 
 const (

@@ -23,8 +23,8 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/cloudwan/gohan/db"
-	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/db/options"
+	"github.com/cloudwan/gohan/schema"
 )
 
 const (

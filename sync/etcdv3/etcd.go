@@ -85,9 +85,8 @@ func (s *Sync) Update(key, jsonString string) error {
 	if jsonString == "" {
 		// do nothing, because clientv3 doesn't have directories
 		return nil
-	} else {
-		_, err = s.etcdClient.Put(s.withTimeout(), key, jsonString)
 	}
+	_, err = s.etcdClient.Put(s.withTimeout(), key, jsonString)
 	if err != nil {
 		log.Error(fmt.Sprintf("failed to sync with backend %s", err))
 		return err
@@ -350,6 +349,7 @@ func (s *Sync) WatchContext(ctx context.Context, path string, revision int64) (<
 	return responseChan, nil
 }
 
+// Close closes etcd client
 func (s *Sync) Close() {
 	s.etcdClient.Close()
 }

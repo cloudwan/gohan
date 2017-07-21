@@ -84,11 +84,11 @@ var _ = Describe("Schema", func() {
 		It("Relations after propertiesOrder", func() {
 			s, ok := manager.Schema("school")
 			Expect(ok).To(BeTrue())
-			cityIdIdx := index(s.Properties, "city_id")
+			cityIDIdx := index(s.Properties, "city_id")
 			patronIdx := index(s.Properties, "patron")
-			Expect(cityIdIdx).ToNot(Equal(-1))
+			Expect(cityIDIdx).ToNot(Equal(-1))
 			Expect(patronIdx).ToNot(Equal(-1))
-			Expect(cityIdIdx).Should(BeNumerically("<", patronIdx))
+			Expect(cityIDIdx).Should(BeNumerically("<", patronIdx))
 		})
 
 		It("Alphabetical order", func() {

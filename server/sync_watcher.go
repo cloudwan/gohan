@@ -32,13 +32,14 @@ import (
 	"github.com/cloudwan/gohan/util"
 )
 
+// SyncWatchRevisionPrefix
 const (
 	SyncWatchRevisionPrefix = "/gohan/watch/revision"
 	processPathPrefix       = "/gohan/cluster/process"
 	masterTTL               = 10
 )
 
-var lockFailedErr = errors.New("failed to lock on sync backend")
+var errLockFailed = errors.New("failed to lock on sync backend")
 
 // SyncWatcher runs extensions when it detects a change on the sync.
 // The watcher implements a load balancing mechanism that uses
@@ -67,6 +68,7 @@ func NewSyncWatcher(sync gohan_sync.Sync, queue *job.Queue, keys []string, event
 	}
 }
 
+// NewSyncWatcherFromServer creates a new instance of syncWatcher from server
 func NewSyncWatcherFromServer(server *Server) *SyncWatcher {
 	config := util.GetConfig()
 	keys := config.GetStringList("watch/keys", []string{})
@@ -231,7 +233,7 @@ func (watcher *SyncWatcher) runSyncWatches(ctx context.Context, size int, positi
 
 			for {
 				err := watcher.processSyncWatch(ctx, path)
-				if err != nil && err != context.Canceled && err != lockFailedErr {
+				if err != nil && err != context.Canceled && err != errLockFailed {
 					log.Error("SyncWatch on `%s` aborted, retrying...: %s", path, err)
 				}
 
@@ -252,7 +254,7 @@ func (watcher *SyncWatcher) processSyncWatch(ctx context.Context, path string) e
 	lockKey := lockPath + "/watch" + path
 	lost, err := watcher.sync.Lock(lockKey, false)
 	if err != nil {
-		return lockFailedErr
+		return errLockFailed
 	}
 	defer watcher.sync.Unlock(lockKey)
 

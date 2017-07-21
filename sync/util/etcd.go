@@ -13,6 +13,7 @@ import (
 
 var log = l.NewLogger()
 
+// CreateFromConfig creates etcd sync from config
 func CreateFromConfig(config *util.Config) (s sync.Sync, err error) {
 	syncType := config.GetString("sync", "etcd")
 	switch syncType {

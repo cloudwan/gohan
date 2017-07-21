@@ -47,6 +47,7 @@ type DB interface {
 	Options() options.Options
 }
 
+// IsDeadlock checks if error is deadlock
 func IsDeadlock(err error) bool {
 	knownDatabaseErrorMessages := []string{
 		"Deadlock found when trying to get lock; try restarting transaction", /* MySQL / MariaDB */
@@ -187,6 +188,7 @@ func CopyDBResources(input, output DB, overrideExisting bool) error {
 	return nil
 }
 
+// CreateFromConfig creates db connection from config
 func CreateFromConfig(config *util.Config) (DB, error) {
 	dbType := config.GetString("database/type", "sqlite3")
 	dbConnection := config.GetString("database/connection", "")

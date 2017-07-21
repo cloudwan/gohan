@@ -22,10 +22,10 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/cloudwan/gohan/db"
+	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
 	srv "github.com/cloudwan/gohan/server"
-	"github.com/cloudwan/gohan/db/transaction"
-	"github.com/cloudwan/gohan/db"
 )
 
 const (
@@ -42,7 +42,7 @@ var _ = Describe("Sync watcher test", func() {
 	})
 
 	AfterEach(func() {
-		Expect(db.Within(testDB, func (tx transaction.Transaction) error {
+		Expect(db.Within(testDB, func(tx transaction.Transaction) error {
 			for _, schema := range schema.GetManager().Schemas() {
 				if whitelist[schema.ID] {
 					continue

@@ -23,6 +23,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+// ErrResourceNotFound is error message for missing resource
 var ErrResourceNotFound = errors.New("resource not found")
 
 //Type represents transaction types

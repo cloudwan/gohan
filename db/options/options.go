@@ -22,19 +22,21 @@ import (
 
 // default transaction retry options
 const (
-	DEFAULT_DEADLOCK_RETRY_TX_INTERVAL = time.Duration(0) * time.Millisecond
-	DEFAULT_DEADLOCK_RETRY_TX_COUNT    = 0
+	DefaultDeadlockRetryTxInterval = time.Duration(0) * time.Millisecond
+	DefaultDeadlockRetryTxCount    = 0
 )
 
+// Options is type for retry transaction options
 type Options struct {
 	RetryTxCount    int
 	RetryTxInterval time.Duration
 }
 
+// Read gets retry transaction options from config
 func Read(config *util.Config) Options {
 	opts := Options{
-		RetryTxCount:    config.GetInt("database/deadlock_retry_tx/count", DEFAULT_DEADLOCK_RETRY_TX_COUNT),
-		RetryTxInterval: time.Duration(config.GetInt("database/deadlock_retry_tx/interval_msec", int(DEFAULT_DEADLOCK_RETRY_TX_INTERVAL))) * time.Millisecond,
+		RetryTxCount:    config.GetInt("database/deadlock_retry_tx/count", DefaultDeadlockRetryTxCount),
+		RetryTxInterval: time.Duration(config.GetInt("database/deadlock_retry_tx/interval_msec", int(DefaultDeadlockRetryTxInterval))) * time.Millisecond,
 	}
 
 	if opts.RetryTxCount < 0 {
@@ -44,9 +46,10 @@ func Read(config *util.Config) Options {
 	return opts
 }
 
+// Default returns default retry transaction options
 func Default() Options {
 	return Options{
-		RetryTxCount:    DEFAULT_DEADLOCK_RETRY_TX_COUNT,
-		RetryTxInterval: DEFAULT_DEADLOCK_RETRY_TX_INTERVAL,
+		RetryTxCount:    DefaultDeadlockRetryTxCount,
+		RetryTxInterval: DefaultDeadlockRetryTxInterval,
 	}
 }

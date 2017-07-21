@@ -32,9 +32,8 @@ type FuzzyTransaction struct {
 func (ft *FuzzyTransaction) fuzzIt(fn func() error) error {
 	if rand.Int()&1 == 0 {
 		return fmt.Errorf("database is locked")
-	} else {
-		return fn()
 	}
+	return fn()
 }
 
 // Create creates a new resource
@@ -47,7 +46,7 @@ func (ft *FuzzyTransaction) Update(resource *schema.Resource) error {
 	return ft.fuzzIt(func() error { return ft.Tx.Update(resource) })
 }
 
-// StatueUpdate updates a state
+// StateUpdate updates a state
 func (ft *FuzzyTransaction) StateUpdate(resource *schema.Resource, state *ResourceState) error {
 	return ft.fuzzIt(func() error { return ft.Tx.StateUpdate(resource, state) })
 }

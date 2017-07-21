@@ -24,11 +24,11 @@ import (
 
 	"context"
 
+	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/pagination"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
-	"github.com/cloudwan/gohan/db/options"
 )
 
 //DB is yaml implementation of DB
@@ -52,7 +52,7 @@ func NewDB(options options.Options) *DB {
 	return &DB{options: options}
 }
 
-//Return DB options
+//Options return DB options
 func (db *DB) Options() options.Options {
 	return db.options
 }
@@ -64,6 +64,7 @@ func (db *DB) Connect(format, conn string, maxOpenConn int) error {
 	return nil
 }
 
+//Close db
 func (db *DB) Close() {
 	// nothing to do
 }
@@ -75,7 +76,7 @@ func (db *DB) Begin() (transaction.Transaction, error) {
 	}, nil
 }
 
-//Begin connection starts new transaction with given transaction options
+//BeginTx connection starts new transaction with given transaction options
 func (db *DB) BeginTx(_ context.Context, _ *transaction.TxOptions) (transaction.Transaction, error) {
 	return &Transaction{
 		db: db,
@@ -290,7 +291,7 @@ func (tx *Transaction) List(s *schema.Schema, filter transaction.Filter, options
 	return
 }
 
-//Lock resources in the db. Not supported in file db
+//LockList resources in the db. Not supported in file db
 func (tx *Transaction) LockList(s *schema.Schema, filter transaction.Filter, options *transaction.ListOptions, pg *pagination.Paginator, policy schema.LockPolicy) (list []*schema.Resource, total uint64, err error) {
 	return tx.List(s, filter, options, pg)
 }
@@ -307,7 +308,7 @@ func (tx *Transaction) Fetch(s *schema.Schema, filter transaction.Filter) (*sche
 	return list[0], nil
 }
 
-//Fetch & lock a resource. Not supported in file db
+//LockFetch fetches and locks a resource. Not supported in file db
 func (tx *Transaction) LockFetch(s *schema.Schema, filter transaction.Filter, policy schema.LockPolicy) (*schema.Resource, error) {
 	return tx.Fetch(s, filter)
 }

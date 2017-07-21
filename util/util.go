@@ -345,7 +345,7 @@ func MaybeInt(value interface{}) int {
 	return res
 }
 
-//Find return index of elem in slice
+//Index return index of elem in slice
 func Index(slice []string, elem string) int {
 	for i, value := range slice {
 		if value == elem {

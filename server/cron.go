@@ -35,7 +35,7 @@ func startCRONProcess(server *Server) {
 	}
 	if server.sync == nil {
 		log.Fatalf(fmt.Sprintf("Could not start CRON process because of sync backend misconfiguration."))
-		l.LogFatalPanic(log)
+		l.FatalPanic(log)
 	}
 	log.Info("Started CRON process")
 	c := cron.New()

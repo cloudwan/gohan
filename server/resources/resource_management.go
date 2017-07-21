@@ -74,8 +74,8 @@ type ExtensionError struct {
 	ExceptionInfo map[string]interface{}
 }
 
-func measureRequestTime(timeStarted time.Time, requestType string, schemaId string) {
-	metrics.UpdateTimer(timeStarted, "req.%s.%s", schemaId, requestType)
+func measureRequestTime(timeStarted time.Time, requestType string, schemaID string) {
+	metrics.UpdateTimer(timeStarted, "req.%s.%s", schemaID, requestType)
 }
 
 //resourceTransactionWithContext executes function in the db transaction and set it to the context
@@ -94,7 +94,7 @@ func resourceTransactionWithContext(ctx middleware.Context, dataStore db.DB, lev
 	}
 
 	return db.WithinTx(dataStore, context.Background(), &transaction.TxOptions{IsolationLevel: level}, func(tx transaction.Transaction) error {
-		for k, _ := range ctx {
+		for k := range ctx {
 			delete(ctx, k)
 		}
 
@@ -756,7 +756,7 @@ func DeleteResource(context middleware.Context,
 	var resource *schema.Resource
 	var fetchErr error
 
-	if errPreTx := db.Within(dataStore, func (preTransaction transaction.Transaction) error {
+	if errPreTx := db.Within(dataStore, func(preTransaction transaction.Transaction) error {
 		tenantIDs := policy.GetTenantIDFilter(schema.ActionDelete, auth.TenantID())
 		filter := transaction.IDFilter(resourceID)
 		if tenantIDs != nil {

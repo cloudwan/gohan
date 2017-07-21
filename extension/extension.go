@@ -96,13 +96,13 @@ type Error struct {
 	ExceptionInfo map[string]interface{}
 }
 
-func measureExtensionTime(timeStarted time.Time, event string, schemaId string) {
-	metrics.UpdateTimer(timeStarted, "ext.%s.%s", schemaId, event)
+func measureExtensionTime(timeStarted time.Time, event string, schemaID string) {
+	metrics.UpdateTimer(timeStarted, "ext.%s.%s", schemaID, event)
 }
 
 //HandleEvent handles the event in the given environment
-func HandleEvent(context map[string]interface{}, environment Environment, event string, schemaId string) error {
-	defer measureExtensionTime(time.Now(), event, schemaId)
+func HandleEvent(context map[string]interface{}, environment Environment, event string, schemaID string) error {
+	defer measureExtensionTime(time.Now(), event, schemaID)
 	if err := environment.HandleEvent(event, context); err != nil {
 		return err
 	}

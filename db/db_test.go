@@ -479,21 +479,21 @@ var _ = Describe("Database operation test", func() {
 		)
 
 		const (
-			DEADLOCK_DB_SCHEMA  = "test_data/test_schema.yaml"
-			DEADLOCK_DB_INITIAL = "test_data/test_initial.yaml"
-			DEADLOCK_DB_NAME    = "test_data/deadlock_db.db"
-			DEADLOCK_DB_TYPE    = "sqlite3"
+			deadlockDbSchema  = "test_data/test_schema.yaml"
+			deadlockDbInitial = "test_data/test_initial.yaml"
+			deadlockDbName    = "test_data/deadlock_db.db"
+			deadlockDbType    = "sqlite3"
 		)
 
 		BeforeEach(func() {
-			os.Remove(DEADLOCK_DB_NAME)
-			Expect(manager.LoadSchemaFromFile(DEADLOCK_DB_SCHEMA)).To(Succeed())
-			Expect(db.InitDBWithSchemas(DEADLOCK_DB_TYPE, DEADLOCK_DB_NAME, false, false, true)).To(Succeed())
-			firstConn, err = db.ConnectDB(DEADLOCK_DB_TYPE, DEADLOCK_DB_NAME, db.DefaultMaxOpenConn, connOpts)
+			os.Remove(deadlockDbName)
+			Expect(manager.LoadSchemaFromFile(deadlockDbSchema)).To(Succeed())
+			Expect(db.InitDBWithSchemas(deadlockDbType, deadlockDbName, false, false, true)).To(Succeed())
+			firstConn, err = db.ConnectDB(deadlockDbType, deadlockDbName, db.DefaultMaxOpenConn, connOpts)
 			Expect(err).ToNot(HaveOccurred())
-			secondConn, err = db.ConnectDB(DEADLOCK_DB_TYPE, DEADLOCK_DB_NAME, db.DefaultMaxOpenConn, connOpts)
+			secondConn, err = db.ConnectDB(deadlockDbType, deadlockDbName, db.DefaultMaxOpenConn, connOpts)
 			Expect(err).ToNot(HaveOccurred())
-			initDB, err := db.ConnectDB("yaml", DEADLOCK_DB_INITIAL, db.DefaultMaxOpenConn, options.Default())
+			initDB, err := db.ConnectDB("yaml", deadlockDbInitial, db.DefaultMaxOpenConn, options.Default())
 			defer initDB.Close()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(db.CopyDBResources(initDB, firstConn, false)).To(Succeed())

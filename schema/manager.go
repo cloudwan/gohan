@@ -305,8 +305,8 @@ func (manager *Manager) ValidateSchema(schemaPath, filePath string) error {
 
 //OrderedLoadSchemasFromFiles calls LoadSchemaFromFile for each file in right order - first abstract then parent and rest on the end
 func (manager *Manager) OrderedLoadSchemasFromFiles(filePaths []string) error {
-	MAX_DEPTH := 8 // maximum number of nested schemas
-	for i := MAX_DEPTH; i > 0 && len(filePaths) > 0; i-- {
+	MaxDepth := 8 // maximum number of nested schemas
+	for i := MaxDepth; i > 0 && len(filePaths) > 0; i-- {
 		rest := make([]string, 0)
 		for _, filePath := range filePaths {
 			if filePath == "" {
