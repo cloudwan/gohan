@@ -265,7 +265,7 @@ func eventsFromNode(action string, kvs []*pb.KeyValue, responseChan chan *sync.E
 func (s *Sync) Watch(path string, responseChan chan *sync.Event, stopChan chan bool, revision int64) error {
 	options := []etcd.OpOption{etcd.WithPrefix(), etcd.WithSort(etcd.SortByModRevision, etcd.SortAscend)}
 	if revision != sync.RevisionCurrent {
-		options = append(options, etcd.WithMinModRev(revision+1))
+		options = append(options, etcd.WithMinModRev(revision))
 	}
 	node, err := s.etcdClient.Get(s.withTimeout(), path, options...)
 	if err != nil {

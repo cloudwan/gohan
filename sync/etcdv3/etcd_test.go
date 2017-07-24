@@ -209,7 +209,7 @@ func TestWatch(t *testing.T) {
 	sync := newSync(t)
 	sync.etcdClient.Delete(context.Background(), "/", etcd.WithPrefix())
 
-	path := "/path/to/watch"
+	path := "/path/to/watch/without/revision"
 	responseChan := make(chan *gohan_sync.Event)
 	stopChan := make(chan bool)
 
@@ -240,10 +240,55 @@ func TestWatch(t *testing.T) {
 	}
 }
 
+func TestWatchWithRevision(t *testing.T) {
+	sync := newSync(t)
+	sync.etcdClient.Delete(context.Background(), "/", etcd.WithPrefix())
+
+	path := "/path/to/watch/with/revision"
+	responseChan := make(chan *gohan_sync.Event)
+	stopChan := make(chan bool)
+
+	putResponse, err := sync.etcdClient.Put(context.Background(), path+"/existing", `{"existing": true}`)
+	if err != nil {
+		t.Fatalf("failed to put key: %s", err)
+	}
+	startRev := putResponse.Header.Revision
+
+	putResponse, err = sync.etcdClient.Put(context.Background(), path+"/new", `{"existing": false}`)
+	if err != nil {
+		t.Fatalf("failed to update key: %s", err)
+	}
+	secondRevision := putResponse.Header.Revision
+
+	go func() {
+		err := sync.Watch(path, responseChan, stopChan, startRev+1)
+		if err != nil {
+			t.Fatalf("failed to watch")
+		}
+	}()
+
+	resp := <-responseChan
+	if resp.Key != path+"/new" || resp.Data["existing"].(bool) != false || resp.Revision != secondRevision{
+		t.Fatalf("mismatch response: %+v, expecting /new, existing==false, revision==%d", resp, secondRevision)
+	}
+
+	putResponse, err = sync.etcdClient.Put(context.Background(), path+"/third", `{"existing": false}`)
+	if err != nil {
+		t.Fatalf("failed to update key: %s", err)
+	}
+	thirdRevision := putResponse.Header.Revision
+
+	resp = <-responseChan
+	if resp.Key != path+"/third" || resp.Data["existing"].(bool) != false || resp.Revision != thirdRevision{
+		t.Fatalf("mismatch response: %+v, expecting /third, existing==false, revision==%d", resp, thirdRevision)
+	}
+
+}
+
 func newSync(t *testing.T) *Sync {
 	sync, err := NewSync(endpoints, time.Millisecond*100)
 	if err != nil {
-		t.Errorf("unexpected error")
+		t.Fatalf("unexpected error: %s", err)
 	}
 	return sync
 }
