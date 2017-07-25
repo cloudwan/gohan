@@ -18,11 +18,44 @@ package schema
 import (
 	"fmt"
 
+	"github.com/cloudwan/gohan/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Schema", func() {
+	Describe("Schema plural", func() {
+		var (
+			manager *Manager
+			s       *Schema
+			ok      bool
+		)
+
+		BeforeEach(func() {
+			manager = GetManager()
+			Expect(manager.LoadSchemasFromFiles(
+				"../tests/test_schema_plural.yaml")).To(Succeed())
+
+			s, ok = manager.Schema("box")
+			Expect(ok).To(BeTrue())
+		})
+
+		It("should use schema.ID + \"s\" as table name when legacy is true", func() {
+			Expect(s.GetDbTableName()).To(Equal(s.ID + "s"))
+		})
+
+		It("should use schema.Plural as table name when legacy is false", func() {
+			config := util.GetConfig()
+			config.ReadConfig("../tests/test_legacy_config.yaml")
+			Expect(config.GetBool("database/legacy", true)).To(BeFalse())
+			Expect(s.GetDbTableName()).To(Equal(s.Plural))
+		})
+
+		AfterEach(func() {
+			ClearManager()
+		})
+	})
+
 	Describe("Schema manager", func() {
 		It("should reorder schemas if it is DAG", func() {
 			manager := GetManager()
