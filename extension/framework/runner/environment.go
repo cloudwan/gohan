@@ -254,19 +254,33 @@ func (env *Environment) getTransaction(isNew bool, options *transaction.TxOption
 	env.dbTransactions = append(env.dbTransactions, tx)
 	return tx, nil
 }
-
+func getSpecifiedFunction(env *Environment, functionName string, setValue otto.Value) func(call otto.FunctionCall) otto.Value {
+	return func(call otto.FunctionCall) otto.Value {
+		exceptions := env.getFromOtto(functionName, "exceptions").([]otto.Value)
+		responses := env.getFromOtto(functionName, "responses").([]otto.Value)
+		if len(call.ArgumentList) != 1 && setValue == otto.FalseValue() {
+			call.Otto.Call("Fail", nil, "Return() should be called with exactly one argument")
+		} else if len(call.ArgumentList) != 1 && setValue == otto.TrueValue() {
+			call.Otto.Call("Fail", nil, "Throw() should be called with exactly one argument")
+		}
+		responses = append(responses, call.ArgumentList[0])
+		exceptions = append(exceptions, setValue)
+		env.setToOtto(functionName, "responses", responses)
+		env.setToOtto(functionName, "exceptions", exceptions)
+		return otto.NullValue()
+	}
+}
 func (env *Environment) mockFunction(functionName string) {
 	env.VM.Set(functionName, func(call otto.FunctionCall) otto.Value {
 		responses := env.getFromOtto(functionName, "responses").([]otto.Value)
 		requests := env.getFromOtto(functionName, "requests").([][]otto.Value)
-
+		exceptions := env.getFromOtto(functionName, "exceptions").([]otto.Value)
 		err := env.checkSpecified(functionName)
 		if err != nil {
 			call.Otto.Call("Fail", nil, err)
 		}
 
 		readableArguments := valueSliceToString(call.ArgumentList)
-
 		if len(responses) == 0 {
 			call.Otto.Call("Fail", nil, fmt.Sprintf("Unexpected call to %s(%v)", functionName, readableArguments))
 		}
@@ -277,14 +291,17 @@ func (env *Environment) mockFunction(functionName string) {
 			call.Otto.Call("Fail", nil, fmt.Sprintf("Wrong arguments for call %s(%v), expected %s",
 				functionName, readableArguments, valueSliceToString(expectedArguments)))
 		}
-
+		isException := exceptions[0]
+		exceptions = exceptions[1:]
 		response := responses[0]
 		responses = responses[1:]
-		env.setToOtto(functionName, "responses", responses)
-
 		requests = requests[1:]
 		env.setToOtto(functionName, "requests", requests)
-
+		env.setToOtto(functionName, "exceptions", exceptions)
+		env.setToOtto(functionName, "responses", responses)
+		if isException == otto.TrueValue() {
+			gohan_otto.ThrowOtto(&call, response.String())
+		}
 		return response
 	})
 
@@ -299,16 +316,10 @@ func (env *Environment) mockFunction(functionName string) {
 	})
 
 	env.setToOtto(functionName, "responses", []otto.Value{})
-	env.setToOtto(functionName, "Return", func(call otto.FunctionCall) otto.Value {
-		responses := env.getFromOtto(functionName, "responses").([]otto.Value)
-		if len(call.ArgumentList) != 1 {
-			call.Otto.Call("Fail", nil, "Return() should be called with exactly one argument")
-		}
-		responses = append(responses, call.ArgumentList[0])
-		env.setToOtto(functionName, "responses", responses)
+	env.setToOtto(functionName, "Return", getSpecifiedFunction(env, functionName, otto.FalseValue()))
 
-		return otto.NullValue()
-	})
+	env.setToOtto(functionName, "exceptions", []otto.Value{})
+	env.setToOtto(functionName, "Throw", getSpecifiedFunction(env, functionName, otto.TrueValue()))
 	env.mockedFunctions = append(env.mockedFunctions, functionName)
 }
 

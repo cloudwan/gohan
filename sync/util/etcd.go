@@ -13,6 +13,8 @@ import (
 
 var log = l.NewLogger()
 
+const etcdTimeoutDefaultValue = 1000
+
 // CreateFromConfig creates etcd sync from config
 func CreateFromConfig(config *util.Config) (s sync.Sync, err error) {
 	syncType := config.GetString("sync", "etcd")
@@ -27,7 +29,7 @@ func CreateFromConfig(config *util.Config) (s sync.Sync, err error) {
 		etcdServers := config.GetStringList("etcd", nil)
 		if etcdServers != nil {
 			log.Info("etcd servers: %s", etcdServers)
-			s, err = etcdv3.NewSync(etcdServers, time.Second)
+			s, err = etcdv3.NewSync(etcdServers, time.Duration(config.GetInt("etcd_timeout", etcdTimeoutDefaultValue))*time.Millisecond)
 			if err != nil {
 				err = fmt.Errorf("failed to connect to etcd servers: %s", err)
 				return

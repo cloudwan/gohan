@@ -109,6 +109,23 @@ func init() {
 		    return this.name.concat("(").concat(this.message).concat(")");
 		  };
 		}
+		function TimeOutException(msg){
+		  BaseException.call(this);
+		  this.message = msg;
+		  this.name = "TimeOutException";
+		  this.code = 408;
+		  this.fields.push("code");
+		}
+		TimeOutException.prototype = Object.create(BaseException.prototype);
+
+		function NotFoundException(msg) {
+		   BaseException.call(this);
+		   this.message = msg;
+		   this.name = "NotFoundException";
+		   this.code = 404;
+ 		   this.fields.push("code");
+		}
+		NotFoundException.prototype = Object.create(BaseException.prototype);
 
 		function CustomException(msg, code) {
 		  BaseException.call(this);

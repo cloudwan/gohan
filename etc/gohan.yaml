@@ -37,8 +37,10 @@ tls:
 # embedded webui get served if you use "embed" here
 document_root: "embed"
 # list of etcd backend servers
-#etcd:
-#    - "http://127.0.0.1:2379"
+etcd:
+    - "http://127.0.0.1:2379"
+
+etcd_timeout: 1000
 # keystone configuraion
 keystone:
     use_keystone: false
