@@ -25,32 +25,66 @@ import (
 	"github.com/cloudwan/gohan/schema"
 )
 
-func (gohanClientCLI *GohanClientCLI) getCustomArgsAsMap(
-	args []string,
-	actionInput string,
-	action schema.Action,
-) (argsMap map[string]interface{}, err error) {
-	argsMap = map[string]interface{}{}
-	if action.InputSchema != nil {
-		var value interface{}
-		inputType, ok := action.InputSchema["type"].(string)
-		if !ok {
-			return nil, fmt.Errorf("Invalid input schema")
-		}
-		switch inputType {
+func getValueFromRaw(key, rawValue, valueType string) (interface{}, error) {
+	var value interface{}
+	var err error
+	if rawValue == "<null>" {
+		value = nil
+	} else {
+		switch valueType {
 		case "integer", "number":
-			value, err = strconv.ParseInt(actionInput, 10, 64)
+			value, err = strconv.ParseInt(rawValue, 10, 64)
 		case "boolean":
-			value, err = strconv.ParseBool(actionInput)
+			value, err = strconv.ParseBool(rawValue)
 		case "array", "object":
-			err = json.Unmarshal([]byte(actionInput), &value)
+			err = json.Unmarshal([]byte(rawValue), &value)
 		default:
-			value = actionInput
+			value = rawValue
 		}
 		if err != nil {
-			return nil, fmt.Errorf("Error parsing action input %s", err)
+			return nil, fmt.Errorf("Error parsing parameter '%v': %v", key, err)
 		}
-		argsMap[action.ID] = value
+	}
+	return value, nil
+}
+
+func (gohanClientCLI *GohanClientCLI) getCustomArgsAsMap(
+	args []string,
+	actionInput []string,
+	action schema.Action,
+) (map[string]interface{}, error) {
+	argsMap := map[string]interface{}{}
+	if action.InputSchema != nil {
+		inputType, err := action.GetInputType()
+		if err != nil {
+			return nil, err
+		}
+		if len(actionInput) == 1 {
+			value, err := getValueFromRaw("input", actionInput[0], inputType)
+			if err != nil {
+				return nil, err
+			}
+			argsMap[action.ID] = value
+		} else {
+			if inputType != "object" {
+				err := fmt.Errorf("Input schema type must be an object to pass input with parameters")
+				return nil, err
+			}
+			data := map[string]interface{}{}
+			for i := 0; i < len(actionInput); i += 2 {
+				key := strings.TrimPrefix(actionInput[i], "--")
+				valueType, err := action.GetInputParameterType(key)
+				if err != nil {
+					return nil, err
+				}
+				value, err := getValueFromRaw(key, actionInput[i+1], valueType)
+				if err != nil {
+					return nil, err
+				}
+				data[key] = value
+			}
+			argsMap[action.ID] = data
+		}
 	}
 	for i := 0; i < len(args); i += 2 {
 		key := strings.TrimPrefix(args[i], "--")
@@ -60,8 +94,8 @@ func (gohanClientCLI *GohanClientCLI) getCustomArgsAsMap(
 		value := args[i+1]
 		argsMap[key] = value
 	}
-	err = gohanClientCLI.handleCommonArguments(argsMap)
-	return
+	err := gohanClientCLI.handleCommonArguments(argsMap)
+	return argsMap, err
 }
 
 func (gohanClientCLI *GohanClientCLI) handleArguments(args []string, s *schema.Schema) (map[string]interface{}, error) {
@@ -87,25 +121,9 @@ func getArgsAsMap(args []string, s *schema.Schema) (map[string]interface{}, erro
 		if property, err := s.GetPropertyByID(key); err == nil {
 			valueType = property.Type
 		}
-		rawValue := args[i+1]
-		var value interface{}
-		var err error
-		if rawValue == "<null>" {
-			value = nil
-		} else {
-			switch valueType {
-			case "integer", "number":
-				value, err = strconv.ParseInt(rawValue, 10, 64)
-			case "boolean":
-				value, err = strconv.ParseBool(rawValue)
-			case "array", "object":
-				err = json.Unmarshal([]byte(rawValue), &value)
-			default:
-				value = rawValue
-			}
-			if err != nil {
-				return nil, fmt.Errorf("Error parsing parameter '%v': %v", key, err)
-			}
+		value, err := getValueFromRaw(key, args[i+1], valueType)
+		if err != nil {
+			return nil, err
 		}
 		result[key] = value
 	}

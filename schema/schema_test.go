@@ -56,6 +56,31 @@ var _ = Describe("Schema", func() {
 		})
 	})
 
+	Describe("Action", func() {
+		var manager *Manager
+
+		BeforeEach(func() {
+			manager = GetManager()
+			Expect(manager.LoadSchemasFromFiles("../tests/test_schema_action.yaml")).To(Succeed())
+		})
+
+		It("Should get nil for non existing action", func() {
+			s, ok := manager.schema("action")
+			Expect(ok).To(BeTrue())
+			Expect(s.GetActionFromCommand("b")).To(BeNil())
+		})
+
+		It("Should get correct action", func() {
+			s, ok := manager.schema("action")
+			Expect(ok).To(BeTrue())
+			Expect(s.GetActionFromCommand("a")).To(Equal(&s.Actions[0]))
+		})
+
+		AfterEach(func() {
+			ClearManager()
+		})
+	})
+
 	Describe("Schema manager", func() {
 		It("should reorder schemas if it is DAG", func() {
 			manager := GetManager()

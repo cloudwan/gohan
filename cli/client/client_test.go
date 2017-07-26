@@ -274,6 +274,122 @@ var _ = Describe("CLI functions", func() {
 			}
 		})
 
+		Describe("Displaying commands info", func() {
+			BeforeEach(func() {
+				server.AppendHandlers(
+					ghttp.CombineHandlers(
+						ghttp.VerifyRequest("GET", "/gohan/v0.1/schemas"),
+						ghttp.RespondWithJSONEncoded(200, getActionSchemasResponse()),
+					),
+					ghttp.CombineHandlers(
+						ghttp.VerifyRequest("GET", "/v2.0/actions/do_a"),
+						ghttp.RespondWithJSONEncoded(200, doA()),
+					),
+				)
+			})
+
+			It("Should show custom commands in schemas info", func() {
+				result, err := gohanClientCLI.ExecuteCommand("action", []string{})
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(Equal(`
+  action
+  -----------------------------------
+  Description: Action
+
+  Properties:
+    - a [ number ]: <no value> <no value>
+    - b [ boolean ]: <no value> <no value>
+    - c [ string ]: <no value> <no value>
+    - d [ object ]: <no value> <no value>
+
+  Commands:
+
+  - List all action resources
+
+    gohan client action list
+
+  - Show a action resources
+
+    gohan client action show [ID]
+
+  - Create a action resources
+
+    gohan client action create \
+      --a [ number ] \
+      --b [ boolean ] \
+      --c [ string ] \
+      --d [ object ] \
+
+
+  - Update action resources
+
+    gohan client action set \
+      --a [number ] \
+      --b [boolean ] \
+      --c [string ] \
+      --d [object ] \
+      [ID]
+
+  - Delete action resources
+
+    gohan client action delete [ID]
+
+  Custom commands:
+
+  - do_a
+
+    gohan client action do_a
+
+  - do_b
+
+    gohan client action do_b [ID]
+
+  - do_c
+
+    gohan client action do_c [Input]
+      Input type: [ number ]
+
+  - do_d
+
+    gohan client action do_d [Input] [ID]
+      Input type: [ object ]
+      Input properties:
+        --a_in [ number ]
+        --b_in [ string ]
+        --c_in [ boolean ]
+`))
+			})
+
+			It("Should show action parameters when inspecting action", func() {
+				gohanClientCLI.schemas, err = gohanClientCLI.getSchemas()
+				Expect(err).ToNot(HaveOccurred())
+				gohanClientCLI.commands = gohanClientCLI.getCommands()
+				result, err := gohanClientCLI.ExecuteCommand("action do_d", []string{})
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(Equal(`
+  action
+  -----------------------------------
+
+  Command: do_d
+  gohan client action do_d [Input] [ID]
+    Input type: [ object ]
+    Input properties:
+      --a_in [ number ]
+      --b_in [ string ]
+      --c_in [ boolean ]
+`))
+			})
+
+			It("Should execute action with no parameters", func() {
+				gohanClientCLI.schemas, err = gohanClientCLI.getSchemas()
+				Expect(err).ToNot(HaveOccurred())
+				gohanClientCLI.commands = gohanClientCLI.getCommands()
+				result, err := gohanClientCLI.ExecuteCommand("action do_a", []string{})
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(Equal("\"" + doA() + "\""))
+			})
+		})
+
 		Describe("Reading schemas", func() {
 			It("Should get Gohan schemas successfully", func() {
 				server.AppendHandlers(
