@@ -43,6 +43,7 @@ const (
 	onlyOneOfTenantIDTenantNameError = "Only one of [tenant_id, tenant_name] should be specified"
 )
 
+// AllActions are all possible actions
 var AllActions = []string{ActionCreate, ActionRead, ActionUpdate, ActionDelete}
 
 func newTenant(tenantID, tenantName string) Tenant {

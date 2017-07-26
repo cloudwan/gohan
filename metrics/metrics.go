@@ -61,12 +61,14 @@ func getGraphiteConfig(config *util.Config) (graphiteConfigs []graphite.Config, 
 	return graphiteConfigs, nil
 }
 
+// SetupMetrics setups metrics from config
 func SetupMetrics(config *util.Config) (err error) {
 	monitoringEnabled = config.GetBool("metrics/enabled", false)
 	graphiteConfigs, err = getGraphiteConfig(config)
 	return
 }
 
+// StartMetricsProcess starts to send runtime metrics to graphite
 func StartMetricsProcess() {
 	if monitoringEnabled && len(graphiteConfigs) > 0 {
 		log.Debug("Starting sending runtime metrics to graphite, config %+v", graphiteConfigs)
@@ -79,6 +81,7 @@ func StartMetricsProcess() {
 	}
 }
 
+// UpdateTimer updates metrics timer
 func UpdateTimer(since time.Time, format string, args ...interface{}) {
 	if monitoringEnabled {
 		m := metrics.GetOrRegisterTimer(fmt.Sprintf(format, args...), metrics.DefaultRegistry)

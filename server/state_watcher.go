@@ -65,6 +65,7 @@ func NewStateWatcher(sync gohan_sync.Sync, db db.DB, identity middleware.Identit
 	}
 }
 
+// NewStateWatcherFromServer is a constructor for StateWatcher
 func NewStateWatcherFromServer(server *Server) *StateWatcher {
 	return NewStateWatcher(server.sync, server.db, server.keystoneIdentity)
 }
@@ -240,7 +241,6 @@ func (watcher *StateWatcher) MonitoringUpdate(event *gohan_sync.Event) error {
 	resourceID := curSchema.GetResourceIDFromPath(schemaPath)
 	log.Info("Started MonitoringUpdate for %s %s %v", event.Action, event.Key, event.Data)
 
-
 	return db.WithinTx(watcher.db, context.Background(), &transaction.TxOptions{IsolationLevel: transaction.GetIsolationLevel(curSchema, MonitoringUpdateEventName)},
 		func(tx transaction.Transaction) error {
 			curResource, err := tx.Fetch(curSchema, transaction.IDFilter(resourceID))
@@ -301,7 +301,6 @@ func (watcher *StateWatcher) MonitoringUpdate(event *gohan_sync.Event) error {
 		})
 }
 
-func (watcher *StateWatcher) measureStateUpdateTime(timeStarted time.Time, event string, schemaId string) {
-	metrics.UpdateTimer(timeStarted, "state.%s.%s", schemaId, event)
+func (watcher *StateWatcher) measureStateUpdateTime(timeStarted time.Time, event string, schemaID string) {
+	metrics.UpdateTimer(timeStarted, "state.%s.%s", schemaID, event)
 }
-

@@ -23,9 +23,9 @@ import (
 
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/pagination"
+	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
 	gohan_sync "github.com/cloudwan/gohan/sync"
-	"github.com/cloudwan/gohan/db/transaction"
 )
 
 const (
@@ -123,14 +123,14 @@ func (writer *SyncWriter) Sync() (synced int, err error) {
 		if err != nil {
 			return
 		}
-		synced += 1
+		synced++
 	}
 	return
 }
 
 func (writer *SyncWriter) listEvents() ([]*schema.Resource, error) {
 	var resourceList []*schema.Resource
-	if dbErr := db.Within(writer.db, func (tx transaction.Transaction) error {
+	if dbErr := db.Within(writer.db, func(tx transaction.Transaction) error {
 		schemaManager := schema.GetManager()
 		eventSchema, _ := schemaManager.Schema("event")
 		paginator, _ := pagination.NewPaginator(eventSchema, "id", pagination.ASC, eventPollingLimit, 0)
@@ -147,7 +147,7 @@ func (writer *SyncWriter) listEvents() ([]*schema.Resource, error) {
 func (writer *SyncWriter) syncEvent(resource *schema.Resource) error {
 	schemaManager := schema.GetManager()
 	eventSchema, _ := schemaManager.Schema("event")
-	return db.Within(writer.db, func (tx transaction.Transaction) error {
+	return db.Within(writer.db, func(tx transaction.Transaction) error {
 		var err error
 		eventType := resource.Get("type").(string)
 		resourcePath := resource.Get("path").(string)

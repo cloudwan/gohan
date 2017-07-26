@@ -23,19 +23,22 @@ import (
 	"strings"
 	"time"
 
+	// Import mysql lib
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 	sq "github.com/lann/squirrel"
+	// Import go-sqlite3 lib
 	_ "github.com/mattn/go-sqlite3"
+	// Import go-fakedb lib
 	_ "github.com/nati/go-fakedb"
 
 	"context"
 
+	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/pagination"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
-	"github.com/cloudwan/gohan/db/options"
 	"os"
 )
 
@@ -100,7 +103,7 @@ func NewDB(options options.Options) *DB {
 	return &DB{handlers: handlers, options: options}
 }
 
-//Return DB options
+//Options returns DB options
 func (db *DB) Options() options.Options {
 	return db.options
 }
@@ -302,6 +305,7 @@ func (db *DB) Connect(sqlType, conn string, maxOpenConn int) (err error) {
 	return fmt.Errorf("Failed to connect db")
 }
 
+// Close closes db connection
 func (db *DB) Close() {
 	db.DB.Close()
 }
@@ -329,7 +333,7 @@ func (db *DB) Begin() (tx transaction.Transaction, err error) {
 	return
 }
 
-//Begin starts new transaction with given transaction options
+//BeginTx starts new transaction with given transaction options
 func (db *DB) BeginTx(ctx context.Context, options *transaction.TxOptions) (tx transaction.Transaction, err error) {
 	sqlOptions, err := mapTxOptions(options)
 	if err != nil {
@@ -501,8 +505,8 @@ func (db *DB) RegisterTable(s *schema.Schema, cascade, migrate bool) error {
 	}
 	_, err = db.DB.Exec(tableDef)
 	if err != nil && indices != nil {
-		for _, indexSql := range indices {
-			_, err = db.DB.Exec(indexSql)
+		for _, indexSQL := range indices {
+			_, err = db.DB.Exec(indexSQL)
 			if err != nil {
 				return err
 			}
@@ -840,7 +844,7 @@ func shouldJoin(policy schema.LockPolicy) bool {
 	}
 }
 
-//Lock resources in the db
+//LockList locks resources in the db
 func (tx *Transaction) LockList(s *schema.Schema, filter transaction.Filter, options *transaction.ListOptions, pg *pagination.Paginator, lockPolicy schema.LockPolicy) (list []*schema.Resource, total uint64, err error) {
 	policyJoin := shouldJoin(lockPolicy)
 
@@ -973,7 +977,7 @@ func (tx *Transaction) Fetch(s *schema.Schema, filter transaction.Filter) (*sche
 	return list[0], nil
 }
 
-//Fetch & lock a resource
+//LockFetch locks and fetches a resource
 func (tx *Transaction) LockFetch(s *schema.Schema, filter transaction.Filter, lockPolicy schema.LockPolicy) (*schema.Resource, error) {
 	list, _, err := tx.LockList(s, filter, nil, nil, lockPolicy)
 	if err != nil {
@@ -988,7 +992,7 @@ func (tx *Transaction) LockFetch(s *schema.Schema, filter transaction.Filter, lo
 //StateFetch fetches the state of the specified resource
 func (tx *Transaction) StateFetch(s *schema.Schema, filter transaction.Filter) (state transaction.ResourceState, err error) {
 	if !s.StateVersioning() {
-		err = fmt.Errorf("Schema %s does not support state versioning.", s.ID)
+		err = fmt.Errorf("Schema %s does not support state versioning", s.ID)
 		return
 	}
 	cols := makeStateColumns(s)
@@ -1053,7 +1057,7 @@ func (tx *Transaction) Closed() bool {
 	return tx.closed
 }
 
-// IsolationLevel returns tx isolation level
+// GetIsolationLevel returns tx isolation level
 func (tx *Transaction) GetIsolationLevel() transaction.Type {
 	return tx.isolationLevel
 }

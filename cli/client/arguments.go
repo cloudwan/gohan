@@ -48,7 +48,7 @@ func (gohanClientCLI *GohanClientCLI) getCustomArgsAsMap(
 			value = actionInput
 		}
 		if err != nil {
-			return nil, fmt.Errorf("Error parsing action input %s:", err)
+			return nil, fmt.Errorf("Error parsing action input %s", err)
 		}
 		argsMap[action.ID] = value
 	}

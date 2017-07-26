@@ -10,6 +10,7 @@ import (
 	"github.com/cloudwan/gohan/util"
 )
 
+// Resync performs resync
 func Resync(dbConn db.DB, sync sync.Sync) (err error) {
 
 	syncDbConn := &DbSyncWrapper{DB: dbConn}

@@ -29,6 +29,7 @@ import (
 
 var logger = log.NewLogger()
 
+// LoadConfig loads config from config file
 func LoadConfig(configFile string) (err error) {
 	config := util.GetConfig()
 
@@ -57,6 +58,7 @@ func readGooseConfig() (dbType, dbConnection, migrationsPath string, noInit bool
 	return
 }
 
+// Init initialises migration
 func Init() error {
 	logger.Info("migration: init")
 
@@ -118,10 +120,12 @@ func Init() error {
 	return goose.Status(db, migrationsPath)
 }
 
+// Help outputs migration sub command help
 func Help() {
 	fmt.Println("missing subcommand: help, up, up-by-one, up-to, create, create-next, down, down-to, redo, status, version")
 }
 
+// Run executes migration
 func Run(subCmd string, args []string) error {
 	dbType, dbConnection, migrationsPath, _ := readGooseConfig()
 
@@ -152,13 +156,15 @@ func Run(subCmd string, args []string) error {
 
 var modifiedSchemas = map[string]bool{}
 
+// MarkSchemaAsModified marks schema as modified
 func MarkSchemaAsModified(schemaID string) {
 	modifiedSchemas[schemaID] = true
 }
 
+// GetModifiedSchemas gets all modified schemas
 func GetModifiedSchemas() []string {
 	schemas := make([]string, len(modifiedSchemas))
-	for schema, _ := range modifiedSchemas {
+	for schema := range modifiedSchemas {
 		schemas = append(schemas, schema)
 	}
 	return schemas

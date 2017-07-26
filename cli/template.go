@@ -109,11 +109,12 @@ func toSwaggerPath(in *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo
 	return pongo2.AsValue(r.ReplaceAllString(i, "{$1}")), nil
 }
 
-func hasIdParam(in *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
+func hasIDParam(in *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
 	i := in.String()
 	return pongo2.AsValue(strings.Contains(i, ":id")), nil
 }
 
+// SnakeToCamel  changes value from snake case to camel case
 func SnakeToCamel(in *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
 	i := in.String()
 	return pongo2.AsValue(snaker.SnakeToCamel(i)), nil
@@ -143,11 +144,12 @@ func toGoType(in *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Err
 func init() {
 	pongo2.RegisterFilter("swagger", toSwagger)
 	pongo2.RegisterFilter("swagger_path", toSwaggerPath)
-	pongo2.RegisterFilter("swagger_has_id_param", hasIdParam)
+	pongo2.RegisterFilter("swagger_has_id_param", hasIDParam)
 	pongo2.RegisterFilter("to_go_type", toGoType)
 	pongo2.RegisterFilter("snake_to_camel", SnakeToCamel)
 }
 
+// SchemaWithPolicy ...
 type SchemaWithPolicy struct {
 	Schema   *schema.Schema
 	Policies []string

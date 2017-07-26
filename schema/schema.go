@@ -56,8 +56,10 @@ const (
 	abstract string = "abstract"
 )
 
+// LockPolicy is type lock policy
 type LockPolicy int
 
+// LockRelatedResources is type of LockPolicy
 const (
 	LockRelatedResources LockPolicy = iota
 	SkipRelatedResources
@@ -165,6 +167,7 @@ func newSchemaFromObj(rawTypeData interface{}, metaschema *Schema) (*Schema, err
 	return schema, nil
 }
 
+// PropertyOrder is type of property order
 type PropertyOrder struct {
 	properties      []Property
 	propertiesOrder []string
@@ -195,22 +198,21 @@ func (p PropertyOrder) Less(i, j int) bool {
 		return false
 	} else if iIdx != -1 && jIdx != -1 {
 		return iIdx < jIdx
+	}
+	if lhv.ID == "id" {
+		return true
+	}
+	if lhv.Indexed && !rhv.Indexed {
+		return true
+	} else if !lhv.Indexed && rhv.Indexed {
+		return false
 	} else {
-		if lhv.ID == "id" {
+		if lhv.Relation != "" && rhv.Relation == "" {
 			return true
-		}
-		if lhv.Indexed && !rhv.Indexed {
-			return true
-		} else if !lhv.Indexed && rhv.Indexed {
+		} else if lhv.Relation == "" && rhv.Relation != "" {
 			return false
 		} else {
-			if lhv.Relation != "" && rhv.Relation == "" {
-				return true
-			} else if lhv.Relation == "" && rhv.Relation != "" {
-				return false
-			} else {
-				return lhv.ID < rhv.ID
-			}
+			return lhv.ID < rhv.ID
 		}
 	}
 }
@@ -631,6 +633,7 @@ func (schema *Schema) JSON() map[string]interface{} {
 	}
 }
 
+// GetLockingPolicy gets locking policy for given schema and event
 func (schema *Schema) GetLockingPolicy(event string) LockPolicy {
 	if schema.Metadata["locking_policy"] == nil {
 		return NoLocking

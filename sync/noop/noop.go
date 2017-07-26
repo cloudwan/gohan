@@ -45,6 +45,7 @@ func (sync *Sync) Delete(path string, prefix bool) error {
 	return nil
 }
 
+// Fetch sync
 func (sync *Sync) Fetch(path string) (*sync.Node, error) {
 	return nil, nil
 }
@@ -74,6 +75,7 @@ func (sync *Sync) WatchContext(ctx context.Context, path string, revision int64)
 	return nil, nil
 }
 
+// Close sync
 func (sync *Sync) Close() {
 
 }

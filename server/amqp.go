@@ -63,7 +63,7 @@ func listenAMQP(server *Server) {
 
 	for _, queue := range queues {
 		go func(queue string) {
-			defer l.LogFatalPanic(log)
+			defer l.FatalPanic(log)
 			for server.running {
 				conn, err := amqp.Dial(connection)
 				if err != nil {

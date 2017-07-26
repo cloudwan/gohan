@@ -35,6 +35,7 @@ import (
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/extension/framework"
 	"github.com/cloudwan/gohan/extension/gohanscript"
+	// Import gohan extension autogen lib
 	_ "github.com/cloudwan/gohan/extension/gohanscript/autogen"
 	"github.com/cloudwan/gohan/extension/otto"
 	l "github.com/cloudwan/gohan/log"
@@ -412,21 +413,21 @@ func getMigrateSubcommand(subcmd, usage string) cli.Command {
 
 func getMigrateSubcommandWithPostMigrateEvent(subcmd, usage string) cli.Command {
 	const (
-		POST_MIGRATION_EVENT_TIMEOUT_FLAG = "post-migration-event-timeout"
-		CONFIG_FILE_FLAG                  = "config-file"
-		EMIT_POST_MIGRATION_EVENT_FLAG    = "emit-post-migration-event"
-		POST_MIGRATION_EVENT              = "post-migration"
+		PostMigrationEventTimeoutFlag = "post-migration-event-timeout"
+		ConfigFileFlag                = "config-file"
+		EmitPostMigrationEventFlag    = "emit-post-migration-event"
+		PostMigrationEvent            = "post-migration"
 	)
 	return cli.Command{
 		Name:  subcmd,
 		Usage: usage,
 		Flags: []cli.Flag{
-			cli.StringFlag{Name: CONFIG_FILE_FLAG, Value: defaultConfigFile, Usage: "Server config File"},
-			cli.BoolFlag{Name: EMIT_POST_MIGRATION_EVENT_FLAG, Usage: "Enable if post-migration event should be emited to modified schema extensions"},
-			cli.DurationFlag{Name: POST_MIGRATION_EVENT_TIMEOUT_FLAG, Value: time.Second * 30, Usage: "Maximum duration of post-migration event"},
+			cli.StringFlag{Name: ConfigFileFlag, Value: defaultConfigFile, Usage: "Server config File"},
+			cli.BoolFlag{Name: EmitPostMigrationEventFlag, Usage: "Enable if post-migration event should be emited to modified schema extensions"},
+			cli.DurationFlag{Name: PostMigrationEventTimeoutFlag, Value: time.Second * 30, Usage: "Maximum duration of post-migration event"},
 		},
 		Action: func(context *cli.Context) {
-			configFile := context.String(CONFIG_FILE_FLAG)
+			configFile := context.String(ConfigFileFlag)
 			if migration.LoadConfig(configFile) != nil {
 				return
 			}
@@ -436,7 +437,7 @@ func getMigrateSubcommandWithPostMigrateEvent(subcmd, usage string) cli.Command 
 				os.Exit(1)
 			}
 
-			emitEvent := context.Bool(EMIT_POST_MIGRATION_EVENT_FLAG)
+			emitEvent := context.Bool(EmitPostMigrationEventFlag)
 			if !emitEvent {
 				return
 			}
@@ -486,8 +487,8 @@ func getMigrateSubcommandWithPostMigrateEvent(subcmd, usage string) cli.Command 
 
 				if _, ok := environmentManager.GetEnvironment(s.ID); !ok {
 					env := otto.NewEnvironment("post-migration-env", dbConn, identity, sync)
-					eventTimeout := context.Duration(POST_MIGRATION_EVENT_TIMEOUT_FLAG)
-					env.SetEventTimeLimit(POST_MIGRATION_EVENT, eventTimeout)
+					eventTimeout := context.Duration(PostMigrationEventTimeoutFlag)
+					env.SetEventTimeLimit(PostMigrationEvent, eventTimeout)
 					env.LoadExtensionsForPath(manager.Extensions, manager.TimeLimit, manager.TimeLimits, pluralURL)
 					log.Info("Loading environment for %s schema with URL: %s", s.ID, pluralURL)
 					if err != nil {
@@ -502,7 +503,7 @@ func getMigrateSubcommandWithPostMigrateEvent(subcmd, usage string) cli.Command 
 				eventContext["sync"] = sync
 				eventContext["db"] = dbConn
 				eventContext["identity_service"] = identity
-				err := env.HandleEvent(POST_MIGRATION_EVENT, eventContext)
+				err := env.HandleEvent(PostMigrationEvent, eventContext)
 				if err != nil {
 					log.Fatalf("Failed to handle event post-migration, err: %s", err)
 				}
@@ -585,10 +586,10 @@ func getCreateInitialMigrationCommand() cli.Command {
 				if s.IsAbstract() {
 					continue
 				}
-				createSql, indices := sqlDB.GenTableDef(s, cascade)
-				sqlString.WriteString(createSql + "\n")
-				for _, indexSql := range indices {
-					sqlString.WriteString(indexSql + "\n")
+				createSQL, indices := sqlDB.GenTableDef(s, cascade)
+				sqlString.WriteString(createSQL + "\n")
+				for _, indexSQL := range indices {
+					sqlString.WriteString(indexSQL + "\n")
 				}
 			}
 			sqlString.WriteString("\n")

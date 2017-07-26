@@ -28,6 +28,7 @@ type PathEventTimeLimit struct {
 	TimeDuration time.Duration
 }
 
+// NewPathEventTimeLimit is a constructor for PathEventTimeLimit
 func NewPathEventTimeLimit(pathRegex, eventRegex string, timeDuration time.Duration) *PathEventTimeLimit {
 	return &PathEventTimeLimit{
 		PathRegex:    regexp.MustCompile(pathRegex),
@@ -48,6 +49,7 @@ type EventTimeLimit struct {
 	TimeDuration time.Duration
 }
 
+// NewEventTimeLimit is a constructor for EventTimeLimit
 func NewEventTimeLimit(eventRegex *regexp.Regexp, timeLimit time.Duration) *EventTimeLimit {
 	return &EventTimeLimit{
 		EventRegex:   eventRegex,

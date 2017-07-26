@@ -59,7 +59,7 @@ var (
 var _ = Describe("Server package test", func() {
 
 	AfterEach(func() {
-		Expect(db.Within(testDB, func (tx transaction.Transaction) error {
+		Expect(db.Within(testDB, func(tx transaction.Transaction) error {
 			for _, schema := range schema.GetManager().Schemas() {
 				if whitelist[schema.ID] {
 					continue

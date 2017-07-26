@@ -21,6 +21,7 @@ import (
 	l "github.com/cloudwan/gohan/log"
 )
 
+// RevisionCurrent is current sync revision
 const RevisionCurrent = -1
 
 var log = l.NewLogger()

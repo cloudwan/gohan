@@ -27,10 +27,10 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/transaction"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/cloudwan/gohan/db/options"
 )
 
 var _ = Describe("Mysql", func() {

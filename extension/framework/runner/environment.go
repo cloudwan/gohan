@@ -30,12 +30,13 @@ import (
 	"github.com/cloudwan/gohan/sync/noop"
 	"github.com/xyproto/otto"
 
+	// Import otto underscore lib
 	_ "github.com/xyproto/otto/underscore"
 
 	"context"
 
-	gohan_otto "github.com/cloudwan/gohan/extension/otto"
 	"github.com/cloudwan/gohan/db/options"
+	gohan_otto "github.com/cloudwan/gohan/extension/otto"
 )
 
 const (
@@ -167,7 +168,7 @@ func (env *Environment) addTestingAPI() {
 	builtins := map[string]interface{}{
 		"Fail": func(call otto.FunctionCall) otto.Value {
 			if len(call.ArgumentList) == 0 {
-				panic(fmt.Errorf("Fail!"))
+				panic(fmt.Errorf("Fail"))
 			}
 
 			if !call.ArgumentList[0].IsString() {
