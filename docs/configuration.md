@@ -33,6 +33,10 @@ Gohan server configuration uses YAML format.
       initial_data:
           - type: "yaml"
             connection: "./etc/examples/heat_template.yaml"
+      # if legacy is true table names are created from schema id,
+      # otherwise table names are based on schema plural,
+      # default true
+      legacy: false
   # schema path
   schemas:
     - "./etc/schema/gohan.json"
@@ -43,7 +47,7 @@ Gohan server configuration uses YAML format.
     cert_file: "./etc/cert.pem"
     key_file: "./etc/key.pem"
   # document root of gohan API server
-  # Note: only static and schema directoriy will be served
+  # Note: only static and schema directory will be served
   document_root: "./etc"
   # list of etcd backend servers
   etcd:

@@ -1,0 +1,13 @@
+schemas:
+- description: box
+  id: box
+  singular: box
+  plural: boxes 
+  title: box
+  schema:
+    properties:
+      id:
+        description: ID
+        title: ID
+        type: string
+    type: object
