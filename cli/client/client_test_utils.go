@@ -237,11 +237,107 @@ func getChamberSchema() map[string]interface{} {
 	}
 }
 
+func getActionsSchema() map[string]interface{} {
+	return map[string]interface{}{
+		"description": "Action",
+		"id":          "action",
+		"title":       "action",
+		"singular":    "action",
+		"plural":      "action",
+		"prefix":      "/v2.0",
+		"url":         "/v2.0/actions",
+		"schema": map[string]interface{}{
+			"properties": map[string]interface{}{
+				"a": map[string]interface{}{
+					"permission": []interface{}{
+						"create",
+						"update",
+					},
+					"type": "number",
+				},
+				"b": map[string]interface{}{
+					"permission": []interface{}{
+						"create",
+						"update",
+					},
+					"type": "boolean",
+				},
+				"c": map[string]interface{}{
+					"permission": []interface{}{
+						"create",
+						"update",
+					},
+					"type": "string",
+				},
+				"d": map[string]interface{}{
+					"permission": []interface{}{
+						"create",
+						"update",
+					},
+					"type": "object",
+				},
+			},
+			"propertiesOrder": []interface{}{
+				"a",
+				"b",
+				"c",
+				"d",
+			},
+		},
+		"actions": map[string]interface{}{
+			"do_a": map[string]interface{}{
+				"method": "GET",
+				"path":   "/do_a",
+				"output": map[string]interface{}{
+					"type": "string",
+				},
+			},
+			"do_b": map[string]interface{}{
+				"method": "GET",
+				"path":   "/:id/do_b",
+			},
+			"do_c": map[string]interface{}{
+				"method": "GET",
+				"path":   "/do_c",
+				"input": map[string]interface{}{
+					"type": "number",
+				},
+			},
+			"do_d": map[string]interface{}{
+				"method": "GET",
+				"path":   "/:id/do_d",
+				"input": map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"a_in": map[string]interface{}{
+							"type": "number",
+						},
+						"b_in": map[string]interface{}{
+							"type": "string",
+						},
+						"c_in": map[string]interface{}{
+							"type": "boolean",
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
 func getSchemasResponse() interface{} {
 	return map[string]interface{}{
 		"schemas": []map[string]interface{}{
 			getCastleSchema(),
 			getTowerSchema(),
+		},
+	}
+}
+
+func getActionSchemasResponse() interface{} {
+	return map[string]interface{}{
+		"schemas": []map[string]interface{}{
+			getActionsSchema(),
 		},
 	}
 }
@@ -270,6 +366,10 @@ func openGates() string {
 
 func closeGates() string {
 	return "gates closed"
+}
+
+func doA() string {
+	return "done a"
 }
 
 func getIcyTower() map[string]interface{} {
@@ -313,8 +413,8 @@ func compareSchemas(actual, expected []*schema.Schema) {
 	for i, s := range actual {
 		sortProperties(s)
 		sortProperties(expected[i])
-		sortActions(s)
-		sortActions(expected[i])
+		schema.SortActions(s)
+		schema.SortActions(expected[i])
 		g.Expect(s).To(g.Equal(expected[i]))
 	}
 }
@@ -327,16 +427,6 @@ func (p properties) Less(i, j int) bool { return p[i].ID < p[j].ID }
 
 func sortProperties(schema *schema.Schema) {
 	sort.Sort(properties(schema.Properties))
-}
-
-type actions []schema.Action
-
-func (a actions) Len() int           { return len(a) }
-func (a actions) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a actions) Less(i, j int) bool { return a[i].ID < a[j].ID }
-
-func sortActions(schema *schema.Schema) {
-	sort.Sort(actions(schema.Actions))
 }
 
 //ByName is alias type for handling gohanCommands

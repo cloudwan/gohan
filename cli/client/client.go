@@ -33,8 +33,9 @@ import (
 )
 
 var (
-	log                 = l.NewLoggerForModule("gohan.cli.client")
-	logOutput io.Writer = os.Stderr
+	log                       = l.NewLoggerForModule("gohan.cli.client")
+	logOutput       io.Writer = os.Stderr
+	defaultCommands           = []string{"list", "show", "create", "set", "delete"}
 )
 
 const schemaListTemplate = `gohan client {{.ID}} # {{.Title}}
@@ -45,9 +46,8 @@ const schemaTemplate = `
   -----------------------------------
   Description: {{.Description}}
 
-  Properties: {{$properties := .JSONSchema.properties}}
-  {{range $key := .JSONSchema.propertiesOrder}} - {{$key}} {{with index $properties $key}}[ {{.type}} ]: {{.title}} {{.description}}{{end}}
-  {{end}}
+  Properties:{{$properties := .JSONSchema.properties}}{{range $key := .JSONSchema.propertiesOrder}}
+    - {{$key}}{{with index $properties $key}} [ {{.type}} ]: {{.title}} {{.description}}{{end}}{{end}}
 
   Commands:
 
@@ -69,13 +69,38 @@ const schemaTemplate = `
 
     gohan client {{.ID}} set \
 {{$propertiesOnUpdate := .JSONSchemaOnUpdate.properties}}{{range $key := .JSONSchema.propertiesOrder}}{{with index $propertiesOnUpdate $key}}      --{{$key}} [{{.type}} ] \
-{{end}}{{end}}       [ID]
+{{end}}{{end}}      [ID]
 
   - Delete {{.Title}} resources
 
-  gohan client {{.ID}} delete [ID]
+    gohan client {{.ID}} delete [ID]{{with .Actions}}
 
+  Custom commands:{{range $action := $.Actions}}
+
+  - {{$action.ID}}
+
+    gohan client {{$.Title}} {{$action.ID}}{{if $action.InputSchema}} [Input]{{end}}{{if $action.TakesID}} [ID]{{end}}{{with $action.InputSchema}}
+      Input type: [ {{.type}} ]{{if eq .type "object"}}
+      Input properties:{{range $key, $type := .properties}}
+        --{{$key}} [ {{$type.type}} ]{{end}}{{end}}{{end}}{{end}}{{end}}
 `
+
+const actionTemplate = `
+  {{.Schema.Title}}
+  -----------------------------------
+
+  Command: {{.Action.ID}}
+  gohan client {{.Schema.Title}} {{.Action.ID}}{{if .Action.InputSchema}} [Input]{{end}}{{if .Action.TakesID}} [ID]{{end}}{{with .Action.InputSchema}}
+    Input type: [ {{.type}} ]{{if eq .type "object"}}
+    Input properties:{{range $key, $type := .properties}}
+      --{{$key}} [ {{$type.type}} ]{{end}}{{end}}{{end}}
+`
+
+// ActionTemplateEntry is input struct for generating custom command info
+type ActionTemplateEntry struct {
+	Schema *schema.Schema
+	Action *schema.Action
+}
 
 // GohanClientCLI ...
 type GohanClientCLI struct {
@@ -89,10 +114,34 @@ func setUpLogging(level l.Level) {
 	l.SetUpBasicLogging(logOutput, l.CliFormat, l.ModuleLevel{"gohan.cli.client", level})
 }
 
+func isCustomCommand(command string) bool {
+	for _, c := range defaultCommands {
+		if c == command {
+			return false
+		}
+	}
+	return true
+}
+
+func getCustomCommandName(command string, length int) string {
+	args := strings.Split(command, " ")
+	if length == 0 && len(args) >= 2 && isCustomCommand(args[1]) {
+		return args[1]
+	}
+	return ""
+}
+
 // ExecuteCommand ...
 func (gohanClientCLI *GohanClientCLI) ExecuteCommand(command string, arguments []string) (string, error) {
+	actionName := getCustomCommandName(command, len(arguments))
 	for _, c := range gohanClientCLI.commands {
 		if c.Name == command {
+			if actionName != "" {
+				action := c.Schema.GetActionFromCommand(actionName)
+				if !action.TakesNoArgs() {
+					return outputCustomCommands(c.Schema, action)
+				}
+			}
 			return c.Action(arguments)
 		}
 	}
@@ -108,10 +157,11 @@ func (gohanClientCLI *GohanClientCLI) outputSubCommands(command string) (string,
 		return "", err
 	}
 	//Output schema specific help
-	for _, schema := range schemas {
-		if command == schema.ID {
+	for _, schemaForTemplate := range schemas {
+		if command == schemaForTemplate.ID {
+			schema.SortActions(schemaForTemplate)
 			tmpl, _ := template.New("schema").Parse(schemaTemplate)
-			tmpl.Execute(buf, schema)
+			tmpl.Execute(buf, schemaForTemplate)
 			return buf.String(), nil
 		}
 	}
@@ -124,6 +174,14 @@ func (gohanClientCLI *GohanClientCLI) outputSubCommands(command string) (string,
 	for _, schema := range schemas {
 		tmpl.Execute(buf, schema)
 	}
+	return buf.String(), nil
+}
+
+func outputCustomCommands(schema *schema.Schema, action *schema.Action) (string, error) {
+	entry := ActionTemplateEntry{schema, action}
+	buf := new(bytes.Buffer)
+	tmpl, _ := template.New("schema").Parse(actionTemplate)
+	tmpl.Execute(buf, entry)
 	return buf.String(), nil
 }
 

@@ -1,0 +1,17 @@
+schemas:
+- description: action
+  id: action
+  singular: action
+  plural: actions
+  title: action
+  schema:
+    properties:
+      id:
+        description: ID
+        title: ID
+        type: string
+    type: object
+  actions:
+    a:
+      method: GET
+      path: /a

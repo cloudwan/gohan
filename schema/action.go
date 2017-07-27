@@ -15,6 +15,12 @@
 
 package schema
 
+import (
+	"fmt"
+	"regexp"
+	"sort"
+)
+
 // Action struct
 type Action struct {
 	ID           string
@@ -49,4 +55,86 @@ func NewActionFromObject(id string, rawData interface{}) (Action, error) {
 	outputSchema, _ := actionData["output"].(map[string]interface{})
 	parameters, _ := actionData["parameters"].(map[string]interface{})
 	return NewAction(id, method, path, description, inputSchema, outputSchema, parameters), nil
+}
+
+// TakesID checks if action takes ID as a parameter
+func (action *Action) TakesID() bool {
+	re := regexp.MustCompile(`.*/:id(/.*)?$`)
+	return len(re.FindString(action.Path)) != 0
+}
+
+// GetInputType gets action input type
+func (action *Action) GetInputType() (string, error) {
+	if action.InputSchema == nil {
+		return "", fmt.Errorf("Action does not take input")
+	}
+	inputType, ok := action.InputSchema["type"].(string)
+	if !ok {
+		return "", fmt.Errorf("Input schema does not have a type")
+	}
+	return inputType, nil
+}
+
+// GetInputParameterNames gets action input parameter names
+func (action *Action) GetInputParameterNames() ([]string, error) {
+	if action.InputSchema == nil {
+		return nil, fmt.Errorf("Action does not take input")
+	}
+	properties, ok := action.InputSchema["properties"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("Input schema does not have properties")
+	}
+
+	keys := make([]string, len(properties))
+	i := 0
+	for k := range properties {
+		keys[i] = k
+		i++
+	}
+	return keys, nil
+}
+
+// GetInputParameterType gets input parameter type
+func (action *Action) GetInputParameterType(parameter string) (string, error) {
+	if action.InputSchema == nil {
+		return "", fmt.Errorf("Action does not take input")
+	}
+	properties, ok := action.InputSchema["properties"].(map[string]interface{})
+	if !ok {
+		return "", fmt.Errorf("Input schema does not have properties")
+	}
+	parameterObject, ok := properties[parameter].(map[string]interface{})
+	if !ok {
+		return "", fmt.Errorf("Property with ID %s not found", parameter)
+	}
+	parameterType, ok := parameterObject["type"].(string)
+	if !ok {
+		return "", fmt.Errorf("Parameter with ID %s does not have a type", parameter)
+	}
+	return parameterType, nil
+}
+
+// TakesNoArgs checks if action takes no arguments
+func (action *Action) TakesNoArgs() bool {
+	return action.InputSchema == nil && !action.TakesID()
+}
+
+// Sorting
+type actions []Action
+
+func (a actions) Len() int {
+	return len(a)
+}
+
+func (a actions) Swap(i, j int) {
+	a[i], a[j] = a[j], a[i]
+}
+
+func (a actions) Less(i, j int) bool {
+	return a[i].ID < a[j].ID
+}
+
+// SortActions sort actions by id
+func SortActions(schema *Schema) {
+	sort.Sort(actions(schema.Actions))
 }

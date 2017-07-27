@@ -287,31 +287,45 @@ func (gohanClientCLI *GohanClientCLI) formatCustomOutput(rawOutput interface{}) 
 func splitArgs(
 	args []string,
 	action *schema.Action,
-) (remainingArgs []string, input string, id string, err error) {
+) (remainingArgs []string, input []string, id string, err error) {
 	remainingArgs = args
-	re := regexp.MustCompile(`.*/:id(/.*)?$`)
-	match := re.FindString(action.Path)
 	argCount := 0
-	if len(match) != 0 {
+	takesID := action.TakesID()
+	if takesID {
 		argCount++
 	}
 	if action.InputSchema != nil {
-		argCount++
+		if (len(args)-argCount)%2 == 0 {
+			var parameters []string
+			parameters, err = action.GetInputParameterNames()
+			if err != nil {
+				argCount++
+			} else {
+				argCount += 2 * len(parameters)
+			}
+		} else {
+			argCount++
+		}
 	}
 	if len(args) < argCount {
 		err = fmt.Errorf("Wrong number of arguments")
 		return
-	} else if (len(args)-argCount)%2 != 0 {
-		err = fmt.Errorf("Parameters should be in [--param-name value]... format")
+	}
+	if err != nil {
 		return
 	}
-	if len(match) != 0 {
+	if takesID {
 		id = remainingArgs[len(remainingArgs)-1]
 		remainingArgs = remainingArgs[:len(remainingArgs)-1]
+		argCount--
 	}
 	if action.InputSchema != nil {
-		input = remainingArgs[len(remainingArgs)-1]
-		remainingArgs = remainingArgs[:len(remainingArgs)-1]
+		input = make([]string, argCount)
+		length := len(remainingArgs)
+		for i := 0; i < argCount; i++ {
+			input[i] = remainingArgs[length-argCount+i]
+		}
+		remainingArgs = remainingArgs[:length-argCount]
 	}
 	return
 }

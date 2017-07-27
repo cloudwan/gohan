@@ -652,3 +652,13 @@ func (schema *Schema) GetLockingPolicy(event string) LockPolicy {
 		panic(fmt.Sprintf("Unknown locking policy '%s' for event %s in schema %s", policy, event, schema.ID))
 	}
 }
+
+// GetActionFromCommand gets action with given id
+func (schema *Schema) GetActionFromCommand(command string) *Action {
+	for _, action := range schema.Actions {
+		if action.ID == command {
+			return &action
+		}
+	}
+	return nil
+}
