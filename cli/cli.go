@@ -417,6 +417,7 @@ func getMigrateSubcommandWithPostMigrateEvent(subcmd, usage string) cli.Command 
 		ConfigFileFlag                = "config-file"
 		EmitPostMigrationEventFlag    = "emit-post-migration-event"
 		PostMigrationEvent            = "post-migration"
+		SyncEtcdEventFlag             = "sync-etcd-event"
 	)
 	return cli.Command{
 		Name:  subcmd,
@@ -425,6 +426,7 @@ func getMigrateSubcommandWithPostMigrateEvent(subcmd, usage string) cli.Command 
 			cli.StringFlag{Name: ConfigFileFlag, Value: defaultConfigFile, Usage: "Server config File"},
 			cli.BoolFlag{Name: EmitPostMigrationEventFlag, Usage: "Enable if post-migration event should be emited to modified schema extensions"},
 			cli.DurationFlag{Name: PostMigrationEventTimeoutFlag, Value: time.Second * 30, Usage: "Maximum duration of post-migration event"},
+			cli.BoolFlag{Name: SyncEtcdEventFlag, Usage: "Enable if ETCD events should be synchronized after migration"},
 		},
 		Action: func(context *cli.Context) {
 			configFile := context.String(ConfigFileFlag)
@@ -507,6 +509,17 @@ func getMigrateSubcommandWithPostMigrateEvent(subcmd, usage string) cli.Command 
 				if err != nil {
 					log.Fatalf("Failed to handle event post-migration, err: %s", err)
 				}
+			}
+
+			etcdEvent := context.Bool(SyncEtcdEventFlag)
+			if !etcdEvent {
+				return
+			}
+
+			syncWriter := server.NewSyncWriter(sync, dbConn)
+			_, err = syncWriter.Sync()
+			if err != nil {
+				log.Fatalf("Failed to synchronize post-migration events, err: %s", err)
 			}
 		},
 	}
