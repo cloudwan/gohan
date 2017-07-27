@@ -19,10 +19,21 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"net"
+	"net/http"
+	"net/http/pprof"
+	"os"
+	"os/signal"
+	"path"
+	"path/filepath"
+	"regexp"
+	"strings"
+	"syscall"
+	"time"
+
 	"github.com/braintree/manners"
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/migration"
-
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/extension"
@@ -38,17 +49,6 @@ import (
 	"github.com/go-martini/martini"
 	"github.com/lestrrat/go-server-starter/listener"
 	"github.com/martini-contrib/staticbin"
-	"net"
-	"net/http"
-	"net/http/pprof"
-	"os"
-	"os/signal"
-	"path"
-	"path/filepath"
-	"regexp"
-	"strings"
-	"syscall"
-	"time"
 )
 
 type tlsConfig struct {
@@ -511,7 +511,7 @@ func RunServer(configFile string) {
 			}
 			extensions[event] = env
 		}
-		syncWatcher := NewSyncWatcher(server.sync, server.queue, keys, events, extensions)
+		syncWatcher := NewSyncWatcher(server.sync, keys, events, extensions)
 		go syncWatcher.Run(server.masterCtx)
 
 	}

@@ -17,9 +17,10 @@ package otto
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/cloudwan/gohan/sync"
 	"github.com/xyproto/otto"
-	"time"
 )
 
 func convertSyncEvent(event *sync.Event) map[string]interface{} {
@@ -73,26 +74,26 @@ func init() {
 					return otto.NullValue()
 				}
 
-				done := make(chan struct{})
+				errCh := make(chan error)
+				defer close(errCh)
 				go func() {
 					node, err = env.Sync.Fetch(path)
-					close(done)
+					errCh <- err
 				}()
 
 				select {
 				case interrupt := <-call.Otto.Interrupt:
 					log.Debug("Received otto interrupt in gohan_sync_fetch")
 					interrupt()
-				case <-done:
-				}
+				case err = <-errCh:
+					if err != nil {
+						ThrowOttoException(&call, "Failed to fetch sync: "+err.Error())
+						return otto.NullValue()
+					}
 
-				if err != nil {
-					ThrowOttoException(&call, "Failed to fetch sync: "+err.Error())
-					return otto.NullValue()
-				}
-
-				if value, err = vm.ToValue(convertSyncNode(node)); err == nil {
-					return value
+					if value, err = vm.ToValue(convertSyncNode(node)); err == nil {
+						return value
+					}
 				}
 
 				return otto.NullValue()
@@ -117,22 +118,58 @@ func init() {
 					return otto.NullValue()
 				}
 
-				done := make(chan struct{})
+				errCh := make(chan error)
+				defer close(errCh)
 				go func() {
 					err = env.Sync.Delete(path, prefix)
-					close(done)
+					errCh <- err
 				}()
 
 				select {
 				case interrupt := <-call.Otto.Interrupt:
 					log.Debug("Received otto interrupt in gohan_sync_delete")
 					interrupt()
-				case <-done:
+				case err = <-errCh:
+					if err != nil {
+						ThrowOttoException(&call, "Failed to delete sync: "+err.Error())
+						return otto.NullValue()
+					}
 				}
 
-				if err != nil {
-					ThrowOttoException(&call, "Failed to delete sync: "+err.Error())
+				return otto.NullValue()
+			},
+			"gohan_sync_update": func(call otto.FunctionCall) otto.Value {
+				var path string
+				var value string
+				var err error
+
+				VerifyCallArguments(&call, "gohan_sync_update", 2)
+
+				if path, err = GetString(call.Argument(0)); err != nil {
+					ThrowOttoException(&call, "Invalid type of first argument: expected a string")
 					return otto.NullValue()
+				}
+				if value, err = GetString(call.Argument(1)); err != nil {
+					ThrowOttoException(&call, "Invalid type of second argument: expected a string")
+					return otto.NullValue()
+				}
+
+				errCh := make(chan error)
+				defer close(errCh)
+				go func() {
+					err = env.Sync.Update(path, value)
+					errCh <- err
+				}()
+
+				select {
+				case interrupt := <-call.Otto.Interrupt:
+					log.Debug("Received otto interrupt in gohan_sync_update")
+					interrupt()
+				case err = <-errCh:
+					if err != nil {
+						ThrowOttoException(&call, "Failed to update sync: "+err.Error())
+						return otto.NullValue()
+					}
 				}
 
 				return otto.NullValue()
