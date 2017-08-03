@@ -1,4 +1,0 @@
-# list of etcd backend servers
-sync: etcdv3
-etcd:
-    - "http://127.0.0.1:2379"
