@@ -49,7 +49,10 @@ import (
 
 var log = l.NewLogger()
 
-const defaultConfigFile = "gohan.yaml"
+const (
+	defaultConfigFile  = "gohan.yaml"
+	syncMigrationsPath = "/gohan/cluster/migrations"
+)
 
 //Run execute main command
 func Run(name, usage, version string) {
@@ -394,6 +397,33 @@ documentation for detail information about writing tests.`,
 	}
 }
 
+func migrationSubcommandWithLock(action func(*cli.Context)) func(*cli.Context) {
+	return func(context *cli.Context) {
+		configFile := context.String("config-file")
+		if migration.LoadConfig(configFile) != nil {
+			return
+		}
+
+		config := util.GetConfig()
+		sync, err := sync_util.CreateFromConfig(config)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if sync == nil {
+			log.Fatal("sync is nil")
+		}
+
+		_, err = sync.Lock(syncMigrationsPath, true)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer sync.Unlock(syncMigrationsPath)
+
+		action(context)
+	}
+}
+
 func getMigrateSubcommand(subcmd, usage string) cli.Command {
 	return cli.Command{
 		Name:  subcmd,
@@ -401,16 +431,11 @@ func getMigrateSubcommand(subcmd, usage string) cli.Command {
 		Flags: []cli.Flag{
 			cli.StringFlag{Name: "config-file", Value: defaultConfigFile, Usage: "Server config File"},
 		},
-		Action: func(context *cli.Context) {
-			configFile := context.String("config-file")
-			if migration.LoadConfig(configFile) != nil {
-				return
-			}
-
+		Action: migrationSubcommandWithLock(func(context *cli.Context) {
 			if migration.Run(subcmd, context.Args()) != nil {
 				os.Exit(1)
 			}
-		},
+		}),
 	}
 }
 
@@ -431,11 +456,7 @@ func getMigrateSubcommandWithPostMigrateEvent(subcmd, usage string) cli.Command 
 			cli.DurationFlag{Name: PostMigrationEventTimeoutFlag, Value: time.Second * 30, Usage: "Maximum duration of post-migration event"},
 			cli.BoolFlag{Name: SyncEtcdEventFlag, Usage: "Enable if ETCD events should be synchronized after migration"},
 		},
-		Action: func(context *cli.Context) {
-			configFile := context.String(ConfigFileFlag)
-			if migration.LoadConfig(configFile) != nil {
-				return
-			}
+		Action: migrationSubcommandWithLock(func(context *cli.Context) {
 			config := util.GetConfig()
 
 			if migration.Run(subcmd, context.Args()) != nil {
@@ -513,7 +534,6 @@ func getMigrateSubcommandWithPostMigrateEvent(subcmd, usage string) cli.Command 
 					log.Fatalf("Failed to handle event post-migration, err: %s", err)
 				}
 			}
-
 			etcdEvent := context.Bool(SyncEtcdEventFlag)
 			if !etcdEvent {
 				return
@@ -524,7 +544,7 @@ func getMigrateSubcommandWithPostMigrateEvent(subcmd, usage string) cli.Command 
 			if err != nil {
 				log.Fatalf("Failed to synchronize post-migration events, err: %s", err)
 			}
-		},
+		}),
 	}
 
 }
