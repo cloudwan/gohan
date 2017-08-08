@@ -25,14 +25,18 @@ import (
 	"context"
 
 	"github.com/cloudwan/gohan/schema"
+	"sync"
 )
 
-var transactionCommited chan int
+var (
+	transactionCommited     chan int
+	transactionCommitedOnce sync.Once
+)
 
 func transactionCommitInformer() chan int {
-	if transactionCommited == nil {
+	transactionCommitedOnce.Do(func() {
 		transactionCommited = make(chan int, 1)
-	}
+	})
 	return transactionCommited
 }
 
