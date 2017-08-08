@@ -172,6 +172,7 @@ func doTemplate(c *cli.Context) {
 	}
 	pwd, _ := os.Getwd()
 	os.Chdir(path.Dir(configFile))
+	defer os.Chdir(pwd)
 	schemaFiles := config.GetStringList("schemas", nil)
 	if schemaFiles == nil {
 		util.ExitFatal("No schema specified in configuraion")
@@ -198,29 +199,60 @@ func doTemplate(c *cli.Context) {
 	title := c.String("title")
 	version := c.String("version")
 	description := c.String("description")
+	outputPath := c.String("output-path")
 	schemasWithPolicy := filterSchemasForPolicy(policy, policies, schemas)
 	if c.IsSet("split-by-resource-group") {
-		saveAllResources(schemasWithPolicy, tpl, version, description)
-		return
+		applyTemplateForEachResourceGroup(schemasWithPolicy, tpl, version, description, outputPath)
+	} else if c.IsSet("split-by-resource") {
+		applyTemplateForEachResource(schemasWithPolicy, tpl, outputPath)
+	} else {
+		applyTemplateForAll(schemasWithPolicy, tpl, title, version, description, outputPath)
 	}
-	output, err := tpl.Execute(pongo2.Context{"schemas": schemasWithPolicy, "title": title, "version": version, "description": description})
+}
+
+func applyTemplateForAll(schemas []*SchemaWithPolicy, tpl *pongo2.Template, title, version, description, outputPath string) {
+	output, err := tpl.Execute(pongo2.Context{"schemas": schemas, "title": title, "version": version, "description": description})
 	if err != nil {
 		util.ExitFatal(err)
 		return
 	}
-	os.Chdir(pwd)
-	fmt.Println(output)
-}
-
-func saveAllResources(schemas []*SchemaWithPolicy, tpl *pongo2.Template, version, description string) {
-	for _, resource := range getAllResourcesFromSchemas(schemas) {
-		resourceSchemas := filerSchemasByResource(resource, schemas)
-		output, _ := tpl.Execute(pongo2.Context{"schemas": resourceSchemas, "title": resource, "version": version, "description": description})
-		ioutil.WriteFile(resource+".json", []byte(output), 0644)
+	if outputPath == "" {
+		fmt.Println(output)
+	} else {
+		ioutil.WriteFile(outputPath, []byte(output), 0644)
 	}
 }
 
-func getAllResourcesFromSchemas(schemas []*SchemaWithPolicy) []string {
+func applyTemplateForEachResourceGroup(schemas []*SchemaWithPolicy, tpl *pongo2.Template, version, description, outputPath string) {
+	for _, resourceGroup := range getAllResourceGroupsFromSchemas(schemas) {
+		resourceSchemas := filerSchemasByResourceGroup(resourceGroup, schemas)
+		output, err := tpl.Execute(pongo2.Context{"schemas": resourceSchemas, "title": resourceGroup, "version": version, "description": description})
+		if err != nil {
+			util.ExitFatal(err)
+			return
+		}
+		outputPath = strings.Replace(outputPath, "__resource__", resourceGroup, 1)
+		ioutil.WriteFile(outputPath, []byte(output), 0644)
+	}
+}
+
+func applyTemplateForEachResource(schemas []*SchemaWithPolicy, tpl *pongo2.Template, outputPath string) {
+	for _, schemaWithPolicy := range schemas {
+		schema := schemaWithPolicy.Schema
+		if schema.Metadata["type"] == "metaschema" || schema.Type == "abstract" {
+			continue
+		}
+		output, err := tpl.Execute(pongo2.Context{"schema": schemaWithPolicy})
+		if err != nil {
+			util.ExitFatal(err)
+			return
+		}
+		outputPathForResource := strings.Replace(outputPath, "__resource__", schema.ID, 1)
+		ioutil.WriteFile(outputPathForResource, []byte(output), 0644)
+	}
+}
+
+func getAllResourceGroupsFromSchemas(schemas []*SchemaWithPolicy) []string {
 	resourcesSet := make(map[string]bool)
 	for _, schema := range schemas {
 		metadata, _ := schema.Schema.Metadata["resource_group"].(string)
@@ -233,7 +265,7 @@ func getAllResourcesFromSchemas(schemas []*SchemaWithPolicy) []string {
 	return resources
 }
 
-func filerSchemasByResource(resource string, schemas []*SchemaWithPolicy) []*SchemaWithPolicy {
+func filerSchemasByResourceGroup(resource string, schemas []*SchemaWithPolicy) []*SchemaWithPolicy {
 	var filteredSchemas []*SchemaWithPolicy
 	for _, schema := range schemas {
 		if schema.Schema.Metadata["resource_group"] == resource {
@@ -339,7 +371,9 @@ func getTemplateCommand() cli.Command {
 		Flags: []cli.Flag{
 			cli.StringFlag{Name: "config-file", Value: "gohan.yaml", Usage: "Server config File"},
 			cli.StringFlag{Name: "template, t", Value: "", Usage: "Template File"},
-			cli.StringFlag{Name: "split-by-resource-group", Value: "", Usage: "Group by resource"},
+			cli.StringFlag{Name: "split-by-resource-group", Value: "", Usage: "Split output file for each resource groups"},
+			cli.StringFlag{Name: "split-by-resource", Value: "", Usage: "Split output file for each resources"},
+			cli.StringFlag{Name: "output-path", Value: "__resource__.json", Usage: "Output Path. You can use __resource__ as a resource name"},
 			cli.StringFlag{Name: "policy", Value: "", Usage: "Policy"},
 		},
 		Action: doTemplate,

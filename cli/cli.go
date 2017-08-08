@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"runtime"
@@ -599,6 +598,9 @@ func getCreateInitialMigrationCommand() cli.Command {
 				if s.IsAbstract() {
 					continue
 				}
+				if s.Metadata["type"] == "metaschema" {
+					continue
+				}
 				createSQL, indices := sqlDB.GenTableDef(s, cascade)
 				sqlString.WriteString(createSQL + "\n")
 				for _, indexSQL := range indices {
@@ -610,6 +612,9 @@ func getCreateInitialMigrationCommand() cli.Command {
 			sqlString.WriteString("-- SQL section 'Down' is executed when this migration is rolled back\n")
 			for _, s := range schemas {
 				if s.IsAbstract() {
+					continue
+				}
+				if s.Metadata["type"] == "metaschema" {
 					continue
 				}
 				sqlString.WriteString(fmt.Sprintf("drop table %s;", s.GetDbTableName()))
@@ -758,101 +763,5 @@ func getGraceServerCommand() cli.Command {
 			}
 			s.Run()
 		},
-	}
-}
-
-func getGenerateCommand() cli.Command {
-	return cli.Command{
-		Name:      "generate",
-		ShortName: "gen",
-		Usage:     "Generate ServerSide Code",
-		Flags: []cli.Flag{
-			cli.StringFlag{Name: "template, t", Value: "embed://etc/templates/server.tmpl", Usage: "Application template path"},
-			cli.StringFlag{Name: "config-file, c", Value: "./gohan.yaml", Usage: "Gohan config file"},
-			cli.StringFlag{Name: "output, o", Value: ".", Usage: "Dir of output"},
-			cli.StringFlag{Name: "package, p", Value: "gen", Usage: "Package Name"},
-		},
-		Action: gohanGenerate,
-	}
-}
-
-func gohanGenerate(c *cli.Context) {
-	path := c.String("output")
-	template := c.String("template")
-	configFile := c.String("config-file")
-	packageName := c.String("package")
-	codeDir := filepath.Join(path, packageName)
-	etcDir := filepath.Join(path, "etc")
-	dbDir := filepath.Join(etcDir, "db")
-	migrationDir := filepath.Join(dbDir, "migrations")
-	schemaPath := filepath.Join(etcDir, "schema.json")
-	manager := schema.GetManager()
-	config := util.GetConfig()
-	config.ReadConfig(configFile)
-	schemaFiles := config.GetStringList("schemas", nil)
-	if schemaFiles == nil {
-		log.Fatal("No schema specified in configuraion")
-		return
-	}
-	if err := manager.LoadSchemasFromFiles(schemaFiles...); err != nil {
-		log.Fatal(err)
-		return
-	}
-	// Genrating schema json
-	log.Info("Genrating: schema json")
-
-	list := []interface{}{}
-
-	for _, schema := range manager.OrderedSchemas() {
-		if schema.IsAbstract() {
-			continue
-		}
-		if schema.Metadata["type"] == "metaschema" {
-			continue
-		}
-		s := schema.JSON()
-		s["url"] = schema.URL
-		list = append(list, s)
-	}
-	os.Mkdir(etcDir, 0777)
-	os.Mkdir(dbDir, 0777)
-	os.Mkdir(migrationDir, 0777)
-	execCommand(fmt.Sprintf("rm %s/*_init_schema.sql", migrationDir))
-	execCommand(
-		fmt.Sprintf(
-			"gohan migrate init --config-file %s", configFile))
-	execCommand(
-		fmt.Sprintf(
-			"gohan migrate up --config-file %s", configFile))
-	// Running sqlboiler
-	execCommand("sqlboiler mysql")
-
-	util.SaveFile(schemaPath, map[string]interface{}{
-		"schemas": list,
-	})
-	execCommand(
-		fmt.Sprintf(
-			"go-bindata -pkg %s -o %s/go-bindata.go %s", packageName, codeDir, schemaPath))
-
-	//Generating application code
-	log.Info("Generating: application code")
-	execCommand(
-		fmt.Sprintf(
-			"gohan template --config-file %s --template %s | grep -v '^\\s*$' > %s/base_controller.go", configFile, template, packageName))
-	execCommand(
-		fmt.Sprintf(
-			"goimports -w %s/base_controller.go", codeDir))
-
-}
-
-func execCommand(command string) {
-	output, err := exec.Command("sh", "-c", command).Output()
-	log.Info("Running: %s", command)
-	outputStr := string(output[:])
-	if outputStr != "" {
-		log.Info("Output: %s", outputStr)
-	}
-	if err != nil {
-		log.Error("Error: %s", err)
 	}
 }
