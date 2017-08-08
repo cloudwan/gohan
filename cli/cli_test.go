@@ -22,49 +22,101 @@ import (
 	"github.com/codegangsta/cli"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"os"
 	"sync"
 	"time"
 )
 
-func getContextWithConfig(configFile string) *cli.Context {
+const useEtcdEnv = "USE_ETCD_DURING_MIGRATIONS"
+
+func getContextWithConfig(configFile string, useEtcd bool) *cli.Context {
+	if useEtcd {
+		os.Setenv(useEtcdEnv, "true")
+	}
+
 	configFlag := cli.StringFlag{Name: "config-file", Value: configFile}
+	useEtcdFlag := cli.BoolFlag{Name: lockWithEtcd, EnvVar: useEtcdEnv}
+
 	set := flag.NewFlagSet("", flag.ContinueOnError)
 	configFlag.Apply(set)
+	useEtcdFlag.Apply(set)
+
 	return cli.NewContext(nil, set, &cli.Context{})
 }
 
 var _ = Describe("CLI", func() {
+	const (
+		configPath = "../tests/test_etcd.yaml"
+		etcdServer = "http://127.0.0.1:2379"
+	)
+
+	var (
+		waitForThread sync.WaitGroup
+		waitForLocal  sync.WaitGroup
+		etcdSync      *etcdv3.Sync
+	)
+
+	BeforeEach(func() {
+		waitForThread = sync.WaitGroup{}
+		waitForLocal = sync.WaitGroup{}
+
+		waitForThread.Add(1)
+		waitForLocal.Add(1)
+
+		var err error
+		etcdSync, err = etcdv3.NewSync([]string{etcdServer}, time.Second)
+		Expect(err).ToNot(HaveOccurred())
+	})
+
+	AfterEach(func() {
+		os.Unsetenv(useEtcdEnv)
+	})
+
 	Describe("Post migration subcommand wrapper tests", func() {
-		It("Should lock - migrationsSubCommand wrapper", func() {
-			const (
-				configPath = "../tests/test_etcd.yaml"
-				etcdServer = "http://127.0.0.1:2379"
-			)
-
-			waitForLock := sync.WaitGroup{}
-			waitForFail := sync.WaitGroup{}
-
+		It("Should lock when the flag is set - migrationsSubCommand wrapper", func() {
 			lock := func(context *cli.Context) {
-				waitForLock.Done()
-				waitForFail.Wait()
+				waitForThread.Done()
+				waitForLocal.Wait()
 			}
 
-			etcdSync, err := etcdv3.NewSync([]string{etcdServer}, time.Second)
-			Expect(err).ToNot(HaveOccurred())
-
-			wrapped := migrationSubcommandWithLock(lock)
-			context := getContextWithConfig(configPath)
+			context := getContextWithConfig(configPath, true)
 			Expect(context.String("config-file")).To(Equal(configPath))
 
-			waitForFail.Add(1)
-			waitForLock.Add(1)
-			go wrapped(context)
-			waitForLock.Wait()
-			_, err = etcdSync.Lock(syncMigrationsPath, false)
-			waitForFail.Done()
+			wrapped := func() {
+				migrationSubcommandWithLock(lock)(context)
+				waitForThread.Done()
+			}
+
+			go wrapped()
+			waitForThread.Wait()
+			waitForThread.Add(1)
+			_, err := etcdSync.Lock(syncMigrationsPath, false)
+			waitForLocal.Done()
+			waitForThread.Wait()
 
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(MatchError(fmt.Sprintf("failed to lock path %s", syncMigrationsPath)))
+		})
+
+		It("Should not lock when the flag is unset - migrationsSubCommand wrapper", func() {
+			lock := func() {
+				etcdSync.Lock(syncMigrationsPath, true)
+				waitForThread.Done()
+				waitForLocal.Wait()
+				etcdSync.Unlock(syncMigrationsPath)
+				waitForThread.Done()
+			}
+
+			wrapped := migrationSubcommandWithLock(func(context *cli.Context) {})
+			context := getContextWithConfig(configPath, false)
+			Expect(context.String("config-file")).To(Equal(configPath))
+
+			go lock()
+			waitForThread.Wait()
+			waitForThread.Add(1)
+			wrapped(context)
+			waitForLocal.Done()
+			waitForThread.Wait()
 		})
 	})
 })

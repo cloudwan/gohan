@@ -52,6 +52,7 @@ var log = l.NewLogger()
 const (
 	defaultConfigFile  = "gohan.yaml"
 	syncMigrationsPath = "/gohan/cluster/migrations"
+	lockWithEtcd       = "lock-with-etcd"
 )
 
 //Run execute main command
@@ -404,6 +405,12 @@ func migrationSubcommandWithLock(action func(*cli.Context)) func(*cli.Context) {
 			return
 		}
 
+		useEtcd := context.Bool(lockWithEtcd)
+		if !useEtcd {
+			action(context)
+			return
+		}
+
 		config := util.GetConfig()
 		sync, err := sync_util.CreateFromConfig(config)
 		if err != nil {
@@ -430,6 +437,7 @@ func getMigrateSubcommand(subcmd, usage string) cli.Command {
 		Usage: usage,
 		Flags: []cli.Flag{
 			cli.StringFlag{Name: "config-file", Value: defaultConfigFile, Usage: "Server config File"},
+			cli.BoolFlag{Name: lockWithEtcd, Usage: "Enable if ETCD should be used to synchronize migrations"},
 		},
 		Action: migrationSubcommandWithLock(func(context *cli.Context) {
 			if migration.Run(subcmd, context.Args()) != nil {
@@ -455,6 +463,7 @@ func getMigrateSubcommandWithPostMigrateEvent(subcmd, usage string) cli.Command 
 			cli.BoolFlag{Name: EmitPostMigrationEventFlag, Usage: "Enable if post-migration event should be emitted to modified schema extensions"},
 			cli.DurationFlag{Name: PostMigrationEventTimeoutFlag, Value: time.Second * 30, Usage: "Maximum duration of post-migration event"},
 			cli.BoolFlag{Name: SyncEtcdEventFlag, Usage: "Enable if ETCD events should be synchronized after migration"},
+			cli.BoolFlag{Name: lockWithEtcd, Usage: "Enable if ETCD should be used to synchronize migrations"},
 		},
 		Action: migrationSubcommandWithLock(func(context *cli.Context) {
 			config := util.GetConfig()
