@@ -160,7 +160,7 @@ func (watcher *StateWatcher) StateUpdate(event *gohan_sync.Event) error {
 	resourceID := curSchema.GetResourceIDFromPath(schemaPath)
 	log.Info("Started StateUpdate for %s %s %v", event.Action, event.Key, event.Data)
 
-	return db.WithinTx(watcher.db, context.Background(), &transaction.TxOptions{IsolationLevel: transaction.GetIsolationLevel(curSchema, StateUpdateEventName)},
+	return db.WithinTx(context.Background(), watcher.db, &transaction.TxOptions{IsolationLevel: transaction.GetIsolationLevel(curSchema, StateUpdateEventName)},
 		func(tx transaction.Transaction) error {
 			curResource, err := tx.Fetch(curSchema, transaction.IDFilter(resourceID))
 			if err != nil {
@@ -241,7 +241,7 @@ func (watcher *StateWatcher) MonitoringUpdate(event *gohan_sync.Event) error {
 	resourceID := curSchema.GetResourceIDFromPath(schemaPath)
 	log.Info("Started MonitoringUpdate for %s %s %v", event.Action, event.Key, event.Data)
 
-	return db.WithinTx(watcher.db, context.Background(), &transaction.TxOptions{IsolationLevel: transaction.GetIsolationLevel(curSchema, MonitoringUpdateEventName)},
+	return db.WithinTx(context.Background(), watcher.db, &transaction.TxOptions{IsolationLevel: transaction.GetIsolationLevel(curSchema, MonitoringUpdateEventName)},
 		func(tx transaction.Transaction) error {
 			curResource, err := tx.Fetch(curSchema, transaction.IDFilter(resourceID))
 			if err != nil {

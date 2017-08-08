@@ -93,7 +93,7 @@ func resourceTransactionWithContext(ctx middleware.Context, dataStore db.DB, lev
 		originalCtx[k] = v
 	}
 
-	return db.WithinTx(dataStore, context.Background(), &transaction.TxOptions{IsolationLevel: level}, func(tx transaction.Transaction) error {
+	return db.WithinTx(context.Background(), dataStore, &transaction.TxOptions{IsolationLevel: level}, func(tx transaction.Transaction) error {
 		for k := range ctx {
 			delete(ctx, k)
 		}

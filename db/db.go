@@ -114,7 +114,7 @@ func Within(db DB, fn func(transaction.Transaction) error) error {
 }
 
 // WithinTx executes a scoped transaction with options on a database
-func WithinTx(db DB, ctx context.Context, options *transaction.TxOptions, fn func(transaction.Transaction) error) error {
+func WithinTx(ctx context.Context, db DB, options *transaction.TxOptions, fn func(transaction.Transaction) error) error {
 	return withinTxImpl(db,
 		func(db DB) (transaction.Transaction, error) {
 			return db.BeginTx(ctx, options)

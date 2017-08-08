@@ -177,7 +177,10 @@ func DecodeYAMLLibObject(yamlData interface{}) interface{} {
 //GetContent loads file from remote or local
 func GetContent(url string) ([]byte, error) {
 	if strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://") {
-		resp, _ := http.Get(url)
+		resp, err := http.Get(url)
+		if err != nil {
+			return nil, err
+		}
 		defer resp.Body.Close()
 		content, err := ioutil.ReadAll(resp.Body)
 		return content, err
