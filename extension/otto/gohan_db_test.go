@@ -66,8 +66,8 @@ var _ = Describe("GohanDb", func() {
 		mockCtrl = gomock.NewController(GinkgoT())
 
 		fakeResources = []map[string]interface{}{
-			map[string]interface{}{"tenant_id": "t0", "test_string": "str0", "test_bool": false},
-			map[string]interface{}{"tenant_id": "t1", "test_string": "str1", "test_bool": true},
+			{"tenant_id": "t0", "test_string": "str0", "test_bool": false},
+			{"tenant_id": "t1", "test_string": "str1", "test_bool": true},
 		}
 
 		r0, err = schema.NewResource(s, fakeResources[0])
@@ -231,7 +231,7 @@ var _ = Describe("GohanDb", func() {
 					Expect(context["resp"]).To(
 						Equal(
 							[]map[string]interface{}{
-								map[string]interface{}{"tenant_id": "t1", "test_string": "str1", "test_bool": true},
+								{"tenant_id": "t1", "test_string": "str1", "test_bool": true},
 							},
 						),
 					)

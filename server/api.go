@@ -461,7 +461,7 @@ func mapTopLevelNamespaceRoute(route martini.Router, namespace *schema.Namespace
 						Status: "SUPPORTED",
 						ID:     childNamespace.Prefix,
 						Links: []schema.Link{
-							schema.Link{
+							{
 								Href: childNamespace.GetFullPrefix() + "/",
 								Rel:  "self",
 							},
@@ -490,7 +490,7 @@ func mapChildNamespaceRoute(route martini.Router, namespace *schema.Namespace) {
 				if s.NamespaceID == namespace.ID {
 					resources = append(resources, schema.NamespaceResource{
 						Links: []schema.Link{
-							schema.Link{
+							{
 								Href: s.GetPluralURL(),
 								Rel:  "self",
 							},

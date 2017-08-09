@@ -427,7 +427,7 @@ var _ = Describe("CLI functions", func() {
 			It("Should show error - Could not retrieve schemas - could not parse schema", func() {
 				wrongSchemas := map[string]interface{}{
 					"schemas": []map[string]interface{}{
-						map[string]interface{}{
+						{
 							"wrong": "key",
 						},
 					},

@@ -1402,7 +1402,6 @@ var _ = Describe("Resource manager", func() {
 
 	Describe("Running an action on a resource", func() {
 		var (
-			adminResourceData      map[string]interface{}
 			fakeIdentity           middleware.IdentityService
 			fakeAction             schema.Action
 			fakeActionWithoutInput schema.Action
@@ -1411,14 +1410,6 @@ var _ = Describe("Resource manager", func() {
 		BeforeEach(func() {
 			schemaID = "test"
 			action = "create"
-			adminResourceData = map[string]interface{}{
-				"id":           resourceID1,
-				"tenant_id":    adminTenantID,
-				"test_string":  "Steloj estas en ordo.",
-				"test_number":  0.5,
-				"test_integer": 1,
-				"test_bool":    false,
-			}
 			fakeIdentity = &middleware.FakeIdentity{}
 			inputSchema := map[string]interface{}{
 				"type": "object",
@@ -1471,9 +1462,9 @@ var _ = Describe("Resource manager", func() {
 
 	Describe("Executing a sequence of operations", func() {
 		var (
-			adminResourceData, memberResourceData                                 map[string]interface{}
+			adminResourceData,
 			listContext, showContext, deleteContext, createContext, updateContext middleware.Context
-			fakeIdentity                                                          middleware.IdentityService
+			fakeIdentity middleware.IdentityService
 		)
 
 		BeforeEach(func() {
@@ -1483,14 +1474,6 @@ var _ = Describe("Resource manager", func() {
 				"id":           resourceID1,
 				"tenant_id":    adminTenantID,
 				"test_string":  "Steloj estas en ordo.",
-				"test_number":  0.5,
-				"test_integer": 1,
-				"test_bool":    false,
-			}
-			memberResourceData = map[string]interface{}{
-				"id":           resourceID2,
-				"tenant_id":    powerUserTenantID,
-				"test_string":  "Mi estas la pordo, mi estas la sxlosilo.",
 				"test_number":  0.5,
 				"test_integer": 1,
 				"test_bool":    false,
