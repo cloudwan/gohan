@@ -15,9 +15,12 @@
 
 package otto
 
+import "sync"
+
 // GlobalStore for values living longer that a single extension environment
 type GlobalStore struct {
 	objects map[string]map[string]interface{}
+	mtx     sync.Mutex
 }
 
 // NewGlobalStore ...
@@ -30,6 +33,9 @@ func NewGlobalStore() *GlobalStore {
 // Get a value registered for name,
 // or, if there is none, register an empty object.
 func (store *GlobalStore) Get(name string) map[string]interface{} {
+	store.mtx.Lock()
+	defer store.mtx.Unlock()
+
 	if result, ok := store.objects[name]; ok {
 		return result
 	}
