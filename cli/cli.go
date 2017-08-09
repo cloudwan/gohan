@@ -331,6 +331,10 @@ func getResyncCommand() cli.Command {
 			}
 
 			dbConn, err := db.CreateFromConfig(config)
+			if err != nil {
+				log.Fatalf("Failed to create db conn, err: %s", err)
+			}
+
 			sync, err := sync_util.CreateFromConfig(config)
 			if err != nil {
 				log.Fatalf("Failed to create sync, err: %s", err)
@@ -424,7 +428,7 @@ func getMigrateSubcommandWithPostMigrateEvent(subcmd, usage string) cli.Command 
 		Usage: usage,
 		Flags: []cli.Flag{
 			cli.StringFlag{Name: ConfigFileFlag, Value: defaultConfigFile, Usage: "Server config File"},
-			cli.BoolFlag{Name: EmitPostMigrationEventFlag, Usage: "Enable if post-migration event should be emited to modified schema extensions"},
+			cli.BoolFlag{Name: EmitPostMigrationEventFlag, Usage: "Enable if post-migration event should be emitted to modified schema extensions"},
 			cli.DurationFlag{Name: PostMigrationEventTimeoutFlag, Value: time.Second * 30, Usage: "Maximum duration of post-migration event"},
 			cli.BoolFlag{Name: SyncEtcdEventFlag, Usage: "Enable if ETCD events should be synchronized after migration"},
 		},
