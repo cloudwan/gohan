@@ -287,8 +287,8 @@ var _ = Describe("Otto extension manager", func() {
 			})
 		})
 
-		Context("When extension is running too long after default timelimit overriden", func() {
-			It("should be aborted in the middle of extension with overriden time limit", func() {
+		Context("When extension is running too long after default time limit overridden", func() {
+			It("should be aborted in the middle of extension with overridden time limit", func() {
 				timeoutExtension, err := schema.NewExtension(map[string]interface{}{
 					"id": "timeout_extension",
 					"code": `gohan_register_handler("test_event", function(context) {
@@ -324,7 +324,7 @@ var _ = Describe("Otto extension manager", func() {
 				Expect(timeDuration).Should(BeNumerically("<", time.Millisecond*200))
 			})
 
-			It("should not be aborted in the middle of extension with overriden time limit if the override is for a different event", func() {
+			It("should not be aborted in the middle of extension with overridden time limit if the override is for a different event", func() {
 				timeoutExtension, err := schema.NewExtension(map[string]interface{}{
 					"id": "timeout_extension",
 					"code": `gohan_register_handler("test_event", function(context) {
@@ -1866,6 +1866,7 @@ var _ = Describe("Otto extension manager", func() {
 					`,
 				"path": ".*",
 			})
+			Expect(err).ToNot(HaveOccurred())
 			extensions := []*schema.Extension{hookExtension, extension}
 			env := newEnvironment()
 			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "hook")).To(Succeed())
@@ -1981,6 +1982,7 @@ var _ = Describe("Otto extension manager", func() {
 			env.Sync.Update("/gohan_sync_delete_test", "{}")
 			Expect(env.HandleEvent("test_event", context)).To(Succeed())
 			node, err := env.Sync.Fetch("/gohan_sync_delete_test")
+			Expect(err).To(HaveOccurred())
 			Expect(node).To(BeNil())
 		})
 	})
@@ -2009,6 +2011,7 @@ var _ = Describe("Otto extension manager", func() {
 			env.Sync.Update("/gohan_sync_delete_test/child2", "bar")
 			Expect(env.HandleEvent("test_event", context)).To(Succeed())
 			node, err := env.Sync.Fetch("/gohan_sync_delete_test")
+			Expect(err).To(HaveOccurred())
 			Expect(node).To(BeNil())
 		})
 	})

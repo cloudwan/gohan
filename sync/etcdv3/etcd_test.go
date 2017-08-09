@@ -268,7 +268,7 @@ func TestWatchWithRevision(t *testing.T) {
 	}()
 
 	resp := <-responseChan
-	if resp.Key != path+"/new" || resp.Data["existing"].(bool) != false || resp.Revision != secondRevision{
+	if resp.Key != path+"/new" || resp.Data["existing"].(bool) != false || resp.Revision != secondRevision {
 		t.Fatalf("mismatch response: %+v, expecting /new, existing==false, revision==%d", resp, secondRevision)
 	}
 
@@ -279,7 +279,7 @@ func TestWatchWithRevision(t *testing.T) {
 	thirdRevision := putResponse.Header.Revision
 
 	resp = <-responseChan
-	if resp.Key != path+"/third" || resp.Data["existing"].(bool) != false || resp.Revision != thirdRevision{
+	if resp.Key != path+"/third" || resp.Data["existing"].(bool) != false || resp.Revision != thirdRevision {
 		t.Fatalf("mismatch response: %+v, expecting /third, existing==false, revision==%d", resp, thirdRevision)
 	}
 
