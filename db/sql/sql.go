@@ -812,7 +812,7 @@ func (tx *Transaction) executeSelect(sc *selectContext, sql string, args []inter
 }
 
 //List resources in the db
-func (tx *Transaction) List(s *schema.Schema, filter transaction.Filter, options *transaction.ListOptions, pg *pagination.Paginator) (list []*schema.Resource, total uint64, err error) {
+func (tx *Transaction) List(s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions, pg *pagination.Paginator) (list []*schema.Resource, total uint64, err error) {
 	sc := &selectContext{
 		schema:    s,
 		filter:    filter,
@@ -844,8 +844,8 @@ func shouldJoin(policy schema.LockPolicy) bool {
 	}
 }
 
-//LockList locks resources in the db
-func (tx *Transaction) LockList(s *schema.Schema, filter transaction.Filter, options *transaction.ListOptions, pg *pagination.Paginator, lockPolicy schema.LockPolicy) (list []*schema.Resource, total uint64, err error) {
+// LockList locks resources in the db
+func (tx *Transaction) LockList(s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions, pg *pagination.Paginator, lockPolicy schema.LockPolicy) (list []*schema.Resource, total uint64, err error) {
 	policyJoin := shouldJoin(lockPolicy)
 
 	sc := &selectContext{
@@ -966,8 +966,8 @@ func (tx *Transaction) count(s *schema.Schema, filter transaction.Filter) (res u
 }
 
 //Fetch resources by ID in the db
-func (tx *Transaction) Fetch(s *schema.Schema, filter transaction.Filter) (*schema.Resource, error) {
-	list, _, err := tx.List(s, filter, nil, nil)
+func (tx *Transaction) Fetch(s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions) (*schema.Resource, error) {
+	list, _, err := tx.List(s, filter, options, nil)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to fetch %s: %s", filter, err)
 	}
@@ -977,8 +977,8 @@ func (tx *Transaction) Fetch(s *schema.Schema, filter transaction.Filter) (*sche
 	return list[0], nil
 }
 
-//LockFetch locks and fetches a resource
-func (tx *Transaction) LockFetch(s *schema.Schema, filter transaction.Filter, lockPolicy schema.LockPolicy) (*schema.Resource, error) {
+// LockFetch fetches & locks a resource
+func (tx *Transaction) LockFetch(s *schema.Schema, filter transaction.Filter, lockPolicy schema.LockPolicy, options *transaction.ViewOptions) (*schema.Resource, error) {
 	list, _, err := tx.LockList(s, filter, nil, nil, lockPolicy)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to fetch and lock %s: %s", filter, err)

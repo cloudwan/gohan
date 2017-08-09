@@ -57,21 +57,21 @@ func (ft *FuzzyTransaction) Delete(s *schema.Schema, resourceID interface{}) err
 }
 
 // Fetch fetches a resource
-func (ft *FuzzyTransaction) Fetch(s *schema.Schema, filter Filter) (*schema.Resource, error) {
+func (ft *FuzzyTransaction) Fetch(s *schema.Schema, filter Filter, options *ViewOptions) (*schema.Resource, error) {
 	var outResource *schema.Resource
 	return outResource, ft.fuzzIt(func() error {
 		var err error
-		outResource, err = ft.Tx.Fetch(s, filter)
+		outResource, err = ft.Tx.Fetch(s, filter, options)
 		return err
 	})
 }
 
 // LockFetch locks and fetches a resource
-func (ft *FuzzyTransaction) LockFetch(s *schema.Schema, filter Filter, lockPolicy schema.LockPolicy) (*schema.Resource, error) {
+func (ft *FuzzyTransaction) LockFetch(s *schema.Schema, filter Filter, lockPolicy schema.LockPolicy, options *ViewOptions) (*schema.Resource, error) {
 	var outResource *schema.Resource
 	return outResource, ft.fuzzIt(func() error {
 		var err error
-		outResource, err = ft.Tx.LockFetch(s, filter, lockPolicy)
+		outResource, err = ft.Tx.LockFetch(s, filter, lockPolicy, options)
 		return err
 	})
 }
@@ -87,7 +87,7 @@ func (ft *FuzzyTransaction) StateFetch(s *schema.Schema, filter Filter) (Resourc
 }
 
 // List lists resources
-func (ft *FuzzyTransaction) List(s *schema.Schema, filter Filter, options *ListOptions, pagination *pagination.Paginator) ([]*schema.Resource, uint64, error) {
+func (ft *FuzzyTransaction) List(s *schema.Schema, filter Filter, options *ViewOptions, pagination *pagination.Paginator) ([]*schema.Resource, uint64, error) {
 	var outResources []*schema.Resource
 	var outCount uint64
 	return outResources, outCount, ft.fuzzIt(func() error {
@@ -98,7 +98,7 @@ func (ft *FuzzyTransaction) List(s *schema.Schema, filter Filter, options *ListO
 }
 
 // LockList locks and lists resources
-func (ft *FuzzyTransaction) LockList(s *schema.Schema, filter Filter, options *ListOptions, pagination *pagination.Paginator, lockPolicy schema.LockPolicy) ([]*schema.Resource, uint64, error) {
+func (ft *FuzzyTransaction) LockList(s *schema.Schema, filter Filter, options *ViewOptions, pagination *pagination.Paginator, lockPolicy schema.LockPolicy) ([]*schema.Resource, uint64, error) {
 	var outResources []*schema.Resource
 	var outCount uint64
 	return outResources, outCount, ft.fuzzIt(func() error {

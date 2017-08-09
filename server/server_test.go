@@ -122,6 +122,14 @@ var _ = Describe("Server package test", func() {
 				Expect(result).To(HaveKeyWithValue("network", util.MatchAsJSON(network)))
 			})
 
+			It("Should return 2 fields", func() {
+				requestURL := networkPluralURL + "?_fields=id&_fields=name"
+				result := testURL("GET", requestURL, adminTokenID, nil, http.StatusOK)
+				res := result.(map[string]interface{})
+				networks := res["networks"].([]interface{})
+				n0 := networks[0].(map[string]interface{})
+				Expect(len(n0)).To(Equal(2))
+			})
 			It("should get networks list", func() {
 				result = testURL("GET", networkPluralURL, adminTokenID, nil, http.StatusOK)
 				Expect(result).To(HaveKeyWithValue("networks", ConsistOf(util.MatchAsJSON(network))))
@@ -131,7 +139,12 @@ var _ = Describe("Server package test", func() {
 				result = testURL("GET", getNetworkSingularURL("red"), adminTokenID, nil, http.StatusOK)
 				Expect(result).To(HaveKeyWithValue("network", util.MatchAsJSON(network)))
 			})
-
+			It("should get particular network with filtered fields", func() {
+				result = testURL("GET", getNetworkSingularURL("red")+"?_fields=description&_fields=name&_fields=shared", adminTokenID, nil, http.StatusOK)
+				subresult := result.(map[string]interface{})
+				fields := subresult["network"].(map[string]interface{})
+				Expect(len(fields)).To(Equal(3))
+			})
 			It("should not get invalid network", func() {
 				testURL("GET", baseURL+"/v2.0/network/unknownID", adminTokenID, nil, http.StatusNotFound)
 			})
