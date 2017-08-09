@@ -146,12 +146,16 @@ var _ = Describe("Sync watcher test", func() {
 			// Therefore, sorting fetched results by key means the order of called sync update extensions
 			watchKey1a := "/watch/key/1/apple"
 			err := sync.Update(watchKey1a, "{}")
+			Expect(err).ToNot(HaveOccurred())
 			watchKey2a := "/watch/key/2/apple"
 			err = sync.Update(watchKey2a, "{}")
+			Expect(err).ToNot(HaveOccurred())
 			watchKey1b := "/watch/key/1/banana"
 			err = sync.Update(watchKey1b, "{}")
+			Expect(err).ToNot(HaveOccurred())
 			watchKey1c := "/watch/key/1/cherry"
 			err = sync.Update(watchKey1c, "{}")
+			Expect(err).ToNot(HaveOccurred())
 
 			time.Sleep(1 * time.Second)
 

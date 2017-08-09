@@ -130,7 +130,7 @@ var _ = Describe("Templates", func() {
 			})
 		})
 
-		Context("With schema containg 2 resources", func() {
+		Context("With schema containing 2 resources", func() {
 			It("should recognize correctly all of them", func() {
 
 				resources := getAllResourceGroupsFromSchemas(schemaWithPolicy)
