@@ -16,7 +16,7 @@ Common HTTP Status
 - Not Found: 404  Resource Not Found
 - Internal Server Error: 500  Server Side issue occurred.. Please contact administrator
 
-{% for schema in schemas %}{% if schema.Metadata.type != "metaschema" && schema.Type != "abstract" %}
+{% for schema in schemas %}{% set schema = schema.Schema %}{% if schema.Metadata.type != "metaschema" && schema.Type != "abstract" %}
 {{ schema.Title }}
 ============================
 

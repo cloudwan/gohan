@@ -103,7 +103,7 @@ var _ = Describe("Templates", func() {
 		Context("With resource set to a", func() {
 			It("should return only a schemas", func() {
 
-				filteredSchemas := filerSchemasByResource("a", schemaWithPolicy)
+				filteredSchemas := filerSchemasByResourceGroup("a", schemaWithPolicy)
 
 				Expect(filteredSchemas).To(HaveLen(2))
 				Expect(filteredSchemas[0].Schema.URL).To(Equal("/v2.0/nets"))
@@ -114,7 +114,7 @@ var _ = Describe("Templates", func() {
 		Context("With resource set to b", func() {
 			It("should return only b schemas", func() {
 
-				filteredSchemas := filerSchemasByResource("b", schemaWithPolicy)
+				filteredSchemas := filerSchemasByResourceGroup("b", schemaWithPolicy)
 
 				Expect(filteredSchemas).To(HaveLen(1))
 				Expect(filteredSchemas[0].Schema.URL).To(Equal("/v2.0/network/:network/subnets"))
@@ -124,7 +124,7 @@ var _ = Describe("Templates", func() {
 		Context("With resource set to c", func() {
 			It("should not return any schemas", func() {
 
-				filteredSchemas := filerSchemasByResource("c", schemaWithPolicy)
+				filteredSchemas := filerSchemasByResourceGroup("c", schemaWithPolicy)
 
 				Expect(filteredSchemas).To(BeEmpty())
 			})
@@ -133,7 +133,7 @@ var _ = Describe("Templates", func() {
 		Context("With schema containing 2 resources", func() {
 			It("should recognize correctly all of them", func() {
 
-				resources := getAllResourcesFromSchemas(schemaWithPolicy)
+				resources := getAllResourceGroupsFromSchemas(schemaWithPolicy)
 
 				Expect(resources).To(HaveLen(2))
 				Expect(resources).To(ContainElement("a"))
