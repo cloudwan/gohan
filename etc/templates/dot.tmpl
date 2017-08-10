@@ -1,8 +1,8 @@
 digraph schemas {
-{% for schema in schemas %}{% if schema.Metadata.type != "metaschema" && schema.Type != "abstract" %}
-  {{ schema.ID }} [ label = "{ {{ schema.ID }} | {%  for property in schema.Properties %}{{ property.ID }}\l{% endfor %} }", shape = "record"];
+{% for schema in schemas %}{% set schema = schema.Schema %}{% if schema.Metadata.type != "metaschema" && schema.Type != "abstract" %}
+  "{{ schema.ID }}" [ label = "{ {{ schema.ID }} | {%  for property in schema.Properties %}{{ property.ID }}\l{% endfor %} }", shape = "record"];
   {%  for property in schema.Properties %}{% if property.Relation != "" %}
-  {{ schema.ID }} -> {{ property.Relation }} [ label = "{{ property.ID }}"];
+  "{{ schema.ID }}" -> "{{ property.Relation }}" [ label = "{{ property.ID }}"];
   {% endif %}{% endfor %}
 {% endif %}{% endfor %}
 }

@@ -464,11 +464,13 @@ USAGE:
    command generate [command options] [arguments...]
 
 OPTIONS:
-   --template, -t "embed://etc/templates/server.tmpl"	Application template path
-   --config-file, -c "./gohan.yaml"			Gohan config file
-   --output, -o "."					Dir of output
-   --package, -p "gen"					Package Name
-
+   --template, -t                       Application template path
+   --templates                          Template Configuraion
+   --config-file, -c "./gohan.yaml"     Gohan config file
+   --output, -o "."                     Dir of output
+   --package, -p "gen"                  Package Name
+   --dbname, -d "gohan"                 DB Name
+   --resetdb                            Reset Database on create
 ```
 
 This command requires mysql setup, and generated code would work with only MySQL.
@@ -481,27 +483,28 @@ Setup mysql
 
 Prepare gohan.yaml with MySQL configuration
 
-## Step3
+### Step3
 
-Prepare SQLBoiler 
+Write template configuraion files. 
 
-``` toml
-blacklist=["goose_db_version"]
-schema="myschema"
-pkgname="gen"
-output="gen"
-no-tests=true
-no-hooks=true
-[mysql]
-  dbname="gohan"
-  host="localhost"
-  port=3306
-  user="root"
-  pass="password"
-  sslmode="false"
+type can be all, group or resource.
+If type is all, all schema would be included in to a single file.
+If type is resource, we will generate files for each resources.
+If type is group, we will generate files for each resources groups.
+
+You can control generated filename using output_path. output_path may contrain
+"__resource__", and this identifire would be substituted by actual schema id.
+
+``` yaml
+- type: all 
+  template_path: server.tmpl
+  output_path: base_controller.go
+- type: resource 
+  template_path: controller.tmpl
+  output_path: __resource___controller.go
 ```
 
-## Step3
+### Step4
 
 Prepare main.go file
 
@@ -521,7 +524,7 @@ func main() {
 
 ```
 
-## Step4
+### Step5
 
 You can add custom logic by providing own controller struct using embed struct.
 
