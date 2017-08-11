@@ -150,7 +150,7 @@ func DBGet(tx transaction.Transaction, schemaID string, id string, tenantID stri
 	if tenantID != "" {
 		filter["tenant_id"] = tenantID
 	}
-	resp, err := tx.Fetch(schemaObj, filter)
+	resp, err := tx.Fetch(schemaObj, filter, nil)
 	if err != nil {
 		return nil, err
 	}

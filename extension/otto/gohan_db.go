@@ -510,7 +510,7 @@ func GohanDbFetch(tx transaction.Transaction, schemaID, ID,
 	if tenantID != "" {
 		filter["tenant_id"] = tenantID
 	}
-	resp, err := tx.Fetch(schema, filter)
+	resp, err := tx.Fetch(schema, filter, nil)
 	if err != nil {
 		return nil, fmt.Errorf("Error during gohan_db_fetch: %s", err.Error())
 	}
@@ -527,7 +527,7 @@ func GohanDbLockFetch(tx transaction.Transaction, schemaID, ID, tenantID string,
 	if tenantID != "" {
 		filter["tenant_id"] = tenantID
 	}
-	resp, err := tx.LockFetch(schema, filter, policy)
+	resp, err := tx.LockFetch(schema, filter, policy, nil)
 	if err != nil {
 		return nil, fmt.Errorf("Error during gohan_db_lock_fetch: %s", err.Error())
 	}
