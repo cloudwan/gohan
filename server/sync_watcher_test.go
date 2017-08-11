@@ -39,6 +39,7 @@ const (
 
 var _ = Describe("Sync watcher test", func() {
 	BeforeEach(func() {
+		server.GetSync().Delete(processPathPrefix, true)
 		watcher := srv.NewSyncWatcherFromServer(server)
 		go watcher.Run(context.Background())
 		time.Sleep(time.Second)
