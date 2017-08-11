@@ -155,7 +155,7 @@ func (tl *transactionEventLogger) Resync(resource *schema.Resource) error {
 }
 
 func (tl *transactionEventLogger) Delete(s *schema.Schema, resourceID interface{}) error {
-	resource, err := tl.Fetch(s, transaction.IDFilter(resourceID))
+	resource, err := tl.Transaction.LockFetch(s, transaction.IDFilter(resourceID), schema.SkipRelatedResources)
 	if err != nil {
 		return err
 	}
