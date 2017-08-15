@@ -7,16 +7,16 @@ import (
 	"path"
 	"regexp"
 
-	"github.com/cloudwan/gohan/schema"
-	"github.com/cloudwan/gohan/util"
-	"github.com/codegangsta/cli"
+	"github.com/vattle/sqlboiler/strmangle"
 
 	"io/ioutil"
 	"strings"
 
-	"github.com/flosch/pongo2"
+	"github.com/cloudwan/gohan/schema"
+	"github.com/cloudwan/gohan/util"
+	"github.com/codegangsta/cli"
 
-	"github.com/serenize/snaker"
+	"github.com/flosch/pongo2"
 )
 
 func deleteGohanExtendedProperties(node map[string]interface{}) {
@@ -117,7 +117,7 @@ func hasIDParam(in *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.E
 // SnakeToCamel  changes value from snake case to camel case
 func SnakeToCamel(in *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
 	i := in.String()
-	return pongo2.AsValue(snaker.SnakeToCamel(i)), nil
+	return pongo2.AsValue(strmangle.TitleCase(i)), nil
 }
 
 func toGoType(in *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
