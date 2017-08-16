@@ -25,14 +25,18 @@ import (
 	"context"
 
 	"github.com/cloudwan/gohan/schema"
+	"sync"
 )
 
-var transactionCommited chan int
+var (
+	transactionCommited     chan int
+	transactionCommitedOnce sync.Once
+)
 
 func transactionCommitInformer() chan int {
-	if transactionCommited == nil {
+	transactionCommitedOnce.Do(func() {
 		transactionCommited = make(chan int, 1)
-	}
+	})
 	return transactionCommited
 }
 
@@ -151,7 +155,7 @@ func (tl *transactionEventLogger) Resync(resource *schema.Resource) error {
 }
 
 func (tl *transactionEventLogger) Delete(s *schema.Schema, resourceID interface{}) error {
-	resource, err := tl.Fetch(s, transaction.IDFilter(resourceID))
+	resource, err := tl.Fetch(s, transaction.IDFilter(resourceID), nil)
 	if err != nil {
 		return err
 	}

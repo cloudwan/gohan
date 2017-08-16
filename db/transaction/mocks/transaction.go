@@ -72,8 +72,8 @@ func (_mr *_MockTransactionRecorder) Delete(arg0, arg1 interface{}) *gomock.Call
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "Delete", arg0, arg1)
 }
 
-func (_m *MockTransaction) Fetch(_param0 *schema.Schema, _param1 transaction.Filter) (*schema.Resource, error) {
-	ret := _m.ctrl.Call(_m, "Fetch", _param0, _param1)
+func (_m *MockTransaction) Fetch(_param0 *schema.Schema, _param1 transaction.Filter, _param2 *transaction.ViewOptions) (*schema.Resource, error) {
+	ret := _m.ctrl.Call(_m, "Fetch", _param0, _param1, nil)
 	ret0, _ := ret[0].(*schema.Resource)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -83,8 +83,8 @@ func (_mr *_MockTransactionRecorder) Fetch(arg0, arg1 interface{}) *gomock.Call 
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "Fetch", arg0, arg1)
 }
 
-func (_m *MockTransaction) LockFetch(_param0 *schema.Schema, _param1 transaction.Filter, _param2 schema.LockPolicy) (*schema.Resource, error) {
-	ret := _m.ctrl.Call(_m, "LockFetch", _param0, _param1, _param2)
+func (_m *MockTransaction) LockFetch(_param0 *schema.Schema, _param1 transaction.Filter, _param2 schema.LockPolicy, _param3 *transaction.ViewOptions) (*schema.Resource, error) {
+	ret := _m.ctrl.Call(_m, "LockFetch", _param0, _param1, _param2, _param3)
 	ret0, _ := ret[0].(*schema.Resource)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -105,7 +105,7 @@ func (_mr *_MockTransactionRecorder) StateFetch(arg0, arg1 interface{}) *gomock.
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "StateFetch", arg0, arg1)
 }
 
-func (_m *MockTransaction) List(_param0 *schema.Schema, _param1 transaction.Filter, _param2 *transaction.ListOptions, _param3 *pagination.Paginator) ([]*schema.Resource, uint64, error) {
+func (_m *MockTransaction) List(_param0 *schema.Schema, _param1 transaction.Filter, _param2 *transaction.ViewOptions, _param3 *pagination.Paginator) ([]*schema.Resource, uint64, error) {
 	ret := _m.ctrl.Call(_m, "List", _param0, _param1, _param2, _param3)
 	ret0, _ := ret[0].([]*schema.Resource)
 	ret1, _ := ret[1].(uint64)
@@ -117,7 +117,7 @@ func (_mr *_MockTransactionRecorder) List(arg0, arg1, arg2, arg3 interface{}) *g
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "List", arg0, arg1, arg2, arg3)
 }
 
-func (_m *MockTransaction) LockList(_param0 *schema.Schema, _param1 transaction.Filter, _param2 *transaction.ListOptions, _param3 *pagination.Paginator, _param4 schema.LockPolicy) ([]*schema.Resource, uint64, error) {
+func (_m *MockTransaction) LockList(_param0 *schema.Schema, _param1 transaction.Filter, _param2 *transaction.ViewOptions, _param3 *pagination.Paginator, _param4 schema.LockPolicy) ([]*schema.Resource, uint64, error) {
 	ret := _m.ctrl.Call(_m, "LockList", _param0, _param1, _param2, _param3, _param4)
 	ret0, _ := ret[0].([]*schema.Resource)
 	ret1, _ := ret[1].(uint64)

@@ -226,7 +226,7 @@ func (s byPaginator) Less(i, j int) bool {
 }
 
 //List resources in the db
-func (tx *Transaction) List(s *schema.Schema, filter transaction.Filter, options *transaction.ListOptions, pg *pagination.Paginator) (list []*schema.Resource, total uint64, err error) {
+func (tx *Transaction) List(s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions, pg *pagination.Paginator) (list []*schema.Resource, total uint64, err error) {
 	db := tx.db
 	db.load()
 	table := db.getTable(s)
@@ -291,14 +291,14 @@ func (tx *Transaction) List(s *schema.Schema, filter transaction.Filter, options
 	return
 }
 
-//LockList resources in the db. Not supported in file db
-func (tx *Transaction) LockList(s *schema.Schema, filter transaction.Filter, options *transaction.ListOptions, pg *pagination.Paginator, policy schema.LockPolicy) (list []*schema.Resource, total uint64, err error) {
+// LockList locks resources in the db. Not supported in file db
+func (tx *Transaction) LockList(s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions, pg *pagination.Paginator, policy schema.LockPolicy) (list []*schema.Resource, total uint64, err error) {
 	return tx.List(s, filter, options, pg)
 }
 
 //Fetch resources by ID in the db
-func (tx *Transaction) Fetch(s *schema.Schema, filter transaction.Filter) (*schema.Resource, error) {
-	list, _, err := tx.List(s, filter, nil, nil)
+func (tx *Transaction) Fetch(s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions) (*schema.Resource, error) {
+	list, _, err := tx.List(s, filter, options, nil)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to fetch %s: %s", filter, err)
 	}
@@ -308,9 +308,9 @@ func (tx *Transaction) Fetch(s *schema.Schema, filter transaction.Filter) (*sche
 	return list[0], nil
 }
 
-//LockFetch fetches and locks a resource. Not supported in file db
-func (tx *Transaction) LockFetch(s *schema.Schema, filter transaction.Filter, policy schema.LockPolicy) (*schema.Resource, error) {
-	return tx.Fetch(s, filter)
+// LockFetch fetches & locks a resource. Not supported in file db
+func (tx *Transaction) LockFetch(s *schema.Schema, filter transaction.Filter, policy schema.LockPolicy, options *transaction.ViewOptions) (*schema.Resource, error) {
+	return tx.Fetch(s, filter, options)
 }
 
 //StateFetch is not supported in file databases

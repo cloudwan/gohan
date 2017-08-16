@@ -1040,7 +1040,6 @@ var _ = Describe("CLI functions", func() {
 					})
 				})
 			})
-
 			Describe("List command", func() {
 				var listCommand gohanCommand
 
@@ -1062,6 +1061,11 @@ var _ = Describe("CLI functions", func() {
 					result, err := listCommand.Action([]string{})
 					Expect(err).ToNot(HaveOccurred())
 					Expect(result).To(MatchJSON(getTowerListJSONResponse()))
+				})
+				It("Should add 2 fields to gohanClient", func() {
+					_, err := listCommand.Action([]string{"--fields", "id,name"})
+					Expect(err).ToNot(HaveOccurred())
+					Expect(len(gohanClientCLI.opts.fields)).To(Equal(2))
 				})
 
 				It("Should show error - error parsing arguments", func() {
