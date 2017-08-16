@@ -18,7 +18,7 @@ var SCHEMAS = ["./schema.yaml"];
 var PATH = "/v1.0/networks";
 
 function testUnexpectedCall() {
-    result = gohan_sync_fetch("unexpectedKey");
+    var result = gohan_sync_fetch("unexpectedKey");
 }
 
 function testLastThrow() {
@@ -28,19 +28,19 @@ function testLastThrow() {
     gohan_sync_fetch.Expect().Return(null);
     gohan_sync_fetch.Expect().Throw("TimeOutException");
     var response1 = gohan_sync_fetch();
-    if (response1 !== mock_response1){
+    if (response1 !== mock_response1) {
         Fail();
     }
     var mock_response2 = null;
     var response2 = gohan_sync_fetch();
-    if (response2 !== mock_response2){
+    if (response2 !== mock_response2) {
         Fail();
     }
 
     try {
         gohan_sync_fetch()
     } catch(error) {
-        if (error instanceof TimeOutException){
+        if (error instanceof TimeOutException) {
             return;
         }
     }
@@ -52,7 +52,7 @@ function testWrongThrow() {
     try {
         gohan_sync_fetch()
     } catch(error) {
-        if (error instanceof TimeOutException){
+        if (error instanceof TimeOutException) {
             return;
         }
     }

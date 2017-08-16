@@ -53,7 +53,7 @@ Gohan server configuration uses YAML format.
   etcd:
       - "http://127.0.0.1:2379"
   # timeout in milliseconds.1000 milliseconds by default 
-  etcd_timeout: 1000
+  etcd_timeout_ms: 1000
   # keystone configuraion
   keystone:
       use_keystone: false

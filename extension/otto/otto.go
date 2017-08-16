@@ -354,7 +354,7 @@ func (env *Environment) ClearEnvironment() {
 	env.DataStore.Close()
 }
 
-//ThrowOtto throws cutsom JavaScript exception that will be passed to Otto
+//ThrowOtto throws custom JavaScript exception that will be passed to Otto
 func ThrowOtto(call *otto.FunctionCall, exceptionName string, arguments ...interface{}) {
 	exception, _ := call.Otto.Call("new "+exceptionName, nil, arguments...)
 	panic(exception)

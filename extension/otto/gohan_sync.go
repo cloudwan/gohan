@@ -86,7 +86,7 @@ func init() {
 					log.Debug("Received otto interrupt in gohan_sync_fetch")
 					interrupt()
 				case err = <-errCh:
-					if err != nil && err == context.DeadlineExceeded {
+					if err == context.DeadlineExceeded {
 						ThrowOtto(&call, "TimeOutException", "Context Deadline Exceeded")
 						return otto.NullValue()
 					} else if err != nil {

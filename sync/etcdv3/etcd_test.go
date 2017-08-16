@@ -1,11 +1,13 @@
 package etcdv3
 
 import (
-	gohan_sync "github.com/cloudwan/gohan/sync"
-	etcd "github.com/coreos/etcd/clientv3"
-	"golang.org/x/net/context"
 	"testing"
 	"time"
+
+	"golang.org/x/net/context"
+
+	gohan_sync "github.com/cloudwan/gohan/sync"
+	etcd "github.com/coreos/etcd/clientv3"
 )
 
 var endpoints = []string{"localhost:2379"}

@@ -40,7 +40,7 @@ document_root: "embed"
 etcd:
     - "http://127.0.0.1:2379"
 
-etcd_timeout: 1000
+etcd_timeout_ms: 1000
 # keystone configuraion
 keystone:
     use_keystone: false
