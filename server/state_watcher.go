@@ -162,7 +162,7 @@ func (watcher *StateWatcher) StateUpdate(event *gohan_sync.Event) error {
 
 	return db.WithinTx(context.Background(), watcher.db, &transaction.TxOptions{IsolationLevel: transaction.GetIsolationLevel(curSchema, StateUpdateEventName)},
 		func(tx transaction.Transaction) error {
-			curResource, err := tx.Fetch(curSchema, transaction.IDFilter(resourceID))
+			curResource, err := tx.Fetch(curSchema, transaction.IDFilter(resourceID), nil)
 			if err != nil {
 				return err
 			}
@@ -243,7 +243,7 @@ func (watcher *StateWatcher) MonitoringUpdate(event *gohan_sync.Event) error {
 
 	return db.WithinTx(context.Background(), watcher.db, &transaction.TxOptions{IsolationLevel: transaction.GetIsolationLevel(curSchema, MonitoringUpdateEventName)},
 		func(tx transaction.Transaction) error {
-			curResource, err := tx.Fetch(curSchema, transaction.IDFilter(resourceID))
+			curResource, err := tx.Fetch(curSchema, transaction.IDFilter(resourceID), nil)
 			if err != nil {
 				return err
 			}

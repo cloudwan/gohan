@@ -60,8 +60,8 @@ type ResourceState struct {
 	Monitoring    string
 }
 
-//ListOptions specifies additional list related options.
-type ListOptions struct {
+//ViewOptions specifies additional options.
+type ViewOptions struct {
 	// Details specifies if all the underlying structures should be
 	// returned.
 	Details bool
@@ -75,11 +75,11 @@ type Transaction interface {
 	Update(*schema.Resource) error
 	StateUpdate(*schema.Resource, *ResourceState) error
 	Delete(*schema.Schema, interface{}) error
-	Fetch(*schema.Schema, Filter) (*schema.Resource, error)
-	LockFetch(*schema.Schema, Filter, schema.LockPolicy) (*schema.Resource, error)
+	Fetch(*schema.Schema, Filter, *ViewOptions) (*schema.Resource, error)
+	LockFetch(*schema.Schema, Filter, schema.LockPolicy, *ViewOptions) (*schema.Resource, error)
 	StateFetch(*schema.Schema, Filter) (ResourceState, error)
-	List(*schema.Schema, Filter, *ListOptions, *pagination.Paginator) ([]*schema.Resource, uint64, error)
-	LockList(*schema.Schema, Filter, *ListOptions, *pagination.Paginator, schema.LockPolicy) ([]*schema.Resource, uint64, error)
+	List(*schema.Schema, Filter, *ViewOptions, *pagination.Paginator) ([]*schema.Resource, uint64, error)
+	LockList(*schema.Schema, Filter, *ViewOptions, *pagination.Paginator, schema.LockPolicy) ([]*schema.Resource, uint64, error)
 	RawTransaction() *sqlx.Tx
 	Query(*schema.Schema, string, []interface{}) (list []*schema.Resource, err error)
 	Commit() error

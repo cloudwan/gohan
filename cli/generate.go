@@ -201,6 +201,6 @@ func execCommand(command string) {
 		log.Info("Output: %s", outputStr)
 	}
 	if err != nil {
-		log.Error("Error: %s", err)
+		log.Error("Error: %s %s", err, output)
 	}
 }

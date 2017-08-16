@@ -196,12 +196,11 @@ func GetResourcesInTransaction(context middleware.Context, resourceSchema *schem
 		return err
 	}
 
-	var o *transaction.ListOptions
+	var o *transaction.ViewOptions
 	r, ok := context["http_request"].(*http.Request)
 	if ok {
 		o = listOptionsFromQueryParameter(r.URL.Query())
 	}
-
 	list, total, err := mainTransaction.List(
 		resourceSchema,
 		filter,
@@ -242,8 +241,8 @@ func FilterFromQueryParameter(resourceSchema *schema.Schema, queryParameters map
 	return filter
 }
 
-func listOptionsFromQueryParameter(v url.Values) *transaction.ListOptions {
-	return &transaction.ListOptions{
+func listOptionsFromQueryParameter(v url.Values) *transaction.ViewOptions {
+	return &transaction.ViewOptions{
 		Details: parseBool(v.Get("_details"), true),
 		Fields:  v["_fields"],
 	}
@@ -271,14 +270,11 @@ func GetMultipleResources(context middleware.Context, dataStore db.DB, resourceS
 	if err != nil {
 		return err
 	}
-
 	filter := FilterFromQueryParameter(resourceSchema, queryParameters)
-
 	if policy.RequireOwner() {
 		filter["tenant_id"] = policy.GetTenantIDFilter(schema.ActionRead, auth.TenantID())
 	}
 	filter = policy.RemoveHiddenProperty(filter)
-
 	paginator, err := pagination.FromURLQuery(resourceSchema, queryParameters)
 	if err != nil {
 		return ResourceError{err, err.Error(), WrongQuery}
@@ -365,6 +361,11 @@ func GetSingleResource(context middleware.Context, dataStore db.DB, resourceSche
 //GetSingleResourceInTransaction get resource in single transaction
 func GetSingleResourceInTransaction(context middleware.Context, resourceSchema *schema.Schema, resourceID string, tenantIDs []string) (err error) {
 	defer measureRequestTime(time.Now(), "get.single.in_tx", resourceSchema.ID)
+	var options *transaction.ViewOptions
+	r, ok := context["http_request"].(*http.Request)
+	if ok {
+		options = listOptionsFromQueryParameter(r.URL.Query())
+	}
 	mainTransaction := context["transaction"].(transaction.Transaction)
 	environmentManager := extension.GetManager()
 	environment, ok := environmentManager.GetEnvironment(resourceSchema.ID)
@@ -385,8 +386,7 @@ func GetSingleResourceInTransaction(context middleware.Context, resourceSchema *
 	if tenantIDs != nil {
 		filter["tenant_id"] = tenantIDs
 	}
-	object, err := mainTransaction.Fetch(resourceSchema, filter)
-
+	object, err := mainTransaction.Fetch(resourceSchema, filter, options)
 	if object == nil {
 		switch err {
 		case transaction.ErrResourceNotFound:
@@ -435,7 +435,7 @@ func CreateOrUpdateResource(
 			filter["tenant_id"] = tenantIDs
 		}
 
-		_, fetchErr := preTransaction.Fetch(resourceSchema, filter)
+		_, fetchErr := preTransaction.Fetch(resourceSchema, filter, nil)
 		exists = fetchErr == nil
 		return nil
 	}); preTxErr != nil {
@@ -688,11 +688,11 @@ func UpdateResourceInTransaction(
 	var err error
 	switch resourceSchema.GetLockingPolicy("update") {
 	case schema.NoLocking:
-		resource, err = mainTransaction.Fetch(resourceSchema, filter)
+		resource, err = mainTransaction.Fetch(resourceSchema, filter, nil)
 	case schema.LockRelatedResources:
-		resource, err = mainTransaction.LockFetch(resourceSchema, filter, schema.LockRelatedResources)
+		resource, err = mainTransaction.LockFetch(resourceSchema, filter, schema.LockRelatedResources, nil)
 	case schema.SkipRelatedResources:
-		resource, err = mainTransaction.LockFetch(resourceSchema, filter, schema.SkipRelatedResources)
+		resource, err = mainTransaction.LockFetch(resourceSchema, filter, schema.SkipRelatedResources, nil)
 	}
 
 	if err != nil {
@@ -770,7 +770,7 @@ func DeleteResource(context middleware.Context,
 		if tenantIDs != nil {
 			filter["tenant_id"] = tenantIDs
 		}
-		resource, fetchErr = preTransaction.Fetch(resourceSchema, filter)
+		resource, fetchErr = preTransaction.Fetch(resourceSchema, filter, nil)
 		return nil
 	}); errPreTx != nil {
 		return err
@@ -830,11 +830,11 @@ func DeleteResourceInTransaction(context middleware.Context, resourceSchema *sch
 	var err error
 	switch resourceSchema.GetLockingPolicy("delete") {
 	case schema.NoLocking:
-		resource, err = mainTransaction.Fetch(resourceSchema, filter)
+		resource, err = mainTransaction.Fetch(resourceSchema, filter, nil)
 	case schema.LockRelatedResources:
-		resource, err = mainTransaction.LockFetch(resourceSchema, filter, schema.LockRelatedResources)
+		resource, err = mainTransaction.LockFetch(resourceSchema, filter, schema.LockRelatedResources, nil)
 	case schema.SkipRelatedResources:
-		resource, err = mainTransaction.LockFetch(resourceSchema, filter, schema.SkipRelatedResources)
+		resource, err = mainTransaction.LockFetch(resourceSchema, filter, schema.SkipRelatedResources, nil)
 	}
 
 	log.Debug("%s %s", resource, err)
