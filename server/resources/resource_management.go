@@ -627,6 +627,11 @@ func UpdateResource(
 	if err != nil {
 		return ResourceError{err, err.Error(), Unauthorized}
 	}
+	needsDelete := false
+	if _, ok := dataMap["id"]; !ok {
+		dataMap["id"] = resourceID
+		needsDelete = true
+	}
 	context["resource"] = dataMap
 
 	if err := extension.HandleEvent(context, environment, "pre_update", resourceSchema.ID); err != nil {
@@ -634,6 +639,9 @@ func UpdateResource(
 	}
 
 	if resourceData, ok := context["resource"].(map[string]interface{}); ok {
+		if needsDelete == true {
+			delete(resourceData, "id")
+		}
 		dataMap = resourceData
 	}
 

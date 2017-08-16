@@ -1234,6 +1234,28 @@ var _ = Describe("Resource manager", func() {
 				})
 			})
 		})
+		Describe("Whether id is not empty during update and update_in_transaction", func() {
+			BeforeEach(func() {
+				javascriptCode := `if (context.resource.id === undefined || context.resource.id === ""){
+					throw new CustomException();
+				}`
+
+				events["pre_update"] = javascriptCode
+				events["pre_update_in_transaction"] = javascriptCode
+			})
+			It("Should receive id and tenat_id but should not update them", func() {
+				err := resources.CreateResource(
+					context, testDB, fakeIdentity, currentSchema, adminResourceData)
+				Expect(err).To(Succeed())
+				delete(adminResourceData, "id")
+				delete(adminResourceData, "tenant_id")
+
+				err = resources.UpdateResource(
+					context, testDB, fakeIdentity, currentSchema, resourceID1, adminResourceData)
+				Expect(err).To(Succeed())
+
+			})
+		})
 
 		Describe("When there are resources in the database", func() {
 			JustBeforeEach(func() {
