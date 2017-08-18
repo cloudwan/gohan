@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/cloudwan/gohan/extension"
+	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/metrics"
 	gohan_sync "github.com/cloudwan/gohan/sync"
 	"github.com/cloudwan/gohan/util"
@@ -295,6 +296,7 @@ func (watcher *SyncWatcher) processSyncWatch(ctx context.Context, path string) e
 }
 
 func (watcher *SyncWatcher) watchExtensionHandler(response *gohan_sync.Event) {
+	defer l.Panic(log)
 	for _, event := range watcher.watchEvents {
 		//match extensions
 		if strings.HasPrefix(response.Key, "/"+event) {
