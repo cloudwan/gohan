@@ -39,7 +39,7 @@ document_root: "embed"
 # list of etcd backend servers
 etcd:
     - "http://127.0.0.1:2379"
-
+# timeout in milliseconds.1000 milliseconds by default
 etcd_timeout_ms: 1000
 # keystone configuraion
 keystone:

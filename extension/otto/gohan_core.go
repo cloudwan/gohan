@@ -113,7 +113,7 @@ func init() {
 		  BaseException.call(this);
 		  this.message = msg;
 		  this.name = "TimeOutException";
-		  this.code = 408;
+		  this.code = 503;
 		  this.fields.push("code");
 		}
 		TimeOutException.prototype = Object.create(BaseException.prototype);

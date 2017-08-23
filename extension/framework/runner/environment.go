@@ -254,6 +254,7 @@ func (env *Environment) getTransaction(isNew bool, options *transaction.TxOption
 	env.dbTransactions = append(env.dbTransactions, tx)
 	return tx, nil
 }
+
 func getSpecifiedFunction(env *Environment, functionName string, setValue otto.Value) func(call otto.FunctionCall) otto.Value {
 	return func(call otto.FunctionCall) otto.Value {
 		exceptions := env.getFromOtto(functionName, "exceptions").([]otto.Value)
@@ -270,6 +271,7 @@ func getSpecifiedFunction(env *Environment, functionName string, setValue otto.V
 		return otto.NullValue()
 	}
 }
+
 func (env *Environment) mockFunction(functionName string) {
 	env.VM.Set(functionName, func(call otto.FunctionCall) otto.Value {
 		responses := env.getFromOtto(functionName, "responses").([]otto.Value)
