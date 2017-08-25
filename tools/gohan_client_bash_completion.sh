@@ -9,7 +9,8 @@ getUn_namedProperties()
 {
     _schema_id=$1
     OIFS=$IFS
-    IFS=$'\n' arr=`${COMP_WORDS[0]} client $_schema_id list`
+    IFS=$'\n'
+    arr=`${COMP_WORDS[0]} client $_schema_id list`
     _wasProperties=0
     _counter=0
     _un_named=""
@@ -22,15 +23,14 @@ getUn_namedProperties()
         _result="${_cop//$_replacewhat/$_replacewith}"
         _result="${_result//$_replacewhat2/$_replacewith}"
         let _counter=_counter+1
-        if [  -z $_result ] ; then
+        if [ -z "$_result" ]; then
             continue
         fi
-        if [[ $_counter -gt 2 ]];then
+        if [ $_counter -gt 2 ];then
             _args=$(echo $a | tr "|" "\n")
             _sub=0
             for i in $_args
             do
-
 		let _sub=_sub+1
 		if [ $_sub -eq 1 ] && [ ! -z "${i// }" ] ; then
         	    i="$(echo -e "${i}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
@@ -38,6 +38,7 @@ getUn_namedProperties()
 		fi
             done
         fi
+    IFS=$OIFS
     done
 }
 
@@ -66,6 +67,7 @@ getProperties()
 	elif [[ -z "${a// }" ]] ; then
             _wasProperties=0
 	fi
+    IFS=$OIFS
     done
 }
 
