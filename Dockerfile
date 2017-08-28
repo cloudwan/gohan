@@ -1,4 +1,4 @@
-FROM golang:1.8
+FROM golang:1.9
 MAINTAINER Leif Madsen <leif@leifmadsen.com>
 
 RUN go get github.com/cloudwan/gohan
