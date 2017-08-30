@@ -30,7 +30,7 @@ func getGenerateCommand() cli.Command {
 		ShortName: "gen",
 		Usage:     "Generate ServerSide Code",
 		Flags: []cli.Flag{
-			cli.StringFlag{Name: "templates", Value: "", Usage: "Template Configuraion"},
+			cli.StringFlag{Name: "templates", Value: "", Usage: "Template configuration"},
 			cli.StringFlag{Name: "config-file, c", Value: "./gohan.yaml", Usage: "Gohan config file"},
 			cli.StringFlag{Name: "language, l", Value: "go", Usage: "Programming language"},
 			cli.StringFlag{Name: "output, o", Value: ".", Usage: "Dir of output"},
@@ -102,7 +102,7 @@ func gohanGenerate(c *cli.Context) {
 	config.ReadConfig(configFile)
 	schemaFiles := config.GetStringList("schemas", nil)
 	if schemaFiles == nil {
-		log.Fatal("No schema specified in configuraion")
+		log.Fatal("No schema specified in configuration")
 		return
 	}
 	if err := manager.LoadSchemasFromFiles(schemaFiles...); err != nil {

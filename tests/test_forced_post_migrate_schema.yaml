@@ -1,0 +1,18 @@
+schemas:
+- description: force_schema
+  id: force_schema
+  singular: force_schema
+  plural: force_schemas
+  title: force_schema
+  schema:
+    properties:
+      id:
+        description: ID
+        title: ID
+        type: string
+    type: object
+extensions:
+- id: test_force_schema
+  code_type: javascript
+  path: .*
+  code: "gohan_register_handler(\"post-migration\", function(context) { gohan_sync_update(\"post-migration\", \"success\"); });"

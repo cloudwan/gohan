@@ -16,18 +16,96 @@
 package migration
 
 import (
-	"fmt"
-
 	"database/sql"
+	"fmt"
 	"os"
 	"path"
 
-	"github.com/cloudwan/gohan/log"
+	logger "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/util"
 	"github.com/cloudwan/goose"
 )
 
-var logger = log.NewLogger()
+var (
+	log             = logger.NewLogger()
+	modifiedSchemas map[string]bool = map[string]bool{}
+)
+
+// MarkSchemaAsModified marks schema as modified
+func MarkSchemaAsModified(schemaID string) {
+	modifiedSchemas[schemaID] = true
+}
+
+// GetModifiedSchemas returns a list of schemas modified during migrations
+func GetModifiedSchemas() []string {
+	schemas := make([]string, len(modifiedSchemas))
+	for schema := range modifiedSchemas {
+		schemas = append(schemas, schema)
+	}
+	return schemas
+}
+
+// Init initialises migration
+func Init() error {
+	log.Info("migration: init")
+
+	dbType, dbConnection, migrationsPath, noInit := readGooseConfig()
+
+	if err := goose.SetDialect(dbType); err != nil {
+		return fmt.Errorf("migration: failed to set goose dialect: %s", err)
+	}
+
+	db, err := sql.Open(dbType, dbConnection)
+
+	if err != nil {
+		return fmt.Errorf("migration: failed to open db: %s", err)
+	}
+
+	v, err := goose.EnsureDBVersion(db)
+	if err != nil {
+		return fmt.Errorf("migration: failed to ensure db version: %s", err)
+	}
+
+	log.Info("migration path: %q, version: %d", migrationsPath, v)
+
+	if err = goose.LoadMigrationPlugins(migrationsPath); err != nil {
+		return fmt.Errorf("migration: failed to load migration plugins: %s", err)
+	}
+
+	if noInit {
+		// pending migrations are not allowed if no-init is enabled (no_init=true)
+		m, err := goose.LastMigration(migrationsPath)
+		var last int64
+		if err != nil {
+			if err != goose.ErrNoNextVersion {
+				return err
+			}
+			last = 0
+		} else {
+			last = m.Version
+		}
+
+		if err != nil {
+			if err != goose.ErrNoNextVersion {
+				return fmt.Errorf("migration: %s", err)
+			}
+		}
+
+		dbVersion, err := goose.GetDBVersion(db)
+
+		log.Info("migration: db version: %d; last migration: %d", dbVersion, last)
+
+		if err != nil {
+			return fmt.Errorf("migration: GetDBVersion failed: %s", err)
+		}
+
+		if last != dbVersion {
+			return fmt.Errorf("migration: there are pending migrations - reject to run gohan (no_init=true); db version=%d; last migration=%d", dbVersion, last)
+		}
+	}
+
+	return goose.Status(db, migrationsPath)
+}
 
 // LoadConfig loads config from config file
 func LoadConfig(configFile string) (err error) {
@@ -58,74 +136,11 @@ func readGooseConfig() (dbType, dbConnection, migrationsPath string, noInit bool
 	return
 }
 
-// Init initialises migration
-func Init() error {
-	logger.Info("migration: init")
-
-	dbType, dbConnection, migrationsPath, noInit := readGooseConfig()
-
-	if err := goose.SetDialect(dbType); err != nil {
-		return fmt.Errorf("migration: failed to set goose dialect: %s", err)
-	}
-
-	db, err := sql.Open(dbType, dbConnection)
-
-	if err != nil {
-		return fmt.Errorf("migration: failed to open db: %s", err)
-	}
-
-	v, err := goose.EnsureDBVersion(db)
-	if err != nil {
-		return fmt.Errorf("migration: failed to ensure db version: %s", err)
-	}
-
-	logger.Info("migration path: %q, version: %d", migrationsPath, v)
-
-	if err = goose.LoadMigrationPlugins(migrationsPath); err != nil {
-		return fmt.Errorf("migration: failed to load migration plugins: %s", err)
-	}
-
-	if noInit {
-		// pending migrations are not allowed if no-init is enabled (no_init=true)
-		m, err := goose.LastMigration(migrationsPath)
-		var last int64
-		if err != nil {
-			if err != goose.ErrNoNextVersion {
-				return err
-			}
-			last = 0
-		} else {
-			last = m.Version
-		}
-
-		if err != nil {
-			if err != goose.ErrNoNextVersion {
-				return fmt.Errorf("migration: %s", err)
-			}
-		}
-
-		dbVersion, err := goose.GetDBVersion(db)
-
-		logger.Info("migration: db version: %d; last migration: %d", dbVersion, last)
-
-		if err != nil {
-			return fmt.Errorf("migration: GetDBVersion failed: %s", err)
-		}
-
-		if last != dbVersion {
-			return fmt.Errorf("migration: there are pending migrations - reject to run gohan (no_init=true); db version=%d; last migration=%d", dbVersion, last)
-		}
-	}
-
-	return goose.Status(db, migrationsPath)
-}
-
-// Help outputs migration sub command help
+// help outputs migration sub command help
 func Help() {
 	fmt.Println("missing subcommand: help, up, up-by-one, up-to, create, create-next, down, down-to, redo, status, version")
 }
 
-// Run executes migration
 func Run(subCmd string, args []string) error {
 	dbType, dbConnection, migrationsPath, _ := readGooseConfig()
 
@@ -142,7 +157,7 @@ func Run(subCmd string, args []string) error {
 	}
 
 	if err = goose.LoadMigrationPlugins(migrationsPath); err != nil {
-		logger.Error("migration: failed to load migration plugins: %s", err)
+		log.Error("migration: failed to load migration plugins: %s", err)
 		return err
 	}
 
@@ -152,20 +167,4 @@ func Run(subCmd string, args []string) error {
 	}
 
 	return nil
-}
-
-var modifiedSchemas = map[string]bool{}
-
-// MarkSchemaAsModified marks schema as modified
-func MarkSchemaAsModified(schemaID string) {
-	modifiedSchemas[schemaID] = true
-}
-
-// GetModifiedSchemas gets all modified schemas
-func GetModifiedSchemas() []string {
-	schemas := make([]string, len(modifiedSchemas))
-	for schema := range modifiedSchemas {
-		schemas = append(schemas, schema)
-	}
-	return schemas
 }

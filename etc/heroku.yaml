@@ -1,8 +1,8 @@
 #######################################################
-#  Gohan API Server example configuraion
+#  Gohan API Server example configuration
 ######################################################
 
-# database connection configuraion
+# database connection configuration
 database:
     # yaml, json, sqlite3 and mysql supported
     # yaml and json db is for schema development purpose
@@ -32,7 +32,7 @@ document_root: "embed"
 # list of etcd backend servers
 #etcd:
 #    - "http://127.0.0.1:2379"
-# keystone configuraion
+# keystone configuration
 keystone:
     use_keystone: true
     fake: true
@@ -40,7 +40,7 @@ keystone:
     user_name: "admin"
     tenant_name: "admin"
     password: "gohan"
-# CORS (Cross-origin resource sharing (CORS)) configuraion for javascript based client
+# CORS (Cross-origin resource sharing (CORS)) configuration for javascript based client
 cors: "*"
 
 webui_config:
