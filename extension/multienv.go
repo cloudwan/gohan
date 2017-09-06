@@ -23,13 +23,15 @@ import (
 
 //MultiEnvironment can handle multiple environment
 type MultiEnvironment struct {
+	baseEnvs []Environment
 	childEnv []Environment
 }
 
 //NewEnvironment create new gohan extension environment based on context
 func NewEnvironment(envs []Environment) *MultiEnvironment {
 	env := &MultiEnvironment{
-		childEnv: envs,
+		baseEnvs: envs,
+		childEnv: make([]Environment, len(envs)),
 	}
 	env.SetUp()
 	return env
@@ -41,7 +43,10 @@ func (env *MultiEnvironment) SetUp() {
 
 //LoadExtensionsForPath for returns extensions for specific path
 func (env *MultiEnvironment) LoadExtensionsForPath(extensions []*schema.Extension, timeLimit time.Duration, timeLimits []*schema.PathEventTimeLimit, path string) error {
-	for _, env := range env.childEnv {
+	// FIXME(p-kozlowski) this method is invoked only on startup, before the first cloning
+	// also, it is not safe to invoke it later. therefore, it should not be a part of public interface, rather
+	// a part of initialization
+	for _, env := range env.baseEnvs {
 		err := env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, path)
 		if err != nil {
 			return err
@@ -52,8 +57,8 @@ func (env *MultiEnvironment) LoadExtensionsForPath(extensions []*schema.Extensio
 
 //HandleEvent handles event
 func (env *MultiEnvironment) HandleEvent(event string, context map[string]interface{}) error {
-	for _, env := range env.childEnv {
-		err := env.HandleEvent(event, context)
+	for i := range env.childEnv {
+		err := env.handleEventInChild(i, event, context)
 		if err != nil {
 			return err
 		}
@@ -61,11 +66,31 @@ func (env *MultiEnvironment) HandleEvent(event string, context map[string]interf
 	return nil
 }
 
+func (env *MultiEnvironment) handleEventInChild(childIdx int, event string, context map[string]interface{}) error {
+	if !env.baseEnvs[childIdx].IsEventHandled(event, context) {
+		return nil
+	}
+	env.cloneChildIfNeeded(childIdx)
+	return env.childEnv[childIdx].HandleEvent(event, context)
+}
+
+func (env *MultiEnvironment) cloneChildIfNeeded(childIdx int) {
+	if env.childEnv[childIdx] == nil {
+		env.childEnv[childIdx] = env.baseEnvs[childIdx].Clone()
+	}
+}
+
 //Clone makes clone of the environment
 func (env *MultiEnvironment) Clone() Environment {
-	newEnv := NewEnvironment([]Environment{})
-	for _, env := range env.childEnv {
-		newEnv.childEnv = append(newEnv.childEnv, env.Clone())
+	return NewEnvironment(env.baseEnvs)
+}
+
+// IsEventHandled returns whether a given event is handled by this environment
+func (env *MultiEnvironment) IsEventHandled(event string, context map[string]interface{}) bool {
+	for _, env := range env.baseEnvs {
+		if env.IsEventHandled(event, context) {
+			return true
+		}
 	}
-	return newEnv
+	return false
 }

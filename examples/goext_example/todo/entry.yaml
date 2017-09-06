@@ -1,0 +1,74 @@
+extensions:
+- id: example
+  code_type: goext
+  path: ""
+  url: file://../example.so
+- action: read
+  effect: allow
+  id: member_schema
+  principal: Member
+  resource:
+    path: /gohan/v0.1/schemas*
+- action: '*'
+  condition:
+  - is_owner
+  effect: allow
+  id: member_policy
+  principal: Member
+  resource:
+    path: /v0.1/member_resources*
+    properties:
+    - id
+    - name
+    - description
+    - tenant_id
+schemas:
+- description: Entry
+  id: entry
+  plural: entries
+  prefix: /v0.1
+  schema:
+    properties:
+      description:
+        description: Description
+        default: ""
+        permission:
+        - create
+        - update
+        title: Description
+        type: string
+        unique: false
+      id:
+        description: ID
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: false
+      name:
+        description: Name
+        permission:
+        - create
+        - update
+        title: Name
+        type: string
+        unique: false
+      tenant_id:
+        description: Tenant ID
+        permission:
+        - create
+        title: Tenant
+        type: string
+        unique: false
+    propertiesOrder:
+    - id
+    - name
+    - description
+    - tenant_id
+    type: object
+  singular: entry
+  title: Entry
+  actions:
+    custom_event:
+      path: /custom/custom
+      method: GET

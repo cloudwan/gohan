@@ -507,6 +507,7 @@ func CreateResource(
 		dataMap["id"] = uuid.NewV4().String()
 	}
 	context["id"] = dataMap["id"]
+	context["schema_id"] = resourceSchema.ID
 
 	if err := extension.HandleEvent(context, environment, "pre_create", resourceSchema.ID); err != nil {
 		return err

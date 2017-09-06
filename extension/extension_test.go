@@ -59,7 +59,7 @@ var _ = Describe("Environment manager", func() {
 		Context("When it is registered", func() {
 			It("Should return an error", func() {
 				err := manager.RegisterEnvironment(schemaID1, env2)
-				Expect(err).To(MatchError("Environment already registered for this schema"))
+				Expect(err).To(MatchError("Environment already registered for schema 'Wormtongue'"))
 			})
 		})
 	})

@@ -125,3 +125,8 @@ func (env *Environment) Clone() ext.Environment {
 	clone.timeLimits = env.timeLimits
 	return clone
 }
+
+// IsEventHandled returns whether a given event is handled by this environment
+func (env *Environment) IsEventHandled(event string, context map[string]interface{}) bool {
+	return true
+}

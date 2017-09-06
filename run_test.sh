@@ -15,7 +15,7 @@ ETCD_PID=$!
 echo "mode: count" > profile.cov
 
 # Standard go tooling behavior is to ignore dirs with leading underscors
-for dir in $(find . -maxdepth 10 -not -path './.git*' -not -path '*/_*' -not -path './vendor/*' -type d);
+for dir in $(find . -maxdepth 10 -not -path './.git*' -not -path '*/_*' -not -path './vendor/*' -not -path '*/test_data/*' -not -path '*/goext_example*' -type d);
 do
 if ls $dir/*.go &> /dev/null; then
     go test -race -covermode=atomic -coverprofile=$dir/profile.tmp $dir

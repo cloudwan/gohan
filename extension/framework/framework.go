@@ -26,10 +26,12 @@ import (
 
 	"github.com/codegangsta/cli"
 
+	gorunner "github.com/cloudwan/gohan/extension/framework/goplugin/runner"
 	"github.com/cloudwan/gohan/extension/framework/runner"
 	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/singleton"
 	"github.com/cloudwan/gohan/util"
+	"strings"
 )
 
 var (
@@ -37,8 +39,7 @@ var (
 	log                 = l.NewLoggerForModule("extest")
 )
 
-// TestExtensions runs extension tests when invoked from Gohan CLI
-func TestExtensions(c *cli.Context) {
+func setupConfig(c *cli.Context) *util.Config {
 	l.SetUpBasicLogging(logWriter, l.DefaultFormat)
 
 	var config *util.Config
@@ -59,11 +60,39 @@ func TestExtensions(c *cli.Context) {
 		}
 	}
 
-	testFiles := getTestFiles(c.Args())
+	return config
+}
 
-	//logging from config is a limited printAllLogs option
-	returnCode := RunTests(testFiles, c.Bool("verbose") || config != nil, c.String("run-test"), c.Int("parallel"))
-	os.Exit(returnCode)
+// TestExtensions runs extension tests when invoked from Gohan CLI
+func TestExtensions(context *cli.Context) {
+	config := setupConfig(context)
+	hasExtTypes := context.IsSet("type")
+	runJsExt := !hasExtTypes
+	runSoExt := !hasExtTypes
+	if hasExtTypes {
+		extTypes := strings.Split(context.String("type"), ",")
+		for _, t := range extTypes {
+			switch (t) {
+			case "js":
+				runJsExt = true
+			case "so":
+				runSoExt = true
+			}
+		}
+	}
+	if runJsExt {
+		testFiles := getTestFiles(context.Args(), "js")
+		if ret := RunTests(testFiles, context.Bool("verbose") || config != nil, context.String("run-test"), context.Int("parallel")); ret != 0 {
+			os.Exit(ret)
+		}
+	}
+	if runSoExt {
+		testFiles := getTestFiles(context.Args(), "so")
+		if err := gorunner.NewGoTestRunner(testFiles, context.Bool("verbose") || config != nil, context.String("run-test"), context.Int("parallel")).Run(); err != nil {
+			log.Fatalf("%s", err.Error())
+			os.Exit(1)
+		}
+	}
 }
 
 // RunTests runs extension tests for CLI.
@@ -171,13 +200,13 @@ func printSummary(summary map[string]error, printAllLogs bool) {
 	}
 }
 
-func getTestFiles(args cli.Args) []string {
+func getTestFiles(args cli.Args, fileExt string) []string {
 	paths := args
 	if len(paths) == 0 {
 		paths = append(paths, ".")
 	}
 
-	pattern := regexp.MustCompile(`^test_.*\.js$`)
+	pattern := regexp.MustCompile(`^test_.*\.` + fileExt + `$`)
 	seen := map[string]bool{}
 	testFiles := []string{}
 	for _, path := range paths {
@@ -205,6 +234,9 @@ func getTestFiles(args cli.Args) []string {
 			return nil
 		})
 	}
+
+	log.Notice("Found %d test file(s) of type '%s' in path(s): %s",
+		len(testFiles), fileExt, strings.Join(paths, ", "))
 
 	return testFiles
 }

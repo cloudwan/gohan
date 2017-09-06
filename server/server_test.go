@@ -782,6 +782,10 @@ var _ = Describe("Server package test", func() {
 			if err != nil {
 				Fail(err.Error())
 			}
+			syncConn.Delete("/config/v2.0/networks/resync-test-net1", false)
+			syncConn.Delete("/config/v2.0/networks/resync-test-net2", false)
+			syncConn.Delete("/config/v2.0/subnets/test-subnet1-id", false)
+
 			networkSchema, _ := manager.Schema("network")
 			subnetSchema, _ := manager.Schema("subnet")
 

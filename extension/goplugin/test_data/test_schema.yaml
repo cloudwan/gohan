@@ -1,0 +1,40 @@
+extensions:
+- id: test_ext_init
+  code_type: goext
+  path: ""
+  url: file://ext_good/ext_good.so
+networks: []
+policies:
+- action: '*'
+  effect: allow
+  id: admin_statement
+  principal: admin
+  resource:
+    path: .*
+schemas:
+- description: Test
+  id: test
+  plural: tests
+  prefix: /v0.1
+  schema:
+    properties:
+      id:
+        description: ID
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: false
+      description:
+        description: Description
+        permission:
+        - create
+        title: Description
+        type: string
+        unique: false
+    propertiesOrder:
+    - id
+    - description
+    type: object
+  singular: test
+  title: Test
