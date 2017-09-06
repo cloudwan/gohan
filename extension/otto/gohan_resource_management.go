@@ -36,10 +36,10 @@ func handleChainError(env *Environment, call *otto.FunctionCall, err error) {
 	default:
 		ThrowOttoException(call, err.Error())
 	case resources.ResourceError:
-		throwOtto(call, "ResourceException", err.Message, err.Problem)
+		ThrowOtto(call, "ResourceException", err.Message, err.Problem)
 	case extension.Error:
 		exceptionInfo, _ := env.VM.ToValue(err.ExceptionInfo)
-		throwOtto(call, "ExtensionException", err.Error(), exceptionInfo)
+		ThrowOtto(call, "ExtensionException", err.Error(), exceptionInfo)
 	}
 }
 

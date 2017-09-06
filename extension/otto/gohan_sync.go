@@ -17,10 +17,10 @@ package otto
 
 import (
 	"fmt"
-	"time"
-
 	"github.com/cloudwan/gohan/sync"
 	"github.com/xyproto/otto"
+	"golang.org/x/net/context"
+	"time"
 )
 
 func convertSyncEvent(event *sync.Event) map[string]interface{} {
@@ -86,7 +86,10 @@ func init() {
 					log.Debug("Received otto interrupt in gohan_sync_fetch")
 					interrupt()
 				case err = <-errCh:
-					if err != nil {
+					if err == context.DeadlineExceeded {
+						ThrowOtto(&call, "TimeOutException", "Context Deadline Exceeded")
+						return otto.NullValue()
+					} else if err != nil {
 						ThrowOttoException(&call, "Failed to fetch sync: "+err.Error())
 						return otto.NullValue()
 					}
@@ -171,7 +174,6 @@ func init() {
 						return otto.NullValue()
 					}
 				}
-
 				return otto.NullValue()
 			},
 			"gohan_sync_watch": func(call otto.FunctionCall) otto.Value {

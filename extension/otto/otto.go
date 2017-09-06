@@ -354,14 +354,15 @@ func (env *Environment) ClearEnvironment() {
 	env.DataStore.Close()
 }
 
-func throwOtto(call *otto.FunctionCall, exceptionName string, arguments ...interface{}) {
+//ThrowOtto throws custom JavaScript exception that will be passed to Otto
+func ThrowOtto(call *otto.FunctionCall, exceptionName string, arguments ...interface{}) {
 	exception, _ := call.Otto.Call("new "+exceptionName, nil, arguments...)
 	panic(exception)
 }
 
 //ThrowOttoException throws a JavaScript exception that will be passed to Otto
 func ThrowOttoException(call *otto.FunctionCall, format string, arguments ...interface{}) {
-	throwOtto(call, "Error", fmt.Sprintf(format, arguments...))
+	ThrowOtto(call, "Error", fmt.Sprintf(format, arguments...))
 }
 
 // ThrowIfHappened throws an exception with err's message if err happened
