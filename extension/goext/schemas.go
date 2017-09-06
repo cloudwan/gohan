@@ -94,7 +94,7 @@ func (ctx Context) Clone() Context {
 }
 
 // Priority represents handler priority; can be negative
-type Priority = int
+type Priority int
 
 // PriorityDefault is a default handler priority
 const PriorityDefault Priority = 0
