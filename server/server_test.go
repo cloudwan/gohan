@@ -701,6 +701,11 @@ var _ = Describe("Server package test", func() {
 			Expect(result).To(Equal("Dobranoc!"))
 		})
 
+		It("should propagare custom errors", func() {
+			result := testURL("GET", responderPluralURL+"/r1/test_throw", memberTokenID, nil, 499)
+			Expect(result.(map[string]interface{})).To(HaveKeyWithValue("error", "tested exception"))
+		})
+
 		It("should be unauthorized", func() {
 			testHiAction := map[string]interface{}{
 				"name": "Heisenberg",
