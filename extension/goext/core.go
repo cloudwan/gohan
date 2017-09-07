@@ -22,6 +22,6 @@ type ICore interface {
 	TriggerEvent(event string, context Context) error
 	HandleEvent(event string, context Context) error
 
-	RegisterEventHandler(eventName string, handler func(context Context, environment IEnvironment) error, priority Priority)
-	RegisterSchemaEventHandler(schemaID string, eventName string, handler func(context Context, resource Resource, environment IEnvironment) error, priority Priority)
+	RegisterEventHandler(eventName string, handler func(context Context, environment IEnvironment) error, priority int)
+	RegisterSchemaEventHandler(schemaID string, eventName string, handler func(context Context, resource Resource, environment IEnvironment) error, priority int)
 }

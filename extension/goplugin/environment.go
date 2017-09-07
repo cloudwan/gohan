@@ -45,7 +45,7 @@ type Handler func(context goext.Context, environment goext.IEnvironment) error
 type Handlers []Handler
 
 // PrioritizedHandlers is a prioritized list of generic handlers
-type PrioritizedHandlers map[goext.Priority]Handlers
+type PrioritizedHandlers map[int]Handlers
 
 // EventPrioritizedHandlers is a per-event prioritized list of generic handlers
 type EventPrioritizedHandlers map[string]PrioritizedHandlers
@@ -57,7 +57,7 @@ type SchemaHandler func(context goext.Context, resource goext.Resource, environm
 type SchemaHandlers []SchemaHandler
 
 // PrioritizedSchemaHandlers is a prioritized list of schema handlers
-type PrioritizedSchemaHandlers map[goext.Priority]SchemaHandlers
+type PrioritizedSchemaHandlers map[int]SchemaHandlers
 
 // SchemaPrioritizedSchemaHandlers is a per-schema prioritized list of schema handlers
 type SchemaPrioritizedSchemaHandlers map[string]PrioritizedSchemaHandlers
@@ -322,8 +322,8 @@ func (thisEnvironment *Environment) dispatchSchemaEvent(prioritizedSchemaHandler
 	return nil
 }
 
-func sortSchemaHandlers(schemaHandlers PrioritizedSchemaHandlers) []goext.Priority {
-	priorities := []goext.Priority{}
+func sortSchemaHandlers(schemaHandlers PrioritizedSchemaHandlers) (priorities []int) {
+	priorities = []int{}
 	for priority := range schemaHandlers {
 		priorities = append(priorities, priority)
 	}
@@ -331,8 +331,8 @@ func sortSchemaHandlers(schemaHandlers PrioritizedSchemaHandlers) []goext.Priori
 	return priorities
 }
 
-func sortHandlers(handlers PrioritizedHandlers) []goext.Priority {
-	priorities := []goext.Priority{}
+func sortHandlers(handlers PrioritizedHandlers) (priorities []int) {
+	priorities = []int{}
 	for priority := range handlers {
 		priorities = append(priorities, priority)
 	}
@@ -548,7 +548,7 @@ func (thisEnvironment *Environment) resourceFromContext(sch Schema, context map[
 }
 
 // RegisterEventHandler registers an event handler
-func (thisEnvironment *Environment) RegisterEventHandler(event string, handler func(context goext.Context, environment goext.IEnvironment) error, priority goext.Priority) {
+func (thisEnvironment *Environment) RegisterEventHandler(event string, handler func(context goext.Context, environment goext.IEnvironment) error, priority int) {
 	if GlobHandlers == nil {
 		GlobHandlers = EventPrioritizedHandlers{}
 	}
@@ -565,7 +565,7 @@ func (thisEnvironment *Environment) RegisterEventHandler(event string, handler f
 }
 
 // RegisterSchemaEventHandler register an event handler for a schema
-func (thisEnvironment *Environment) RegisterSchemaEventHandler(schemaID string, event string, handler func(context goext.Context, resource goext.Resource, environment goext.IEnvironment) error, priority goext.Priority) {
+func (thisEnvironment *Environment) RegisterSchemaEventHandler(schemaID string, event string, handler func(context goext.Context, resource goext.Resource, environment goext.IEnvironment) error, priority int) {
 	if GlobSchemaHandlers == nil {
 		GlobSchemaHandlers = EventSchemaPrioritizedSchemaHandlers{}
 	}
