@@ -93,11 +93,8 @@ func (ctx Context) Clone() Context {
 	return contextCopy
 }
 
-// Priority represents handler priority; can be negative
-type Priority = int
-
 // PriorityDefault is a default handler priority
-const PriorityDefault Priority = 0
+const PriorityDefault = 0
 
 // ISchema is an interface representing a single schema in Gohan
 type ISchema interface {
@@ -140,7 +137,7 @@ type ISchema interface {
 	DeleteRaw(filter Filter, context Context) error
 
 	// RegisterEventHandler registers an event handler for a named event with given priority
-	RegisterEventHandler(event string, handler func(context Context, resource Resource, environment IEnvironment) error, priority Priority)
+	RegisterEventHandler(event string, handler func(context Context, resource Resource, environment IEnvironment) error, priority int)
 
 	// RegisterType registers a resource type, derived from BaseResource
 	RegisterType(resourceType interface{})

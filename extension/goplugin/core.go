@@ -27,12 +27,12 @@ type Core struct {
 }
 
 // RegisterSchemaEventHandler registers a schema handler
-func (thisCore *Core) RegisterSchemaEventHandler(schemaID string, eventName string, handler func(context goext.Context, resource goext.Resource, environment goext.IEnvironment) error, priority goext.Priority) {
+func (thisCore *Core) RegisterSchemaEventHandler(schemaID string, eventName string, handler func(context goext.Context, resource goext.Resource, environment goext.IEnvironment) error, priority int) {
 	thisCore.environment.RegisterSchemaEventHandler(schemaID, eventName, handler, priority)
 }
 
 // RegisterEventHandler registers a global handler
-func (thisCore *Core) RegisterEventHandler(eventName string, handler func(context goext.Context, environment goext.IEnvironment) error, priority goext.Priority) {
+func (thisCore *Core) RegisterEventHandler(eventName string, handler func(context goext.Context, environment goext.IEnvironment) error, priority int) {
 	thisCore.environment.RegisterEventHandler(eventName, handler, priority)
 }
 

@@ -593,7 +593,7 @@ func (thisSchema *Schema) DeleteRaw(filter goext.Filter, context goext.Context) 
 }
 
 // RegisterEventHandler registers a schema handler
-func (thisSchema *Schema) RegisterEventHandler(event string, handler func(context goext.Context, resource goext.Resource, environment goext.IEnvironment) error, priority goext.Priority) {
+func (thisSchema *Schema) RegisterEventHandler(event string, handler func(context goext.Context, resource goext.Resource, environment goext.IEnvironment) error, priority int) {
 	thisSchema.environment.RegisterSchemaEventHandler(thisSchema.rawSchema.ID, event, handler, priority)
 }
 
