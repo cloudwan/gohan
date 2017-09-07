@@ -36,12 +36,12 @@ func TestNonEmptyUpdate(t *testing.T) {
 	data := "blabla"
 	err := sync.Update(path, data)
 	if err != nil {
-		t.Errorf("unexpected error")
+		t.Fatalf("unexpected error")
 	}
 
 	node, err := sync.Fetch(path)
 	if err != nil {
-		t.Errorf("unexpected error")
+		t.Fatalf("unexpected error")
 	}
 	if node.Key != path || node.Value != data || len(node.Children) != 0 {
 		t.Errorf("unexpected node: %+v", node)
@@ -49,7 +49,7 @@ func TestNonEmptyUpdate(t *testing.T) {
 
 	err = sync.Delete(path, false)
 	if err != nil {
-		t.Errorf("unexpected error")
+		t.Fatalf("unexpected error")
 	}
 
 	node, err = sync.Fetch(path)
@@ -66,7 +66,7 @@ func TestEmptyUpdate(t *testing.T) {
 	data := ""
 	err := sync.Update(path, data)
 	if err != nil {
-		t.Errorf("unexpected error")
+		t.Fatalf("unexpected error")
 	}
 
 	// not found because v3 doesn't support directories
@@ -91,18 +91,18 @@ func TestRecursiveUpdate(t *testing.T) {
 	for path, data := range items {
 		err := sync.Update(path, data)
 		if err != nil {
-			t.Errorf("unexpected error")
+			t.Fatalf("unexpected error")
 		}
 	}
 	err := sync.Update(base+"invalid", "should not be included")
 	if err != nil {
-		t.Errorf("unexpected error")
+		t.Fatalf("unexpected error")
 	}
 
 	// not found because v3 doesn't support directories
 	node, err := sync.Fetch(base)
 	if err != nil {
-		t.Errorf("unexpected error")
+		t.Fatalf("unexpected error")
 	}
 
 	if node.Key != base || node.Value != items[base] || len(node.Children) != 2 {
@@ -127,11 +127,11 @@ func TestLockUnblocking(t *testing.T) {
 	path := "/path/lock"
 	_, err := sync0.Lock(path, false)
 	if err != nil {
-		t.Errorf("unexpected error")
+		t.Fatalf("unexpected error")
 	}
 	_, err = sync1.Lock(path, false)
 	if err == nil {
-		t.Errorf("unexpected non error")
+		t.Fatalf("unexpected non error")
 	}
 
 	if sync0.HasLock(path) != true {
@@ -143,11 +143,11 @@ func TestLockUnblocking(t *testing.T) {
 
 	err = sync0.Unlock(path)
 	if err != nil {
-		t.Errorf("unexpected error")
+		t.Fatalf("unexpected error")
 	}
 	_, err = sync1.Lock(path, false)
 	if err != nil {
-		t.Errorf("unexpected  error")
+		t.Fatalf("unexpected  error")
 	}
 
 	if sync0.HasLock(path) != false {
@@ -166,13 +166,13 @@ func TestLockBlocking(t *testing.T) {
 	path := "/path/lock"
 	_, err := sync0.Lock(path, true)
 	if err != nil {
-		t.Errorf("unexpected error")
+		t.Fatalf("unexpected error")
 	}
 	locked1 := make(chan struct{})
 	go func() {
 		_, err := sync1.Lock(path, true)
 		if err != nil {
-			t.Errorf("unexpected error")
+			t.Fatalf("unexpected error")
 		}
 		close(locked1)
 	}()
@@ -180,7 +180,7 @@ func TestLockBlocking(t *testing.T) {
 	time.Sleep(time.Millisecond * 100)
 	select {
 	case <-locked1:
-		t.Errorf("blocking failed")
+		t.Fatalf("blocking failed")
 	default:
 	}
 
@@ -193,7 +193,7 @@ func TestLockBlocking(t *testing.T) {
 
 	err = sync0.Unlock(path)
 	if err != nil {
-		t.Errorf("unexpected error")
+		t.Fatalf("unexpected error")
 	}
 	time.Sleep(time.Millisecond * 200)
 	<-locked1
@@ -219,25 +219,25 @@ func TestWatch(t *testing.T) {
 	go func() {
 		err := sync.Watch(path, responseChan, stopChan, gohan_sync.RevisionCurrent)
 		if err != nil {
-			t.Errorf("failed to watch")
+			t.Fatalf("failed to watch")
 		}
 	}()
 
 	resp := <-responseChan
 	if resp.Action != "get" || resp.Key != path+"/existing" || resp.Data["existing"].(bool) != true {
-		t.Errorf("mismatch response: %+v", resp)
+		t.Fatalf("mismatch response: %+v", resp)
 	}
 
 	sync.etcdClient.Put(context.Background(), path+"/new", `{"existing": false}`)
 	resp = <-responseChan
 	if resp.Action != "set" || resp.Key != path+"/new" || resp.Data["existing"].(bool) != false {
-		t.Errorf("mismatch response: %+v", resp)
+		t.Fatalf("mismatch response: %+v", resp)
 	}
 
 	sync.etcdClient.Delete(context.Background(), path+"/existing")
 	resp = <-responseChan
 	if resp.Action != "delete" || resp.Key != path+"/existing" || len(resp.Data) != 0 {
-		t.Errorf("mismatch response: %+v", resp)
+		t.Fatalf("mismatch response: %+v", resp)
 	}
 }
 
