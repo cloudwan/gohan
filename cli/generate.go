@@ -18,8 +18,10 @@ import (
 //TemplateDef template def defines file
 type TemplateDef struct {
 	Type         string `yaml:"type"`          // All, ResourceGroup, Resource
+	Package      string `yaml:"package"`       // Code generation directory. Default "gen".
 	OutputPath   string `yaml:"output_path"`   // This could be template string. "dir/{{Resource.ID}}".go
 	TemplatePath string `yaml:"template_path"` // Path to template
+	Language     string `yaml:"language"`      // Type of programming language. Eg: go(Default), typescript
 }
 
 func getGenerateCommand() cli.Command {
@@ -28,9 +30,9 @@ func getGenerateCommand() cli.Command {
 		ShortName: "gen",
 		Usage:     "Generate ServerSide Code",
 		Flags: []cli.Flag{
-			cli.StringFlag{Name: "template, t", Value: "", Usage: "Application template path"},
 			cli.StringFlag{Name: "templates", Value: "", Usage: "Template Configuraion"},
 			cli.StringFlag{Name: "config-file, c", Value: "./gohan.yaml", Usage: "Gohan config file"},
+			cli.StringFlag{Name: "language, l", Value: "go", Usage: "Programming language"},
 			cli.StringFlag{Name: "output, o", Value: ".", Usage: "Dir of output"},
 			cli.StringFlag{Name: "package, p", Value: "gen", Usage: "Package Name"},
 			cli.StringFlag{Name: "dbname, d", Value: "gohan", Usage: "DB Name"},
@@ -84,10 +86,10 @@ func dropDatabase(dbName string) error {
 
 func gohanGenerate(c *cli.Context) {
 	path := c.String("output")
-	template := c.String("template")
 	templates := c.String("templates")
 	configFile := c.String("config-file")
 	packageName := c.String("package")
+	language := c.String("language")
 	dbName := c.String("dbname")
 	codeDir := filepath.Join(path, packageName)
 	etcDir := filepath.Join(path, "etc")
@@ -164,6 +166,11 @@ func gohanGenerate(c *cli.Context) {
 		}
 		for _, templateDef := range templateConfig {
 			flag := ""
+			if templateDef.Package != "" {
+				packageName = templateDef.Package
+				codeDir = filepath.Join(path, packageName)
+				language = templateDef.Language
+			}
 			templatePath := filepath.Join(templateDir, templateDef.TemplatePath)
 			switch templateDef.Type {
 			case "resource":
@@ -177,20 +184,13 @@ func gohanGenerate(c *cli.Context) {
 					configFile, templatePath,
 					flag, filepath.Join(codeDir, templateDef.OutputPath),
 				))
+			if language == "go" {
+				execCommand(
+					fmt.Sprintf(
+						"goimports -w %s/*.go", codeDir))
+			}
 		}
-		execCommand(
-			fmt.Sprintf(
-				"goimports -w %s/*.go", codeDir))
 	}
-	if template != "" {
-		execCommand(
-			fmt.Sprintf(
-				"gohan template --config-file %s --template %s | grep -v '^\\s*$' > %s/base_controller.go", configFile, template, packageName))
-		execCommand(
-			fmt.Sprintf(
-				"goimports -w %s/base_controller.go", codeDir))
-	}
-
 }
 
 func execCommand(command string) {
