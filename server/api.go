@@ -20,6 +20,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"strings"
+
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/extension/goext"
@@ -100,8 +102,8 @@ func unwrapExtensionException(exceptionInfo map[string]interface{}) (message map
 	}
 	code = 400
 	var err error
-	switch name {
-	case "CustomException":
+	switch {
+	case name == "CustomException":
 		codeRaw, ok := exceptionInfo["code"]
 		if !ok {
 			return map[string]interface{}{"error": fmt.Sprintf(exceptionObjectDoestNotContainKeyError, "code")}, http.StatusInternalServerError
@@ -110,7 +112,7 @@ func unwrapExtensionException(exceptionInfo map[string]interface{}) (message map
 		if err != nil {
 			return map[string]interface{}{"error": fmt.Sprintf(exceptionPropertyIsNotExpectedTypeError, "code", "int")}, http.StatusInternalServerError
 		}
-	case "ResourceException":
+	case name == "ResourceException":
 		problemRaw, ok := exceptionInfo["problem"]
 		if !ok {
 			return map[string]interface{}{"error": fmt.Sprintf(exceptionObjectDoestNotContainKeyError, "problem")}, http.StatusInternalServerError
@@ -120,7 +122,7 @@ func unwrapExtensionException(exceptionInfo map[string]interface{}) (message map
 			return map[string]interface{}{"error": fmt.Sprintf(exceptionPropertyIsNotExpectedTypeError, "problem", "int")}, http.StatusInternalServerError
 		}
 		code = problemToResponseCode(resources.ResourceProblem(problem))
-	case "ExtensionException":
+	case name == "ExtensionException":
 		innerExceptionInfoRaw, ok := exceptionInfo["inner_exception"]
 		if !ok {
 			return map[string]interface{}{"error": fmt.Sprintf(exceptionObjectDoestNotContainKeyError, "inner_exception")}, http.StatusInternalServerError
@@ -130,6 +132,17 @@ func unwrapExtensionException(exceptionInfo map[string]interface{}) (message map
 			return map[string]interface{}{"error": fmt.Sprintf(exceptionPropertyIsNotExpectedTypeError, "inner_exception", "map[string]interface{}")}, http.StatusInternalServerError
 		}
 		_, code = unwrapExtensionException(innerExceptionInfo)
+	case strings.Contains(name, "Exception"):
+		codeRaw, ok := exceptionInfo["code"]
+		if !ok {
+			// it's ok for custom exceptions not to provide an error code...
+			break
+		}
+		code, err = strconv.Atoi(fmt.Sprint(codeRaw))
+		if err != nil {
+			// ...but if they do, it has to be an integer
+			return map[string]interface{}{"error": fmt.Sprintf(exceptionPropertyIsNotExpectedTypeError, "code", "int")}, http.StatusInternalServerError
+		}
 	}
 	if 200 <= code && code < 300 {
 		message, ok = messageRaw.(map[string]interface{})
