@@ -1051,10 +1051,10 @@
 			"revision": "67823cd24dece1b04cced3a0a0b3ca2bc84d875e"
 		},
 		{
-			"checksumSHA1": "2pomhK12VRaro+l83VqZ6C3zoSw=",
+			"checksumSHA1": "pxNd7yTU1466GvCD8Es8/PM74ww=",
 			"path": "github.com/serenize/snaker",
-			"revision": "543781d2b79bd95c51ffe70e70a55c946ca211ff",
-			"revisionTime": "2016-11-23T06:43:35Z"
+			"revision": "1c7f65329f6524115af8ca01ab604c00cddf5558",
+			"revisionTime": "2017-04-25T22:26:38Z"
 		},
 		{
 			"checksumSHA1": "lBehULzb2/kIK3wZ0gz2yNmHq9s=",
