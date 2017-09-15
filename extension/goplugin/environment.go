@@ -65,20 +65,11 @@ type SchemaPrioritizedSchemaHandlers map[string]PrioritizedSchemaHandlers
 // EventSchemaPrioritizedSchemaHandlers is a per-event per-schema prioritized list of schema handlers
 type EventSchemaPrioritizedSchemaHandlers map[string]SchemaPrioritizedSchemaHandlers
 
-// GlobHandlers is a global registry of global handlers
-var GlobHandlers EventPrioritizedHandlers
-
-// GlobSchemaHandlers is a global registry of schema handlers
-var GlobSchemaHandlers EventSchemaPrioritizedSchemaHandlers
-
 // GlobRawTypes is a global registry of runtime types used to map raw resources
 var GlobRawTypes = make(map[string]reflect.Type)
 
 // GlobTypes is a global registry of runtime types used to map resources
 var GlobTypes = make(map[string]reflect.Type)
-
-// GlobEnvironments is a global registry of loaded shared environments
-var GlobEnvironments = map[string]*Environment{}
 
 // Environment golang based rawEnvironment for gohan extension
 type Environment struct {
@@ -98,6 +89,10 @@ type Environment struct {
 	db    db.DB
 	ident middleware.IdentityService
 	sync  sync.Sync
+
+	// handlers
+	schemaHandlers EventSchemaPrioritizedSchemaHandlers
+	handlers       EventPrioritizedHandlers
 
 	// plugin related
 	manager *schema.Manager
@@ -147,6 +142,16 @@ func (thisEnvironment *Environment) Sync() goext.ISync {
 // Database returns an implementation to IDatabase interface
 func (thisEnvironment *Environment) Database() goext.IDatabase {
 	return thisEnvironment.extDatabase
+}
+
+// GetHandlers returns handlers of the environment
+func (thisEnvironment *Environment) GetHandlers() EventPrioritizedHandlers {
+	return thisEnvironment.handlers
+}
+
+// GetSchemaHandlers returns schemaHandlers of the environment
+func (thisEnvironment *Environment) GetSchemaHandlers() EventSchemaPrioritizedSchemaHandlers {
+	return thisEnvironment.schemaHandlers
 }
 
 //bind sets environment bindings
@@ -208,37 +213,6 @@ func (thisEnvironment *Environment) Start() error {
 
 // Load loads script into the environment
 func (thisEnvironment *Environment) Load(source string, beforeStartInit func() error) (bool, error) {
-	if existingEnvironment, ok := GlobEnvironments[source]; ok {
-		log.Debug("Golang extension already in registry: %s", source)
-
-		// link to existing
-		thisEnvironment.source = existingEnvironment.source
-		thisEnvironment.beforeStartInit = existingEnvironment.beforeStartInit
-
-		// extension
-		thisEnvironment.extCore = existingEnvironment.extCore
-		thisEnvironment.extLogger = existingEnvironment.extLogger
-		thisEnvironment.extSchemas = existingEnvironment.extSchemas
-		thisEnvironment.extSync = existingEnvironment.extSync
-		thisEnvironment.extDatabase = existingEnvironment.extDatabase
-
-		// internals
-		thisEnvironment.name = existingEnvironment.name
-		thisEnvironment.db = existingEnvironment.db
-		thisEnvironment.ident = existingEnvironment.ident
-		thisEnvironment.sync = existingEnvironment.sync
-
-		// plugin related
-		thisEnvironment.manager = existingEnvironment.manager
-		thisEnvironment.plugin = existingEnvironment.plugin
-
-		thisEnvironment.initFnRaw = existingEnvironment.initFnRaw
-		thisEnvironment.initFns = existingEnvironment.initFns
-
-		return false, nil
-	}
-	GlobEnvironments[source] = thisEnvironment
-
 	log.Debug("Loading golang extension: %s", source)
 
 	thisEnvironment.source = source
@@ -344,7 +318,7 @@ func sortHandlers(handlers PrioritizedHandlers) (priorities []int) {
 func (thisEnvironment *Environment) HandleEvent(event string, context map[string]interface{}) error {
 	context["event_type"] = event
 	// dispatch to schema handlers
-	if schemaPrioritizedSchemaHandlers, ok := GlobSchemaHandlers[event]; ok {
+	if schemaPrioritizedSchemaHandlers, ok := thisEnvironment.schemaHandlers[event]; ok {
 		if iSchemaID, ok := context["schema_id"]; ok {
 			schemaID := iSchemaID.(string)
 			if prioritizedSchemaHandlers, ok := schemaPrioritizedSchemaHandlers[schemaID]; ok {
@@ -371,7 +345,7 @@ func (thisEnvironment *Environment) HandleEvent(event string, context map[string
 	}
 
 	// dispatch to generic handlers
-	if prioritizedEventHandlers, ok := GlobHandlers[event]; ok {
+	if prioritizedEventHandlers, ok := thisEnvironment.handlers[event]; ok {
 		for _, priority := range sortHandlers(prioritizedEventHandlers) {
 			for index, eventHandler := range prioritizedEventHandlers[priority] {
 				if err := eventHandler(context, thisEnvironment); err != nil {
@@ -549,40 +523,40 @@ func (thisEnvironment *Environment) resourceFromContext(sch Schema, context map[
 
 // RegisterEventHandler registers an event handler
 func (thisEnvironment *Environment) RegisterEventHandler(event string, handler func(context goext.Context, environment goext.IEnvironment) error, priority int) {
-	if GlobHandlers == nil {
-		GlobHandlers = EventPrioritizedHandlers{}
+	if thisEnvironment.handlers == nil {
+		thisEnvironment.handlers = EventPrioritizedHandlers{}
 	}
 
-	if GlobHandlers[event] == nil {
-		GlobHandlers[event] = PrioritizedHandlers{}
+	if thisEnvironment.handlers[event] == nil {
+		thisEnvironment.handlers[event] = PrioritizedHandlers{}
 	}
 
-	if GlobHandlers[event][priority] == nil {
-		GlobHandlers[event][priority] = Handlers{}
+	if thisEnvironment.handlers[event][priority] == nil {
+		thisEnvironment.handlers[event][priority] = Handlers{}
 	}
 
-	GlobHandlers[event][priority] = append(GlobHandlers[event][priority], handler)
+	thisEnvironment.handlers[event][priority] = append(thisEnvironment.handlers[event][priority], handler)
 }
 
 // RegisterSchemaEventHandler register an event handler for a schema
 func (thisEnvironment *Environment) RegisterSchemaEventHandler(schemaID string, event string, handler func(context goext.Context, resource goext.Resource, environment goext.IEnvironment) error, priority int) {
-	if GlobSchemaHandlers == nil {
-		GlobSchemaHandlers = EventSchemaPrioritizedSchemaHandlers{}
+	if thisEnvironment.schemaHandlers == nil {
+		thisEnvironment.schemaHandlers = EventSchemaPrioritizedSchemaHandlers{}
 	}
 
-	if GlobSchemaHandlers[event] == nil {
-		GlobSchemaHandlers[event] = SchemaPrioritizedSchemaHandlers{}
+	if thisEnvironment.schemaHandlers[event] == nil {
+		thisEnvironment.schemaHandlers[event] = SchemaPrioritizedSchemaHandlers{}
 	}
 
-	if GlobSchemaHandlers[event][schemaID] == nil {
-		GlobSchemaHandlers[event][schemaID] = PrioritizedSchemaHandlers{}
+	if thisEnvironment.schemaHandlers[event][schemaID] == nil {
+		thisEnvironment.schemaHandlers[event][schemaID] = PrioritizedSchemaHandlers{}
 	}
 
-	if GlobSchemaHandlers[event][schemaID][priority] == nil {
-		GlobSchemaHandlers[event][schemaID][priority] = SchemaHandlers{}
+	if thisEnvironment.schemaHandlers[event][schemaID][priority] == nil {
+		thisEnvironment.schemaHandlers[event][schemaID][priority] = SchemaHandlers{}
 	}
 
-	GlobSchemaHandlers[event][schemaID][priority] = append(GlobSchemaHandlers[event][schemaID][priority], handler)
+	thisEnvironment.schemaHandlers[event][schemaID][priority] = append(thisEnvironment.schemaHandlers[event][schemaID][priority], handler)
 }
 
 // RegisterRawType registers a runtime type of raw resource for a given name
@@ -612,10 +586,9 @@ func (thisEnvironment *Environment) Stop() {
 	log.Info("Stop environment")
 
 	// reset globals
-	GlobHandlers = nil
-	GlobSchemaHandlers = nil
+	thisEnvironment.handlers = nil
+	thisEnvironment.schemaHandlers = nil
 	GlobRawTypes = make(map[string]reflect.Type)
-	GlobEnvironments = map[string]*Environment{}
 
 	// reset locals
 	thisEnvironment.extCore = nil
