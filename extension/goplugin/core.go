@@ -18,26 +18,27 @@ package goplugin
 import (
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/extension/goext"
+	"github.com/cloudwan/gohan/util"
 	"github.com/twinj/uuid"
 )
 
 // Core is an implementation of ICore interface
 type Core struct {
-	environment *Environment
+	env *Environment
 }
 
 // RegisterSchemaEventHandler registers a schema handler
-func (thisCore *Core) RegisterSchemaEventHandler(schemaID string, eventName string, handler func(context goext.Context, resource goext.Resource, environment goext.IEnvironment) error, priority int) {
-	thisCore.environment.RegisterSchemaEventHandler(schemaID, eventName, handler, priority)
+func (core *Core) RegisterSchemaEventHandler(schemaID string, eventName string, handler func(context goext.Context, resource goext.Resource, environment goext.IEnvironment) error, priority int) {
+	core.env.RegisterSchemaEventHandler(schemaID, eventName, handler, priority)
 }
 
 // RegisterEventHandler registers a global handler
-func (thisCore *Core) RegisterEventHandler(eventName string, handler func(context goext.Context, environment goext.IEnvironment) error, priority int) {
-	thisCore.environment.RegisterEventHandler(eventName, handler, priority)
+func (core *Core) RegisterEventHandler(eventName string, handler func(context goext.Context, environment goext.IEnvironment) error, priority int) {
+	core.env.RegisterEventHandler(eventName, handler, priority)
 }
 
 // TriggerEvent causes the given event to be handled in all environments (across different-language extensions)
-func (thisCore *Core) TriggerEvent(event string, context goext.Context) error {
+func (core *Core) TriggerEvent(event string, context goext.Context) error {
 	schemaID := ""
 
 	if s, ok := context["schema"]; ok {
@@ -45,22 +46,39 @@ func (thisCore *Core) TriggerEvent(event string, context goext.Context) error {
 	} else {
 		log.Panic("TriggerEvent: missing schema in context")
 	}
+	context["schema_id"] = schemaID
 
 	envManager := extension.GetManager()
 	return envManager.HandleEventInAllEnvironments(context, event, schemaID)
 }
 
 // HandleEvent Causes the given event to be handled within the same environment
-func (thisCore *Core) HandleEvent(event string, context goext.Context) error {
-	return thisCore.environment.HandleEvent(event, context)
+func (core *Core) HandleEvent(event string, context goext.Context) error {
+	return core.env.HandleEvent(event, context)
 }
 
 // NewUUID create a new unique ID
-func (thisCore *Core) NewUUID() string {
+func (core *Core) NewUUID() string {
 	return uuid.NewV4().String()
 }
 
+// Config gets parameter from config
+func (core *Core) Config(key string, defaultValue interface{}) interface{} {
+	config := util.GetConfig()
+	return config.GetParam(key, defaultValue)
+}
+
 // NewCore allocates Core
-func NewCore(environment *Environment) goext.ICore {
-	return &Core{environment: environment}
+func NewCore(env *Environment) *Core {
+	return &Core{env: env}
+}
+
+// Clone allocates a clone of Core; object may be nil
+func (core *Core) Clone() *Core {
+	if core == nil {
+		return nil
+	}
+	return &Core{
+		env: core.env,
+	}
 }

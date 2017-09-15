@@ -24,8 +24,9 @@ import (
 
 	"context"
 
-	"github.com/cloudwan/gohan/schema"
 	"sync"
+
+	"github.com/cloudwan/gohan/schema"
 )
 
 var (

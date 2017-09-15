@@ -208,12 +208,9 @@ func CreateFromConfig(config *util.Config) (DB, error) {
 	return dbConn, nil
 }
 
-// InitDBWithSchemas initializes database using schemas stored in Manager
-func InitDBWithSchemas(dbType, dbConnection string, dropOnCreate, cascade, migrate bool) error {
-	aDb, err := ConnectDB(dbType, dbConnection, DefaultMaxOpenConn, options.Default())
-	if err != nil {
-		return err
-	}
+// InitDBConnWithSchemas initializes database connection using schemas stored in Manager
+func InitDBConnWithSchemas(aDb DB, dropOnCreate, cascade, migrate bool) error {
+	var err error
 	schemaManager := schema.GetManager()
 	schemas := schemaManager.OrderedSchemas()
 	if len(schemas) == 0 {
@@ -247,6 +244,15 @@ func InitDBWithSchemas(dbType, dbConnection string, dropOnCreate, cascade, migra
 			}
 		}
 	}
-	aDb.Close()
 	return nil
+}
+
+// InitDBWithSchemas initializes database using schemas stored in Manager
+func InitDBWithSchemas(dbType, dbConnection string, dropOnCreate, cascade, migrate bool) error {
+	aDb, err := ConnectDB(dbType, dbConnection, DefaultMaxOpenConn, options.Default())
+	if err != nil {
+		return err
+	}
+	defer aDb.Close()
+	return InitDBConnWithSchemas(aDb, dropOnCreate, cascade, migrate)
 }

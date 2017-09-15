@@ -21,22 +21,21 @@ import (
 	"path/filepath"
 	"plugin"
 	"reflect"
+	"sort"
 	"strings"
 	"time"
 
-	"sort"
-
-	"github.com/cloudwan/gohan/db"
+	gohan_db "github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/extension/goext"
-	logger "github.com/cloudwan/gohan/log"
+	gohan_logger "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/schema"
-	"github.com/cloudwan/gohan/server/middleware"
-	"github.com/cloudwan/gohan/sync"
+	gohan_sync "github.com/cloudwan/gohan/sync"
+	"github.com/mohae/deepcopy"
 	"github.com/twinj/uuid"
 )
 
-var log = logger.NewLogger()
+var log = gohan_logger.NewLogger()
 
 // Handler is a generic handler
 type Handler func(context goext.Context, environment goext.IEnvironment) error
@@ -65,218 +64,222 @@ type SchemaPrioritizedSchemaHandlers map[string]PrioritizedSchemaHandlers
 // EventSchemaPrioritizedSchemaHandlers is a per-event per-schema prioritized list of schema handlers
 type EventSchemaPrioritizedSchemaHandlers map[string]SchemaPrioritizedSchemaHandlers
 
-// GlobHandlers is a global registry of global handlers
-var GlobHandlers EventPrioritizedHandlers
+func newTraceID() string {
+	return uuid.NewV4().String()
+}
 
-// GlobSchemaHandlers is a global registry of schema handlers
-var GlobSchemaHandlers EventSchemaPrioritizedSchemaHandlers
-
-// GlobRawTypes is a global registry of runtime types used to map raw resources
-var GlobRawTypes = make(map[string]reflect.Type)
-
-// GlobTypes is a global registry of runtime types used to map resources
-var GlobTypes = make(map[string]reflect.Type)
-
-// GlobEnvironments is a global registry of loaded shared environments
-var GlobEnvironments = map[string]*Environment{}
-
-// Environment golang based rawEnvironment for gohan extension
+// Environment golang based environment for gohan extensions
 type Environment struct {
-	// initial
-	source          string
-	beforeStartInit func() error
+	initFns         map[string]func(goext.IEnvironment) error
+	beforeStartHook func(env *Environment) error
+	afterStopHook   func(env *Environment)
 
-	// extension
-	extCore     goext.ICore
-	extLogger   goext.ILogger
-	extSchemas  goext.ISchemas
-	extSync     goext.ISync
-	extDatabase goext.IDatabase
+	coreImpl     *Core
+	loggerImpl   *Logger
+	schemasImpl  *Schemas
+	syncImpl     *Sync
+	databaseImpl *Database
 
-	// internals
-	name  string
-	db    db.DB
-	ident middleware.IdentityService
-	sync  sync.Sync
-
-	// plugin related
-	manager *schema.Manager
-	plugin  *plugin.Plugin
-
-	schemasFnRaw plugin.Symbol
-	schemasFn    func() []string
-	schemas      []string
-
-	initFnRaw plugin.Symbol
-	initFns   []func(goext.IEnvironment) error
-
+	name    string
 	traceID string
+
+	handlers       EventPrioritizedHandlers
+	schemaHandlers EventSchemaPrioritizedSchemaHandlers
+
+	rawTypes map[string]reflect.Type
+	types    map[string]reflect.Type
 }
 
 // NewEnvironment create new gohan extension rawEnvironment based on context
-func NewEnvironment(name string, dataStore db.DB, ident middleware.IdentityService, sync sync.Sync) *Environment {
-	newEnvironment := &Environment{
-		name:  name,
-		db:    dataStore,
-		ident: ident,
-		sync:  sync,
+func NewEnvironment(name string, beforeStartHook func(env *Environment) error, afterStopHook func(env *Environment)) *Environment {
+	env := &Environment{
+		initFns:         map[string]func(goext.IEnvironment) error{},
+		beforeStartHook: beforeStartHook,
+		afterStopHook:   afterStopHook,
+
+		name: name,
+
+		rawTypes: make(map[string]reflect.Type),
+		types:    make(map[string]reflect.Type),
 	}
-	return newEnvironment
+	return env
+}
+
+// Handlers returns a copy of handlers - used for testing
+func (env *Environment) Handlers() EventPrioritizedHandlers {
+	return env.handlers
+}
+
+// SchemaHandlers returns a copy of handlers - used for testing
+func (env *Environment) SchemaHandlers() EventSchemaPrioritizedSchemaHandlers {
+	return env.schemaHandlers
+}
+
+// RawTypes returns raw types
+func (env *Environment) RawTypes() map[string]reflect.Type {
+	return env.rawTypes
+}
+
+// Types returns types
+func (env *Environment) Types() map[string]reflect.Type {
+	return env.types
 }
 
 // Core returns an implementation to Core interface
-func (thisEnvironment *Environment) Core() goext.ICore {
-	return thisEnvironment.extCore
+func (env *Environment) Core() goext.ICore {
+	return env.coreImpl
 }
 
 // Logger returns an implementation to Logger interface
-func (thisEnvironment *Environment) Logger() goext.ILogger {
-	return thisEnvironment.extLogger
+func (env *Environment) Logger() goext.ILogger {
+	return env.loggerImpl
 }
 
 // Schemas returns an implementation to Schemas interface
-func (thisEnvironment *Environment) Schemas() goext.ISchemas {
-	return thisEnvironment.extSchemas
+func (env *Environment) Schemas() goext.ISchemas {
+	return env.schemasImpl
 }
 
 // Sync returns an implementation to Sync interface
-func (thisEnvironment *Environment) Sync() goext.ISync {
-	return thisEnvironment.extSync
+func (env *Environment) Sync() goext.ISync {
+	return env.syncImpl
 }
 
 // Database returns an implementation to IDatabase interface
-func (thisEnvironment *Environment) Database() goext.IDatabase {
-	return thisEnvironment.extDatabase
+func (env *Environment) Database() goext.IDatabase {
+	return env.databaseImpl
 }
 
-//bind sets environment bindings
-func (thisEnvironment *Environment) bind() {
-	thisEnvironment.extCore = NewCore(thisEnvironment)
-	thisEnvironment.extLogger = NewLogger(thisEnvironment)
-	thisEnvironment.extSchemas = NewSchemas(thisEnvironment)
-	thisEnvironment.extSync = NewSync(thisEnvironment)
-	thisEnvironment.extDatabase = NewDatabase(thisEnvironment)
+// HTTP returns an implementation to IHTTP interface
+func (env *Environment) HTTP() goext.IHTTP {
+	return &HTTP{}
+}
+
+// Auth returns an implementation to IAuth interface
+func (env *Environment) Auth() goext.IAuth {
+	return &Auth{}
+}
+
+// SetDatabase sets and binds database implementation
+func (env *Environment) SetDatabase(db gohan_db.DB) {
+	env.bindDatabase(db)
+}
+
+// SetSync sets and binds sync implementation
+func (env *Environment) SetSync(sync gohan_sync.Sync) {
+	env.bindSync(sync)
+}
+
+func (env *Environment) bindCore() {
+	env.coreImpl = NewCore(env)
+}
+
+func (env *Environment) bindLogger() {
+	env.loggerImpl = NewLogger(env)
+}
+
+func (env *Environment) bindSchemas() {
+	env.schemasImpl = NewSchemas(env)
+}
+
+func (env *Environment) bindSync(sync gohan_sync.Sync) {
+	env.syncImpl = NewSync(sync)
+}
+
+func (env *Environment) bindDatabase(db gohan_db.DB) {
+	env.databaseImpl = NewDatabase(db)
 }
 
 // Start starts already loaded environment
-func (thisEnvironment *Environment) Start() error {
+func (env *Environment) Start() error {
 	var err error
 
-	if thisEnvironment.source == "" {
-		panic("golang extension is not loaded")
+	if len(env.initFns) == 0 {
+		log.Debug("Go environment is empty: %s", env.name)
+		return nil
 	}
 
-	log.Debug("Starting golang environment: %s", thisEnvironment.source)
+	log.Debug("Starting go environment: %s", env.name)
+
+	// bind
+	env.bindCore()
+	env.bindLogger()
+	env.bindSchemas()
 
 	// Before start init
-	if thisEnvironment.beforeStartInit != nil {
-		log.Debug("Calling before start init golang environment: %s", thisEnvironment.source)
+	if env.beforeStartHook != nil {
+		log.Debug("Calling before start for go environment: %s", env.name)
 
-		if err = thisEnvironment.beforeStartInit(); err != nil {
-			log.Error("Failed to before start init golang extension: %s; error: %s", thisEnvironment.source, err)
+		if err = env.beforeStartHook(env); err != nil {
+			log.Error("Failed to call before start for go extension: %s; error: %s", env.name, err)
 			return err
 		}
 	} else {
-		log.Debug("Before start init is not set for golang environment: %s", thisEnvironment.source)
+		log.Debug("Before start init is not set for go environment: %s", env.name)
 	}
 
-	// Manager
-	thisEnvironment.manager = schema.GetManager()
+	// generate trace ID
+	env.traceID = newTraceID()
 
-	// bind
-	thisEnvironment.bind()
+	// init extensions
+	log.Debug("Start go extension: %s", env.name)
 
-	// Generating TraceID
-	thisEnvironment.traceID = uuid.NewV4().String()
-
-	// Init
-	log.Debug("Start golang extension: %s", thisEnvironment.source)
-
-	for _, initFn := range thisEnvironment.initFns {
-		err = initFn(thisEnvironment)
+	for _, initFn := range env.initFns {
+		err = initFn(env)
 
 		if err != nil {
-			log.Error("Failed to start golang extension: %s; error: %s", thisEnvironment.source, err)
+			log.Error("Failed to start go extension: %s; error: %s", env.name, err)
 			return err
 		}
 	}
 
-	log.Debug("Golang extension started: %s", thisEnvironment.source)
+	log.Debug("Go extension started: %s", env.name)
 
 	return nil
 }
 
 // Load loads script into the environment
-func (thisEnvironment *Environment) Load(source string, beforeStartInit func() error) (bool, error) {
-	if existingEnvironment, ok := GlobEnvironments[source]; ok {
-		log.Debug("Golang extension already in registry: %s", source)
+func (env *Environment) Load(fileName string) error {
+	log.Debug("Loading go extension: %s", fileName)
 
-		// link to existing
-		thisEnvironment.source = existingEnvironment.source
-		thisEnvironment.beforeStartInit = existingEnvironment.beforeStartInit
-
-		// extension
-		thisEnvironment.extCore = existingEnvironment.extCore
-		thisEnvironment.extLogger = existingEnvironment.extLogger
-		thisEnvironment.extSchemas = existingEnvironment.extSchemas
-		thisEnvironment.extSync = existingEnvironment.extSync
-		thisEnvironment.extDatabase = existingEnvironment.extDatabase
-
-		// internals
-		thisEnvironment.name = existingEnvironment.name
-		thisEnvironment.db = existingEnvironment.db
-		thisEnvironment.ident = existingEnvironment.ident
-		thisEnvironment.sync = existingEnvironment.sync
-
-		// plugin related
-		thisEnvironment.manager = existingEnvironment.manager
-		thisEnvironment.plugin = existingEnvironment.plugin
-
-		thisEnvironment.initFnRaw = existingEnvironment.initFnRaw
-		thisEnvironment.initFns = existingEnvironment.initFns
-
-		return false, nil
+	if _, ok := env.initFns[fileName]; ok {
+		log.Warning(fmt.Sprintf("Go extension %s already loaded in %s", fileName, env.name))
+		return nil
 	}
-	GlobEnvironments[source] = thisEnvironment
-
-	log.Debug("Loading golang extension: %s", source)
-
-	thisEnvironment.source = source
-	thisEnvironment.beforeStartInit = beforeStartInit
 
 	var err error
 	var ok bool
 
-	if filepath.Ext(source) != ".so" {
-		return false, fmt.Errorf("golang extensions plugin must be a *.so file, file: %s", source)
+	if filepath.Ext(fileName) != ".so" {
+		return fmt.Errorf("go extension must be a *.so file, file: %s", fileName)
 	}
 
-	thisEnvironment.plugin, err = plugin.Open(source)
+	pl, err := plugin.Open(fileName)
 
 	if err != nil {
-		return false, fmt.Errorf("failed to load golang extension: %s", err)
+		return fmt.Errorf("failed to load go extension: %s", err)
 	}
 
 	// Init
-	thisEnvironment.initFnRaw, err = thisEnvironment.plugin.Lookup("Init")
+	initFnRaw, err := pl.Lookup("Init")
 
 	if err != nil {
-		return false, fmt.Errorf("golang extension does not export Init: %s", err)
+		return fmt.Errorf("go extension does not export Init: %s", err)
 	}
 
-	initFn, ok := thisEnvironment.initFnRaw.(func(goext.IEnvironment) error)
+	initFn, ok := initFnRaw.(func(goext.IEnvironment) error)
 
 	if !ok {
-		return false, fmt.Errorf("invalid signature of Init function in golang extension: %s", source)
+		return fmt.Errorf("invalid signature of Init function in go extension: %s", fileName)
 	}
 
-	thisEnvironment.initFns = append(thisEnvironment.initFns, initFn)
+	env.initFns[fileName] = initFn
 
-	return true, nil
+	return nil
 }
 
 //LoadExtensionsForPath for returns extensions for specific path
-func (thisEnvironment *Environment) LoadExtensionsForPath(extensions []*schema.Extension, timeLimit time.Duration, timeLimits []*schema.PathEventTimeLimit, path string) error {
+func (env *Environment) LoadExtensionsForPath(extensions []*schema.Extension, timeLimit time.Duration, timeLimits []*schema.PathEventTimeLimit, path string) error {
 	for _, extension := range extensions {
 		if extension.Match(path) {
 			if extension.CodeType != "goext" {
@@ -284,39 +287,38 @@ func (thisEnvironment *Environment) LoadExtensionsForPath(extensions []*schema.E
 			}
 			url := strings.TrimPrefix(extension.URL, "file://")
 			if url == "" {
-				log.Warning("ignore golang extension '%s' without plugin", extension.ID)
+				log.Warning(fmt.Sprintf("ignore go extension '%s' without plugin", extension.ID))
 				continue
 			}
-			loaded, err := thisEnvironment.Load(url, nil)
-			if err != nil {
-				return err
-			}
-			if loaded {
-				if err = thisEnvironment.Start(); err != nil {
-					return err
-				}
+			if err := env.Load(url); err != nil {
+				return fmt.Errorf("failed to load binary: %s", err)
 			}
 		}
 	}
-
+	if err := env.Start(); err != nil {
+		log.Error("failed to start environment: %s", err)
+		return err
+	}
 	return nil
 }
 
-func (thisEnvironment *Environment) dispatchSchemaEvent(prioritizedSchemaHandlers PrioritizedSchemaHandlers, sch Schema, event string, context map[string]interface{}) error {
-	thisEnvironment.Logger().Debugf("Starting event: %s, schema: %s", event, sch.rawSchema.ID)
-	defer thisEnvironment.Logger().Debugf("Finished event: %s, schema: %s", event, sch.rawSchema.ID)
-	if resource, err := thisEnvironment.resourceFromContext(sch, context); err == nil {
+func (env *Environment) dispatchSchemaEvent(prioritizedSchemaHandlers PrioritizedSchemaHandlers, sch Schema, event string, context map[string]interface{}) error {
+	env.Logger().Debugf("Starting event: %s, schema: %s", event, sch.raw.ID)
+	defer env.Logger().Debugf("Finished event: %s, schema: %s", event, sch.raw.ID)
+	if resource, err := env.resourceFromContext(sch, context); err == nil {
 		for _, priority := range sortSchemaHandlers(prioritizedSchemaHandlers) {
-			for index, schemaEventHandler := range prioritizedSchemaHandlers[priority] {
-				if err := schemaEventHandler(context, resource, thisEnvironment); err != nil {
-					return fmt.Errorf("failed to dispatch schema event '%s' to schema '%s' at priority '%d' with index '%d': %s",
-						event, sch.ID(), priority, index, err)
+			for _, schemaEventHandler := range prioritizedSchemaHandlers[priority] {
+				context["go_validation"] = true
+				if err := schemaEventHandler(context, resource, env); err != nil {
+					return err
 				}
-				thisEnvironment.updateContextFromResource(context, resource)
+				if resource != nil {
+					context["resource"] = sch.StructToMap(resource)
+				}
 			}
 		}
 	} else {
-		return fmt.Errorf("failed to parse resource from context with schema '%s' for event '%s': %s", sch.ID(), event, err)
+		return goext.NewError(goext.ErrorBadRequest, fmt.Errorf("failed to parse resource from context with schema '%s' for event '%s': %s", sch.ID(), event, err))
 	}
 
 	return nil
@@ -341,16 +343,16 @@ func sortHandlers(handlers PrioritizedHandlers) (priorities []int) {
 }
 
 // HandleEvent handles an event
-func (thisEnvironment *Environment) HandleEvent(event string, context map[string]interface{}) error {
+func (env *Environment) HandleEvent(event string, context map[string]interface{}) error {
 	context["event_type"] = event
 	// dispatch to schema handlers
-	if schemaPrioritizedSchemaHandlers, ok := GlobSchemaHandlers[event]; ok {
+	if schemaPrioritizedSchemaHandlers, ok := env.schemaHandlers[event]; ok {
 		if iSchemaID, ok := context["schema_id"]; ok {
 			schemaID := iSchemaID.(string)
 			if prioritizedSchemaHandlers, ok := schemaPrioritizedSchemaHandlers[schemaID]; ok {
-				if iSchema := thisEnvironment.Schemas().Find(schemaID); iSchema != nil {
+				if iSchema := env.Schemas().Find(schemaID); iSchema != nil {
 					sch := iSchema.(*Schema)
-					if err := thisEnvironment.dispatchSchemaEvent(prioritizedSchemaHandlers, *sch, event, context); err != nil {
+					if err := env.dispatchSchemaEvent(prioritizedSchemaHandlers, *sch, event, context); err != nil {
 						return err
 					}
 				}
@@ -358,9 +360,9 @@ func (thisEnvironment *Environment) HandleEvent(event string, context map[string
 		} else {
 			// all
 			for schemaID, prioritizedSchemaHandlers := range schemaPrioritizedSchemaHandlers {
-				if iSchema := thisEnvironment.Schemas().Find(schemaID); iSchema != nil {
+				if iSchema := env.Schemas().Find(schemaID); iSchema != nil {
 					sch := iSchema.(*Schema)
-					if err := thisEnvironment.dispatchSchemaEvent(prioritizedSchemaHandlers, *sch, event, context); err != nil {
+					if err := env.dispatchSchemaEvent(prioritizedSchemaHandlers, *sch, event, context); err != nil {
 						return err
 					}
 				} else {
@@ -371,10 +373,10 @@ func (thisEnvironment *Environment) HandleEvent(event string, context map[string
 	}
 
 	// dispatch to generic handlers
-	if prioritizedEventHandlers, ok := GlobHandlers[event]; ok {
+	if prioritizedEventHandlers, ok := env.handlers[event]; ok {
 		for _, priority := range sortHandlers(prioritizedEventHandlers) {
 			for index, eventHandler := range prioritizedEventHandlers[priority] {
-				if err := eventHandler(context, thisEnvironment); err != nil {
+				if err := eventHandler(context, env); err != nil {
 					return fmt.Errorf("failed to dispatch event '%s' at priority '%d' with index '%d': %s",
 						event, priority, index, err)
 				}
@@ -385,7 +387,7 @@ func (thisEnvironment *Environment) HandleEvent(event string, context map[string
 	return nil
 }
 
-func (thisEnvironment *Environment) updateContextFromResource(context goext.Context, resource interface{}) error {
+func (env *Environment) updateContextFromResource(context goext.Context, resource interface{}) error {
 	if resource == nil {
 		context["resource"] = nil
 		return nil
@@ -399,7 +401,7 @@ func (thisEnvironment *Environment) updateContextFromResource(context goext.Cont
 		return fmt.Errorf("failed to convert context resource to map during update context from resource")
 	}
 
-	if resourceMap, ok := thisEnvironment.resourceToMap(resource).(map[string]interface{}); ok {
+	if resourceMap, ok := env.resourceToMap(resource).(map[string]interface{}); ok {
 		for key, value := range resourceMap {
 			if _, ok := context["resource"].(map[string]interface{})[key]; ok {
 				context["resource"].(map[string]interface{})[key] = value
@@ -412,7 +414,7 @@ func (thisEnvironment *Environment) updateContextFromResource(context goext.Cont
 	return nil
 }
 
-func (thisEnvironment *Environment) updateResourceFromContextR(resource interface{}, resourceData map[string]interface{}) error {
+func (env *Environment) updateResourceFromContextR(resource interface{}, resourceData map[string]interface{}) error {
 	resourceValue := reflect.ValueOf(resource)
 	resourceElem := resourceValue.Elem()
 	resourceElemType := resourceElem.Type()
@@ -429,7 +431,7 @@ func (thisEnvironment *Environment) updateResourceFromContextR(resource interfac
 
 		if resourceFieldType.Type.Kind() == reflect.Struct {
 			if _, ok := resourceData[resourceFieldTagDB].(map[string]interface{}); ok {
-				thisEnvironment.updateResourceFromContextR(resourceField.Interface(), resourceData[resourceFieldTagDB].(map[string]interface{}))
+				env.updateResourceFromContextR(resourceField.Interface(), resourceData[resourceFieldTagDB].(map[string]interface{}))
 			} else if strings.Contains(resourceFieldType.Type.String(), "goext.Null") {
 				if resourceData[resourceFieldTagDB] != nil {
 					if val.Type() == resourceFieldType.Type {
@@ -454,7 +456,7 @@ func (thisEnvironment *Environment) updateResourceFromContextR(resource interfac
 	return nil
 }
 
-func (thisEnvironment *Environment) updateResourceFromContext(resource interface{}, context goext.Context) error {
+func (env *Environment) updateResourceFromContext(resource interface{}, context goext.Context) error {
 	if resource == nil {
 		return nil
 	}
@@ -464,18 +466,60 @@ func (thisEnvironment *Environment) updateResourceFromContext(resource interface
 	}
 
 	if resourceData, ok := context["resource"].(map[string]interface{}); ok {
-		return thisEnvironment.updateResourceFromContextR(resource, resourceData)
+		return env.updateResourceFromContextR(resource, resourceData)
 	}
 
 	return fmt.Errorf("failed to convert context resource to map during update resource from context")
 }
 
-func (thisEnvironment *Environment) resourceToMap(resource interface{}) interface{} {
+func (env *Environment) resourceToMap(resource interface{}) interface{} {
 	resourceValue := reflect.ValueOf(resource)
 	resourceElem := resourceValue.Elem()
 	resourceElemType := resourceElem.Type()
 
 	if resourceElemType.Kind() == reflect.Struct {
+		switch res := resource.(type) {
+		case *goext.NullString:
+			if res.Valid {
+				return res.Value
+			}
+			return nil
+		case *goext.NullInt:
+			if res.Valid {
+				return res.Value
+			}
+			return nil
+		case *goext.NullFloat:
+			if res.Valid {
+				return res.Value
+			}
+			return nil
+		case *goext.NullBool:
+			if res.Valid {
+				return res.Value
+			}
+			return nil
+		case goext.NullString:
+			if res.Valid {
+				return res.Value
+			}
+			return nil
+		case goext.NullInt:
+			if res.Valid {
+				return res.Value
+			}
+			return nil
+		case goext.NullFloat:
+			if res.Valid {
+				return res.Value
+			}
+			return nil
+		case goext.NullBool:
+			if res.Valid {
+				return res.Value
+			}
+			return nil
+		}
 		data := make(map[string]interface{})
 
 		for i := 0; i < resourceElemType.NumField(); i++ {
@@ -483,7 +527,7 @@ func (thisEnvironment *Environment) resourceToMap(resource interface{}) interfac
 			resourceFieldTagDB := resourceFieldType.Tag.Get("db")
 			resourceFieldInterface := resourceElem.Field(i).Interface()
 
-			data[resourceFieldTagDB] = thisEnvironment.resourceToMap(&resourceFieldInterface)
+			data[resourceFieldTagDB] = env.resourceToMap(&resourceFieldInterface)
 		}
 
 		return data
@@ -492,55 +536,57 @@ func (thisEnvironment *Environment) resourceToMap(resource interface{}) interfac
 	return resourceElem.Interface()
 }
 
-func (thisEnvironment *Environment) resourceFromContext(sch Schema, context map[string]interface{}) (res goext.Resource, err error) {
-	rawSchema := sch.rawSchema
+func (env *Environment) resourceFromContext(sch Schema, context map[string]interface{}) (res goext.Resource, err error) {
+	rawSch := sch.raw
+	rawType, ok := env.rawTypes[rawSch.ID]
 
-	resourceType, ok := GlobRawTypes[rawSchema.ID]
 	if !ok {
-		return nil, fmt.Errorf("No type registered for title: %s", rawSchema.ID)
+		return nil, fmt.Errorf("no raw type registered for schema: %s", rawSch.ID)
 	}
-
-	resource := reflect.New(resourceType)
 
 	resourceData, ok := context["resource"]
 
-	if ok {
-		data := resourceData.(map[string]interface{})
-		for i := 0; i < resourceType.NumField(); i++ {
-			field := resource.Elem().Field(i)
-			fieldType := resourceType.Field(i)
-			propertyName := fieldType.Tag.Get("db")
-			if propertyName == "" {
-				return nil, fmt.Errorf("Missing tag 'db' for resource %s field %s", resourceType.Name(), fieldType.Name)
-			}
-			property, err := rawSchema.GetPropertyByID(propertyName)
+	if !ok {
+		return nil, nil
+	}
+
+	resource := reflect.New(rawType)
+	data := resourceData.(map[string]interface{})
+
+	for i := 0; i < rawType.NumField(); i++ {
+		field := resource.Elem().Field(i)
+		fieldType := rawType.Field(i)
+		propertyName := fieldType.Tag.Get("db")
+		if propertyName == "" {
+			return nil, fmt.Errorf("missing tag 'db' for resource %s field %s", rawType.Name(), fieldType.Name)
+		}
+		property, err := rawSch.GetPropertyByID(propertyName)
+		if err != nil {
+			return nil, err
+		}
+		kind := fieldType.Type.Kind()
+		if kind == reflect.Struct || kind == reflect.Ptr || kind == reflect.Slice {
+			mapJSON, err := json.Marshal(data[property.ID])
 			if err != nil {
 				return nil, err
 			}
-			if fieldType.Type.Kind() == reflect.Struct {
-				mapJSON, err := json.Marshal(data[property.ID])
-				if err != nil {
-					return nil, err
-				}
-				newField := reflect.New(field.Type())
-				fieldJSON := string(mapJSON)
-				fieldInterface := newField.Interface()
-				err = json.Unmarshal([]byte(fieldJSON), &fieldInterface)
-				if err != nil {
-					return nil, err
-				}
-				field.Set(newField.Elem())
-			} else {
-				value := reflect.ValueOf(data[property.ID])
-				if value.IsValid() {
-					if value.Type() != field.Type() && field.Kind() == reflect.Int && value.Kind() == reflect.Float64 { // reflect treats number(N, 0) as float
-						field.SetInt(int64(value.Float()))
-					} else {
-						field.Set(value)
-					}
+			newField := reflect.New(field.Type())
+			fieldJSON := string(mapJSON)
+			fieldInterface := newField.Interface()
+			err = json.Unmarshal([]byte(fieldJSON), &fieldInterface)
+			if err != nil {
+				return nil, err
+			}
+			field.Set(newField.Elem())
+		} else {
+			value := reflect.ValueOf(data[property.ID])
+			if value.IsValid() {
+				if value.Type() != field.Type() && field.Kind() == reflect.Int && value.Kind() == reflect.Float64 { // reflect treats number(N, 0) as float
+					field.SetInt(int64(value.Float()))
+				} else {
+					field.Set(value)
 				}
 			}
-
 		}
 	}
 
@@ -548,122 +594,124 @@ func (thisEnvironment *Environment) resourceFromContext(sch Schema, context map[
 }
 
 // RegisterEventHandler registers an event handler
-func (thisEnvironment *Environment) RegisterEventHandler(event string, handler func(context goext.Context, environment goext.IEnvironment) error, priority int) {
-	if GlobHandlers == nil {
-		GlobHandlers = EventPrioritizedHandlers{}
+func (env *Environment) RegisterEventHandler(event string, handler func(context goext.Context, environment goext.IEnvironment) error, priority int) {
+	if env.handlers == nil {
+		env.handlers = EventPrioritizedHandlers{}
 	}
 
-	if GlobHandlers[event] == nil {
-		GlobHandlers[event] = PrioritizedHandlers{}
+	if env.handlers[event] == nil {
+		env.handlers[event] = PrioritizedHandlers{}
 	}
 
-	if GlobHandlers[event][priority] == nil {
-		GlobHandlers[event][priority] = Handlers{}
+	if env.handlers[event][priority] == nil {
+		env.handlers[event][priority] = Handlers{}
 	}
 
-	GlobHandlers[event][priority] = append(GlobHandlers[event][priority], handler)
+	env.handlers[event][priority] = append(env.handlers[event][priority], handler)
 }
 
 // RegisterSchemaEventHandler register an event handler for a schema
-func (thisEnvironment *Environment) RegisterSchemaEventHandler(schemaID string, event string, handler func(context goext.Context, resource goext.Resource, environment goext.IEnvironment) error, priority int) {
-	if GlobSchemaHandlers == nil {
-		GlobSchemaHandlers = EventSchemaPrioritizedSchemaHandlers{}
+func (env *Environment) RegisterSchemaEventHandler(schemaID string, event string, handler func(context goext.Context, resource goext.Resource, environment goext.IEnvironment) error, priority int) {
+	if env.schemaHandlers == nil {
+		env.schemaHandlers = EventSchemaPrioritizedSchemaHandlers{}
 	}
 
-	if GlobSchemaHandlers[event] == nil {
-		GlobSchemaHandlers[event] = SchemaPrioritizedSchemaHandlers{}
+	if env.schemaHandlers[event] == nil {
+		env.schemaHandlers[event] = SchemaPrioritizedSchemaHandlers{}
 	}
 
-	if GlobSchemaHandlers[event][schemaID] == nil {
-		GlobSchemaHandlers[event][schemaID] = PrioritizedSchemaHandlers{}
+	if env.schemaHandlers[event][schemaID] == nil {
+		env.schemaHandlers[event][schemaID] = PrioritizedSchemaHandlers{}
 	}
 
-	if GlobSchemaHandlers[event][schemaID][priority] == nil {
-		GlobSchemaHandlers[event][schemaID][priority] = SchemaHandlers{}
+	if env.schemaHandlers[event][schemaID][priority] == nil {
+		env.schemaHandlers[event][schemaID][priority] = SchemaHandlers{}
 	}
 
-	GlobSchemaHandlers[event][schemaID][priority] = append(GlobSchemaHandlers[event][schemaID][priority], handler)
+	env.schemaHandlers[event][schemaID][priority] = append(env.schemaHandlers[event][schemaID][priority], handler)
 }
 
 // RegisterRawType registers a runtime type of raw resource for a given name
-func (thisEnvironment *Environment) RegisterRawType(name string, typeValue interface{}) {
+func (env *Environment) RegisterRawType(name string, typeValue interface{}) {
 	targetType := reflect.TypeOf(typeValue)
-	GlobRawTypes[name] = targetType
-}
-
-// RawType returns a runtime type for a given named raw resource
-func (thisEnvironment *Environment) RawType(name string) reflect.Type {
-	return GlobRawTypes[name]
+	env.rawTypes[name] = targetType
 }
 
 // RegisterType registers a runtime type of resource for a given name
-func (thisEnvironment *Environment) RegisterType(name string, typeValue interface{}) {
+func (env *Environment) RegisterType(name string, typeValue interface{}) {
 	targetType := reflect.TypeOf(typeValue)
-	GlobTypes[name] = targetType
-}
-
-// ResourceType returns a runtime type for a given named resource
-func (thisEnvironment *Environment) ResourceType(name string) reflect.Type {
-	return GlobTypes[name]
+	env.types[name] = targetType
 }
 
 // Stop stops the environment to its initial state
-func (thisEnvironment *Environment) Stop() {
+func (env *Environment) Stop() {
 	log.Info("Stop environment")
 
-	// reset globals
-	GlobHandlers = nil
-	GlobSchemaHandlers = nil
-	GlobRawTypes = make(map[string]reflect.Type)
-	GlobEnvironments = map[string]*Environment{}
-
 	// reset locals
-	thisEnvironment.extCore = nil
-	thisEnvironment.extLogger = nil
-	thisEnvironment.extSchemas = nil
-	thisEnvironment.extSync = nil
-	thisEnvironment.extDatabase = nil
+	env.coreImpl = nil
+	env.loggerImpl = nil
+	env.schemasImpl = nil
+	env.syncImpl = nil
+	env.databaseImpl = nil
+
+	env.traceID = ""
+
+	env.handlers = nil
+	env.schemaHandlers = nil
+
+	env.rawTypes = make(map[string]reflect.Type)
+	env.types = make(map[string]reflect.Type)
+
+	// after stop
+	if env.afterStopHook != nil {
+		log.Debug("Calling after stop hook for go environment: %s", env.name)
+		env.afterStopHook(env)
+	} else {
+		log.Debug("After stop hook is not set for go environment: %s", env.name)
+	}
 }
 
 // Reset clear the environment to its initial state
-func (thisEnvironment *Environment) Reset() {
+func (env *Environment) Reset() {
 	log.Info("Reset environment")
 
-	thisEnvironment.Stop()
-	thisEnvironment.Start()
+	env.Stop()
+	env.Start()
 }
 
 // Clone makes a clone of the rawEnvironment
-func (thisEnvironment *Environment) Clone() extension.Environment {
-	env := &Environment{
-		source:          thisEnvironment.source,
-		beforeStartInit: thisEnvironment.beforeStartInit,
+func (env *Environment) Clone() extension.Environment {
+	clone := &Environment{
+		initFns:         env.initFns,
+		beforeStartHook: env.beforeStartHook,
+		afterStopHook:   env.afterStopHook,
 
-		// internals
-		name:  thisEnvironment.name,
-		db:    thisEnvironment.db,
-		ident: thisEnvironment.ident,
-		sync:  thisEnvironment.sync,
+		coreImpl:     env.coreImpl.Clone(),
+		loggerImpl:   env.loggerImpl.Clone(),
+		schemasImpl:  env.schemasImpl.Clone(),
+		syncImpl:     env.syncImpl.Clone(),
+		databaseImpl: env.databaseImpl.Clone(),
 
-		// plugin related
-		manager: thisEnvironment.manager,
-		plugin:  thisEnvironment.plugin,
+		name: env.name,
 
-		schemasFnRaw: thisEnvironment.schemasFnRaw,
-		schemasFn:    thisEnvironment.schemasFn,
-		schemas:      thisEnvironment.schemas,
+		traceID: newTraceID(),
 
-		initFnRaw: thisEnvironment.initFnRaw,
-		initFns:   thisEnvironment.initFns,
+		handlers:       deepcopy.Copy(env.handlers).(EventPrioritizedHandlers),
+		schemaHandlers: deepcopy.Copy(env.schemaHandlers).(EventSchemaPrioritizedSchemaHandlers),
 
-		traceID: uuid.NewV4().String(),
+		rawTypes: make(map[string]reflect.Type),
+		types:    make(map[string]reflect.Type),
 	}
-	env.bind()
-
-	return env
+	for k, v := range env.rawTypes {
+		clone.rawTypes[k] = v
+	}
+	for k, v := range env.types {
+		clone.types[k] = v
+	}
+	return clone
 }
 
 // IsEventHandled returns whether a given event is handled by this environment
-func (thisEnvironment *Environment) IsEventHandled(event string, context map[string]interface{}) bool {
+func (env *Environment) IsEventHandled(event string, context map[string]interface{}) bool {
 	return true
 }

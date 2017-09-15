@@ -363,6 +363,20 @@ var _ = Describe("Runner", func() {
 			})
 		})
 
+		Context("When correctly using the Gohan Sync Fetch mock", func() {
+			BeforeEach(func() {
+				testFile = "./test_data/gohan_sync_fetch_mock.js"
+			})
+
+			It("Should work", func() {
+				Expect(errors).To(HaveLen(3))
+				Expect(errors).To(HaveKeyWithValue("testLastThrow", BeNil()))
+				Expect(errors).To(HaveKeyWithValue("testWrongThrow", MatchError(ContainSubstring("Fail"))))
+				Expect(errors).To(HaveKeyWithValue(
+					"testUnexpectedCall", MatchError(ContainSubstring("Unexpected call"))))
+			})
+		})
+
 		Context("When using Gohan builtins", func() {
 			BeforeEach(func() {
 				testFile = "./test_data/gohan_builtins.js"

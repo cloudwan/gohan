@@ -16,123 +16,134 @@
 package goplugin
 
 import (
-	"github.com/cloudwan/gohan/extension/goext"
-	l "github.com/cloudwan/gohan/log"
 	"fmt"
+
+	"github.com/cloudwan/gohan/extension/goext"
+	gohan_log "github.com/cloudwan/gohan/log"
 )
 
-const logModule = "[goext]"
+const logModule = "[GOEXT]"
 
 // Logger is an implementation of ILogger
 type Logger struct {
-	environment *Environment
+	env *Environment
 }
 
-func (thisLogger *Logger) dispatchLog(module string, level goext.Level, format string) {
-	logger := l.NewLoggerForModule(module)
-	format = fmt.Sprintf("[%s] %s", thisLogger.environment.traceID, format)
+func (logger *Logger) dispatchLog(module string, level goext.Level, format string) {
+	log := gohan_log.NewLoggerForModule(module)
+	format = fmt.Sprintf("[%s] %s", logger.env.traceID, format)
 
 	switch level {
 	case goext.LevelCritical:
-		logger.Critical(format)
+		log.Critical(format)
 	case goext.LevelError:
-		logger.Error(format)
+		log.Error(format)
 	case goext.LevelWarning:
-		logger.Warning(format)
+		log.Warning(format)
 	case goext.LevelNotice:
-		logger.Notice(format)
+		log.Notice(format)
 	case goext.LevelInfo:
-		logger.Info(format)
+		log.Info(format)
 	case goext.LevelDebug:
-		logger.Debug(format)
+		log.Debug(format)
 	default:
 		panic("Invalid error level")
 	}
 }
 
-func (thisLogger *Logger) dispatchLogf(module string, level goext.Level, format string, args ...interface{}) {
-	logger := l.NewLoggerForModule(module)
-	format = fmt.Sprintf("[%s] %s", thisLogger.environment.traceID, format)
+func (logger *Logger) dispatchLogf(module string, level goext.Level, format string, args ...interface{}) {
+	log := gohan_log.NewLoggerForModule(module)
+	format = fmt.Sprintf("[%s] %s", logger.env.traceID, format)
 
 	switch level {
 	case goext.LevelCritical:
-		logger.Critical(format, args...)
+		log.Critical(format, args...)
 	case goext.LevelError:
-		logger.Error(format, args...)
+		log.Error(format, args...)
 	case goext.LevelWarning:
-		logger.Warning(format, args...)
+		log.Warning(format, args...)
 	case goext.LevelNotice:
-		logger.Notice(format, args...)
+		log.Notice(format, args...)
 	case goext.LevelInfo:
-		logger.Info(format, args...)
+		log.Info(format, args...)
 	case goext.LevelDebug:
-		logger.Debug(format, args...)
+		log.Debug(format, args...)
 	default:
 		panic("Invalid error level")
 	}
 }
 
 // Critical emits a critical log message
-func (thisLogger *Logger) Critical(format string) {
-	thisLogger.dispatchLog(logModule, goext.LevelCritical, format)
+func (logger *Logger) Critical(format string) {
+	logger.dispatchLog(logModule, goext.LevelCritical, format)
 }
 
 // Criticalf emits a formatted critical log message
-func (thisLogger *Logger) Criticalf(format string, args ...interface{}) {
-	thisLogger.dispatchLogf(logModule, goext.LevelCritical, format, args...)
+func (logger *Logger) Criticalf(format string, args ...interface{}) {
+	logger.dispatchLogf(logModule, goext.LevelCritical, format, args...)
 }
 
 // Error emits an error log message
-func (thisLogger *Logger) Error(format string) {
-	thisLogger.dispatchLog(logModule, goext.LevelError, format)
+func (logger *Logger) Error(format string) {
+	logger.dispatchLog(logModule, goext.LevelError, format)
 }
 
 // Errorf emits a formatted error log message
-func (thisLogger *Logger) Errorf(format string, args ...interface{}) {
-	thisLogger.dispatchLogf(logModule, goext.LevelError, format, args...)
+func (logger *Logger) Errorf(format string, args ...interface{}) {
+	logger.dispatchLogf(logModule, goext.LevelError, format, args...)
 }
 
 // Warning emits a warning log message
-func (thisLogger *Logger) Warning(format string) {
-	thisLogger.dispatchLog(logModule, goext.LevelWarning, format)
+func (logger *Logger) Warning(format string) {
+	logger.dispatchLog(logModule, goext.LevelWarning, format)
 }
 
 // Warningf emits a formatted warning log message
-func (thisLogger *Logger) Warningf(format string, args ...interface{}) {
-	thisLogger.dispatchLogf(logModule, goext.LevelWarning, format, args...)
+func (logger *Logger) Warningf(format string, args ...interface{}) {
+	logger.dispatchLogf(logModule, goext.LevelWarning, format, args...)
 }
 
 // Notice emits a notice log message
-func (thisLogger *Logger) Notice(format string) {
-	thisLogger.dispatchLog(logModule, goext.LevelNotice, format)
+func (logger *Logger) Notice(format string) {
+	logger.dispatchLog(logModule, goext.LevelNotice, format)
 }
 
 // Noticef emits a formatted notice log message
-func (thisLogger *Logger) Noticef(format string, args ...interface{}) {
-	thisLogger.dispatchLogf(logModule, goext.LevelNotice, format, args...)
+func (logger *Logger) Noticef(format string, args ...interface{}) {
+	logger.dispatchLogf(logModule, goext.LevelNotice, format, args...)
 }
 
 // Info emits an info log message
-func (thisLogger *Logger) Info(format string) {
-	thisLogger.dispatchLog(logModule, goext.LevelInfo, format)
+func (logger *Logger) Info(format string) {
+	logger.dispatchLog(logModule, goext.LevelInfo, format)
 }
 
 // Infof emits a formatted info log message
-func (thisLogger *Logger) Infof(format string, args ...interface{}) {
-	thisLogger.dispatchLogf(logModule, goext.LevelInfo, format, args...)
+func (logger *Logger) Infof(format string, args ...interface{}) {
+	logger.dispatchLogf(logModule, goext.LevelInfo, format, args...)
 }
 
 // Debug emits a debug log message
-func (thisLogger *Logger) Debug(format string) {
-	thisLogger.dispatchLog(logModule, goext.LevelDebug, format)
+func (logger *Logger) Debug(format string) {
+	logger.dispatchLog(logModule, goext.LevelDebug, format)
 }
 
 // Debugf emits a formatted debug log message
-func (thisLogger *Logger) Debugf(format string, args ...interface{}) {
-	thisLogger.dispatchLogf(logModule, goext.LevelDebug, format, args...)
+func (logger *Logger) Debugf(format string, args ...interface{}) {
+	logger.dispatchLogf(logModule, goext.LevelDebug, format, args...)
 }
 
 // NewLogger allocates Logger
-func NewLogger(environment *Environment) goext.ILogger {
-	return &Logger{environment: environment}
+func NewLogger(env *Environment) *Logger {
+	return &Logger{env: env}
+}
+
+// Clone allocates a clone of Logger; object may be nil
+func (logger *Logger) Clone() *Logger {
+	if logger == nil {
+		return nil
+	}
+	return &Logger{
+		env: logger.env,
+	}
 }

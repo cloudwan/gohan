@@ -1205,6 +1205,8 @@ var _ = Describe("Otto extension manager", func() {
 							Expect(env.HandleEvent("test", context)).To(Succeed())
 							Expect(context["exception"]).To(HaveKeyWithValue("message", ContainSubstring("Labori inteligente")))
 							Expect(context["exception_message"]).To(ContainSubstring("Labori inteligente"))
+							innerException := context["exception"].(map[string]interface{})["inner_exception"].(map[string]interface{})
+							Expect(innerException).To(HaveKeyWithValue("code", int64(390)))
 						})
 					})
 

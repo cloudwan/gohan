@@ -390,6 +390,12 @@ func (schema *Schema) ValidateOnCreate(object interface{}) error {
 	return schema.Validate(schema.JSONSchemaOnCreate, object)
 }
 
+//ValidateGoOnCreate validates json object using jsoncschema on object creation
+func (schema *Schema) ValidateGoOnCreate(resource interface{}) error {
+	// FIXME
+	return nil
+}
+
 //ValidateOnUpdate validates json object using jsoncschema on object update
 func (schema *Schema) ValidateOnUpdate(object interface{}) error {
 	return schema.Validate(schema.JSONSchemaOnUpdate, object)

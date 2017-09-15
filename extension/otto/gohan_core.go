@@ -117,7 +117,6 @@ func init() {
 		for name, object := range builtins {
 			vm.Set(name, object)
 		}
-
 		loadNPMModules()
 		registerBuiltinModules(vm)
 

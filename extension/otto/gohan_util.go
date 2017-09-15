@@ -24,18 +24,16 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"os/exec"
+	"strings"
 	"text/template"
 	"time"
 
-	"github.com/twinj/uuid"
-	"github.com/xyproto/otto"
-
-	"os"
-	"strings"
-
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
+	"github.com/twinj/uuid"
+	"github.com/xyproto/otto"
 )
 
 const (
@@ -93,7 +91,7 @@ func init() {
 
 				done := make(chan struct{})
 				go func() {
-					code, headers, body, err = gohanHTTP(ctx, method, url, rawHeaders, data, opaque)
+					code, headers, body, err = GohanHTTP(ctx, method, url, rawHeaders, data, opaque)
 					close(done)
 				}()
 
@@ -352,7 +350,8 @@ func init() {
 	RegisterInit(gohanUtilInit)
 }
 
-func gohanHTTP(ctx context.Context, method, rawURL string, headers map[string]interface{},
+// GohanHTTP performs a HTTP request
+func GohanHTTP(ctx context.Context, method, rawURL string, headers map[string]interface{},
 	postData interface{}, opaque bool) (int, http.Header, string, error) {
 
 	var reader io.Reader

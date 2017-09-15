@@ -19,9 +19,9 @@ package goext
 type Type string
 
 const (
-	//ReadUncommited is transaction type for READ UNCOMMITTED
+	//ReadUncommitted is transaction type for READ UNCOMMITTED
 	//You don't need to use this for most case
-	ReadUncommited Type = "READ UNCOMMITTED"
+	ReadUncommitted Type = "READ UNCOMMITTED"
 
 	//ReadCommited is transaction type for READ COMMITTED
 	//You don't need to use this for most case

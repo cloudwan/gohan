@@ -1,6 +1,23 @@
+// Copyright (C) 2017 NTT Innovation Institute, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+// implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package goplugin
 
 import (
+	"fmt"
+
 	"github.com/cloudwan/gohan/db/pagination"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/extension/goext"
@@ -17,7 +34,7 @@ func (t *Transaction) findRawSchema(id string) *schema.Schema {
 	schema, ok := manager.Schema(id)
 
 	if !ok {
-		log.Warning("cannot find schema '%s'", id)
+		log.Warning(fmt.Sprintf("cannot find schema '%s'", id))
 		return nil
 	}
 	return schema
@@ -89,8 +106,24 @@ func (t *Transaction) Fetch(schema goext.ISchema, filter goext.Filter) (map[stri
 
 // LockFetch locks and fetches an existing resource
 func (t *Transaction) LockFetch(schema goext.ISchema, filter goext.Filter, lockPolicy goext.LockPolicy) (map[string]interface{}, error) {
-	//TODO: implement proper locking
-	return t.Fetch(schema, filter)
+	res, err := t.tx.LockFetch(t.findRawSchema(schema.ID()), transaction.Filter(filter), convertLockPolicy(lockPolicy), nil)
+	if err != nil {
+		return nil, err
+	}
+	return res.Data(), nil
+}
+
+func convertLockPolicy(policy goext.LockPolicy) schema.LockPolicy {
+	switch policy {
+	case goext.SkipRelatedResources:
+		return schema.SkipRelatedResources
+	case goext.LockRelatedResources:
+		return schema.LockRelatedResources
+	case goext.NoLock:
+		return schema.NoLocking
+	default:
+		panic(fmt.Sprintf("Unknown lock policy: %d", policy))
+	}
 }
 
 // StateFetch fetches a state an existing resource
@@ -111,6 +144,10 @@ func (t *Transaction) List(schema goext.ISchema, filter goext.Filter, listOption
 		return nil, 0, err
 	}
 
+	return resourcesToMap(data)
+}
+
+func resourcesToMap(data []*schema.Resource) ([]map[string]interface{}, uint64, error) {
 	resourceProperties := make([]map[string]interface{}, len(data))
 	for i := range data {
 		resourceProperties[i] = data[i].Data()
@@ -121,7 +158,14 @@ func (t *Transaction) List(schema goext.ISchema, filter goext.Filter, listOption
 
 // LockList locks and lists existing resources
 func (t *Transaction) LockList(schema goext.ISchema, filter goext.Filter, listOptions *goext.ListOptions, paginator *goext.Paginator, lockingPolicy goext.LockPolicy) ([]map[string]interface{}, uint64, error) {
-	return t.List(schema, filter, listOptions, paginator)
+	schemaID := schema.ID()
+
+	data, _, err := t.tx.LockList(t.findRawSchema(schemaID), transaction.Filter(filter), nil, (*pagination.Paginator)(paginator), convertLockPolicy(lockingPolicy))
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return resourcesToMap(data)
 }
 
 // RawTransaction returns the raw transaction
