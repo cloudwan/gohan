@@ -222,6 +222,14 @@ func (mockEnv *MockIEnvironment) getTraceID() string {
 	return mockEnv.env.getTraceID()
 }
 
+func (mockEnv *MockIEnvironment) getTimelimit() time.Duration {
+	return mockEnv.env.timeLimit
+}
+
+func (mockEnv *MockIEnvironment) getTimelimits() []*schema.EventTimeLimit {
+	return mockEnv.env.timeLimits
+}
+
 func (mockEnv *MockIEnvironment) IsEventHandled(event string, context map[string]interface{}) bool {
 	return mockEnv.env.IsEventHandled(event, context)
 }

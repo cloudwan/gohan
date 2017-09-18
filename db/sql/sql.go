@@ -557,15 +557,23 @@ func (tx *Transaction) logQuery(sql string, args ...interface{}) {
 	log.Debug("[%p] Executing SQL query '%s'", tx.transaction, query)
 }
 
-// Exec executes sql in transaction
 func (tx *Transaction) Exec(sql string, args ...interface{}) error {
+	return tx.ExecContext(context.Background(), sql, args...)
+}
+
+// Exec executes sql in transaction
+func (tx *Transaction) ExecContext(ctx context.Context, sql string, args ...interface{}) error {
 	tx.logQuery(sql, args...)
-	_, err := tx.transaction.Exec(sql, args...)
+	_, err := tx.transaction.ExecContext(ctx, sql, args...)
 	return err
 }
 
-//Create create resource in the db
 func (tx *Transaction) Create(resource *schema.Resource) error {
+	return tx.CreateContext(context.Background(), resource)
+}
+
+//Create create resource in the db
+func (tx *Transaction) CreateContext(ctx context.Context, resource *schema.Resource) error {
 	var cols []string
 	var values []interface{}
 	db := tx.db
@@ -589,7 +597,7 @@ func (tx *Transaction) Create(resource *schema.Resource) error {
 	if err != nil {
 		return err
 	}
-	return tx.Exec(sql, args...)
+	return tx.ExecContext(ctx, sql, args...)
 }
 
 func (tx *Transaction) updateQuery(resource *schema.Resource) (sq.UpdateBuilder, error) {
@@ -614,8 +622,12 @@ func (tx *Transaction) updateQuery(resource *schema.Resource) (sq.UpdateBuilder,
 	return q, nil
 }
 
-//Update update resource in the db
 func (tx *Transaction) Update(resource *schema.Resource) error {
+	return tx.UpdateContext(context.Background(), resource)
+}
+
+//Update update resource in the db
+func (tx *Transaction) UpdateContext(ctx context.Context, resource *schema.Resource) error {
 	q, err := tx.updateQuery(resource)
 	if err != nil {
 		return err
@@ -629,11 +641,15 @@ func (tx *Transaction) Update(resource *schema.Resource) error {
 	}
 	sql += " WHERE id = ?"
 	args = append(args, resource.ID())
-	return tx.Exec(sql, args...)
+	return tx.ExecContext(ctx, sql, args...)
+}
+
+func (tx *Transaction) StateUpdate(resource *schema.Resource, state *transaction.ResourceState) error {
+	return tx.StateUpdateContext(context.Background(), resource, state)
 }
 
 //StateUpdate update resource state
-func (tx *Transaction) StateUpdate(resource *schema.Resource, state *transaction.ResourceState) error {
+func (tx *Transaction) StateUpdateContext(ctx context.Context, resource *schema.Resource, state *transaction.ResourceState) error {
 	q, err := tx.updateQuery(resource)
 	if err != nil {
 		return err
@@ -649,16 +665,20 @@ func (tx *Transaction) StateUpdate(resource *schema.Resource, state *transaction
 	if err != nil {
 		return err
 	}
-	return tx.Exec(sql, args...)
+	return tx.ExecContext(ctx, sql, args...)
+}
+
+func (tx *Transaction) Delete(s *schema.Schema, resourceID interface{}) error {
+	return tx.DeleteContext(context.Background(), s, resourceID)
 }
 
 //Delete delete resource from db
-func (tx *Transaction) Delete(s *schema.Schema, resourceID interface{}) error {
+func (tx *Transaction) DeleteContext(ctx context.Context, s *schema.Schema, resourceID interface{}) error {
 	sql, args, err := sq.Delete(quote(s.GetDbTableName())).Where(sq.Eq{"id": resourceID}).ToSql()
 	if err != nil {
 		return err
 	}
-	return tx.Exec(sql, args...)
+	return tx.ExecContext(ctx, sql, args...)
 }
 
 func (db *DB) handler(property *schema.Property) propertyHandler {
@@ -817,9 +837,9 @@ func buildSelect(sc *selectContext) (string, []interface{}, error) {
 	return q.ToSql()
 }
 
-func (tx *Transaction) executeSelect(sc *selectContext, sql string, args []interface{}) (list []*schema.Resource, total uint64, err error) {
+func (tx *Transaction) executeSelect(ctx context.Context, sc *selectContext, sql string, args []interface{}) (list []*schema.Resource, total uint64, err error) {
 	tx.logQuery(sql, args...)
-	rows, err := tx.transaction.Queryx(sql, args...)
+	rows, err := tx.transaction.QueryxContext(ctx, sql, args...)
 	if err != nil {
 		return
 	}
@@ -829,12 +849,16 @@ func (tx *Transaction) executeSelect(sc *selectContext, sql string, args []inter
 	if err != nil {
 		return nil, 0, err
 	}
-	total, err = tx.count(sc.schema, sc.filter)
+	total, err = tx.count(ctx, sc.schema, sc.filter)
 	return
 }
 
-//List resources in the db
 func (tx *Transaction) List(s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions, pg *pagination.Paginator) (list []*schema.Resource, total uint64, err error) {
+	return tx.ListContext(context.Background(), s, filter, options, pg)
+}
+
+//List resources in the db
+func (tx *Transaction) ListContext(ctx context.Context, s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions, pg *pagination.Paginator) (list []*schema.Resource, total uint64, err error) {
 	sc := &selectContext{
 		schema:    s,
 		filter:    filter,
@@ -851,7 +875,7 @@ func (tx *Transaction) List(s *schema.Schema, filter transaction.Filter, options
 		return nil, 0, err
 	}
 
-	return tx.executeSelect(sc, sql, args)
+	return tx.executeSelect(ctx, sc, sql, args)
 }
 
 func shouldJoin(policy schema.LockPolicy) bool {
@@ -866,8 +890,12 @@ func shouldJoin(policy schema.LockPolicy) bool {
 	}
 }
 
-// LockList locks resources in the db
 func (tx *Transaction) LockList(s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions, pg *pagination.Paginator, lockPolicy schema.LockPolicy) (list []*schema.Resource, total uint64, err error) {
+	return tx.LockListContext(context.Background(), s, filter, options, pg, lockPolicy)
+}
+
+// LockList locks resources in the db
+func (tx *Transaction) LockListContext(ctx context.Context, s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions, pg *pagination.Paginator, lockPolicy schema.LockPolicy) (list []*schema.Resource, total uint64, err error) {
 	policyJoin := shouldJoin(lockPolicy)
 
 	sc := &selectContext{
@@ -897,13 +925,17 @@ func (tx *Transaction) LockList(s *schema.Schema, filter transaction.Filter, opt
 		sc.join = true
 	}
 
-	return tx.executeSelect(sc, sql, args)
+	return tx.executeSelect(ctx, sc, sql, args)
+}
+
+func (tx *Transaction) Query(s *schema.Schema, query string, arguments []interface{}) (list []*schema.Resource, err error) {
+	return tx.QueryContext(context.Background(), s, query, arguments)
 }
 
 // Query with raw sql string
-func (tx *Transaction) Query(s *schema.Schema, query string, arguments []interface{}) (list []*schema.Resource, err error) {
+func (tx *Transaction) QueryContext(ctx context.Context, s *schema.Schema, query string, arguments []interface{}) (list []*schema.Resource, err error) {
 	tx.logQuery(query, arguments...)
-	rows, err := tx.transaction.Queryx(query, arguments...)
+	rows, err := tx.transaction.QueryxContext(ctx, query, arguments...)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to run query: %s", query)
 	}
@@ -963,7 +995,7 @@ func (tx *Transaction) decode(s *schema.Schema, tableName string, skipNil, recur
 }
 
 //count count all matching resources in the db
-func (tx *Transaction) count(s *schema.Schema, filter transaction.Filter) (res uint64, err error) {
+func (tx *Transaction) count(ctx context.Context, s *schema.Schema, filter transaction.Filter) (res uint64, err error) {
 	q := sq.Select("Count(id) as count").From(quote(s.GetDbTableName()))
 	//Filter get already tested
 	q, _ = addFilterToQuery(s, q, filter, false)
@@ -972,7 +1004,7 @@ func (tx *Transaction) count(s *schema.Schema, filter transaction.Filter) (res u
 		return
 	}
 	result := map[string]interface{}{}
-	err = tx.transaction.QueryRowx(sql, args...).MapScan(result)
+	err = tx.transaction.QueryRowxContext(ctx, sql, args...).MapScan(result)
 	if err != nil {
 		return
 	}
@@ -987,9 +1019,13 @@ func (tx *Transaction) count(s *schema.Schema, filter transaction.Filter) (res u
 	return
 }
 
-//Fetch resources by ID in the db
 func (tx *Transaction) Fetch(s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions) (*schema.Resource, error) {
-	list, _, err := tx.List(s, filter, options, nil)
+	return tx.FetchContext(context.Background(), s, filter, options)
+}
+
+//Fetch resources by ID in the db
+func (tx *Transaction) FetchContext(ctx context.Context, s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions) (*schema.Resource, error) {
+	list, _, err := tx.ListContext(ctx, s, filter, options, nil)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to fetch %s: %s", filter, err)
 	}
@@ -999,9 +1035,13 @@ func (tx *Transaction) Fetch(s *schema.Schema, filter transaction.Filter, option
 	return list[0], nil
 }
 
-// LockFetch fetches & locks a resource
 func (tx *Transaction) LockFetch(s *schema.Schema, filter transaction.Filter, lockPolicy schema.LockPolicy, options *transaction.ViewOptions) (*schema.Resource, error) {
-	list, _, err := tx.LockList(s, filter, nil, nil, lockPolicy)
+	return tx.LockFetchContext(context.Background(), s, filter, lockPolicy, options)
+}
+
+// LockFetch fetches & locks a resource
+func (tx *Transaction) LockFetchContext(ctx context.Context, s *schema.Schema, filter transaction.Filter, lockPolicy schema.LockPolicy, options *transaction.ViewOptions) (*schema.Resource, error) {
+	list, _, err := tx.LockListContext(ctx, s, filter, nil, nil, lockPolicy)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to fetch and lock %s: %s", filter, err)
 	}
@@ -1011,8 +1051,12 @@ func (tx *Transaction) LockFetch(s *schema.Schema, filter transaction.Filter, lo
 	return list[0], nil
 }
 
-//StateFetch fetches the state of the specified resource
 func (tx *Transaction) StateFetch(s *schema.Schema, filter transaction.Filter) (state transaction.ResourceState, err error) {
+	return tx.StateFetchContext(context.Background(), s, filter)
+}
+
+//StateFetch fetches the state of the specified resource
+func (tx *Transaction) StateFetchContext(ctx context.Context, s *schema.Schema, filter transaction.Filter) (state transaction.ResourceState, err error) {
 	if !s.StateVersioning() {
 		err = fmt.Errorf("Schema %s does not support state versioning", s.ID)
 		return
@@ -1025,7 +1069,7 @@ func (tx *Transaction) StateFetch(s *schema.Schema, filter transaction.Filter) (
 		return
 	}
 	tx.logQuery(sql, args...)
-	rows, err := tx.transaction.Queryx(sql, args...)
+	rows, err := tx.transaction.QueryxContext(ctx, sql, args...)
 	if err != nil {
 		return
 	}

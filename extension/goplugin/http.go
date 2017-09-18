@@ -20,7 +20,6 @@ import (
 	"io/ioutil"
 	net_http "net/http"
 	"strings"
-	"time"
 
 	"github.com/cloudwan/gohan/extension/goext"
 	"github.com/cloudwan/gohan/extension/otto"
@@ -30,19 +29,14 @@ import (
 type HTTP struct{}
 
 // Request performs http request
-func (http *HTTP) Request(method, rawURL string, headers map[string]interface{}, postData interface{}, opaque bool, timeout int) (*goext.Response, error) {
-	log.Debug("gohan_http  [%s] %s %s %t %d", method, headers, rawURL, opaque, timeout)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Millisecond)
-	defer cancel()
+func (http *HTTP) Request(ctx context.Context, method, rawURL string, headers map[string]interface{}, postData interface{}, opaque bool) (*goext.Response, error) {
+	log.Debug("gohan_http  [%s] %s %s %t", method, headers, rawURL, opaque)
 	code, header, body, error := otto.GohanHTTP(ctx, method, rawURL, headers, postData, opaque)
 	return &goext.Response{Code: code, Header: convertHeader(header), Body: body}, error
 }
 
 // RequestRaw performs raw http request
-func (http *HTTP) RequestRaw(method, rawURL string, headers map[string]string, rawData string) (*goext.Response, error) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
+func (http *HTTP) RequestRaw(ctx context.Context, method, rawURL string, headers map[string]string, rawData string) (*goext.Response, error) {
 	// prepare request
 	req, err := net_http.NewRequest(method, rawURL, strings.NewReader(rawData))
 	if err != nil {

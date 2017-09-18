@@ -15,7 +15,10 @@
 
 package goext
 
-import "errors"
+import (
+	"context"
+	"errors"
+)
 
 // LockPolicy indicates lock policy
 type LockPolicy int
@@ -93,6 +96,14 @@ func (ctx Context) Clone() Context {
 		contextCopy[k] = v
 	}
 	return contextCopy
+}
+
+func GetContext(requestContext Context) context.Context {
+	if rawCtx, hasCtx := requestContext["context"]; hasCtx {
+		return rawCtx.(context.Context)
+	} else {
+		return context.Background()
+	}
 }
 
 // PriorityDefault is a default handler priority
