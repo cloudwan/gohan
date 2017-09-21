@@ -401,6 +401,7 @@ func GetSingleResourceInTransaction(context middleware.Context, resourceSchema *
 	response := map[string]interface{}{}
 	response[resourceSchema.Singular] = object.Data()
 	context["response"] = response
+	context["resource"] = object.Data()
 
 	if err := extension.HandleEvent(context, environment, "post_show_in_transaction", resourceSchema.ID); err != nil {
 		return err
