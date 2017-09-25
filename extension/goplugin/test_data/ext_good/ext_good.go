@@ -40,6 +40,12 @@ func Init(env goext.IEnvironment) error {
 	testSchema.RegisterRawType(test.Test{})
 	testSchema.RegisterEventHandler("wait_for_context_cancel", handleWaitForContextCancel, goext.PriorityDefault)
 	testSchema.RegisterEventHandler("echo", handleEcho, goext.PriorityDefault)
+
+	testSuiteSchema := env.Schemas().Find("test_suite")
+	if testSuiteSchema == nil {
+		return fmt.Errorf("test suite schema not found")
+	}
+	testSuiteSchema.RegisterRawType(test.TestSuite{})
 	return nil
 }
 

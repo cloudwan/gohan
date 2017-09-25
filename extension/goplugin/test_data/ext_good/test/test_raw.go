@@ -25,4 +25,10 @@ type Test struct {
 	ID          string     `db:"id"`
 	Description string     `db:"description"`
 	Subobject   *Subobject `db:"subobject"`
+	TestSuiteID *string    `db:"test_suite_id"`
+}
+
+// TestSuite is a test suite resource
+type TestSuite struct {
+	ID string `db:"id"`
 }

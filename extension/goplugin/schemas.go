@@ -56,6 +56,34 @@ func (schemas *Schemas) List() []goext.ISchema {
 	return result
 }
 
+func (schemas *Schemas) Relations(id string) []goext.SchemaRelationInfo {
+	manager := gohan_schema.GetManager()
+	relations := map[string][]goext.SchemaRelationInfo{}
+
+	for _, schema := range manager.OrderedSchemas() {
+		for _, property := range schema.Properties {
+			if property.Relation != "" {
+				if _, ok := relations[property.Relation]; !ok {
+					relations[property.Relation] = []goext.SchemaRelationInfo{}
+				}
+
+				onDeleteCascade := property.OnDeleteCascade
+				if schema.Parent != "" && schema.Parent == property.Relation {
+					onDeleteCascade = schema.OnParentDeleteCascade
+				}
+
+				relations[property.Relation] = append(relations[property.Relation], goext.SchemaRelationInfo{
+					SchemaID:        schema.ID,
+					PropertyID:      property.ID,
+					OnDeleteCascade: onDeleteCascade,
+				})
+			}
+		}
+	}
+
+	return relations[id]
+}
+
 // Find returns a schema by id or nil if not found
 func (schemas *Schemas) Find(id string) goext.ISchema {
 	manager := gohan_schema.GetManager()
