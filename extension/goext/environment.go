@@ -28,6 +28,7 @@ type IEnvironment interface {
 	Database() IDatabase
 	HTTP() IHTTP
 	Auth() IAuth
+	Util() IUtil
 
 	// state
 	Reset()

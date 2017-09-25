@@ -666,19 +666,3 @@ func contextSetTransaction(ctx goext.Context, tx goext.ITransaction) goext.Conte
 	ctx["transaction"] = tx
 	return ctx
 }
-
-func contextGetTransaction(ctx goext.Context) (goext.ITransaction, bool) {
-	ctxTx := ctx["transaction"]
-	if ctxTx == nil {
-		return nil, false
-	}
-
-	switch tx := ctxTx.(type) {
-	case goext.ITransaction:
-		return tx, true
-	case transaction.Transaction:
-		return &Transaction{tx}, true
-	default:
-		panic(fmt.Sprintf("Unknown transaction type in context: %+v", ctxTx))
-	}
-}

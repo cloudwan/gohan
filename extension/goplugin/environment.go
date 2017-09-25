@@ -79,6 +79,7 @@ type Environment struct {
 	schemasImpl  *Schemas
 	syncImpl     *Sync
 	databaseImpl *Database
+	utilImpl     *Util
 
 	name    string
 	traceID string
@@ -160,6 +161,10 @@ func (env *Environment) Auth() goext.IAuth {
 	return &Auth{}
 }
 
+func (env *Environment) Util() goext.IUtil {
+	return env.utilImpl
+}
+
 // SetDatabase sets and binds database implementation
 func (env *Environment) SetDatabase(db gohan_db.DB) {
 	env.bindDatabase(db)
@@ -190,6 +195,10 @@ func (env *Environment) bindDatabase(db gohan_db.DB) {
 	env.databaseImpl = NewDatabase(db)
 }
 
+func (env *Environment) bindUtil() {
+	env.utilImpl = &Util{}
+}
+
 // Start starts already loaded environment
 func (env *Environment) Start() error {
 	var err error
@@ -205,6 +214,7 @@ func (env *Environment) Start() error {
 	env.bindCore()
 	env.bindLogger()
 	env.bindSchemas()
+	env.bindUtil()
 
 	// Before start init
 	if env.beforeStartHook != nil {
@@ -691,6 +701,7 @@ func (env *Environment) Clone() extension.Environment {
 		schemasImpl:  env.schemasImpl.Clone(),
 		syncImpl:     env.syncImpl.Clone(),
 		databaseImpl: env.databaseImpl.Clone(),
+		utilImpl:     env.utilImpl.Clone(),
 
 		name: env.name,
 
