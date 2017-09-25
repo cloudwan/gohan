@@ -197,8 +197,11 @@ func (testRunner *TestRunner) runSingle(t ginkgo.GinkgoTestingT, reporter *Repor
 	env := goplugin.NewEnvironment(envName, beforeStartHook, nil)
 
 	// register
-	if err := extension.GetManager().RegisterEnvironment(envName, env); err != nil {
-		return fmt.Errorf("failed to register environment: %s", err)
+	extensionManager := extension.GetManager()
+	for schemaID, _ := range manager.Schemas() {
+		if err := extensionManager.RegisterEnvironment(schemaID, env); err != nil {
+			return fmt.Errorf("failed to register environment: %s", err)
+		}
 	}
 
 	// load binaries
@@ -231,7 +234,11 @@ func (testRunner *TestRunner) runSingle(t ginkgo.GinkgoTestingT, reporter *Repor
 	env.Stop()
 
 	// unregister
-	extension.GetManager().UnRegisterEnvironment(envName)
+	for schemaID, _ := range manager.Schemas() {
+		if err := extensionManager.UnRegisterEnvironment(schemaID); err != nil {
+			return fmt.Errorf("failed to unregister schema %s", err)
+		}
+	}
 
 	// clear state
 	manager.ClearExtensions()
