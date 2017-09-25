@@ -18,8 +18,6 @@ package goplugin
 import (
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/extension/goext"
-	"github.com/cloudwan/gohan/util"
-	"github.com/twinj/uuid"
 )
 
 // Core is an implementation of ICore interface
@@ -55,17 +53,6 @@ func (core *Core) TriggerEvent(event string, context goext.Context) error {
 // HandleEvent Causes the given event to be handled within the same environment
 func (core *Core) HandleEvent(event string, context goext.Context) error {
 	return core.env.HandleEvent(event, context)
-}
-
-// NewUUID create a new unique ID
-func (core *Core) NewUUID() string {
-	return uuid.NewV4().String()
-}
-
-// Config gets parameter from config
-func (core *Core) Config(key string, defaultValue interface{}) interface{} {
-	config := util.GetConfig()
-	return config.GetParam(key, defaultValue)
 }
 
 // NewCore allocates Core

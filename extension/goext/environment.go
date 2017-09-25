@@ -21,6 +21,7 @@ import "encoding/json"
 // other packages must not be imported nor used
 type IEnvironment interface {
 	// modules
+	Config() IConfig
 	Core() ICore
 	Logger() ILogger
 	Schemas() ISchemas
