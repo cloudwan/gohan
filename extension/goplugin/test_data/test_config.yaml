@@ -1,0 +1,32 @@
+database:
+    type: "sqlite3"
+    connection: "test.db"
+schemas:
+    - "embed://etc/schema/gohan.json"
+    - "test_schema.yaml"
+address: ":19090"
+document_root: "embed"
+sync: etcdv3
+keystone:
+    use_keystone: true
+    fake: true
+    auth_url: "http://localhost:19090/v2.0"
+    user_name: "admin"
+    tenant_name: "admin"
+    password: "gohan"
+cors: "*"
+
+profiling:
+  enabled: true
+
+logging:
+  stderr:
+    enabled: true
+    level: DEBUG
+
+watch:
+  keys:
+  - /watch/key/1
+  events:
+  - watch/key
+  worker_count: 1

@@ -15,14 +15,9 @@
 
 package goext
 
-// ICore is an interface to core parts of Gohan: event triggering and registering
-type ICore interface {
-	NewUUID() string
-	Config(key string, defaultValue interface{}) interface{}
-
-	TriggerEvent(event string, context Context) error
-	HandleEvent(event string, context Context) error
-
-	RegisterEventHandler(eventName string, handler func(context Context, environment IEnvironment) error, priority int)
-	RegisterSchemaEventHandler(schemaID string, eventName string, handler func(context Context, resource Resource, environment IEnvironment) error, priority int)
+// IAuth is an interface to auth in Gohan
+type IAuth interface {
+	HasRole(context Context, role string) bool
+	GetTenantName(context Context) string
+	IsAdmin(context Context) bool
 }

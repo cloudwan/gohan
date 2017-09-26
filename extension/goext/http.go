@@ -15,14 +15,19 @@
 
 package goext
 
-// ICore is an interface to core parts of Gohan: event triggering and registering
-type ICore interface {
-	NewUUID() string
-	Config(key string, defaultValue interface{}) interface{}
+// Header represents HTTP header
+type Header map[string][]string
 
-	TriggerEvent(event string, context Context) error
-	HandleEvent(event string, context Context) error
+// Response represents HTTP response
+type Response struct {
+	Code   int
+	Status string
+	Header Header
+	Body   string
+}
 
-	RegisterEventHandler(eventName string, handler func(context Context, environment IEnvironment) error, priority int)
-	RegisterSchemaEventHandler(schemaID string, eventName string, handler func(context Context, resource Resource, environment IEnvironment) error, priority int)
+// IHTTP is an interface to http in Gohan
+type IHTTP interface {
+	Request(method, rawURL string, headers map[string]interface{}, postData interface{}, opaque bool, timeout int) (*Response, error)
+	RequestRaw(method, rawURL string, headers map[string]string, rawData string) (*Response, error)
 }

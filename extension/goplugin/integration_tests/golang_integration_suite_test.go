@@ -13,16 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package goext
+package goplugin_integration_test
 
-// ICore is an interface to core parts of Gohan: event triggering and registering
-type ICore interface {
-	NewUUID() string
-	Config(key string, defaultValue interface{}) interface{}
+import (
+	"testing"
 
-	TriggerEvent(event string, context Context) error
-	HandleEvent(event string, context Context) error
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+)
 
-	RegisterEventHandler(eventName string, handler func(context Context, environment IEnvironment) error, priority int)
-	RegisterSchemaEventHandler(schemaID string, eventName string, handler func(context Context, resource Resource, environment IEnvironment) error, priority int)
+func TestGolang(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Golang integration suite")
 }

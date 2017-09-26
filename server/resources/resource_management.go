@@ -518,9 +518,17 @@ func CreateResource(
 	}
 
 	//Validation
-	err = resourceSchema.ValidateOnCreate(dataMap)
-	if err != nil {
-		return ResourceError{err, fmt.Sprintf("Validation error: %s", err), WrongData}
+
+	if _, ok := context["go_validation"]; ok {
+		err = resourceSchema.ValidateGoOnCreate(dataMap)
+		if err != nil {
+			return ResourceError{err, fmt.Sprintf("Validation error: %s", err), WrongData}
+		}
+	} else {
+		err = resourceSchema.ValidateOnCreate(dataMap)
+		if err != nil {
+			return ResourceError{err, fmt.Sprintf("Validation error: %s", err), WrongData}
+		}
 	}
 
 	resource, err := manager.LoadResource(resourceSchema.ID, dataMap)
@@ -540,7 +548,7 @@ func CreateResource(
 		context, dataStore,
 		transaction.GetIsolationLevel(resourceSchema, schema.ActionCreate),
 		func() error {
-			return CreateResourceInTransaction(context, resource)
+			return CreateResourceInTransaction(context, resourceSchema, resource)
 		},
 	); err != nil {
 		return err
@@ -557,9 +565,9 @@ func CreateResource(
 }
 
 //CreateResourceInTransaction create db resource model in transaction
-func CreateResourceInTransaction(context middleware.Context, resource *schema.Resource) error {
+func CreateResourceInTransaction(context middleware.Context, resourceSchema *schema.Schema, resource *schema.Resource) error {
 	defer measureRequestTime(time.Now(), "create.in_tx", resource.Schema().ID)
-	resourceSchema := resource.Schema()
+	manager := schema.GetManager()
 	mainTransaction := context["transaction"].(transaction.Transaction)
 	environmentManager := extension.GetManager()
 	environment, ok := environmentManager.GetEnvironment(resourceSchema.ID)
@@ -568,6 +576,14 @@ func CreateResourceInTransaction(context middleware.Context, resource *schema.Re
 	}
 	if err := extension.HandleEvent(context, environment, "pre_create_in_transaction", resourceSchema.ID); err != nil {
 		return err
+	}
+	dataMap, ok := context["resource"].(map[string]interface{})
+	if ok {
+		var err error
+		resource, err = manager.LoadResource(resourceSchema.ID, dataMap)
+		if err != nil {
+			return fmt.Errorf("Loading resource failed: %s", err)
+		}
 	}
 	if err := mainTransaction.Create(resource); err != nil {
 		log.Debug("%s transaction error", err)
@@ -719,7 +735,7 @@ func UpdateResourceInTransaction(
 
 	dataMap, ok = context["resource"].(map[string]interface{})
 	if !ok {
-		return fmt.Errorf("Resource not JSON: %s", err)
+		return fmt.Errorf("Resource not JSON")
 	}
 	resource, err = manager.LoadResource(resourceSchema.ID, dataMap)
 	if err != nil {

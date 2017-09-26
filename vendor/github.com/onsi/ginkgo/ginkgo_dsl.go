@@ -57,6 +57,10 @@ func init() {
 	globalSuite = suite.New(globalFailer)
 }
 
+func Reset() {
+	globalSuite = suite.New(globalFailer)
+}
+
 //GinkgoWriter implements an io.Writer
 //When running in verbose mode any writes to GinkgoWriter will be immediately printed
 //to stdout.  Otherwise, GinkgoWriter will buffer any writes produced during the current test and flush them to screen

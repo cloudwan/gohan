@@ -43,7 +43,8 @@ var _ = Describe("Transaction", func() {
 		Expect(manager.LoadSchemaFromFile(SchemaPath)).To(Succeed())
 		db, err := db.ConnectDB(DbType, DbFile, db.DefaultMaxOpenConn, options.Default())
 		Expect(err).To(BeNil())
-		env = goplugin.NewEnvironment("test", db, nil, nil)
+		env = goplugin.NewEnvironment("test", nil, nil)
+		env.SetDatabase(db)
 	})
 
 	AfterEach(func() {
@@ -59,8 +60,7 @@ var _ = Describe("Transaction", func() {
 		)
 
 		BeforeEach(func() {
-			loaded, err := env.Load("test_data/ext_good/ext_good.so", nil)
-			Expect(loaded).To(BeTrue())
+			err := env.Load("test_data/ext_good/ext_good.so")
 			Expect(err).To(BeNil())
 			Expect(env.Start()).To(Succeed())
 			testSchema = env.Schemas().Find("test")
@@ -75,6 +75,7 @@ var _ = Describe("Transaction", func() {
 			createdResource = map[string]interface{}{
 				"id":          "some-id",
 				"description": "description",
+				"subobject":   map[string]interface{}{},
 			}
 		})
 
@@ -97,6 +98,14 @@ var _ = Describe("Transaction", func() {
 		})
 
 		It("Fetch previously created resource", func() {
+			Expect(tx.Create(testSchema, createdResource)).To(Succeed())
+			returnedResource, err := tx.Fetch(testSchema, goext.Filter{"id": createdResource["id"]})
+			Expect(err).To(BeNil())
+			Expect(createdResource).To(Equal(returnedResource))
+		})
+
+		It("Fetch previously created resource with subobject", func() {
+			createdResource["subobject"] = map[string]interface{}{"subproperty": "subproperty"}
 			Expect(tx.Create(testSchema, createdResource)).To(Succeed())
 			returnedResource, err := tx.Fetch(testSchema, goext.Filter{"id": createdResource["id"]})
 			Expect(err).To(BeNil())

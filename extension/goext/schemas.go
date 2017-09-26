@@ -15,6 +15,8 @@
 
 package goext
 
+import "errors"
+
 // LockPolicy indicates lock policy
 type LockPolicy int
 
@@ -96,10 +98,11 @@ func (ctx Context) Clone() Context {
 // PriorityDefault is a default handler priority
 const PriorityDefault = 0
 
+// ErrResourceNotFound represents 'resource not found' error
+var ErrResourceNotFound = errors.New("resource not found")
+
 // ISchema is an interface representing a single schema in Gohan
 type ISchema interface {
-	IEnvironmentRef
-
 	// ID returns the identifier of this resource
 	ID() string
 
@@ -121,11 +124,17 @@ type ISchema interface {
 	// ListRaw returns a pointer to raw resource, containing db annotations
 	FetchRaw(id string, context Context) (interface{}, error)
 
+	// LockFetch returns a pointer to locked resource derived from BaseResource, containing db annotations
+	LockFetch(id string, context Context, lockPolicy LockPolicy) (interface{}, error)
+
 	// LockFetchRaw returns a pointer to locked raw resource, containing db annotations
 	LockFetchRaw(id string, context Context, lockPolicy LockPolicy) (interface{}, error)
 
 	// CreateRaw creates a raw resource, given by a pointer
 	CreateRaw(rawResource interface{}, context Context) error
+
+	// DbCreateRaw creates a raw resource, given by a pointer, no events are emitted
+	DbCreateRaw(rawResource interface{}, context Context) error
 
 	// UpdateRaw updates a raw resource, given by a pointer
 	UpdateRaw(rawResource interface{}, context Context) error
@@ -135,6 +144,9 @@ type ISchema interface {
 
 	// DeleteRaw deletes a raw resource, given by a pointer
 	DeleteRaw(filter Filter, context Context) error
+
+	// DbDeleteRaw deletes a raw resource, given by a pointer, no events are emitted
+	DbDeleteRaw(filter Filter, context Context) error
 
 	// RegisterEventHandler registers an event handler for a named event with given priority
 	RegisterEventHandler(event string, handler func(context Context, resource Resource, environment IEnvironment) error, priority int)
@@ -148,8 +160,6 @@ type ISchema interface {
 
 // ISchemas is an interface to schemas manager in Gohan
 type ISchemas interface {
-	IEnvironmentRef
-
 	List() []ISchema
 	Find(id string) ISchema
 }

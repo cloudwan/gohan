@@ -15,6 +15,8 @@
 
 package goext
 
+import "fmt"
+
 // ErrorCode identifies an error code
 type ErrorCode int
 
@@ -24,9 +26,17 @@ type Error struct {
 	Err  error
 }
 
+// NewError returns a new error
+func NewError(code ErrorCode, err error) Error {
+	return Error{
+		Code: code,
+		Err:  err,
+	}
+}
+
 // Error returns error message
 func (e Error) Error() string {
-	return e.Err.Error() + " (" + string(e.Code) + ")"
+	return fmt.Sprintf("%s (HTTP code: %d)", e.Err, e.Code)
 }
 
 var (
@@ -45,3 +55,4 @@ var (
 	// ErrorNotImplemented indicates not implemented error
 	ErrorNotImplemented = ErrorCode(501)
 )
+

@@ -35,8 +35,6 @@ type Node struct {
 
 // ISync is an interface to sync in Gohan
 type ISync interface {
-	IEnvironmentRef
-
 	Fetch(path string) (*Node, error)
 	Delete(path string, prefix bool) error
 	Watch(path string, timeout time.Duration, revision int64) ([]*Event, error)

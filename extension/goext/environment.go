@@ -17,7 +17,7 @@ package goext
 
 import "encoding/json"
 
-// IEnvironment is the only scope of Gohan available for a golang extensions;
+// IEnvironment is the only scope of Gohan available for a go extensions;
 // other packages must not be imported nor used
 type IEnvironment interface {
 	// modules
@@ -26,14 +26,11 @@ type IEnvironment interface {
 	Schemas() ISchemas
 	Sync() ISync
 	Database() IDatabase
+	HTTP() IHTTP
+	Auth() IAuth
 
 	// state
 	Reset()
-}
-
-// IEnvironmentRef indicates that an object holds a reference to a valid environment
-type IEnvironmentRef interface {
-	Environment() IEnvironment
 }
 
 // ResourceBase is the base class for all resources

@@ -15,8 +15,14 @@
 
 package test
 
+// Subobject is a test resource
+type Subobject struct {
+	Subproperty string `json:"subproperty,omitempty"`
+}
+
 // Test is a test resource
 type Test struct {
-	ID          string `db:"id"`
-	Description string `db:"description"`
+	ID          string     `db:"id"`
+	Description string     `db:"description"`
+	Subobject   *Subobject `db:"subobject"`
 }

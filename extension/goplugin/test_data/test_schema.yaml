@@ -32,9 +32,39 @@ schemas:
         title: Description
         type: string
         unique: false
+      subobject:
+        description: Subobject description
+        permission:
+        - create
+        title: Subobject
+        type: object
+        properties:
+          subproperty:
+            title: Subproperty
+            type: string
+            maxLength: 255
     propertiesOrder:
     - id
     - description
     type: object
   singular: test
   title: Test
+  actions:
+    wait_for_context_cancel:
+      title: Wait for cancel
+      description: Waits until context is canceled
+      path: /wait_for_context_cancel
+      method: POST
+      input:
+        type: object
+      output:
+        type: object
+    echo:
+      title: Echo
+      description: Echoes incoming message
+      path: /echo
+      method: POST
+      input:
+        type: object
+      output:
+        type: object

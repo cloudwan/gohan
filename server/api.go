@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-
 	"strings"
 
 	"github.com/cloudwan/gohan/db"
@@ -184,6 +183,7 @@ func fillInContext(context middleware.Context, db db.DB,
 	context["http_request"] = r
 	context["http_response"] = w
 	context["schema"] = s
+	context["schema_id"] = s.ID
 	params := map[string]interface{}{}
 	for key, value := range p {
 		params[key] = value

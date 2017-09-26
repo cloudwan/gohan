@@ -83,6 +83,13 @@ a strict requirement meaning that:
  - all packages from GOPATH and vendor must be the same and in the same path when building the binary and the plugin
  - all build options must be the same for both build - it includes the **-race** flag
 
+### Notes about building go plugins
+
+In golang, plugins must be built with the same options as a binary that will load them. This is
+a strict requirement meaning that:
+ - all packages from GOPATH and vendor must be the same and in the same path when building the binary and the plugin
+ - all build options must be the same for both build - it includes the **-race** flag
+
 ## Extension environment
 
 An environment is passed to Init function. It consists of modules which are available

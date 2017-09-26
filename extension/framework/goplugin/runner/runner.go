@@ -19,208 +19,225 @@ import (
 	"fmt"
 	"path/filepath"
 	"plugin"
+	"regexp"
 	"testing"
 
-	"regexp"
-
-	"github.com/cloudwan/gohan/db"
+	gohan_db "github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/extension/goext"
 	"github.com/cloudwan/gohan/extension/goplugin"
-	pkgLog "github.com/cloudwan/gohan/log"
+	gohan_logger "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/schema"
-	"github.com/cloudwan/gohan/server/middleware"
 	"github.com/cloudwan/gohan/sync/noop"
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
+	"github.com/twinj/uuid"
 )
 
 const (
-	testDBFile = "test.db"
+	dbBaseFileName = "test.db"
 )
 
-var log = pkgLog.NewLogger()
+var log = gohan_logger.NewLogger()
 
-// GoTestRunner is a test runner for go (plugin) extensions
-type GoTestRunner struct {
-	pluginFileNames []string
-	printAllLogs    bool
-	testFilter      *regexp.Regexp
-	workers         int
+// TestRunner is a test runner for go extensions
+type TestRunner struct {
+	fileNames      []string
+	verboseLogs    bool
+	fileNameFilter *regexp.Regexp
+	workerCount    int
 }
 
-func dbConnString(name string) string {
-	return fmt.Sprintf("file:%s?mode=memory&cache=shared", name)
-}
-
-func dbConnect(connString string) (db.DB, error) {
-	conn, err := db.ConnectDB("sqlite3", connString, db.DefaultMaxOpenConn, options.Default())
-	if err != nil {
-		return nil, err
-	}
-	return conn, nil
-}
-
-// NewGoTestRunner allocates a new GoTestRunner
-func NewGoTestRunner(pluginFileNames []string, printAllLogs bool, testFilter string, workers int) *GoTestRunner {
-	return &GoTestRunner{
-		pluginFileNames: pluginFileNames,
-		printAllLogs:    printAllLogs,
-		testFilter:      regexp.MustCompile(testFilter),
-		workers:         workers,
+// NewTestRunner allocates a new TestRunner
+func NewTestRunner(fileNames []string, printAllLogs bool, testFilter string, workers int) *TestRunner {
+	return &TestRunner{
+		fileNames:      fileNames,
+		verboseLogs:    printAllLogs,
+		fileNameFilter: regexp.MustCompile(testFilter),
+		workerCount:    workers,
 	}
 }
 
-// GoTestSuite is a test suite state for a go (plugin) extension runner
-type GoTestSuite struct {
-	plugin  *plugin.Plugin
-	db      db.DB
-	env     *goplugin.Environment
-	path    string
-	manager *schema.Manager
+// Run runs go test runner
+func (testRunner *TestRunner) Run() error {
+	// configure reporter
+	gomega.RegisterFailHandler(ginkgo.Fail)
+	t := &testing.T{}
+	reporter := NewReporter()
 
-	schemasFnRaw plugin.Symbol
-	schemasFn    func() []string
-	schemas      []string
-
-	binariesFnRaw plugin.Symbol
-	binariesFn    func() []string
-	binaries      []string
-
-	testFnRaw plugin.Symbol
-	testFn    func(goext.IEnvironment)
-}
-
-// Run runs go (plugin) test runner
-func (goTestRunner *GoTestRunner) Run() error {
-	log.Notice("Running Go extensions tests")
-
-	// note: must hold refs to go tests so that they are available at the time of being run by ginkgo
-	goTestSuites := []*GoTestSuite{}
-
-	for _, pluginFileName := range goTestRunner.pluginFileNames {
-		if !goTestRunner.testFilter.MatchString(pluginFileName) {
+	// run suites
+	var err error
+	for _, fileName := range testRunner.fileNames {
+		if !testRunner.fileNameFilter.MatchString(fileName) {
 			continue
 		}
-
-		log.Notice("Loading test: %s", pluginFileName)
-
-		var err error
-		var ok, loaded bool
-		goTestSuite := &GoTestSuite{}
-
-		goTestSuite.plugin, err = plugin.Open(pluginFileName)
-
-		if err != nil {
-			return err
+		if err = testRunner.runSingle(t, reporter, fileName); err != nil {
+			break
 		}
+	}
+	// display report
+	reporter.Report()
+	return err
+}
 
-		goTestSuite.db, err = dbConnect(dbConnString(testDBFile))
-		if err != nil {
-			return err
-		}
+func readSchemas(p *plugin.Plugin) ([]string, error) {
+	fnRaw, err := p.Lookup("Schemas")
 
-		goTestSuite.env = goplugin.NewEnvironment("test"+pluginFileName, goTestSuite.db, &middleware.FakeIdentity{}, noop.NewSync())
-		manager := extension.GetManager()
-		if err := manager.RegisterEnvironment(pluginFileName, goTestSuite.env); err != nil {
-			return err
-		}
-		goTestSuite.path = filepath.Dir(pluginFileName)
-
-		goTestSuite.manager = schema.GetManager()
-
-		// Get schemas
-		goTestSuite.schemasFnRaw, err = goTestSuite.plugin.Lookup("Schemas")
-
-		if err != nil {
-			return fmt.Errorf("golang extension test does not export Schemas: %s", err)
-		}
-
-		goTestSuite.schemasFn, ok = goTestSuite.schemasFnRaw.(func() []string)
-
-		if !ok {
-			log.Error("invalid signature of Schemas function in golang extension test: %s", pluginFileName)
-			return err
-		}
-
-		goTestSuite.schemas = goTestSuite.schemasFn()
-
-		// Load schemas
-		for _, schemaPath := range goTestSuite.schemas {
-			if err = goTestSuite.manager.LoadSchemaFromFile(goTestSuite.path + "/" + schemaPath); err != nil {
-				return fmt.Errorf("failed to load schema: %s", err)
-			}
-		}
-
-		// Binaries
-		goTestSuite.binariesFnRaw, err = goTestSuite.plugin.Lookup("Binaries")
-
-		if err != nil {
-			return err
-		}
-
-		goTestSuite.binariesFn, ok = goTestSuite.binariesFnRaw.(func() []string)
-
-		if !ok {
-			log.Error("invalid signature of Binary function in golang extension test: %s", pluginFileName)
-			return err
-		}
-
-		goTestSuite.binaries = goTestSuite.binariesFn()
-
-		for _, binary := range goTestSuite.binaries {
-			loaded, err = goTestSuite.env.Load(goTestSuite.path+"/"+binary, func() error {
-				// reset DB
-				err = db.InitDBWithSchemas("sqlite3", dbConnString(testDBFile), true, false, false)
-
-				if err != nil {
-					return fmt.Errorf("failed to init DB: %s", err)
-				}
-
-				return nil
-			})
-
-			if err != nil {
-				log.Error("failed to load golang extension test dependant plugin: %s; error: %s", pluginFileName, err)
-				return err
-			}
-		}
-
-		if loaded {
-			err = goTestSuite.env.Start()
-
-			if err != nil {
-				log.Error("failed to start extension test dependant plugin: %s; error: %s", pluginFileName, err)
-				return err
-			}
-		}
-
-		// Setup test suite
-		goTestSuite.testFnRaw, err = goTestSuite.plugin.Lookup("Test")
-
-		if err != nil {
-			return err
-		}
-
-		goTestSuite.testFn, ok = goTestSuite.testFnRaw.(func(goext.IEnvironment))
-
-		if !ok {
-			log.Error("invalid signature of Test function in golang extension test: %s", pluginFileName)
-			return err
-		}
-
-		// Hold a reference to test
-		goTestSuites = append(goTestSuites, goTestSuite)
-
-		// Run test
-		goTestSuite.testFn(goTestSuite.env)
+	if err != nil {
+		return nil, fmt.Errorf("missing 'Schemas' export: %s", err)
 	}
 
-	gomega.RegisterFailHandler(ginkgo.Fail)
+	fn, ok := fnRaw.(func() []string)
 
-	t := &testing.T{}
-	ginkgo.RunSpecs(t, "Go Extensions Test Suite")
+	if !ok {
+		return nil, fmt.Errorf("invalid signature of 'Schemas' export")
+	}
+
+	return fn(), nil
+}
+
+func readBinaries(p *plugin.Plugin) ([]string, error) {
+	fnRaw, err := p.Lookup("Binaries") // optional
+
+	if err != nil {
+		return []string{}, nil
+	}
+
+	fn, ok := fnRaw.(func() []string)
+
+	if !ok {
+		return nil, fmt.Errorf("invalid signature of 'Binaries' export")
+	}
+
+	return fn(), nil
+}
+
+func readTest(p *plugin.Plugin) (func(goext.IEnvironment), error) {
+	fnRaw, err := p.Lookup("Test")
+
+	if err != nil {
+		return nil, fmt.Errorf("missing 'Test' export: %s", err)
+	}
+
+	testFn, ok := fnRaw.(func(goext.IEnvironment))
+
+	if !ok {
+		return nil, fmt.Errorf("invalid signature of 'Test' export")
+	}
+
+	return testFn, nil
+}
+
+func (testRunner *TestRunner) runSingle(t ginkgo.GinkgoTestingT, reporter *Reporter, fileName string) error {
+	log.Notice("Running Go extensions test: %s", fileName)
+
+	// inform reporter about test suite
+	reporter.Prepare(fileName)
+
+	// load plugin
+	p, err := plugin.Open(fileName)
+
+	if err != nil {
+		return fmt.Errorf("failed to open plugin: %s", err)
+	}
+
+	// read schemas
+	schemas, err := readSchemas(p)
+
+	if err != nil {
+		return fmt.Errorf("failed to read schemas from: %s", err)
+	}
+
+	// get state
+	path := filepath.Dir(fileName)
+	manager := schema.GetManager()
+
+	// load schemas
+	for _, schemaPath := range schemas {
+		if err = manager.LoadSchemaFromFile(path + "/" + schemaPath); err != nil {
+			return fmt.Errorf("failed to load schema: %s", err)
+		}
+	}
+
+	// get binaries
+	binaries, err := readBinaries(p)
+
+	if err != nil {
+		return fmt.Errorf("failed to read binaries: %s", err)
+	}
+
+	// create env
+	beforeStartHook := func(env *goplugin.Environment) error {
+		// db
+		dbFileName := dbBaseFileName + "_" + uuid.NewV4().String()
+		dbConnString := fmt.Sprintf("file:%s?mode=memory&cache=shared", dbFileName)
+		db, err := gohan_db.ConnectDB("sqlite3", dbConnString, gohan_db.DefaultMaxOpenConn, options.Default())
+
+		if err != nil {
+			return fmt.Errorf("failed to connect db: %s", err)
+		}
+
+		if err = gohan_db.InitDBConnWithSchemas(db, true, false, false); err != nil {
+			return fmt.Errorf("failed to init db: %s", err)
+		}
+
+		env.SetDatabase(db)
+
+		// sync
+		sync := noop.NewSync()
+		env.SetSync(sync)
+
+		return nil
+	}
+
+	// create env
+	envName := "Go test environment"
+
+	env := goplugin.NewEnvironment(envName, beforeStartHook, nil)
+
+	// register
+	if err := extension.GetManager().RegisterEnvironment(envName, env); err != nil {
+		return fmt.Errorf("failed to register environment: %s", err)
+	}
+
+	// load binaries
+	for _, binary := range binaries {
+		if err := env.Load(path + "/" + binary); err != nil {
+			return fmt.Errorf("failed to load binary: %s", err)
+		}
+	}
+
+	// load extensions
+	if err := env.LoadExtensionsForPath(manager.Extensions, manager.TimeLimit, manager.TimeLimits, ""); err != nil {
+		return fmt.Errorf("failed to load schemas extensions: %s", err)
+	}
+
+	// get test
+	test, err := readTest(p)
+
+	if err != nil {
+		return fmt.Errorf("failed to read test: %s", err)
+	}
+
+	// prepare test
+	test(env)
+
+	// run test
+	ginkgo.RunSpecsWithCustomReporters(t, fileName, []ginkgo.Reporter{reporter})
+	ginkgo.Reset()
+
+	// stop env
+	env.Stop()
+
+	// unregister
+	extension.GetManager().UnRegisterEnvironment(envName)
+
+	// clear state
+	manager.ClearExtensions()
+	schema.ClearManager()
+
+	log.Notice("Go extension test finished: %s", fileName)
 
 	return nil
 }

@@ -77,7 +77,7 @@ func mapTxOptions(options *transaction.TxOptions) (*sql.TxOptions, error) {
 	switch options.IsolationLevel {
 	case transaction.ReadCommited:
 		sqlOptions.Isolation = sql.LevelReadCommitted
-	case transaction.ReadUncommited:
+	case transaction.ReadUncommitted:
 		sqlOptions.Isolation = sql.LevelReadUncommitted
 	case transaction.RepeatableRead:
 		sqlOptions.Isolation = sql.LevelRepeatableRead
