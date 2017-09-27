@@ -597,13 +597,9 @@ func (schema *Schema) delete(filter goext.Filter, context goext.Context, trigger
 	if err != nil {
 		return err
 	}
-	fetchedLen := len(fetched)
-	if fetchedLen == 0 {
-		return fmt.Errorf("resource not found")
-	}
 
 	mapper := reflectx.NewMapper("db")
-	for i := 0; i < fetchedLen; i++ {
+	for i := 0; i < len(fetched); i++ {
 		resource := reflect.ValueOf(fetched[i])
 		resourceID := mapper.FieldByName(resource, "id").Interface()
 
