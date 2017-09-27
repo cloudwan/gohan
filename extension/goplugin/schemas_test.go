@@ -177,6 +177,10 @@ var _ = Describe("Schemas", func() {
 				_, err := testSchema.LockListRaw(goext.Filter{"id": unknownID}, nil, context, goext.SkipRelatedResources)
 				Expect(err).To(Succeed())
 			})
+
+			It("Should not return error in DeleteRaw", func() {
+				Expect(testSchema.DeleteRaw(goext.Filter{"id": unknownID}, context)).To(Succeed())
+			})
 		})
 
 	})
