@@ -20,6 +20,7 @@ import (
 
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/extension/goext"
+	"github.com/golang/mock/gomock"
 	"github.com/twinj/uuid"
 )
 
@@ -53,4 +54,16 @@ func (u *Util) GetTransaction(context goext.Context) (goext.ITransaction, bool) 
 
 func (u *Util) Clone() *Util {
 	return &Util{}
+}
+
+var controllers map[gomock.TestReporter]*gomock.Controller = make(map[gomock.TestReporter]*gomock.Controller)
+
+func NewController(testReporter gomock.TestReporter) *gomock.Controller {
+	ctrl := gomock.NewController(testReporter)
+	controllers[testReporter] = ctrl
+	return ctrl
+}
+
+func Finish(testReporter gomock.TestReporter) {
+	controllers[testReporter].Finish()
 }

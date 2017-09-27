@@ -113,14 +113,14 @@ func readBinaries(p *plugin.Plugin) ([]string, error) {
 	return fn(), nil
 }
 
-func readTest(p *plugin.Plugin) (func(goext.IEnvironment), error) {
+func readTest(p *plugin.Plugin) (func(goext.MockIEnvironment), error) {
 	fnRaw, err := p.Lookup("Test")
 
 	if err != nil {
 		return nil, fmt.Errorf("missing 'Test' export: %s", err)
 	}
 
-	testFn, ok := fnRaw.(func(goext.IEnvironment))
+	testFn, ok := fnRaw.(func(goext.MockIEnvironment))
 
 	if !ok {
 		return nil, fmt.Errorf("invalid signature of 'Test' export")
@@ -195,11 +195,12 @@ func (testRunner *TestRunner) runSingle(t ginkgo.GinkgoTestingT, reporter *Repor
 	envName := "Go test environment"
 
 	env := goplugin.NewEnvironment(envName, beforeStartHook, nil)
+	mockEnv := goplugin.NewMockIEnvironment(env, ginkgo.GinkgoT())
 
 	// register
 	extensionManager := extension.GetManager()
-	for schemaID, _ := range manager.Schemas() {
-		if err := extensionManager.RegisterEnvironment(schemaID, env); err != nil {
+	for schemaID := range manager.Schemas() {
+		if err := extensionManager.RegisterEnvironment(schemaID, mockEnv); err != nil {
 			return fmt.Errorf("failed to register environment: %s", err)
 		}
 	}
@@ -224,7 +225,9 @@ func (testRunner *TestRunner) runSingle(t ginkgo.GinkgoTestingT, reporter *Repor
 	}
 
 	// prepare test
-	test(env)
+	mockEnv.Reset() // TODO remove
+	test(mockEnv)
+	mockEnv.Reset()
 
 	// run test
 	ginkgo.RunSpecsWithCustomReporters(t, fileName, []ginkgo.Reporter{reporter})
@@ -234,7 +237,7 @@ func (testRunner *TestRunner) runSingle(t ginkgo.GinkgoTestingT, reporter *Repor
 	env.Stop()
 
 	// unregister
-	for schemaID, _ := range manager.Schemas() {
+	for schemaID := range manager.Schemas() {
 		if err := extensionManager.UnRegisterEnvironment(schemaID); err != nil {
 			return fmt.Errorf("failed to unregister schema %s", err)
 		}
