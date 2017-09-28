@@ -64,10 +64,6 @@ type SchemaPrioritizedSchemaHandlers map[string]PrioritizedSchemaHandlers
 // EventSchemaPrioritizedSchemaHandlers is a per-event per-schema prioritized list of schema handlers
 type EventSchemaPrioritizedSchemaHandlers map[string]SchemaPrioritizedSchemaHandlers
 
-func newTraceID() string {
-	return uuid.NewV4().String()
-}
-
 // Environment golang based environment for gohan extensions
 type Environment struct {
 	initFns         map[string]func(goext.IEnvironment) error
@@ -250,7 +246,6 @@ func (env *Environment) Start() error {
 		log.Debug("Before start init is not set for go environment: %s", env.name)
 	}
 
-	// generate trace ID
 	env.traceID = newTraceID()
 
 	// init extensions
@@ -723,10 +718,10 @@ func (env *Environment) Stop() {
 	env.syncImpl = nil
 	env.databaseImpl = nil
 
-	env.traceID = ""
-
 	env.handlers = nil
 	env.schemaHandlers = nil
+
+	env.traceID = ""
 
 	env.rawTypes = make(map[string]reflect.Type)
 	env.types = make(map[string]reflect.Type)
@@ -748,6 +743,10 @@ func (env *Environment) Reset() {
 	env.Start()
 }
 
+func newTraceID() string {
+	return uuid.NewV4().String()
+}
+
 // Clone makes a clone of the rawEnvironment
 func (env *Environment) Clone() extension.Environment {
 	clone := &Environment{
@@ -755,14 +754,10 @@ func (env *Environment) Clone() extension.Environment {
 		beforeStartHook: env.beforeStartHook,
 		afterStopHook:   env.afterStopHook,
 
-		coreImpl:     env.coreImpl.Clone(),
-		loggerImpl:   env.loggerImpl.Clone(),
-		schemasImpl:  env.schemasImpl.Clone(),
 		syncImpl:     env.syncImpl.Clone(),
 		databaseImpl: env.databaseImpl.Clone(),
 
-		name: env.name,
-
+		name:    env.name,
 		traceID: newTraceID(),
 
 		handlers:       deepcopy.Copy(env.handlers).(EventPrioritizedHandlers),
@@ -771,6 +766,11 @@ func (env *Environment) Clone() extension.Environment {
 		rawTypes: make(map[string]reflect.Type),
 		types:    make(map[string]reflect.Type),
 	}
+
+	clone.loggerImpl = env.loggerImpl.Clone(clone)
+	clone.coreImpl = env.coreImpl.Clone(clone)
+	clone.schemasImpl = env.schemasImpl.Clone(clone)
+
 	for k, v := range env.rawTypes {
 		clone.rawTypes[k] = v
 	}
