@@ -16,11 +16,11 @@
 package goext
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
 	gohan_logger "github.com/cloudwan/gohan/log"
-	"fmt"
 )
 
 // DbOptions represent database options
@@ -117,28 +117,26 @@ func withinDetached(db IDatabase, context Context, txBegin func() (ITransaction,
 	return err
 }
 
-func within(db IDatabase, context Context, txBegin func() (ITransaction, error), fn func(tx ITransaction) error) error {
-	rawTx, joinable := context["transaction"]
+func within(env IEnvironment, context Context, txBegin func() (ITransaction, error), fn func(tx ITransaction) error) error {
+	rawTx, joinable := env.Util().GetTransaction(context)
 
 	if joinable {
 		return withinJoinable(rawTx.(ITransaction), fn)
 	}
 
-	return withinDetached(db, context, txBegin, fn)
+	return withinDetached(env.Database(), context, txBegin, fn)
 }
 
 // Within calls a function in scoped transaction
 func Within(env IEnvironment, context Context, fn func(tx ITransaction) error) error {
-	db := env.Database()
-	return within(db, context, func() (ITransaction, error) {
-		return db.Begin()
+	return within(env, context, func() (ITransaction, error) {
+		return env.Database().Begin()
 	}, fn)
 }
 
 // WithinTx calls a function in scoped transaction with options
 func WithinTx(env IEnvironment, context Context, options *TxOptions, fn func(tx ITransaction) error) error {
-	db := env.Database()
-	return within(db, context, func() (ITransaction, error) {
-		return db.BeginTx(context, options)
+	return within(env, context, func() (ITransaction, error) {
+		return env.Database().BeginTx(context, options)
 	}, fn)
 }
