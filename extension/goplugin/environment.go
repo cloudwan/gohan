@@ -125,6 +125,11 @@ func (env *Environment) Types() map[string]reflect.Type {
 	return env.types
 }
 
+// Config returns an implementation to Config interface
+func (env *Environment) Config() goext.IConfig {
+	return &Config{}
+}
+
 // Core returns an implementation to Core interface
 func (env *Environment) Core() goext.ICore {
 	return env.coreImpl
@@ -158,6 +163,10 @@ func (env *Environment) HTTP() goext.IHTTP {
 // Auth returns an implementation to IAuth interface
 func (env *Environment) Auth() goext.IAuth {
 	return &Auth{}
+}
+
+func (env *Environment) Util() goext.IUtil {
+	return &Util{}
 }
 
 // SetDatabase sets and binds database implementation

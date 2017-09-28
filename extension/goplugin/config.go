@@ -13,13 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package goext
+package goplugin
 
-// ICore is an interface to core parts of Gohan: event triggering and registering
-type ICore interface {
-	TriggerEvent(event string, context Context) error
-	HandleEvent(event string, context Context) error
+import "github.com/cloudwan/gohan/util"
 
-	RegisterEventHandler(eventName string, handler func(context Context, environment IEnvironment) error, priority int)
-	RegisterSchemaEventHandler(schemaID string, eventName string, handler func(context Context, resource Resource, environment IEnvironment) error, priority int)
+// Config is an implementation of IConfig
+type Config struct{}
+
+// Config gets parameter from config
+func (config *Config) Config(key string, defaultValue interface{}) interface{} {
+	return util.GetConfig().GetParam(key, defaultValue)
 }

@@ -15,11 +15,7 @@
 
 package goext
 
-// ICore is an interface to core parts of Gohan: event triggering and registering
-type ICore interface {
-	TriggerEvent(event string, context Context) error
-	HandleEvent(event string, context Context) error
-
-	RegisterEventHandler(eventName string, handler func(context Context, environment IEnvironment) error, priority int)
-	RegisterSchemaEventHandler(schemaID string, eventName string, handler func(context Context, resource Resource, environment IEnvironment) error, priority int)
+type IUtil interface {
+	NewUUID() string
+	GetTransaction(context Context) (ITransaction, bool)
 }

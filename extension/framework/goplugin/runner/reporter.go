@@ -17,9 +17,11 @@ package runner
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/mohae/deepcopy"
+	"github.com/olekukonko/tablewriter"
 	"github.com/onsi/ginkgo/config"
 	"github.com/onsi/ginkgo/reporters/stenographer"
 	"github.com/onsi/ginkgo/types"
@@ -142,47 +144,53 @@ func (reporter *Reporter) Report() {
 	totalNumberOfPendingSpecs := 0
 	totalRunTime := time.Duration(0) * time.Nanosecond
 
+	// prepare data
+	data := [][]string{}
+
 	// suites
 	for index, suite := range reporter.suites {
-		fmt.Printf("[%4d] ", index+1)
+		row := []string{}
+		row = append(row, fmt.Sprintf("%d", index+1))
 
 		if suite.NumberOfFailedSpecs == 0 {
-			fmt.Printf(greenColor+"%-65s"+defaultStyle, suite.SuiteDescription)
+			row = append(row, greenColor+suite.SuiteDescription+defaultStyle)
 		} else {
-			fmt.Printf(redColor+"%-65s"+defaultStyle, suite.SuiteDescription)
+			row = append(row, redColor+suite.SuiteDescription+defaultStyle)
 		}
 
-		fmt.Printf(cyanColor+"total: %4d"+defaultStyle+", ", suite.NumberOfTotalSpecs)
+		row = append(row, cyanColor+fmt.Sprintf("%d", suite.NumberOfTotalSpecs)+defaultStyle)
 
 		if suite.NumberOfFailedSpecs == 0 {
-			fmt.Printf(greenColor+"passed: %4d"+defaultStyle+", ", suite.NumberOfPassedSpecs)
+			row = append(row, greenColor+fmt.Sprintf("%d", suite.NumberOfPassedSpecs)+defaultStyle)
 		} else {
-			fmt.Printf("passed: %4d"+", ", suite.NumberOfPassedSpecs)
+			row = append(row, fmt.Sprintf("%d", suite.NumberOfPassedSpecs))
 		}
 
 		if suite.NumberOfFailedSpecs > 0 {
-			fmt.Printf(redColor+"failed: %4d"+defaultStyle+", ", suite.NumberOfFailedSpecs)
+			row = append(row, redColor+fmt.Sprintf("%d", suite.NumberOfFailedSpecs)+defaultStyle)
 		} else {
-			fmt.Printf("failed: %4d"+", ", suite.NumberOfFailedSpecs)
+			row = append(row, fmt.Sprintf("%d", suite.NumberOfFailedSpecs))
 		}
 
 		if suite.NumberOfSkippedSpecs > 0 {
-			fmt.Printf(yellowColor+"skipped: %4d"+defaultStyle+", ", suite.NumberOfSkippedSpecs)
+			row = append(row, yellowColor+fmt.Sprintf("%d", suite.NumberOfSkippedSpecs)+defaultStyle)
 		} else {
-			fmt.Printf("skipped: %4d"+", ", suite.NumberOfSkippedSpecs)
+			row = append(row, fmt.Sprintf("%d", suite.NumberOfSkippedSpecs))
 		}
 
 		if suite.NumberOfPendingSpecs > 0 {
-			fmt.Printf(yellowColor+"pending: %4d"+defaultStyle+", ", suite.NumberOfPendingSpecs)
+			row = append(row, yellowColor+fmt.Sprintf("%d", suite.NumberOfPendingSpecs)+defaultStyle)
 		} else {
-			fmt.Printf("pending: %4d"+", ", suite.NumberOfPendingSpecs)
+			row = append(row, fmt.Sprintf("%d", suite.NumberOfPendingSpecs))
 		}
 
 		if suite.RunTime >= time.Duration(configSlowSpecThreshold*1000)*time.Millisecond {
-			fmt.Printf(redColor+"time: %8.2fms\n"+defaultStyle, float64(suite.RunTime.Nanoseconds())/1000000)
+			row = append(row, redColor+fmt.Sprintf("%.2f", float64(suite.RunTime.Nanoseconds())/1000000)+defaultStyle)
 		} else {
-			fmt.Printf("time: %8.2fms\n", float64(suite.RunTime.Nanoseconds())/1000000)
+			row = append(row, fmt.Sprintf("%.2f", float64(suite.RunTime.Nanoseconds())/1000000))
 		}
+
+		data = append(data, row)
 
 		totalNumberOfTotalSpecs += suite.NumberOfTotalSpecs
 		totalNumberOfPassedSpecs += suite.NumberOfPassedSpecs
@@ -192,32 +200,39 @@ func (reporter *Reporter) Report() {
 		totalRunTime += suite.RunTime
 	}
 
-	fmt.Println()
+	footer := []string{"", boldStyle + cyanColor + "SUMMARY" + defaultStyle}
 
-	fmt.Printf("[----] ")
-	fmt.Printf(yellowColor+"%-65s"+defaultStyle, "SUMMARY")
-	fmt.Printf(cyanColor+"total: %4d"+defaultStyle+", ", totalNumberOfTotalSpecs)
+	footer = append(footer, boldStyle+cyanColor+fmt.Sprintf("%d", totalNumberOfTotalSpecs)+defaultStyle)
+
 	if totalNumberOfFailedSpecs == 0 {
-		fmt.Printf(greenColor+"passed: %4d"+defaultStyle+", ", totalNumberOfPassedSpecs)
+		footer = append(footer, boldStyle+greenColor+fmt.Sprintf("%d", totalNumberOfPassedSpecs)+defaultStyle)
 	} else {
-		fmt.Printf("passed: %4d"+", ", totalNumberOfPassedSpecs)
+		footer = append(footer, boldStyle+fmt.Sprintf("%d", totalNumberOfPassedSpecs)+defaultStyle)
 	}
 	if totalNumberOfFailedSpecs > 0 {
-		fmt.Printf(redColor+"failed: %4d"+defaultStyle+", ", totalNumberOfFailedSpecs)
+		footer = append(footer, boldStyle+redColor+fmt.Sprintf("%d", totalNumberOfFailedSpecs)+defaultStyle)
 	} else {
-		fmt.Printf("failed: %4d"+", ", totalNumberOfFailedSpecs)
+		footer = append(footer, boldStyle+fmt.Sprintf("%d", totalNumberOfFailedSpecs)+defaultStyle)
 	}
 	if totalNumberOfSkippedSpecs > 0 {
-		fmt.Printf(yellowColor+"skipped: %4d"+defaultStyle+", ", totalNumberOfSkippedSpecs)
+		footer = append(footer, boldStyle+yellowColor+fmt.Sprintf("%d", totalNumberOfSkippedSpecs)+defaultStyle)
 	} else {
-		fmt.Printf("skipped: %4d"+", ", totalNumberOfSkippedSpecs)
+		footer = append(footer, boldStyle+fmt.Sprintf("%d", totalNumberOfSkippedSpecs)+defaultStyle)
 	}
 	if totalNumberOfPendingSpecs > 0 {
-		fmt.Printf(yellowColor+"pending: %4d"+defaultStyle+", ", totalNumberOfPendingSpecs)
+		footer = append(footer, boldStyle+yellowColor+fmt.Sprintf("%d", totalNumberOfPendingSpecs)+defaultStyle)
 	} else {
-		fmt.Printf("pending: %4d"+", ", totalNumberOfPendingSpecs)
+		footer = append(footer, boldStyle+fmt.Sprintf("%d", totalNumberOfPendingSpecs)+defaultStyle)
 	}
-	fmt.Printf("time: %8.2fms\n", float64(totalRunTime.Nanoseconds())/1000000)
+	footer = append(footer, boldStyle+fmt.Sprintf("%.2f", float64(totalRunTime.Nanoseconds())/1000000)+defaultStyle)
+
+	data = append(data, footer)
+
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"No.", "Name", "Total", "Passed", "Failed", "Skipped", "Pending", "Time [ms]"})
+	table.SetAlignment(tablewriter.ALIGN_RIGHT)
+	table.AppendBulk(data)
+	table.Render()
 }
 
 // NewReporter allocates a new reporter
