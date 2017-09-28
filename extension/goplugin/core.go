@@ -47,7 +47,10 @@ func (core *Core) TriggerEvent(event string, context goext.Context) error {
 	context["schema_id"] = schemaID
 
 	envManager := extension.GetManager()
-	return envManager.HandleEventInAllEnvironments(context, event, schemaID)
+	if env, found := envManager.GetEnvironment(schemaID); found {
+		return env.HandleEvent(event, context)
+	}
+	return nil
 }
 
 // HandleEvent Causes the given event to be handled within the same environment
