@@ -27,23 +27,31 @@ import (
 
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/options"
+	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
 	srv "github.com/cloudwan/gohan/server"
+	"github.com/cloudwan/gohan/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Environment", func() {
 	const (
-		conn         = "test.db"
+		conn         = "../test_data/test.db"
 		dbType       = "sqlite3"
 		baseURL      = "http://localhost:19090"
 		adminTokenID = "admin_token"
 	)
 
 	var (
-		testDB db.DB
-		server *srv.Server
+		testDB    db.DB
+		server    *srv.Server
+		whitelist = map[string]bool{
+			"schema":    true,
+			"policy":    true,
+			"extension": true,
+			"namespace": true,
+		}
 	)
 
 	startTestServer := func(config string) error {
@@ -78,7 +86,8 @@ var _ = Describe("Environment", func() {
 		return nil
 	}
 
-	BeforeEach(func() {
+	BeforeSuite(func() {
+		removeFileDb(conn)
 		var err error
 		testDB, err = db.ConnectDB(dbType, conn, db.DefaultMaxOpenConn, options.Default())
 		Expect(err).ToNot(HaveOccurred(), "Failed to connect database.")
@@ -86,15 +95,69 @@ var _ = Describe("Environment", func() {
 		Expect(err).ToNot(HaveOccurred(), "Failed to start test server.")
 	})
 
-	AfterEach(func() {
+	AfterSuite(func() {
 		schema.ClearManager()
-		os.Remove(conn)
+		removeFileDb(conn)
+	})
+
+	AfterEach(func() {
+		Expect(db.Within(testDB, func(tx transaction.Transaction) error {
+			for _, schema := range schema.GetManager().Schemas() {
+				if whitelist[schema.ID] {
+					continue
+				}
+				Expect(clearTable(tx, schema)).ToNot(HaveOccurred(), "Failed to clear table.")
+			}
+			return tx.Commit()
+		})).ToNot(HaveOccurred(), "Failed to create or commit transaction.")
 	})
 
 	Context("Requests", func() {
 		It("invokes registered Golang handlers", func() {
 			res := testURL("POST", baseURL+"/v0.1/tests/echo", adminTokenID, map[string]interface{}{"test": "success"}, http.StatusOK)
 			Expect(res.(map[string]interface{})).To(HaveKeyWithValue("test", "success"))
+		})
+	})
+
+	Context("Resource creation", func() {
+		It("Creates resources", func() {
+			resource := map[string]interface{}{
+				"id":            "testId",
+				"description":   "test description",
+				"test_suite_id": nil,
+				"subobject":     nil,
+			}
+
+			result := testURL("PUT", baseURL+"/v0.1/tests/testId", adminTokenID, resource, http.StatusCreated)
+			Expect(result).To(HaveKeyWithValue("test", util.MatchAsJSON(resource)))
+		})
+
+		It("Fails to create when string field given as int", func() {
+			resource := map[string]interface{}{
+				"test": map[string]interface{}{
+					"id":          "testId",
+					"description": 1,
+				},
+			}
+
+			result := testURL("POST", baseURL+"/v0.1/tests", adminTokenID, resource, http.StatusBadRequest)
+			Expect(result).To(HaveKeyWithValue("error", ContainSubstring("invalid type")))
+		})
+	})
+
+	Context("Fetching resources", func() {
+		It("fetches existing resources", func() {
+			resource := map[string]interface{}{
+				"id":            "testId",
+				"description":   "test description",
+				"test_suite_id": nil,
+				"subobject":     nil,
+			}
+
+			testURL("PUT", baseURL+"/v0.1/tests/testId", adminTokenID, resource, http.StatusCreated)
+
+			result := testURL("GET", baseURL+"/v0.1/tests/testId", adminTokenID, nil, http.StatusOK)
+			Expect(result).To(HaveKeyWithValue("test", util.MatchAsJSON(resource)))
 		})
 	})
 })
@@ -124,4 +187,42 @@ func httpRequest(method, url, token string, postData interface{}) (interface{}, 
 	decoder := json.NewDecoder(resp.Body)
 	decoder.Decode(&data)
 	return data, resp
+}
+
+func clearTable(tx transaction.Transaction, s *schema.Schema) error {
+	if s.IsAbstract() {
+		return nil
+	}
+	for _, schema := range schema.GetManager().Schemas() {
+		if schema.ParentSchema == s {
+			err := clearTable(tx, schema)
+			if err != nil {
+				return err
+			}
+		} else {
+			for _, property := range schema.Properties {
+				if property.Relation == s.Singular {
+					err := clearTable(tx, schema)
+					if err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+	resources, _, err := tx.List(s, nil, nil, nil)
+	if err != nil {
+		return err
+	}
+	for _, resource := range resources {
+		err = tx.Delete(s, resource.ID())
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func removeFileDb(fileName string) {
+	os.Remove(fileName)
 }
