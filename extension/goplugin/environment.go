@@ -16,7 +16,6 @@
 package goplugin
 
 import (
-	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"plugin"
@@ -96,8 +95,6 @@ type IEnvironment interface {
 	RegisterType(name string, typeValue interface{})
 
 	dispatchSchemaEvent(prioritizedSchemaHandlers PrioritizedSchemaHandlers, sch Schema, event string, context map[string]interface{}) error
-	resourceFromContext(sch Schema, context map[string]interface{}) (res goext.Resource, err error)
-	updateResourceFromContext(resource interface{}, context goext.Context) error
 	getSchemaHandlers(event string) (SchemaPrioritizedSchemaHandlers, bool)
 	getHandlers(event string) (PrioritizedHandlers, bool)
 	getRawType(schemaID string) (reflect.Type, bool)
@@ -336,21 +333,24 @@ func (env *Environment) dispatchSchemaEvent(prioritizedSchemaHandlers Prioritize
 func dispatchSchemaEventForEnv(env IEnvironment, prioritizedSchemaHandlers PrioritizedSchemaHandlers, sch Schema, event string, context map[string]interface{}) error {
 	env.Logger().Debugf("Starting event: %s, schema: %s", event, sch.raw.ID)
 	defer env.Logger().Debugf("Finished event: %s, schema: %s", event, sch.raw.ID)
-	if resource, err := env.resourceFromContext(sch, context); err == nil {
-		for _, priority := range sortSchemaHandlers(prioritizedSchemaHandlers) {
-			for _, schemaEventHandler := range prioritizedSchemaHandlers[priority] {
-				context["go_validation"] = true
-				if err := schemaEventHandler(context, resource, env); err != nil {
-					return err
-				}
-				if resource != nil {
-					context["resource"] = sch.StructToMap(resource)
-				}
+	var resource goext.Resource
+	var err error
+	if ctxResource, ok := context["resource"]; ok {
+		if resource, err = sch.ResourceFromMap(ctxResource.(map[string]interface{})); err != nil {
+			env.Logger().Warningf("failed to parse resource from context with schema '%s' for event '%s': %s", sch.ID(), event, err)
+			return goext.NewError(goext.ErrorBadRequest, err)
+		}
+	}
+	for _, priority := range sortSchemaHandlers(prioritizedSchemaHandlers) {
+		for _, schemaEventHandler := range prioritizedSchemaHandlers[priority] {
+			context["go_validation"] = true
+			if err := schemaEventHandler(context, resource, env); err != nil {
+				return err
+			}
+			if resource != nil {
+				context["resource"] = env.Util().ResourceToMap(resource)
 			}
 		}
-	} else {
-		env.Logger().Warningf("failed to parse resource from context with schema '%s' for event '%s': %s", sch.ID(), event, err)
-		return goext.NewError(goext.ErrorBadRequest, err)
 	}
 
 	return nil
@@ -445,216 +445,6 @@ func handleEventForEnv(env IEnvironment, event string, context map[string]interf
 	}
 
 	return nil
-}
-
-func (env *Environment) updateContextFromResource(context goext.Context, resource interface{}) error {
-	if resource == nil {
-		context["resource"] = nil
-		return nil
-	}
-
-	if _, ok := context["resource"]; !ok {
-		return nil
-	}
-
-	if _, ok := context["resource"].(map[string]interface{}); !ok {
-		return fmt.Errorf("failed to convert context resource to map during update context from resource")
-	}
-
-	if resourceMap, ok := env.resourceToMap(resource).(map[string]interface{}); ok {
-		for key, value := range resourceMap {
-			if _, ok := context["resource"].(map[string]interface{})[key]; ok {
-				context["resource"].(map[string]interface{})[key] = value
-			}
-		}
-	} else {
-		return fmt.Errorf("failed to convert resource to map during update context from resource")
-	}
-
-	return nil
-}
-
-func (env *Environment) updateResourceFromContextR(resource interface{}, resourceData map[string]interface{}) error {
-	resourceValue := reflect.ValueOf(resource)
-	resourceElem := resourceValue.Elem()
-	resourceElemType := resourceElem.Type()
-
-	if resourceElemType.Kind() != reflect.Struct {
-		panic("resource must be a struct")
-	}
-
-	for i := 0; i < resourceElemType.NumField(); i++ {
-		resourceFieldType := resourceElemType.Field(i)
-		resourceFieldTagDB := resourceFieldType.Tag.Get("db")
-		resourceField := resourceElem.Field(i)
-		val := reflect.ValueOf(resourceData[resourceFieldTagDB])
-
-		if resourceFieldType.Type.Kind() == reflect.Struct {
-			if _, ok := resourceData[resourceFieldTagDB].(map[string]interface{}); ok {
-				env.updateResourceFromContextR(resourceField.Interface(), resourceData[resourceFieldTagDB].(map[string]interface{}))
-			} else if strings.Contains(resourceFieldType.Type.String(), "goext.Null") {
-				if resourceData[resourceFieldTagDB] != nil {
-					if val.Type() == resourceFieldType.Type {
-						resourceField.Set(val)
-					} else {
-						resourceField.Field(0).Set(val)
-						resourceField.Field(1).Set(reflect.ValueOf(true))
-					}
-				} else {
-					resourceField.Field(1).Set(reflect.ValueOf(false))
-				}
-			} else {
-				resourceField.Set(val)
-			}
-		} else {
-			if val.IsValid() {
-				resourceField.Set(val)
-			}
-		}
-	}
-
-	return nil
-}
-
-func (env *Environment) updateResourceFromContext(resource interface{}, context goext.Context) error {
-	if resource == nil {
-		return nil
-	}
-
-	if _, ok := context["resource"]; !ok {
-		return nil
-	}
-
-	if resourceData, ok := context["resource"].(map[string]interface{}); ok {
-		return env.updateResourceFromContextR(resource, resourceData)
-	}
-
-	return fmt.Errorf("failed to convert context resource to map during update resource from context")
-}
-
-func (env *Environment) resourceToMap(resource interface{}) interface{} {
-	resourceValue := reflect.ValueOf(resource)
-	resourceElem := resourceValue.Elem()
-	resourceElemType := resourceElem.Type()
-
-	if resourceElemType.Kind() == reflect.Struct {
-		switch res := resource.(type) {
-		case *goext.NullString:
-			if res.Valid {
-				return res.Value
-			}
-			return nil
-		case *goext.NullInt:
-			if res.Valid {
-				return res.Value
-			}
-			return nil
-		case *goext.NullFloat:
-			if res.Valid {
-				return res.Value
-			}
-			return nil
-		case *goext.NullBool:
-			if res.Valid {
-				return res.Value
-			}
-			return nil
-		case goext.NullString:
-			if res.Valid {
-				return res.Value
-			}
-			return nil
-		case goext.NullInt:
-			if res.Valid {
-				return res.Value
-			}
-			return nil
-		case goext.NullFloat:
-			if res.Valid {
-				return res.Value
-			}
-			return nil
-		case goext.NullBool:
-			if res.Valid {
-				return res.Value
-			}
-			return nil
-		}
-		data := make(map[string]interface{})
-
-		for i := 0; i < resourceElemType.NumField(); i++ {
-			resourceFieldType := resourceElemType.Field(i)
-			resourceFieldTagDB := resourceFieldType.Tag.Get("db")
-			resourceFieldInterface := resourceElem.Field(i).Interface()
-
-			data[resourceFieldTagDB] = env.resourceToMap(&resourceFieldInterface)
-		}
-
-		return data
-	}
-
-	return resourceElem.Interface()
-}
-
-func (env *Environment) resourceFromContext(sch Schema, context map[string]interface{}) (res goext.Resource, err error) {
-	rawSch := sch.raw
-	rawType, ok := env.rawTypes[rawSch.ID]
-
-	if !ok {
-		return nil, fmt.Errorf("no raw type registered for schema: %s", rawSch.ID)
-	}
-
-	resourceData, ok := context["resource"]
-
-	if !ok {
-		return nil, nil
-	}
-
-	resource := reflect.New(rawType)
-	data := resourceData.(map[string]interface{})
-
-	for i := 0; i < rawType.NumField(); i++ {
-		field := resource.Elem().Field(i)
-		fieldType := rawType.Field(i)
-		propertyName := fieldType.Tag.Get("db")
-		if propertyName == "" {
-			return nil, fmt.Errorf("missing tag 'db' for resource %s field %s", rawType.Name(), fieldType.Name)
-		}
-		property, err := rawSch.GetPropertyByID(propertyName)
-		if err != nil {
-			return nil, err
-		}
-		kind := fieldType.Type.Kind()
-		if kind == reflect.Struct || kind == reflect.Ptr || kind == reflect.Slice {
-			mapJSON, err := json.Marshal(data[property.ID])
-			if err != nil {
-				return nil, err
-			}
-			newField := reflect.New(field.Type())
-			fieldJSON := string(mapJSON)
-			fieldInterface := newField.Interface()
-			err = json.Unmarshal([]byte(fieldJSON), &fieldInterface)
-			if err != nil {
-				return nil, err
-			}
-			field.Set(newField.Elem())
-		} else {
-			value := reflect.ValueOf(data[property.ID])
-			if value.IsValid() {
-				if value.Type() == field.Type() {
-					field.Set(value)
-				} else {
-					if field.Kind() == reflect.Int && value.Kind() == reflect.Float64 { // reflect treats number(N, 0) as float
-						field.SetInt(int64(value.Float()))
-					} else {
-						return nil, fmt.Errorf("invalid type of '%s' field (%s, expecting %s)", property.ID, value.Kind(), field.Kind())
-					}
-				}
-			}
-		}
-	}
-
-	return resource.Interface(), nil
 }
 
 // RegisterEventHandler registers an event handler

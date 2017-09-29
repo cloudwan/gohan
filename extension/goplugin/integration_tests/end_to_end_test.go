@@ -132,6 +132,7 @@ var _ = Describe("Environment", func() {
 				"description":   "test description",
 				"test_suite_id": nil,
 				"subobject":     nil,
+				"name":          nil,
 			}
 
 			result := testURL("PUT", baseURL+"/v0.1/tests/testId", adminTokenID, resource, http.StatusCreated)
@@ -158,6 +159,7 @@ var _ = Describe("Environment", func() {
 				"description":   "test description",
 				"test_suite_id": nil,
 				"subobject":     nil,
+				"name":          nil,
 			}
 
 			testURL("PUT", baseURL+"/v0.1/tests/testId", adminTokenID, resource, http.StatusCreated)

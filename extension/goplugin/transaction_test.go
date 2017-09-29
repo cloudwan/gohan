@@ -75,6 +75,7 @@ var _ = Describe("Transaction", func() {
 			createdResource = map[string]interface{}{
 				"id":            "some-id",
 				"description":   "description",
+				"name":          nil,
 				"subobject":     map[string]interface{}{},
 				"test_suite_id": nil,
 			}

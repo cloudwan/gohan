@@ -198,10 +198,6 @@ func (mockEnv *MockIEnvironment) dispatchSchemaEvent(prioritizedSchemaHandlers P
 	return dispatchSchemaEventForEnv(mockEnv, prioritizedSchemaHandlers, sch, event, context)
 }
 
-func (mockEnv *MockIEnvironment) resourceFromContext(sch Schema, context map[string]interface{}) (res goext.Resource, err error) {
-	return mockEnv.env.resourceFromContext(sch, context)
-}
-
 func (mockEnv *MockIEnvironment) RegisterRawType(name string, typeValue interface{}) {
 	mockEnv.env.RegisterRawType(name, typeValue)
 }
@@ -224,10 +220,6 @@ func (mockEnv *MockIEnvironment) getType(schemaID string) (reflect.Type, bool) {
 
 func (mockEnv *MockIEnvironment) getTraceID() string {
 	return mockEnv.env.getTraceID()
-}
-
-func (mockEnv *MockIEnvironment) updateResourceFromContext(resource interface{}, context goext.Context) error {
-	return mockEnv.env.updateResourceFromContext(resource, context)
 }
 
 func (mockEnv *MockIEnvironment) IsEventHandled(event string, context map[string]interface{}) bool {

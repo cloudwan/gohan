@@ -157,6 +157,9 @@ type ISchema interface {
 	// RegisterRawType registers a raw resource type, containing db annotations
 	RegisterRawType(rawResourceType interface{})
 
+	// ResourceFromMap converts mapped representation to structure representation of the raw resource registered for schema
+	ResourceFromMap(context map[string]interface{}) (Resource, error)
+
 	RawSchema() interface{}
 }
 

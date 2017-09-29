@@ -39,6 +39,14 @@ schemas:
         title: Description
         type: string
         unique: false
+      name:
+        description: ""
+        permission:
+        - create
+        - update
+        title: Name
+        type: string
+        maxLength: 255
       subobject:
         description: Subobject description
         permission:
@@ -61,6 +69,7 @@ schemas:
     propertiesOrder:
     - id
     - description
+    - name
     type: object
   singular: test
   title: Test
