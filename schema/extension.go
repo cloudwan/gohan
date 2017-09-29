@@ -23,7 +23,7 @@ import (
 	"github.com/cloudwan/gohan/util"
 )
 
-//DefaultExtension configuraion
+//DefaultExtension configuration
 var DefaultExtension = "javascript"
 
 //Extension is a small plugin for gohan

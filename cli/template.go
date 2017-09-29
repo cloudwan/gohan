@@ -175,7 +175,7 @@ func doTemplate(c *cli.Context) {
 	defer os.Chdir(pwd)
 	schemaFiles := config.GetStringList("schemas", nil)
 	if schemaFiles == nil {
-		util.ExitFatal("No schema specified in configuraion")
+		util.ExitFatal("No schema specified in configuration")
 	} else {
 		err = manager.LoadSchemasFromFiles(schemaFiles...)
 		if err != nil {

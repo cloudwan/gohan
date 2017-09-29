@@ -294,7 +294,7 @@
                                                 "type": "boolean"
                                             },
                                             "view": {
-                                                "title": "view configuraion on UI",
+                                                "title": "view configuration on UI",
                                                 "type": "array"
                                             }
                                         },
