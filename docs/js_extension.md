@@ -245,10 +245,10 @@ apply go style template
 - gohan_netconf_open(hostname, username)
 
 open netconf session.
-(Note: you need set up ssh key configuraion
+(Note: you need set up ssh key configuration
 on both of gohan and target node.)
 In gohan, you need to setup ssh/key_file
-configuraion.
+configuration.
 
 - gohan_netconf_exec(session, command)
 
@@ -261,10 +261,10 @@ close netconf session
 - gohan_ssh_open(hostname, username)
 
 open ssh session.
-(Note: you need set up ssh key configuraion
+(Note: you need set up ssh key configuration
 on both of gohan and target node.)
 In gohan, you need to setup ssh/key_file
-configuraion.
+configuration.
 
 - gohan_ssh_exec(session, command)
 

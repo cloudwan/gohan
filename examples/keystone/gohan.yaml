@@ -1,8 +1,8 @@
 #######################################################
-#  Gohan API Server example configuraion
+#  Gohan API Server example configuration
 ######################################################
 
-# database connection configuraion
+# database connection configuration
 database:
     # yaml, json, sqlite3 and mysql supported
     # yaml and json db is for schema development purpose
@@ -27,7 +27,7 @@ tls:
     key_file: ./key.pem
     cert_file: ./cert.pem
 
-# keystone configuraion
+# keystone configuration
 keystone:
     use_keystone: true
     fake: false
@@ -35,7 +35,7 @@ keystone:
     user_name: "gohan"
     tenant_name: "service"
     password: "gohan"
-# CORS (Cross-origin resource sharing (CORS)) configuraion for javascript based client
+# CORS (Cross-origin resource sharing (CORS)) configuration for javascript based client
 cors: "*"
 
 # allowed levels  "CRITICAL", "ERROR", "WARNING", "NOTICE", "INFO", "DEBUG",

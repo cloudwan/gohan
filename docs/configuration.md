@@ -15,11 +15,11 @@ Gohan server configuration uses YAML format.
 
 ```yaml
   #######################################################
-  #  Gohan API Server example configuraion
+  #  Gohan API Server example configuration
   ######################################################
 
   include: gohan.d
-  # database connection configuraion
+  # database connection configuration
   database:
       # sqlite3 and mysql supported
       type: "sqlite3"
@@ -54,7 +54,7 @@ Gohan server configuration uses YAML format.
       - "http://127.0.0.1:2379"
   # timeout in milliseconds.1000 milliseconds by default 
   etcd_timeout_ms: 1000
-  # keystone configuraion
+  # keystone configuration
   keystone:
       use_keystone: false
       fake: true
@@ -62,7 +62,7 @@ Gohan server configuration uses YAML format.
       user_name: "admin"
       tenant_name: "admin"
       password: "gohan"
-  # CORS (Cross-origin resource sharing (CORS)) configuraion for javascript based client
+  # CORS (Cross-origin resource sharing (CORS)) configuration for javascript based client
   cors: "*"
 
   # Profiling configuration
@@ -112,7 +112,7 @@ You can select from MySQL, sqlite3 and YAML.
 Sample database configuration for MySQL.
 
 ```yaml
-  # database connection configuraion
+  # database connection configuration
   database:
       type: "mysql"
       connection: "root:gohan@127.0.0.1/gohan"
@@ -121,7 +121,7 @@ Sample database configuration for MySQL.
 Sample database configuration for sqlite3.
 
 ```yaml
-  # database connection configuraion
+  # database connection configuration
   database:
       type: "sqlite3"
       connection: "./sqlite3.db"
@@ -255,7 +255,7 @@ Gohan supports OpenStack Keystone authentication backend.
 Gohan supports Cross-Origin Resource Sharing (CORS) for supporting
 javascript WebUI without a proxy server.
 You need to specify allowed domain pattern in CORS parameter.
-Note: DO NOT USE * configuraion in production deployment.
+Note: DO NOT USE * configuration in production deployment.
 
 ```yaml
   cors: "*"

@@ -8,13 +8,13 @@ You can run gohan + mysql with this command.
 MYSQL_PASSWORD=$MYSQL_PASSWORD gohan server --config-file gohan.yaml
 
 ``` yaml
-# database connection configuraion
+# database connection configuration
 database:
     type: "mysql"
     connection: "root:{{.MYSQL_PASSWORD}}@/gohan"
 ```
 
-You can see more mysql configuraion here
+You can see more mysql configuration here
 https://github.com/go-sql-driver/mysql
 
 Simple test script

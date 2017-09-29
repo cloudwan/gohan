@@ -124,7 +124,7 @@ func RunServer(configFile string, controller ControllerInterface) {
 	maxConn := config.GetInt("database/max_open_conn", defaultMaxOpenConn)
 	if databaseConnection == "" {
 		fatalError(
-			fmt.Errorf("no database connection specified in the configuraion file"))
+			fmt.Errorf("no database connection specified in the configuration file"))
 	}
 	db, err := sql.Open(databaseType, databaseConnection)
 	fatalError(err)
