@@ -17,9 +17,6 @@ package goext
 
 // ICore is an interface to core parts of Gohan: event triggering and registering
 type ICore interface {
-	NewUUID() string
-	Config(key string, defaultValue interface{}) interface{}
-
 	TriggerEvent(event string, context Context) error
 	HandleEvent(event string, context Context) error
 

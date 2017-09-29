@@ -13,22 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package test
+package goext
 
-// Subobject is a test resource
-type Subobject struct {
-	Subproperty string `json:"subproperty,omitempty"`
-}
-
-// Test is a test resource
-type Test struct {
-	ID          string     `db:"id"`
-	Description string     `db:"description"`
-	Subobject   *Subobject `db:"subobject"`
-	TestSuiteID *string    `db:"test_suite_id"`
-}
-
-// TestSuite is a test suite resource
-type TestSuite struct {
-	ID string `db:"id"`
+type IUtil interface {
+	NewUUID() string
+	GetTransaction(context Context) (ITransaction, bool)
 }

@@ -56,6 +56,34 @@ func (schemas *Schemas) List() []goext.ISchema {
 	return result
 }
 
+func (schemas *Schemas) Relations(id string) []goext.SchemaRelationInfo {
+	manager := gohan_schema.GetManager()
+	relations := map[string][]goext.SchemaRelationInfo{}
+
+	for _, schema := range manager.OrderedSchemas() {
+		for _, property := range schema.Properties {
+			if property.Relation != "" {
+				if _, ok := relations[property.Relation]; !ok {
+					relations[property.Relation] = []goext.SchemaRelationInfo{}
+				}
+
+				onDeleteCascade := property.OnDeleteCascade
+				if schema.Parent != "" && schema.Parent == property.Relation {
+					onDeleteCascade = schema.OnParentDeleteCascade
+				}
+
+				relations[property.Relation] = append(relations[property.Relation], goext.SchemaRelationInfo{
+					SchemaID:        schema.ID,
+					PropertyID:      property.ID,
+					OnDeleteCascade: onDeleteCascade,
+				})
+			}
+		}
+	}
+
+	return relations[id]
+}
+
 // Find returns a schema by id or nil if not found
 func (schemas *Schemas) Find(id string) goext.ISchema {
 	manager := gohan_schema.GetManager()
@@ -661,20 +689,4 @@ func NewSchema(env *Environment, raw *gohan_schema.Schema) goext.ISchema {
 func contextSetTransaction(ctx goext.Context, tx goext.ITransaction) goext.Context {
 	ctx["transaction"] = tx
 	return ctx
-}
-
-func contextGetTransaction(ctx goext.Context) (goext.ITransaction, bool) {
-	ctxTx := ctx["transaction"]
-	if ctxTx == nil {
-		return nil, false
-	}
-
-	switch tx := ctxTx.(type) {
-	case goext.ITransaction:
-		return tx, true
-	case transaction.Transaction:
-		return &Transaction{tx}, true
-	default:
-		panic(fmt.Sprintf("Unknown transaction type in context: %+v", ctxTx))
-	}
 }

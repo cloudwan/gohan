@@ -33,9 +33,11 @@ import (
 
 var _ = Describe("Schemas", func() {
 	var (
-		env    *goplugin.Environment
-		dbFile string
-		dbType string
+		env             *goplugin.Environment
+		dbFile          string
+		dbType          string
+		testSchema      goext.ISchema
+		testSuiteSchema goext.ISchema
 	)
 
 	const (
@@ -53,10 +55,21 @@ var _ = Describe("Schemas", func() {
 
 		manager := schema.GetManager()
 		Expect(manager.LoadSchemaFromFile(SchemaPath)).To(Succeed())
-		db, err := db.ConnectDB(dbType, dbFile, db.DefaultMaxOpenConn, options.Default())
+		rawDB, err := db.ConnectDB(dbType, dbFile, db.DefaultMaxOpenConn, options.Default())
 		Expect(err).To(BeNil())
 		env = goplugin.NewEnvironment("test", nil, nil)
-		env.SetDatabase(db)
+		env.SetDatabase(rawDB)
+
+		err = env.Load("test_data/ext_good/ext_good.so")
+		Expect(err).To(BeNil())
+		Expect(env.Start()).To(Succeed())
+		testSchema = env.Schemas().Find("test")
+		Expect(testSchema).To(Not(BeNil()))
+		testSuiteSchema = env.Schemas().Find("test_suite")
+		Expect(testSuiteSchema).To(Not(BeNil()))
+
+		err = db.InitDBWithSchemas(dbType, dbFile, true, true, false)
+		Expect(err).To(BeNil())
 	})
 
 	AfterEach(func() {
@@ -64,24 +77,31 @@ var _ = Describe("Schemas", func() {
 
 	})
 
+	Context("Relations", func() {
+		It("Returns relation info if schema has relations", func() {
+			relations := env.Schemas().Relations(testSuiteSchema.ID())
+			Expect(relations).To(HaveLen(1))
+			relation := relations[0]
+			Expect(relation.OnDeleteCascade).To(BeTrue())
+			Expect(relation.PropertyID).To(Equal("test_suite_id"))
+			Expect(relation.SchemaID).To(Equal(testSchema.ID()))
+		})
+
+		It("Returns empty relation info if schema has not any relations", func() {
+			relations := env.Schemas().Relations(testSchema.ID())
+			Expect(relations).To(BeEmpty())
+		})
+	})
+
 	Context("CRUD", func() {
 		var (
-			testSchema      goext.ISchema
 			createdResource test.Test
 			context         goext.Context
 			tx              goext.ITransaction
 		)
 
 		BeforeEach(func() {
-			err := env.Load("test_data/ext_good/ext_good.so")
-			Expect(err).To(BeNil())
-			Expect(env.Start()).To(Succeed())
-			testSchema = env.Schemas().Find("test")
-			Expect(testSchema).To(Not(BeNil()))
-
-			err = db.InitDBWithSchemas(dbType, dbFile, true, true, false)
-			Expect(err).To(BeNil())
-
+			var err error
 			tx, err = env.Database().Begin()
 			Expect(err).To(BeNil())
 
@@ -90,6 +110,7 @@ var _ = Describe("Schemas", func() {
 			createdResource = test.Test{
 				ID:          "some-id",
 				Description: "description",
+				TestSuiteID: nil,
 			}
 		})
 
@@ -195,15 +216,6 @@ var _ = Describe("Schemas", func() {
 			if os.Getenv("MYSQL_TEST") != "true" {
 				Skip("Locks are only valid in MySQL")
 			}
-
-			err := env.Load("test_data/ext_good/ext_good.so")
-			Expect(err).To(BeNil())
-			Expect(env.Start()).To(Succeed())
-			testSchema = env.Schemas().Find("test")
-			Expect(testSchema).To(Not(BeNil()))
-
-			err = db.InitDBWithSchemas(dbType, dbFile, true, true, false)
-			Expect(err).To(BeNil())
 
 			createdResource = test.Test{
 				ID:          "some-id",

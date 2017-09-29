@@ -158,8 +158,21 @@ type ISchema interface {
 	RegisterRawType(rawResourceType interface{})
 }
 
+// SchemaRelationInfo describes schema relation
+type SchemaRelationInfo struct {
+	// SchemaID relation to which schema
+	SchemaID string
+	// PropertyID ID of property which relation is referenced
+	PropertyID string
+	// OnDeleteCascade whether cascading delete on related resource delete is enabled
+	OnDeleteCascade bool
+}
+
 // ISchemas is an interface to schemas manager in Gohan
 type ISchemas interface {
 	List() []ISchema
 	Find(id string) ISchema
+
+	// Relations returns list of information about schema relations
+	Relations(id string) []SchemaRelationInfo
 }
