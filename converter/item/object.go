@@ -17,12 +17,13 @@ package item
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/cloudwan/gohan/converter/crud"
 	"github.com/cloudwan/gohan/converter/hash"
 	"github.com/cloudwan/gohan/converter/name"
 	"github.com/cloudwan/gohan/converter/set"
 	"github.com/cloudwan/gohan/converter/util"
-	"strings"
 )
 
 // Object is an implementation of Item interface
@@ -304,6 +305,7 @@ func (object *Object) GenerateConstructor(suffix string) string {
 		object.Type(suffix),
 		objectType,
 	)
+
 	properties := object.properties.ToArray()
 	for _, property := range properties {
 		propertyCode := property.(*Property).GenerateConstructor(suffix)
@@ -321,6 +323,7 @@ func (object *Object) GenerateConstructor(suffix string) string {
 // with suffix added to type name of each field
 func (object *Object) GenerateStruct(suffix string) string {
 	code := "type " + object.getType(suffix) + " struct {\n"
+
 	properties := object.properties.ToArray()
 	for _, property := range properties {
 		code += property.(*Property).GenerateProperty(suffix)
