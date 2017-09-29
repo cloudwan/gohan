@@ -18,8 +18,8 @@ package main
 import (
 	"github.com/cloudwan/gohan/examples/goext_example/todo"
 	"github.com/cloudwan/gohan/extension/goext"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/ginkgo"
+	"github.com/onsi/gomega"
 )
 
 // Schemas returns a list of extra schemas that will be loaded with this test
@@ -39,39 +39,39 @@ func Binaries() []string {
 func Test(env goext.IEnvironment) {
 	env.Logger().Notice("Running example test suite")
 
-	Describe("Example tests", func() {
+	ginkgo.Describe("Example tests", func() {
 		var (
 			schema goext.ISchema
 			entry  *todo.Entry
 		)
 
-		BeforeEach(func() {
+		ginkgo.BeforeEach(func() {
 			schema = env.Schemas().Find("entry")
-			Expect(schema).To(Not(BeNil()))
+			gomega.Expect(schema).To(gomega.Not(gomega.BeNil()))
 
 			entry = &todo.Entry{
-				ID:          env.Core().NewUUID(),
+				ID:          env.Util().NewUUID(),
 				Name:        "example name",
 				Description: "example description",
 				TenantID:    "admin",
 			}
 		})
 
-		AfterEach(func() {
+		ginkgo.AfterEach(func() {
 			env.Reset()
 		})
 
-		It("Smoke test CRUD", func() {
-			Expect(schema.CreateRaw(entry, nil)).To(Succeed())
-			Expect(schema.UpdateRaw(entry, nil)).To(Succeed())
-			Expect(schema.DeleteRaw(goext.Filter{"id": entry.ID}, nil)).To(Succeed())
+		ginkgo.It("Smoke test CRUD", func() {
+			gomega.Expect(schema.CreateRaw(entry, nil)).To(gomega.Succeed())
+			gomega.Expect(schema.UpdateRaw(entry, nil)).To(gomega.Succeed())
+			gomega.Expect(schema.DeleteRaw(goext.Filter{"id": entry.ID}, nil)).To(gomega.Succeed())
 		})
 
-		It("Should change name in pre_update event", func() {
-			Expect(schema.CreateRaw(entry, nil)).To(Succeed())
+		ginkgo.It("Should change name in pre_update event", func() {
+			gomega.Expect(schema.CreateRaw(entry, nil)).To(gomega.Succeed())
 			entry.Name = "random name"
-			Expect(schema.UpdateRaw(entry, nil)).To(Succeed())
-			Expect(entry.Name).To(Equal("name changed in pre_update event"))
+			gomega.Expect(schema.UpdateRaw(entry, nil)).To(gomega.Succeed())
+			gomega.Expect(entry.Name).To(gomega.Equal("name changed in pre_update event"))
 		})
 	})
 }

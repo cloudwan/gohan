@@ -28,6 +28,7 @@ import (
 	"github.com/twinj/uuid"
 )
 
+// Util is an implementation of IUtil
 type Util struct {
 }
 
@@ -52,11 +53,13 @@ func (util *Util) NewUUID() string {
 	return uuid.NewV4().String()
 }
 
-func (u *Util) GetTransaction(context goext.Context) (goext.ITransaction, bool) {
+// GetTransaction returns the transaction from context
+func (util *Util) GetTransaction(context goext.Context) (goext.ITransaction, bool) {
 	return contextGetTransaction(context)
 }
 
-func (u *Util) Clone() *Util {
+// Clone clones Util
+func (util *Util) Clone() *Util {
 	return &Util{}
 }
 

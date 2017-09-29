@@ -15,6 +15,7 @@
 
 package goext
 
+// IUtil is an interface to utilities in Gohan
 type IUtil interface {
 	NewUUID() string
 	GetTransaction(context Context) (ITransaction, bool)

@@ -31,7 +31,7 @@ type Test struct {
 	TestSuiteID *string          `db:"test_suite_id" json:"test_suite_id"`
 }
 
-// TestSuite is a test suite resource
-type TestSuite struct {
+// Suite is a test suite resource
+type Suite struct {
 	ID string `db:"id" json:"id"`
 }

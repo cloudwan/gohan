@@ -47,7 +47,8 @@ type Sync struct {
 }
 
 func (s *Sync) withTimeout() context.Context {
-	ctx, _ := context.WithTimeout(context.Background(), s.timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), s.timeout)
+	_ = cancel
 	return ctx
 }
 

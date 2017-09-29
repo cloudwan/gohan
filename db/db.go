@@ -147,7 +147,7 @@ func CopyDBResources(input, output DB, overrideExisting bool) error {
 		return errNoSchemasInManager
 	}
 
-	if errInputTx := Within(input, func(inputTx transaction.Transaction) error {
+	return Within(input, func(inputTx transaction.Transaction) error {
 		if errorOutputTx := Within(output, func(outputTx transaction.Transaction) error {
 			for _, s := range schemas {
 				if s.IsAbstract() {
@@ -181,11 +181,7 @@ func CopyDBResources(input, output DB, overrideExisting bool) error {
 			return errorOutputTx
 		}
 		return inputTx.Commit()
-	}); errInputTx != nil {
-		return errInputTx
-	}
-
-	return nil
+	})
 }
 
 // CreateFromConfig creates db connection from config

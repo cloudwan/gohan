@@ -16,21 +16,18 @@
 package resources
 
 import (
+	"context"
 	"fmt"
+	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/pagination"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/extension"
-
-	"context"
-	"net/http"
-	"net/url"
-
-	"time"
-
 	"github.com/cloudwan/gohan/metrics"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/server/middleware"
@@ -222,10 +219,7 @@ func GetResourcesInTransaction(context middleware.Context, resourceSchema *schem
 	context["response"] = response
 	context["total"] = total
 
-	if err := extension.HandleEvent(context, environment, "post_list_in_transaction", resourceSchema.ID); err != nil {
-		return err
-	}
-	return nil
+	return extension.HandleEvent(context, environment, "post_list_in_transaction", resourceSchema.ID)
 }
 
 //FilterFromQueryParameter makes list filter from query.
@@ -304,11 +298,7 @@ func GetMultipleResources(context middleware.Context, dataStore db.DB, resourceS
 		return err
 	}
 
-	if err := ApplyPolicyForResources(context, resourceSchema); err != nil {
-		return err
-	}
-
-	return nil
+	return ApplyPolicyForResources(context, resourceSchema)
 }
 
 // GetSingleResource returns the resource specified by the schema and ID
@@ -597,11 +587,7 @@ func CreateResourceInTransaction(context middleware.Context, resourceSchema *sch
 	response[resourceSchema.Singular] = resource.Data()
 	context["response"] = response
 
-	if err := extension.HandleEvent(context, environment, "post_create_in_transaction", resourceSchema.ID); err != nil {
-		return err
-	}
-
-	return nil
+	return extension.HandleEvent(context, environment, "post_create_in_transaction", resourceSchema.ID)
 }
 
 // UpdateResource updates the resource specified by the schema and ID using the dataMap
@@ -751,11 +737,7 @@ func UpdateResourceInTransaction(
 	response[resourceSchema.Singular] = resource.Data()
 	context["response"] = response
 
-	if err := extension.HandleEvent(context, environment, "post_update_in_transaction", resourceSchema.ID); err != nil {
-		return err
-	}
-
-	return nil
+	return extension.HandleEvent(context, environment, "post_update_in_transaction", resourceSchema.ID)
 }
 
 // DeleteResource deletes the resource specified by the schema and ID
@@ -819,10 +801,8 @@ func DeleteResource(context middleware.Context,
 	); err != nil {
 		return err
 	}
-	if err := extension.HandleEvent(context, environment, "post_delete", resourceSchema.ID); err != nil {
-		return err
-	}
-	return nil
+
+	return extension.HandleEvent(context, environment, "post_delete", resourceSchema.ID)
 }
 
 //DeleteResourceInTransaction deletes resources in a transaction
@@ -876,10 +856,7 @@ func DeleteResourceInTransaction(context middleware.Context, resourceSchema *sch
 		return ResourceError{err, "", DeleteFailed}
 	}
 
-	if err := extension.HandleEvent(context, environment, "post_delete_in_transaction", resourceSchema.ID); err != nil {
-		return err
-	}
-	return nil
+	return extension.HandleEvent(context, environment, "post_delete_in_transaction", resourceSchema.ID)
 }
 
 // ActionResource runs custom action on resource

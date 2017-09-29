@@ -123,7 +123,7 @@ func (watcher *SyncWatcher) Run(ctx context.Context) error {
 		}()
 
 		if err != nil {
-			log.Error("process watch intrupted: %s", err)
+			log.Error("process watch interrupted: %s", err)
 		}
 
 		select {
@@ -195,6 +195,7 @@ func (watcher *SyncWatcher) processWatchLoop(events <-chan *gohan_sync.Event) er
 
 			var cctx context.Context
 			cctx, previousCancel = context.WithCancel(context.Background())
+			_ = previousCancel
 			previousDone = make(chan struct{})
 
 			go func() {

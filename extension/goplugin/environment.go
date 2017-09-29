@@ -183,6 +183,7 @@ func (env *Environment) Auth() goext.IAuth {
 	return &Auth{}
 }
 
+// Util returns an implementation to IUtil interface
 func (env *Environment) Util() goext.IUtil {
 	return &Util{}
 }

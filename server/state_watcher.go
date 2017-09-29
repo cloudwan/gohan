@@ -98,6 +98,7 @@ func (watcher *StateWatcher) iterate(ctx context.Context) error {
 	defer watcher.sync.Unlock(lockKey)
 
 	watchCtx, watchCancel := context.WithCancel(ctx)
+	_ = watchCancel
 	respCh, err := watcher.sync.WatchContext(watchCtx, lockKey, gohan_sync.RevisionCurrent)
 	if err != nil {
 		return fmt.Errorf("sync state watch error: %s", err)

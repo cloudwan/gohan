@@ -55,6 +55,7 @@ func (schemas *Schemas) List() []goext.ISchema {
 	return result
 }
 
+// Relations returns a list of relation info
 func (schemas *Schemas) Relations(id string) []goext.SchemaRelationInfo {
 	manager := gohan_schema.GetManager()
 	relations := map[string][]goext.SchemaRelationInfo{}

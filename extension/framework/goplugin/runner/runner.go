@@ -200,7 +200,7 @@ func (testRunner *TestRunner) runSingle(t ginkgo.GinkgoTestingT, reporter *Repor
 	// register
 	extensionManager := extension.GetManager()
 	for schemaID := range manager.Schemas() {
-		if err := extensionManager.RegisterEnvironment(schemaID, mockEnv); err != nil {
+		if err := extensionManager.RegisterEnvironment(schemaID, env); err != nil {
 			return fmt.Errorf("failed to register environment: %s", err)
 		}
 	}

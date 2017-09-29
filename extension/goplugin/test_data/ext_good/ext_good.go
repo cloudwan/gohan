@@ -47,7 +47,7 @@ func Init(env goext.IEnvironment) error {
 	if testSuiteSchema == nil {
 		return fmt.Errorf("test suite schema not found")
 	}
-	testSuiteSchema.RegisterRawType(test.TestSuite{})
+	testSuiteSchema.RegisterRawType(test.Suite{})
 	return nil
 }
 

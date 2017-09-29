@@ -23,6 +23,7 @@ import (
 // Auth is an implementation of IAuth
 type Auth struct{}
 
+// HasRole checks if context has a specific role
 func (a *Auth) HasRole(context goext.Context, principal string) bool {
 	roleRaw, ok := context["role"]
 	if !ok {
@@ -39,6 +40,7 @@ func (a *Auth) HasRole(context goext.Context, principal string) bool {
 	return role.Match(principal)
 }
 
+// GetTenantName returns tenant name from context
 func (a *Auth) GetTenantName(context goext.Context) string {
 	authRaw, ok := context["auth"]
 	if !ok {

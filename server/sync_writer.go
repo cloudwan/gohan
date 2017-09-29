@@ -100,7 +100,7 @@ func (writer *SyncWriter) Run(ctx context.Context) error {
 		}()
 
 		if err != nil {
-			log.Error("sync writer is intrupted: %s", err)
+			log.Error("sync writer is interrupted: %s", err)
 		}
 
 		select {
