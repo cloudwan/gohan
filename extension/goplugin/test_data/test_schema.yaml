@@ -43,6 +43,14 @@ schemas:
             title: Subproperty
             type: string
             maxLength: 255
+      test_suite_id:
+        description: Test suite ID
+        permission:
+          - create
+        title: Test Suite ID
+        type: string
+        relation: test_suite
+        on_delete_cascade: true
     propertiesOrder:
     - id
     - description
@@ -68,3 +76,19 @@ schemas:
         type: object
       output:
         type: object
+- description: Test Suite
+  id: test_suite
+  plural: test_suites
+  singular: test_suite
+  title: Test Suite
+  prefix: /v0.1
+  schema:
+    properties:
+      id:
+        description: ID
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: false
+    type: object

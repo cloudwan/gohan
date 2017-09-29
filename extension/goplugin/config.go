@@ -13,22 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package test
+package goplugin
 
-// Subobject is a test resource
-type Subobject struct {
-	Subproperty string `json:"subproperty,omitempty"`
-}
+import "github.com/cloudwan/gohan/util"
 
-// Test is a test resource
-type Test struct {
-	ID          string     `db:"id"`
-	Description string     `db:"description"`
-	Subobject   *Subobject `db:"subobject"`
-	TestSuiteID *string    `db:"test_suite_id"`
-}
+// Config is an implementation of IConfig
+type Config struct{}
 
-// TestSuite is a test suite resource
-type TestSuite struct {
-	ID string `db:"id"`
+// Config gets parameter from config
+func (config *Config) Config(key string, defaultValue interface{}) interface{} {
+	return util.GetConfig().GetParam(key, defaultValue)
 }
