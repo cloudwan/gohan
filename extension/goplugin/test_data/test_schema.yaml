@@ -117,3 +117,25 @@ schemas:
         type: string
         unique: false
     type: object
+- description: Base
+  id: base
+  type: abstract
+  plural: bases
+  singular: base
+  title: Base
+  prefix: /v0.1
+  schema:
+    properties: {}
+    type: object
+- description: Derived from base
+  id: derived
+  type: abstract
+  plural: derived
+  singular: derived
+  title: Derived
+  prefix: /v0.1
+  extends:
+  - base
+  schema:
+    properties: {}
+    type: object
