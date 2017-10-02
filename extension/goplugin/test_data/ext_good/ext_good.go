@@ -40,6 +40,7 @@ func Init(env goext.IEnvironment) error {
 	testSchema.RegisterRawType(test.Test{})
 	testSchema.RegisterEventHandler("wait_for_context_cancel", handleWaitForContextCancel, goext.PriorityDefault)
 	testSchema.RegisterEventHandler("echo", handleEcho, goext.PriorityDefault)
+	testSchema.RegisterEventHandler("pre_create", handlePreCreate, goext.PriorityDefault)
 
 	testSuiteSchema := env.Schemas().Find("test_suite")
 	if testSuiteSchema == nil {
@@ -63,5 +64,10 @@ func handleWaitForContextCancel(requestContext goext.Context, _ goext.Resource, 
 func handleEcho(requestContext goext.Context, _ goext.Resource, env goext.IEnvironment) error {
 	env.Logger().Debug("Handling echo")
 	requestContext["response"] = requestContext["input"]
+	return nil
+}
+
+func handlePreCreate(requestContext goext.Context, _ goext.Resource, env goext.IEnvironment) error {
+	env.Logger().Debug("Handling pre create")
 	return nil
 }

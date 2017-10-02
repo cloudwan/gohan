@@ -327,7 +327,8 @@ func (env *Environment) dispatchSchemaEvent(prioritizedSchemaHandlers Prioritize
 			}
 		}
 	} else {
-		return goext.NewError(goext.ErrorBadRequest, fmt.Errorf("failed to parse resource from context with schema '%s' for event '%s': %s", sch.ID(), event, err))
+		env.Logger().Warningf("failed to parse resource from context with schema '%s' for event '%s': %s", sch.ID(), event, err)
+		return goext.NewError(goext.ErrorBadRequest, err)
 	}
 
 	return nil
@@ -590,10 +591,14 @@ func (env *Environment) resourceFromContext(sch Schema, context map[string]inter
 		} else {
 			value := reflect.ValueOf(data[property.ID])
 			if value.IsValid() {
-				if value.Type() != field.Type() && field.Kind() == reflect.Int && value.Kind() == reflect.Float64 { // reflect treats number(N, 0) as float
-					field.SetInt(int64(value.Float()))
-				} else {
+				if value.Type() == field.Type() {
 					field.Set(value)
+				} else {
+					if field.Kind() == reflect.Int && value.Kind() == reflect.Float64 { // reflect treats number(N, 0) as float
+						field.SetInt(int64(value.Float()))
+					} else {
+						return nil, fmt.Errorf("invalid type of '%s' field (%s, expecting %s)", property.ID, value.Kind(), field.Kind())
+					}
 				}
 			}
 		}
