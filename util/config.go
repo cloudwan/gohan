@@ -28,7 +28,7 @@ type Config struct {
 
 var gohanConfig *Config
 
-//GetConfig returns configuraion data
+//GetConfig returns configuration data
 func GetConfig() *Config {
 	if gohanConfig == nil {
 		config := map[string]interface{}{}
