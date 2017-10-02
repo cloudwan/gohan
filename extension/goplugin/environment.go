@@ -90,6 +90,25 @@ type Environment struct {
 	types    map[string]reflect.Type
 }
 
+// Internal interface for goplugin environment
+type IEnvironment interface {
+	goext.IEnvironment
+	extension.Environment
+
+	RegisterSchemaEventHandler(schemaID string, event string, handler func(context goext.Context, resource goext.Resource, environment goext.IEnvironment) error, priority int)
+	RegisterRawType(name string, typeValue interface{})
+	RegisterType(name string, typeValue interface{})
+
+	dispatchSchemaEvent(prioritizedSchemaHandlers PrioritizedSchemaHandlers, sch Schema, event string, context map[string]interface{}) error
+	resourceFromContext(sch Schema, context map[string]interface{}) (res goext.Resource, err error)
+	updateResourceFromContext(resource interface{}, context goext.Context) error
+	getSchemaHandlers(event string) (SchemaPrioritizedSchemaHandlers, bool)
+	getHandlers(event string) (PrioritizedHandlers, bool)
+	getRawType(schemaID string) (reflect.Type, bool)
+	getType(schemaID string) (reflect.Type, bool)
+	getTraceID() string
+}
+
 // NewEnvironment create new gohan extension rawEnvironment based on context
 func NewEnvironment(name string, beforeStartHook func(env *Environment) error, afterStopHook func(env *Environment)) *Environment {
 	env := &Environment{
@@ -189,6 +208,10 @@ func (env *Environment) bindLogger() {
 
 func (env *Environment) bindSchemas() {
 	env.schemasImpl = NewSchemas(env)
+}
+
+func (env *Environment) bindSchemasToEnv(envToBind IEnvironment) {
+	env.schemasImpl = NewSchemas(envToBind)
 }
 
 func (env *Environment) bindSync(sync gohan_sync.Sync) {
@@ -312,6 +335,10 @@ func (env *Environment) LoadExtensionsForPath(extensions []*schema.Extension, ti
 }
 
 func (env *Environment) dispatchSchemaEvent(prioritizedSchemaHandlers PrioritizedSchemaHandlers, sch Schema, event string, context map[string]interface{}) error {
+	return dispatchSchemaEventForEnv(env, prioritizedSchemaHandlers, sch, event, context)
+}
+
+func dispatchSchemaEventForEnv(env IEnvironment, prioritizedSchemaHandlers PrioritizedSchemaHandlers, sch Schema, event string, context map[string]interface{}) error {
 	env.Logger().Debugf("Starting event: %s, schema: %s", event, sch.raw.ID)
 	defer env.Logger().Debugf("Finished event: %s, schema: %s", event, sch.raw.ID)
 	if resource, err := env.resourceFromContext(sch, context); err == nil {
@@ -352,11 +379,39 @@ func sortHandlers(handlers PrioritizedHandlers) (priorities []int) {
 	return priorities
 }
 
+func (env *Environment) getSchemaHandlers(event string) (SchemaPrioritizedSchemaHandlers, bool) {
+	handler, ok := env.schemaHandlers[event]
+	return handler, ok
+}
+
+func (env *Environment) getHandlers(event string) (PrioritizedHandlers, bool) {
+	handler, ok := env.handlers[event]
+	return handler, ok
+}
+
+func (env *Environment) getRawType(schemaID string) (reflect.Type, bool) {
+	rawType, ok := env.rawTypes[schemaID]
+	return rawType, ok
+}
+
+func (env *Environment) getType(schemaID string) (reflect.Type, bool) {
+	resourceType, ok := env.types[schemaID]
+	return resourceType, ok
+}
+
+func (env *Environment) getTraceID() string {
+	return env.traceID
+}
+
 // HandleEvent handles an event
 func (env *Environment) HandleEvent(event string, context map[string]interface{}) error {
+	return handleEventForEnv(env, event, context)
+}
+
+func handleEventForEnv(env IEnvironment, event string, context map[string]interface{}) error {
 	context["event_type"] = event
 	// dispatch to schema handlers
-	if schemaPrioritizedSchemaHandlers, ok := env.schemaHandlers[event]; ok {
+	if schemaPrioritizedSchemaHandlers, ok := env.getSchemaHandlers(event); ok {
 		if iSchemaID, ok := context["schema_id"]; ok {
 			schemaID := iSchemaID.(string)
 			if prioritizedSchemaHandlers, ok := schemaPrioritizedSchemaHandlers[schemaID]; ok {
@@ -383,7 +438,7 @@ func (env *Environment) HandleEvent(event string, context map[string]interface{}
 	}
 
 	// dispatch to generic handlers
-	if prioritizedEventHandlers, ok := env.handlers[event]; ok {
+	if prioritizedEventHandlers, ok := env.getHandlers(event); ok {
 		for _, priority := range sortHandlers(prioritizedEventHandlers) {
 			for index, eventHandler := range prioritizedEventHandlers[priority] {
 				if err := eventHandler(context, env); err != nil {

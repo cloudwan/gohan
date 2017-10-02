@@ -43,7 +43,7 @@ func isPointer(resource interface{}) bool {
 
 // Schemas in an implementation of ISchemas
 type Schemas struct {
-	env *Environment
+	env IEnvironment
 }
 
 // List returns a list of loaded schemas
@@ -98,7 +98,7 @@ func (schemas *Schemas) Find(id string) goext.ISchema {
 }
 
 // NewSchemas allocates a new Schemas
-func NewSchemas(env *Environment) *Schemas {
+func NewSchemas(env IEnvironment) *Schemas {
 	return &Schemas{env: env}
 }
 
@@ -114,7 +114,7 @@ func (schemas *Schemas) Clone() *Schemas {
 
 // Schema is an implementation of ISchema
 type Schema struct {
-	env *Environment
+	env IEnvironment
 	raw *gohan_schema.Schema
 }
 
@@ -200,7 +200,7 @@ func (schema *Schema) ListRaw(filter goext.Filter, paginator *goext.Paginator, c
 type listFunc func(tx goext.ITransaction) ([]map[string]interface{}, uint64, error)
 
 func (schema *Schema) listImpl(context goext.Context, list listFunc) ([]interface{}, error) {
-	resourceType, ok := schema.env.rawTypes[schema.ID()]
+	resourceType, ok := schema.env.getRawType(schema.ID())
 	if !ok {
 		log.Warning(fmt.Sprintf("cannot find raw type for: %s", schema.ID()))
 		return nil, ErrMissingType
@@ -279,7 +279,8 @@ func (schema *Schema) rawListToResourceList(rawList []interface{}) []interface{}
 		return rawList
 	}
 	xRaw := reflect.ValueOf(rawList)
-	resources := reflect.MakeSlice(reflect.SliceOf(schema.env.types[schema.ID()]), xRaw.Len(), xRaw.Len())
+	resourceType, _ := schema.env.getType(schema.ID())
+	resources := reflect.MakeSlice(reflect.SliceOf(resourceType), xRaw.Len(), xRaw.Len())
 	x := reflect.New(resources.Type())
 	x.Elem().Set(resources)
 	x = x.Elem()
@@ -294,7 +295,8 @@ func (schema *Schema) rawListToResourceList(rawList []interface{}) []interface{}
 
 func (schema *Schema) rawToResource(xRaw reflect.Value) interface{} {
 	xRaw = xRaw.Elem()
-	resource := reflect.New(schema.env.types[schema.ID()]).Elem()
+	resourceType, _ := schema.env.getType(schema.ID())
+	resource := reflect.New(resourceType).Elem()
 	setValue(resource.FieldByName(xRaw.Type().Name()), xRaw.Addr())
 	setValue(resource.FieldByName("Schema"), reflect.ValueOf(schema))
 	setValue(resource.FieldByName("Logger"), reflect.ValueOf(NewLogger(schema.env)))
@@ -346,11 +348,11 @@ func (schema *Schema) fetchImpl(id string, context goext.Context, fetch fetchFun
 		}
 		return nil, err
 	}
-	resourceType, ok := schema.env.rawTypes[schema.raw.ID]
+	resourceType, ok := schema.env.getRawType(schema.raw.ID)
 	if !ok {
 		return nil, fmt.Errorf("No type registered for schema: %s", schema.raw.ID)
 	}
-	rawResources := schema.env.rawTypes[schema.ID()]
+	rawResources, _ := schema.env.getRawType(schema.ID())
 	resource := reflect.New(rawResources)
 
 	for i := 0; i < resourceType.NumField(); i++ {
@@ -682,7 +684,7 @@ func (schema *Schema) RegisterType(typeValue interface{}) {
 }
 
 // NewSchema allocates a new Schema
-func NewSchema(env *Environment, raw *gohan_schema.Schema) goext.ISchema {
+func NewSchema(env IEnvironment, raw *gohan_schema.Schema) goext.ISchema {
 	return &Schema{env: env, raw: raw}
 }
 

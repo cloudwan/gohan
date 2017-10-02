@@ -72,7 +72,7 @@ func TestExtensions(context *cli.Context) {
 	if hasExtTypes {
 		extTypes := strings.Split(context.String("type"), ",")
 		for _, t := range extTypes {
-			switch (t) {
+			switch t {
 			case "js":
 				runJsExt = true
 			case "so":
