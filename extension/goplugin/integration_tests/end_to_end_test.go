@@ -117,6 +117,12 @@ var _ = Describe("Environment", func() {
 			res := testURL("POST", baseURL+"/v0.1/tests/echo", adminTokenID, map[string]interface{}{"test": "success"}, http.StatusOK)
 			Expect(res.(map[string]interface{})).To(HaveKeyWithValue("test", "success"))
 		})
+
+		It("triggers JS handlers from Golang plugins", func() {
+			res := testURL("POST", baseURL+"/v0.1/tests/invoke_js", adminTokenID, map[string]interface{}{}, http.StatusOK)
+			Expect(res.(map[string]interface{})).To(HaveKeyWithValue("js_called", true))
+			Expect(res.(map[string]interface{})).To(HaveKeyWithValue("id_valid", true))
+		})
 	})
 
 	Context("Resource creation", func() {
