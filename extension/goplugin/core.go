@@ -108,11 +108,11 @@ func NewCore(env *Environment) *Core {
 }
 
 // Clone allocates a clone of Core; object may be nil
-func (core *Core) Clone() *Core {
+func (core *Core) Clone(env *Environment) *Core {
 	if core == nil {
 		return nil
 	}
 	return &Core{
-		env: core.env,
+		env: env,
 	}
 }

@@ -103,12 +103,12 @@ func NewSchemas(env IEnvironment) *Schemas {
 }
 
 // Clone allocates a clone of Schemas; object may be nil
-func (schemas *Schemas) Clone() *Schemas {
+func (schemas *Schemas) Clone(env *Environment) *Schemas {
 	if schemas == nil {
 		return nil
 	}
 	return &Schemas{
-		env: schemas.env,
+		env: env,
 	}
 }
 
