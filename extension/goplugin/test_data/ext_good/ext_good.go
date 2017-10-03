@@ -40,6 +40,8 @@ func Init(env goext.IEnvironment) error {
 	testSchema.RegisterRawType(test.Test{})
 	testSchema.RegisterEventHandler("wait_for_context_cancel", handleWaitForContextCancel, goext.PriorityDefault)
 	testSchema.RegisterEventHandler("echo", handleEcho, goext.PriorityDefault)
+	testSchema.RegisterEventHandler("invoke_js", handleInvokeJs, goext.PriorityDefault)
+	testSchema.RegisterEventHandler("pre_create", handlePreCreate, goext.PriorityDefault)
 
 	testSuiteSchema := env.Schemas().Find("test_suite")
 	if testSuiteSchema == nil {
@@ -58,10 +60,28 @@ func handleWaitForContextCancel(requestContext goext.Context, _ goext.Resource, 
 	case <-time.After(time.Minute):
 		return fmt.Errorf("context should be canceled")
 	}
+
+	panic("test extension: something went terribly wrong")
 }
 
 func handleEcho(requestContext goext.Context, _ goext.Resource, env goext.IEnvironment) error {
 	env.Logger().Debug("Handling echo")
 	requestContext["response"] = requestContext["input"]
+	return nil
+}
+
+func handleInvokeJs(requestContext goext.Context, _ goext.Resource, env goext.IEnvironment) error {
+	env.Logger().Debug("Handling invoke JS")
+
+	ctx := requestContext.Clone()
+	ctx["schema_id"] = "test"
+	env.Core().TriggerEvent("js_listener", ctx)
+
+	requestContext["response"] = ctx["js_result"]
+	return nil
+}
+
+func handlePreCreate(requestContext goext.Context, _ goext.Resource, env goext.IEnvironment) error {
+	env.Logger().Debug("Handling pre create")
 	return nil
 }

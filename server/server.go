@@ -182,7 +182,7 @@ func (server *Server) getDatabaseConfig() (string, string, bool, bool, bool) {
 	}
 	databaseConnection := config.GetString("database/connection", "")
 	if databaseConnection == "" {
-		log.Fatal("no database connection specified in the configuraion file.")
+		log.Fatal("no database connection specified in the configuration file.")
 	}
 	databaseDropOnCreate := config.GetBool("database/drop_on_create", false)
 	databaseCascade := config.GetBool("database/cascade_delete", false)
@@ -274,7 +274,7 @@ func NewServer(configFile string) (*Server, error) {
 
 	schemaFiles := config.GetStringList("schemas", nil)
 	if schemaFiles == nil {
-		log.Fatal("No schema specified in configuraion")
+		log.Fatal("No schema specified in configuration")
 	} else {
 		err = manager.LoadSchemasFromFiles(schemaFiles...)
 		if err != nil {

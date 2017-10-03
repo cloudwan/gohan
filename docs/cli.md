@@ -119,7 +119,7 @@ server schema.
 ### Configuration
 
 Gohan CLI Client is configured though environment variables. Configuration can be divided into few sections.
-You can use default configuraion for client with: source ./etc/gohan_client.rc
+You can use default configuration for client with: source ./etc/gohan_client.rc
 
 ### Keystone
 
@@ -413,7 +413,7 @@ reballanced.
 ## Migrate
 
 gohan migrate command is a simple wrapper for goose command.
-Using gohan migrate command, you can use gohan configuraion to manage 
+Using gohan migrate command, you can use gohan configuration to manage 
 goose based db migraion.
 gohan create command will genenarete initial goose file using schema.
 
@@ -465,7 +465,7 @@ USAGE:
 
 OPTIONS:
    --template, -t                       Application template path
-   --templates                          Template Configuraion
+   --templates                          Template configuration
    --config-file, -c "./gohan.yaml"     Gohan config file
    --output, -o "."                     Dir of output
    --package, -p "gen"                  Package Name
@@ -485,7 +485,7 @@ Prepare gohan.yaml with MySQL configuration
 
 ### Step3
 
-Write template configuraion files. 
+Write template configuration files. 
 
 type can be all, group or resource.
 If type is all, all schema would be included in to a single file.
