@@ -16,6 +16,8 @@
 package goplugin
 
 import (
+	"fmt"
+
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/extension/goext"
 )
@@ -37,20 +39,62 @@ func (core *Core) RegisterEventHandler(eventName string, handler func(context go
 
 // TriggerEvent causes the given event to be handled in all environments (across different-language extensions)
 func (core *Core) TriggerEvent(event string, context goext.Context) error {
-	schemaID := ""
-
-	if s, ok := context["schema"]; ok {
-		schemaID = s.(goext.ISchema).ID()
-	} else {
-		log.Panic("TriggerEvent: missing schema in context")
+	schemaID, err := getSchemaId(context)
+	if err != nil {
+		log.Panic(err)
 	}
-	context["schema_id"] = schemaID
+
+	// JS extensions expect context["schema"] to be a *schema.Schema.
+	// If a schema is already set, we should overwrite it with proper type and
+	// restore it once we're done with handling the event
+	defer restoreOriginalSchema(context)()
+	context["schema"] = core.env.Schemas().Find(schemaID).RawSchema()
+
+	// as above, if present, context["transaction"] should be a transaction.Transaction
+	defer restoreOriginalTransaction(context)()
+	ensureRawTxInContext(context)
 
 	envManager := extension.GetManager()
 	if env, found := envManager.GetEnvironment(schemaID); found {
 		return env.HandleEvent(event, context)
 	}
 	return nil
+}
+
+func getSchemaId(context goext.Context) (string, error) {
+	rawSchemaID, ok := context["schema_id"]
+	if !ok {
+		return "", fmt.Errorf("TriggerEvent: schema_id missing in context")
+	}
+
+	return rawSchemaID.(string), nil
+}
+
+func restoreOriginalSchema(context goext.Context) func() {
+	return restoreContextByKey(context, "schema")
+}
+
+func restoreOriginalTransaction(context goext.Context) func() {
+	return restoreContextByKey(context, "transaction")
+}
+
+func restoreContextByKey(context goext.Context, key string) func() {
+	if originalValue, hasValue := context[key]; hasValue {
+		return func() {
+			context[key] = originalValue
+		}
+	} else {
+		return func() {
+			delete(context, key)
+		}
+	}
+}
+
+// makes sure that context["transaction"] is a transaction.Transaction
+func ensureRawTxInContext(context goext.Context) {
+	if tx, hasTx := contextGetTransaction(context); hasTx {
+		contextSetTransaction(context, tx)
+	}
 }
 
 // HandleEvent Causes the given event to be handled within the same environment

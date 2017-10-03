@@ -3,6 +3,13 @@ extensions:
   code_type: goext
   path: ""
   url: file://ext_good/ext_good.so
+- id: test_ext_js
+  path: ""
+  code: |
+    gohan_register_handler("js_listener", function (context) {
+      gohan_log_debug("JS Handler invoked");
+      context.js_result = {"js_called": true, "id_valid": context.schema.ID === "test"};
+    });
 networks: []
 policies:
 - action: '*'
@@ -71,6 +78,15 @@ schemas:
       title: Echo
       description: Echoes incoming message
       path: /echo
+      method: POST
+      input:
+        type: object
+      output:
+        type: object
+    invoke_js:
+      title: Invoke JS
+      description: Invokes JS handler from Go extension
+      path: /invoke_js
       method: POST
       input:
         type: object

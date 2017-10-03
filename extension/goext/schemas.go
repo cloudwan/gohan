@@ -156,6 +156,8 @@ type ISchema interface {
 
 	// RegisterRawType registers a raw resource type, containing db annotations
 	RegisterRawType(rawResourceType interface{})
+
+	RawSchema() interface{}
 }
 
 // SchemaRelationInfo describes schema relation
