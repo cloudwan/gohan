@@ -16,8 +16,10 @@
 package goplugin_test
 
 import (
+	"context"
 	"fmt"
 	"reflect"
+	"time"
 
 	"github.com/cloudwan/gohan/extension/goext"
 	"github.com/cloudwan/gohan/extension/goplugin"
@@ -34,7 +36,8 @@ type MyRaw struct {
 
 var _ = Describe("Environment", func() {
 	var (
-		env *goplugin.Environment
+		env     *goplugin.Environment
+		manager *schema.Manager
 	)
 
 	const (
@@ -42,7 +45,7 @@ var _ = Describe("Environment", func() {
 	)
 
 	BeforeEach(func() {
-		manager := schema.GetManager()
+		manager = schema.GetManager()
 		Expect(manager.LoadSchemaFromFile(schemaPath)).To(Succeed())
 		env = goplugin.NewEnvironment("test", nil, nil)
 	})
@@ -285,5 +288,88 @@ var _ = Describe("Environment", func() {
 			Expect(len(myEnvClone.RawTypes())).To(Equal(1))
 			Expect(myEnvClone.RawTypes()["my_raw"]).To(Equal(myEnv.RawTypes()["my_raw"]))
 		})
+
+		Context("execution termination", func() {
+			It("should exit gracefully when HTTP peer disconnects", func() {
+				closeNotifier := SimpleCloseNotifier{make(chan bool, 1)}
+
+				context := goext.MakeContext()
+				context["http_response"] = closeNotifier
+
+				done := make(chan bool, 1)
+				go func() {
+					defer GinkgoRecover()
+					Expect(env.HandleEvent("wait_for_context_cancel", context)).To(Succeed())
+					done <- true
+				}()
+
+				closeNotifier.Close()
+
+				Eventually(done).Should(Receive())
+			})
+
+			It("should exit gracefully on global execution timeout", func() {
+				err := env.LoadExtensionsForPath(manager.Extensions, time.Millisecond*100, nil, "wait_for_context_cancel")
+				Expect(err).To(Succeed())
+
+				done := make(chan bool, 1)
+				go func() {
+					defer GinkgoRecover()
+					Expect(env.HandleEvent("wait_for_context_cancel", goext.MakeContext())).To(Succeed())
+					done <- true
+				}()
+
+				Eventually(done, time.Millisecond*500).Should(Receive())
+			})
+
+			It("should exit gracefully on path execution timeout", func() {
+				timeLimits := []*schema.PathEventTimeLimit{
+					schema.NewPathEventTimeLimit(".*", "wait_for_context_cancel", time.Millisecond*100),
+				}
+
+				err := env.LoadExtensionsForPath(manager.Extensions, 0, timeLimits, "wait_for_context_cancel")
+				Expect(err).To(Succeed())
+
+				done := make(chan bool, 1)
+				go func() {
+					defer GinkgoRecover()
+					Expect(env.HandleEvent("wait_for_context_cancel", goext.MakeContext())).To(Succeed())
+					done <- true
+				}()
+
+				Eventually(done, time.Millisecond*500).Should(Receive())
+			})
+
+			It("should not overwrite existing timeouts", func() {
+				err := env.LoadExtensionsForPath(manager.Extensions, time.Hour, nil, "wait_for_context_cancel")
+				Expect(err).To(Succeed())
+
+				requestContext := goext.MakeContext()
+				ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
+				requestContext["context"] = ctx
+
+				done := make(chan bool, 1)
+				go func() {
+					defer GinkgoRecover()
+					Expect(env.HandleEvent("wait_for_context_cancel", requestContext)).To(Succeed())
+					done <- true
+				}()
+
+				cancel()
+				Eventually(done, time.Millisecond*500).Should(Receive())
+			})
+		})
 	})
 })
+
+type SimpleCloseNotifier struct {
+	closeCh chan bool
+}
+
+func (s SimpleCloseNotifier) CloseNotify() <-chan bool {
+	return s.closeCh
+}
+
+func (s SimpleCloseNotifier) Close() {
+	s.closeCh <- true
+}

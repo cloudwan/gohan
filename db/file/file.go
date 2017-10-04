@@ -138,6 +138,10 @@ func (tx *Transaction) Commit() error {
 	return nil
 }
 
+func (tx *Transaction) CreateContext(_ context.Context, resource *schema.Resource) error {
+	return tx.Create(resource)
+}
+
 //Create create resource in the db
 func (tx *Transaction) Create(resource *schema.Resource) error {
 	db := tx.db
@@ -148,6 +152,10 @@ func (tx *Transaction) Create(resource *schema.Resource) error {
 	db.data[s.GetDbTableName()] = append(table, data)
 	db.write()
 	return nil
+}
+
+func (tx *Transaction) UpdateContext(_ context.Context, resource *schema.Resource) error {
+	return tx.Update(resource)
 }
 
 //Update update resource in the db
@@ -169,9 +177,17 @@ func (tx *Transaction) Update(resource *schema.Resource) error {
 	return nil
 }
 
+func (tx *Transaction) StateUpdateContext(_ context.Context, resource *schema.Resource, state *transaction.ResourceState) error {
+	return tx.StateUpdate(resource, state)
+}
+
 //StateUpdate update resource state
 func (tx *Transaction) StateUpdate(resource *schema.Resource, _ *transaction.ResourceState) error {
 	return tx.Update(resource)
+}
+
+func (tx *Transaction) DeleteContext(_ context.Context, s *schema.Schema, resourceID interface{}) error {
+	return tx.Delete(s, resourceID)
 }
 
 //Delete delete resource from db
@@ -223,6 +239,10 @@ func (s byPaginator) Less(i, j int) bool {
 		return !less
 	}
 	return less
+}
+
+func (tx *Transaction) ListContext(_ context.Context, s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions, pg *pagination.Paginator) (list []*schema.Resource, total uint64, err error) {
+	return tx.List(s, filter, options, pg)
 }
 
 //List resources in the db
@@ -291,9 +311,17 @@ func (tx *Transaction) List(s *schema.Schema, filter transaction.Filter, options
 	return
 }
 
+func (tx *Transaction) LockListContext(_ context.Context, s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions, pg *pagination.Paginator, policy schema.LockPolicy) (list []*schema.Resource, total uint64, err error) {
+	return tx.LockList(s, filter, options, pg, policy)
+}
+
 // LockList locks resources in the db. Not supported in file db
 func (tx *Transaction) LockList(s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions, pg *pagination.Paginator, policy schema.LockPolicy) (list []*schema.Resource, total uint64, err error) {
 	return tx.List(s, filter, options, pg)
+}
+
+func (tx *Transaction) FetchContext(_ context.Context, s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions) (*schema.Resource, error) {
+	return tx.Fetch(s, filter, options)
 }
 
 //Fetch resources by ID in the db
@@ -308,9 +336,17 @@ func (tx *Transaction) Fetch(s *schema.Schema, filter transaction.Filter, option
 	return list[0], nil
 }
 
+func (tx *Transaction) LockFetchContext(_ context.Context, s *schema.Schema, filter transaction.Filter, policy schema.LockPolicy, options *transaction.ViewOptions) (*schema.Resource, error) {
+	return tx.LockFetch(s, filter, policy, options)
+}
+
 // LockFetch fetches & locks a resource. Not supported in file db
 func (tx *Transaction) LockFetch(s *schema.Schema, filter transaction.Filter, policy schema.LockPolicy, options *transaction.ViewOptions) (*schema.Resource, error) {
 	return tx.Fetch(s, filter, options)
+}
+
+func (tx *Transaction) StateFetchContext(_ context.Context, s *schema.Schema, filter transaction.Filter) (state transaction.ResourceState, err error) {
+	return tx.StateFetch(s, filter)
 }
 
 //StateFetch is not supported in file databases
@@ -329,9 +365,17 @@ func (tx *Transaction) RawTransaction() *sqlx.Tx {
 	panic("Not implemented")
 }
 
+func (tx *Transaction) QueryContext(_ context.Context, s *schema.Schema, query string, arguments []interface{}) (list []*schema.Resource, err error) {
+	return tx.Query(s, query, arguments)
+}
+
 // Query with raw string
 func (tx *Transaction) Query(s *schema.Schema, query string, arguments []interface{}) (list []*schema.Resource, err error) {
 	panic("Not implemented")
+}
+
+func (tx *Transaction) ExecContext(_ context.Context, sql string, args ...interface{}) error {
+	return tx.Exec(sql, args...)
 }
 
 // Exec executes sql in transaction

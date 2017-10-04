@@ -16,7 +16,9 @@
 package goplugin
 
 import (
+	"context"
 	"fmt"
+	"net/http"
 	"path/filepath"
 	"plugin"
 	"reflect"
@@ -75,8 +77,10 @@ type Environment struct {
 	syncImpl     *Sync
 	databaseImpl *Database
 
-	name    string
-	traceID string
+	name       string
+	traceID    string
+	timeLimit  time.Duration
+	timeLimits []*schema.EventTimeLimit
 
 	handlers       EventPrioritizedHandlers
 	schemaHandlers EventSchemaPrioritizedSchemaHandlers
@@ -100,6 +104,8 @@ type IEnvironment interface {
 	getRawType(schemaID string) (reflect.Type, bool)
 	getType(schemaID string) (reflect.Type, bool)
 	getTraceID() string
+	getTimelimit() time.Duration
+	getTimelimits() []*schema.EventTimeLimit
 }
 
 // NewEnvironment create new gohan extension rawEnvironment based on context
@@ -319,6 +325,14 @@ func (env *Environment) LoadExtensionsForPath(extensions []*schema.Extension, ti
 			}
 		}
 	}
+	// setup time limits for matching extensions
+	env.timeLimit = timeLimit
+	for _, timeLimit := range timeLimits {
+		if timeLimit.Match(path) {
+			env.timeLimits = append(env.timeLimits, schema.NewEventTimeLimit(timeLimit.EventRegex, timeLimit.TimeDuration))
+		}
+	}
+
 	if err := env.Start(); err != nil {
 		log.Error("failed to start environment: %s", err)
 		return err
@@ -398,21 +412,39 @@ func (env *Environment) getTraceID() string {
 	return env.traceID
 }
 
+func (env *Environment) getTimelimit() time.Duration {
+	return env.timeLimit
+}
+
+func (env *Environment) getTimelimits() []*schema.EventTimeLimit {
+	return env.timeLimits
+}
+
 // HandleEvent handles an event
 func (env *Environment) HandleEvent(event string, context map[string]interface{}) error {
 	return handleEventForEnv(env, event, context)
 }
 
-func handleEventForEnv(env IEnvironment, event string, context map[string]interface{}) error {
-	context["event_type"] = event
+func handleEventForEnv(env IEnvironment, event string, requestContext map[string]interface{}) error {
+	if !hasCancel(requestContext) {
+		done := make(chan bool, 1)
+		addCancel(env, event, requestContext, done)
+
+		defer func() {
+			done <- true
+			delete(requestContext, "context")
+		}()
+	}
+
+	requestContext["event_type"] = event
 	// dispatch to schema handlers
 	if schemaPrioritizedSchemaHandlers, ok := env.getSchemaHandlers(event); ok {
-		if iSchemaID, ok := context["schema_id"]; ok {
+		if iSchemaID, ok := requestContext["schema_id"]; ok {
 			schemaID := iSchemaID.(string)
 			if prioritizedSchemaHandlers, ok := schemaPrioritizedSchemaHandlers[schemaID]; ok {
 				if iSchema := env.Schemas().Find(schemaID); iSchema != nil {
 					sch := iSchema.(*Schema)
-					if err := env.dispatchSchemaEvent(prioritizedSchemaHandlers, *sch, event, context); err != nil {
+					if err := env.dispatchSchemaEvent(prioritizedSchemaHandlers, *sch, event, requestContext); err != nil {
 						return err
 					}
 				}
@@ -422,7 +454,7 @@ func handleEventForEnv(env IEnvironment, event string, context map[string]interf
 			for schemaID, prioritizedSchemaHandlers := range schemaPrioritizedSchemaHandlers {
 				if iSchema := env.Schemas().Find(schemaID); iSchema != nil {
 					sch := iSchema.(*Schema)
-					if err := env.dispatchSchemaEvent(prioritizedSchemaHandlers, *sch, event, context); err != nil {
+					if err := env.dispatchSchemaEvent(prioritizedSchemaHandlers, *sch, event, requestContext); err != nil {
 						return err
 					}
 				} else {
@@ -436,7 +468,7 @@ func handleEventForEnv(env IEnvironment, event string, context map[string]interf
 	if prioritizedEventHandlers, ok := env.getHandlers(event); ok {
 		for _, priority := range sortHandlers(prioritizedEventHandlers) {
 			for index, eventHandler := range prioritizedEventHandlers[priority] {
-				if err := eventHandler(context, env); err != nil {
+				if err := eventHandler(requestContext, env); err != nil {
 					return fmt.Errorf("failed to dispatch event '%s' at priority '%d' with index '%d': %s",
 						event, priority, index, err)
 				}
@@ -445,6 +477,56 @@ func handleEventForEnv(env IEnvironment, event string, context map[string]interf
 	}
 
 	return nil
+}
+
+func hasCancel(requestContext map[string]interface{}) bool {
+	_, cancelFound := requestContext["context"]
+	return cancelFound
+}
+
+func addCancel(env IEnvironment, event string, requestContext map[string]interface{}, done <-chan bool) {
+	ctx, cancel := buildCancel(env, event)
+	cancelOnPeerDisconnect(requestContext, cancel, done)
+	requestContext["context"] = ctx
+}
+
+func cancelOnPeerDisconnect(requestContext map[string]interface{}, cancel context.CancelFunc, done <-chan bool) {
+	closeNotify := getCloseChannel(requestContext)
+	go func() {
+		select {
+		case <-closeNotify:
+			cancel()
+		case <-done:
+			return
+		}
+	}()
+}
+
+func getCloseChannel(requestContext map[string]interface{}) <-chan bool {
+	var closeNotifier http.CloseNotifier
+	var closeNotify <-chan bool
+	if httpResponse, ok := requestContext["http_response"]; ok {
+		if closeNotifier, ok = httpResponse.(http.CloseNotifier); ok {
+			closeNotify = closeNotifier.CloseNotify()
+		}
+	}
+	return closeNotify
+}
+
+func buildCancel(env IEnvironment, event string) (ctx context.Context, cancel context.CancelFunc) {
+	selectedTimeLimit := env.getTimelimit()
+	for _, timeLimit := range env.getTimelimits() {
+		if timeLimit.Match(event) {
+			selectedTimeLimit = timeLimit.TimeDuration
+			break
+		}
+	}
+	if selectedTimeLimit > 0 {
+		ctx, cancel = context.WithTimeout(context.Background(), selectedTimeLimit)
+	} else {
+		ctx, cancel = context.WithCancel(context.Background())
+	}
+	return ctx, cancel
 }
 
 // RegisterEventHandler registers an event handler

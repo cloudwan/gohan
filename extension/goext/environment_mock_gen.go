@@ -5,6 +5,7 @@
 package goext
 
 import (
+	context "context"
 	reflect "reflect"
 	time "time"
 
@@ -359,16 +360,16 @@ func (mr *MockISyncMockRecorder) Fetch(arg0 interface{}) *gomock.Call {
 }
 
 // Watch mocks base method
-func (m *MockISync) Watch(arg0 string, arg1 time.Duration, arg2 int64) ([]*Event, error) {
-	ret := m.ctrl.Call(m, "Watch", arg0, arg1, arg2)
+func (m *MockISync) Watch(arg0 context.Context, arg1 string, arg2 time.Duration, arg3 int64) ([]*Event, error) {
+	ret := m.ctrl.Call(m, "Watch", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].([]*Event)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Watch indicates an expected call of Watch
-func (mr *MockISyncMockRecorder) Watch(arg0, arg1, arg2 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Watch", reflect.TypeOf((*MockISync)(nil).Watch), arg0, arg1, arg2)
+func (mr *MockISyncMockRecorder) Watch(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Watch", reflect.TypeOf((*MockISync)(nil).Watch), arg0, arg1, arg2, arg3)
 }
 
 // MockIDatabase is a mock of IDatabase interface
@@ -492,33 +493,33 @@ func (mr *MockITransactionMockRecorder) Commit() *gomock.Call {
 }
 
 // Create mocks base method
-func (m *MockITransaction) Create(arg0 ISchema, arg1 map[string]interface{}) error {
-	ret := m.ctrl.Call(m, "Create", arg0, arg1)
+func (m *MockITransaction) Create(arg0 context.Context, arg1 ISchema, arg2 map[string]interface{}) error {
+	ret := m.ctrl.Call(m, "Create", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Create indicates an expected call of Create
-func (mr *MockITransactionMockRecorder) Create(arg0, arg1 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockITransaction)(nil).Create), arg0, arg1)
+func (mr *MockITransactionMockRecorder) Create(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockITransaction)(nil).Create), arg0, arg1, arg2)
 }
 
 // Delete mocks base method
-func (m *MockITransaction) Delete(arg0 ISchema, arg1 interface{}) error {
-	ret := m.ctrl.Call(m, "Delete", arg0, arg1)
+func (m *MockITransaction) Delete(arg0 context.Context, arg1 ISchema, arg2 interface{}) error {
+	ret := m.ctrl.Call(m, "Delete", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Delete indicates an expected call of Delete
-func (mr *MockITransactionMockRecorder) Delete(arg0, arg1 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockITransaction)(nil).Delete), arg0, arg1)
+func (mr *MockITransactionMockRecorder) Delete(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockITransaction)(nil).Delete), arg0, arg1, arg2)
 }
 
 // Exec mocks base method
-func (m *MockITransaction) Exec(arg0 string, arg1 ...interface{}) error {
-	varargs := []interface{}{arg0}
-	for _, a := range arg1 {
+func (m *MockITransaction) Exec(arg0 context.Context, arg1 string, arg2 ...interface{}) error {
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "Exec", varargs...)
@@ -527,22 +528,22 @@ func (m *MockITransaction) Exec(arg0 string, arg1 ...interface{}) error {
 }
 
 // Exec indicates an expected call of Exec
-func (mr *MockITransactionMockRecorder) Exec(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
-	varargs := append([]interface{}{arg0}, arg1...)
+func (mr *MockITransactionMockRecorder) Exec(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exec", reflect.TypeOf((*MockITransaction)(nil).Exec), varargs...)
 }
 
 // Fetch mocks base method
-func (m *MockITransaction) Fetch(arg0 ISchema, arg1 Filter) (map[string]interface{}, error) {
-	ret := m.ctrl.Call(m, "Fetch", arg0, arg1)
+func (m *MockITransaction) Fetch(arg0 context.Context, arg1 ISchema, arg2 Filter) (map[string]interface{}, error) {
+	ret := m.ctrl.Call(m, "Fetch", arg0, arg1, arg2)
 	ret0, _ := ret[0].(map[string]interface{})
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Fetch indicates an expected call of Fetch
-func (mr *MockITransactionMockRecorder) Fetch(arg0, arg1 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Fetch", reflect.TypeOf((*MockITransaction)(nil).Fetch), arg0, arg1)
+func (mr *MockITransactionMockRecorder) Fetch(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Fetch", reflect.TypeOf((*MockITransaction)(nil).Fetch), arg0, arg1, arg2)
 }
 
 // GetIsolationLevel mocks base method
@@ -558,8 +559,8 @@ func (mr *MockITransactionMockRecorder) GetIsolationLevel() *gomock.Call {
 }
 
 // List mocks base method
-func (m *MockITransaction) List(arg0 ISchema, arg1 Filter, arg2 *ListOptions, arg3 *Paginator) ([]map[string]interface{}, uint64, error) {
-	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2, arg3)
+func (m *MockITransaction) List(arg0 context.Context, arg1 ISchema, arg2 Filter, arg3 *ListOptions, arg4 *Paginator) ([]map[string]interface{}, uint64, error) {
+	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].([]map[string]interface{})
 	ret1, _ := ret[1].(uint64)
 	ret2, _ := ret[2].(error)
@@ -567,26 +568,26 @@ func (m *MockITransaction) List(arg0 ISchema, arg1 Filter, arg2 *ListOptions, ar
 }
 
 // List indicates an expected call of List
-func (mr *MockITransactionMockRecorder) List(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockITransaction)(nil).List), arg0, arg1, arg2, arg3)
+func (mr *MockITransactionMockRecorder) List(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockITransaction)(nil).List), arg0, arg1, arg2, arg3, arg4)
 }
 
 // LockFetch mocks base method
-func (m *MockITransaction) LockFetch(arg0 ISchema, arg1 Filter, arg2 LockPolicy) (map[string]interface{}, error) {
-	ret := m.ctrl.Call(m, "LockFetch", arg0, arg1, arg2)
+func (m *MockITransaction) LockFetch(arg0 context.Context, arg1 ISchema, arg2 Filter, arg3 LockPolicy) (map[string]interface{}, error) {
+	ret := m.ctrl.Call(m, "LockFetch", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(map[string]interface{})
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // LockFetch indicates an expected call of LockFetch
-func (mr *MockITransactionMockRecorder) LockFetch(arg0, arg1, arg2 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockFetch", reflect.TypeOf((*MockITransaction)(nil).LockFetch), arg0, arg1, arg2)
+func (mr *MockITransactionMockRecorder) LockFetch(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockFetch", reflect.TypeOf((*MockITransaction)(nil).LockFetch), arg0, arg1, arg2, arg3)
 }
 
 // LockList mocks base method
-func (m *MockITransaction) LockList(arg0 ISchema, arg1 Filter, arg2 *ListOptions, arg3 *Paginator, arg4 LockPolicy) ([]map[string]interface{}, uint64, error) {
-	ret := m.ctrl.Call(m, "LockList", arg0, arg1, arg2, arg3, arg4)
+func (m *MockITransaction) LockList(arg0 context.Context, arg1 ISchema, arg2 Filter, arg3 *ListOptions, arg4 *Paginator, arg5 LockPolicy) ([]map[string]interface{}, uint64, error) {
+	ret := m.ctrl.Call(m, "LockList", arg0, arg1, arg2, arg3, arg4, arg5)
 	ret0, _ := ret[0].([]map[string]interface{})
 	ret1, _ := ret[1].(uint64)
 	ret2, _ := ret[2].(error)
@@ -594,21 +595,21 @@ func (m *MockITransaction) LockList(arg0 ISchema, arg1 Filter, arg2 *ListOptions
 }
 
 // LockList indicates an expected call of LockList
-func (mr *MockITransactionMockRecorder) LockList(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockList", reflect.TypeOf((*MockITransaction)(nil).LockList), arg0, arg1, arg2, arg3, arg4)
+func (mr *MockITransactionMockRecorder) LockList(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockList", reflect.TypeOf((*MockITransaction)(nil).LockList), arg0, arg1, arg2, arg3, arg4, arg5)
 }
 
 // Query mocks base method
-func (m *MockITransaction) Query(arg0 ISchema, arg1 string, arg2 []interface{}) ([]map[string]interface{}, error) {
-	ret := m.ctrl.Call(m, "Query", arg0, arg1, arg2)
+func (m *MockITransaction) Query(arg0 context.Context, arg1 ISchema, arg2 string, arg3 []interface{}) ([]map[string]interface{}, error) {
+	ret := m.ctrl.Call(m, "Query", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].([]map[string]interface{})
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Query indicates an expected call of Query
-func (mr *MockITransactionMockRecorder) Query(arg0, arg1, arg2 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Query", reflect.TypeOf((*MockITransaction)(nil).Query), arg0, arg1, arg2)
+func (mr *MockITransactionMockRecorder) Query(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Query", reflect.TypeOf((*MockITransaction)(nil).Query), arg0, arg1, arg2, arg3)
 }
 
 // RawTransaction mocks base method
@@ -624,40 +625,40 @@ func (mr *MockITransactionMockRecorder) RawTransaction() *gomock.Call {
 }
 
 // StateFetch mocks base method
-func (m *MockITransaction) StateFetch(arg0 ISchema, arg1 Filter) (ResourceState, error) {
-	ret := m.ctrl.Call(m, "StateFetch", arg0, arg1)
+func (m *MockITransaction) StateFetch(arg0 context.Context, arg1 ISchema, arg2 Filter) (ResourceState, error) {
+	ret := m.ctrl.Call(m, "StateFetch", arg0, arg1, arg2)
 	ret0, _ := ret[0].(ResourceState)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // StateFetch indicates an expected call of StateFetch
-func (mr *MockITransactionMockRecorder) StateFetch(arg0, arg1 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StateFetch", reflect.TypeOf((*MockITransaction)(nil).StateFetch), arg0, arg1)
+func (mr *MockITransactionMockRecorder) StateFetch(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StateFetch", reflect.TypeOf((*MockITransaction)(nil).StateFetch), arg0, arg1, arg2)
 }
 
 // StateUpdate mocks base method
-func (m *MockITransaction) StateUpdate(arg0 ISchema, arg1 map[string]interface{}, arg2 *ResourceState) error {
-	ret := m.ctrl.Call(m, "StateUpdate", arg0, arg1, arg2)
+func (m *MockITransaction) StateUpdate(arg0 context.Context, arg1 ISchema, arg2 map[string]interface{}, arg3 *ResourceState) error {
+	ret := m.ctrl.Call(m, "StateUpdate", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // StateUpdate indicates an expected call of StateUpdate
-func (mr *MockITransactionMockRecorder) StateUpdate(arg0, arg1, arg2 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StateUpdate", reflect.TypeOf((*MockITransaction)(nil).StateUpdate), arg0, arg1, arg2)
+func (mr *MockITransactionMockRecorder) StateUpdate(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StateUpdate", reflect.TypeOf((*MockITransaction)(nil).StateUpdate), arg0, arg1, arg2, arg3)
 }
 
 // Update mocks base method
-func (m *MockITransaction) Update(arg0 ISchema, arg1 map[string]interface{}) error {
-	ret := m.ctrl.Call(m, "Update", arg0, arg1)
+func (m *MockITransaction) Update(arg0 context.Context, arg1 ISchema, arg2 map[string]interface{}) error {
+	ret := m.ctrl.Call(m, "Update", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Update indicates an expected call of Update
-func (mr *MockITransactionMockRecorder) Update(arg0, arg1 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockITransaction)(nil).Update), arg0, arg1)
+func (mr *MockITransactionMockRecorder) Update(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockITransaction)(nil).Update), arg0, arg1, arg2)
 }
 
 // MockIHTTP is a mock of IHTTP interface
@@ -684,7 +685,7 @@ func (m *MockIHTTP) EXPECT() *MockIHTTPMockRecorder {
 }
 
 // Request mocks base method
-func (m *MockIHTTP) Request(arg0, arg1 string, arg2 map[string]interface{}, arg3 interface{}, arg4 bool, arg5 int) (*Response, error) {
+func (m *MockIHTTP) Request(arg0 context.Context, arg1, arg2 string, arg3 map[string]interface{}, arg4 interface{}, arg5 bool) (*Response, error) {
 	ret := m.ctrl.Call(m, "Request", arg0, arg1, arg2, arg3, arg4, arg5)
 	ret0, _ := ret[0].(*Response)
 	ret1, _ := ret[1].(error)
@@ -697,16 +698,16 @@ func (mr *MockIHTTPMockRecorder) Request(arg0, arg1, arg2, arg3, arg4, arg5 inte
 }
 
 // RequestRaw mocks base method
-func (m *MockIHTTP) RequestRaw(arg0, arg1 string, arg2 map[string]string, arg3 string) (*Response, error) {
-	ret := m.ctrl.Call(m, "RequestRaw", arg0, arg1, arg2, arg3)
+func (m *MockIHTTP) RequestRaw(arg0 context.Context, arg1, arg2 string, arg3 map[string]string, arg4 string) (*Response, error) {
+	ret := m.ctrl.Call(m, "RequestRaw", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].(*Response)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // RequestRaw indicates an expected call of RequestRaw
-func (mr *MockIHTTPMockRecorder) RequestRaw(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestRaw", reflect.TypeOf((*MockIHTTP)(nil).RequestRaw), arg0, arg1, arg2, arg3)
+func (mr *MockIHTTPMockRecorder) RequestRaw(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestRaw", reflect.TypeOf((*MockIHTTP)(nil).RequestRaw), arg0, arg1, arg2, arg3, arg4)
 }
 
 // MockIAuth is a mock of IAuth interface
