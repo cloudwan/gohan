@@ -15,7 +15,10 @@
 
 package goext
 
-import "errors"
+import (
+	"context"
+	"errors"
+)
 
 // LockPolicy indicates lock policy
 type LockPolicy int
@@ -95,6 +98,14 @@ func (ctx Context) Clone() Context {
 	return contextCopy
 }
 
+func GetContext(requestContext Context) context.Context {
+	if rawCtx, hasCtx := requestContext["context"]; hasCtx {
+		return rawCtx.(context.Context)
+	} else {
+		return context.Background()
+	}
+}
+
 // PriorityDefault is a default handler priority
 const PriorityDefault = 0
 
@@ -156,6 +167,9 @@ type ISchema interface {
 
 	// RegisterRawType registers a raw resource type, containing db annotations
 	RegisterRawType(rawResourceType interface{})
+
+	// ResourceFromMap converts mapped representation to structure representation of the raw resource registered for schema
+	ResourceFromMap(context map[string]interface{}) (Resource, error)
 
 	RawSchema() interface{}
 }

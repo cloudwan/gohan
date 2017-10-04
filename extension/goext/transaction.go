@@ -15,6 +15,8 @@
 
 package goext
 
+import "context"
+
 //Type represents transaction types
 type Type string
 
@@ -60,19 +62,19 @@ type ListOptions struct {
 
 // ITransaction is common interface for handling transaction
 type ITransaction interface {
-	Create(schema ISchema, resource map[string]interface{}) error
-	Update(schema ISchema, resource map[string]interface{}) error
-	StateUpdate(schema ISchema, resource map[string]interface{}, state *ResourceState) error
-	Delete(schema ISchema, resourceID interface{}) error
-	Fetch(schema ISchema, filter Filter) (map[string]interface{}, error)
-	LockFetch(schema ISchema, filter Filter, lockPolicy LockPolicy) (map[string]interface{}, error)
-	StateFetch(schema ISchema, filter Filter) (ResourceState, error)
-	List(schema ISchema, filter Filter, listOptions *ListOptions, paginator *Paginator) ([]map[string]interface{}, uint64, error)
-	LockList(schema ISchema, filter Filter, listOptions *ListOptions, paginator *Paginator, lockPolicy LockPolicy) ([]map[string]interface{}, uint64, error)
+	Create(ctx context.Context, schema ISchema, resource map[string]interface{}) error
+	Update(ctx context.Context, schema ISchema, resource map[string]interface{}) error
+	StateUpdate(ctx context.Context, schema ISchema, resource map[string]interface{}, state *ResourceState) error
+	Delete(ctx context.Context, schema ISchema, resourceID interface{}) error
+	Fetch(ctx context.Context, schema ISchema, filter Filter) (map[string]interface{}, error)
+	LockFetch(ctx context.Context, schema ISchema, filter Filter, lockPolicy LockPolicy) (map[string]interface{}, error)
+	StateFetch(ctx context.Context, schema ISchema, filter Filter) (ResourceState, error)
+	List(ctx context.Context, schema ISchema, filter Filter, listOptions *ListOptions, paginator *Paginator) ([]map[string]interface{}, uint64, error)
+	LockList(ctx context.Context, schema ISchema, filter Filter, listOptions *ListOptions, paginator *Paginator, lockPolicy LockPolicy) ([]map[string]interface{}, uint64, error)
 	RawTransaction() interface{} // *sqlx.Tx
-	Query(schema ISchema, query string, args []interface{}) (list []map[string]interface{}, err error)
+	Query(ctx context.Context, schema ISchema, query string, args []interface{}) (list []map[string]interface{}, err error)
 	Commit() error
-	Exec(query string, args ...interface{}) error
+	Exec(ctx context.Context, query string, args ...interface{}) error
 	Close() error
 	Closed() bool
 	GetIsolationLevel() Type

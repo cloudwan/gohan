@@ -16,8 +16,9 @@
 package goplugin
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
+	"net/http"
 	"path/filepath"
 	"plugin"
 	"reflect"
@@ -76,8 +77,10 @@ type Environment struct {
 	syncImpl     *Sync
 	databaseImpl *Database
 
-	name    string
-	traceID string
+	name       string
+	traceID    string
+	timeLimit  time.Duration
+	timeLimits []*schema.EventTimeLimit
 
 	handlers       EventPrioritizedHandlers
 	schemaHandlers EventSchemaPrioritizedSchemaHandlers
@@ -96,13 +99,13 @@ type IEnvironment interface {
 	RegisterType(name string, typeValue interface{})
 
 	dispatchSchemaEvent(prioritizedSchemaHandlers PrioritizedSchemaHandlers, sch Schema, event string, context map[string]interface{}) error
-	resourceFromContext(sch Schema, context map[string]interface{}) (res goext.Resource, err error)
-	updateResourceFromContext(resource interface{}, context goext.Context) error
 	getSchemaHandlers(event string) (SchemaPrioritizedSchemaHandlers, bool)
 	getHandlers(event string) (PrioritizedHandlers, bool)
 	getRawType(schemaID string) (reflect.Type, bool)
 	getType(schemaID string) (reflect.Type, bool)
 	getTraceID() string
+	getTimelimit() time.Duration
+	getTimelimits() []*schema.EventTimeLimit
 }
 
 // NewEnvironment create new gohan extension rawEnvironment based on context
@@ -322,6 +325,14 @@ func (env *Environment) LoadExtensionsForPath(extensions []*schema.Extension, ti
 			}
 		}
 	}
+	// setup time limits for matching extensions
+	env.timeLimit = timeLimit
+	for _, timeLimit := range timeLimits {
+		if timeLimit.Match(path) {
+			env.timeLimits = append(env.timeLimits, schema.NewEventTimeLimit(timeLimit.EventRegex, timeLimit.TimeDuration))
+		}
+	}
+
 	if err := env.Start(); err != nil {
 		log.Error("failed to start environment: %s", err)
 		return err
@@ -336,21 +347,24 @@ func (env *Environment) dispatchSchemaEvent(prioritizedSchemaHandlers Prioritize
 func dispatchSchemaEventForEnv(env IEnvironment, prioritizedSchemaHandlers PrioritizedSchemaHandlers, sch Schema, event string, context map[string]interface{}) error {
 	env.Logger().Debugf("Starting event: %s, schema: %s", event, sch.raw.ID)
 	defer env.Logger().Debugf("Finished event: %s, schema: %s", event, sch.raw.ID)
-	if resource, err := env.resourceFromContext(sch, context); err == nil {
-		for _, priority := range sortSchemaHandlers(prioritizedSchemaHandlers) {
-			for _, schemaEventHandler := range prioritizedSchemaHandlers[priority] {
-				context["go_validation"] = true
-				if err := schemaEventHandler(context, resource, env); err != nil {
-					return err
-				}
-				if resource != nil {
-					context["resource"] = sch.StructToMap(resource)
-				}
+	var resource goext.Resource
+	var err error
+	if ctxResource, ok := context["resource"]; ok {
+		if resource, err = sch.ResourceFromMap(ctxResource.(map[string]interface{})); err != nil {
+			env.Logger().Warningf("failed to parse resource from context with schema '%s' for event '%s': %s", sch.ID(), event, err)
+			return goext.NewError(goext.ErrorBadRequest, err)
+		}
+	}
+	for _, priority := range sortSchemaHandlers(prioritizedSchemaHandlers) {
+		for _, schemaEventHandler := range prioritizedSchemaHandlers[priority] {
+			context["go_validation"] = true
+			if err := schemaEventHandler(context, resource, env); err != nil {
+				return err
+			}
+			if resource != nil {
+				context["resource"] = env.Util().ResourceToMap(resource)
 			}
 		}
-	} else {
-		env.Logger().Warningf("failed to parse resource from context with schema '%s' for event '%s': %s", sch.ID(), event, err)
-		return goext.NewError(goext.ErrorBadRequest, err)
 	}
 
 	return nil
@@ -398,21 +412,39 @@ func (env *Environment) getTraceID() string {
 	return env.traceID
 }
 
+func (env *Environment) getTimelimit() time.Duration {
+	return env.timeLimit
+}
+
+func (env *Environment) getTimelimits() []*schema.EventTimeLimit {
+	return env.timeLimits
+}
+
 // HandleEvent handles an event
 func (env *Environment) HandleEvent(event string, context map[string]interface{}) error {
 	return handleEventForEnv(env, event, context)
 }
 
-func handleEventForEnv(env IEnvironment, event string, context map[string]interface{}) error {
-	context["event_type"] = event
+func handleEventForEnv(env IEnvironment, event string, requestContext map[string]interface{}) error {
+	if !hasCancel(requestContext) {
+		done := make(chan bool, 1)
+		addCancel(env, event, requestContext, done)
+
+		defer func() {
+			done <- true
+			delete(requestContext, "context")
+		}()
+	}
+
+	requestContext["event_type"] = event
 	// dispatch to schema handlers
 	if schemaPrioritizedSchemaHandlers, ok := env.getSchemaHandlers(event); ok {
-		if iSchemaID, ok := context["schema_id"]; ok {
+		if iSchemaID, ok := requestContext["schema_id"]; ok {
 			schemaID := iSchemaID.(string)
 			if prioritizedSchemaHandlers, ok := schemaPrioritizedSchemaHandlers[schemaID]; ok {
 				if iSchema := env.Schemas().Find(schemaID); iSchema != nil {
 					sch := iSchema.(*Schema)
-					if err := env.dispatchSchemaEvent(prioritizedSchemaHandlers, *sch, event, context); err != nil {
+					if err := env.dispatchSchemaEvent(prioritizedSchemaHandlers, *sch, event, requestContext); err != nil {
 						return err
 					}
 				}
@@ -422,7 +454,7 @@ func handleEventForEnv(env IEnvironment, event string, context map[string]interf
 			for schemaID, prioritizedSchemaHandlers := range schemaPrioritizedSchemaHandlers {
 				if iSchema := env.Schemas().Find(schemaID); iSchema != nil {
 					sch := iSchema.(*Schema)
-					if err := env.dispatchSchemaEvent(prioritizedSchemaHandlers, *sch, event, context); err != nil {
+					if err := env.dispatchSchemaEvent(prioritizedSchemaHandlers, *sch, event, requestContext); err != nil {
 						return err
 					}
 				} else {
@@ -436,7 +468,7 @@ func handleEventForEnv(env IEnvironment, event string, context map[string]interf
 	if prioritizedEventHandlers, ok := env.getHandlers(event); ok {
 		for _, priority := range sortHandlers(prioritizedEventHandlers) {
 			for index, eventHandler := range prioritizedEventHandlers[priority] {
-				if err := eventHandler(context, env); err != nil {
+				if err := eventHandler(requestContext, env); err != nil {
 					return fmt.Errorf("failed to dispatch event '%s' at priority '%d' with index '%d': %s",
 						event, priority, index, err)
 				}
@@ -447,214 +479,54 @@ func handleEventForEnv(env IEnvironment, event string, context map[string]interf
 	return nil
 }
 
-func (env *Environment) updateContextFromResource(context goext.Context, resource interface{}) error {
-	if resource == nil {
-		context["resource"] = nil
-		return nil
-	}
+func hasCancel(requestContext map[string]interface{}) bool {
+	_, cancelFound := requestContext["context"]
+	return cancelFound
+}
 
-	if _, ok := context["resource"]; !ok {
-		return nil
-	}
+func addCancel(env IEnvironment, event string, requestContext map[string]interface{}, done <-chan bool) {
+	ctx, cancel := buildCancel(env, event)
+	cancelOnPeerDisconnect(requestContext, cancel, done)
+	requestContext["context"] = ctx
+}
 
-	if _, ok := context["resource"].(map[string]interface{}); !ok {
-		return fmt.Errorf("failed to convert context resource to map during update context from resource")
-	}
-
-	if resourceMap, ok := env.resourceToMap(resource).(map[string]interface{}); ok {
-		for key, value := range resourceMap {
-			if _, ok := context["resource"].(map[string]interface{})[key]; ok {
-				context["resource"].(map[string]interface{})[key] = value
-			}
+func cancelOnPeerDisconnect(requestContext map[string]interface{}, cancel context.CancelFunc, done <-chan bool) {
+	closeNotify := getCloseChannel(requestContext)
+	go func() {
+		select {
+		case <-closeNotify:
+			cancel()
+		case <-done:
+			return
 		}
+	}()
+}
+
+func getCloseChannel(requestContext map[string]interface{}) <-chan bool {
+	var closeNotifier http.CloseNotifier
+	var closeNotify <-chan bool
+	if httpResponse, ok := requestContext["http_response"]; ok {
+		if closeNotifier, ok = httpResponse.(http.CloseNotifier); ok {
+			closeNotify = closeNotifier.CloseNotify()
+		}
+	}
+	return closeNotify
+}
+
+func buildCancel(env IEnvironment, event string) (ctx context.Context, cancel context.CancelFunc) {
+	selectedTimeLimit := env.getTimelimit()
+	for _, timeLimit := range env.getTimelimits() {
+		if timeLimit.Match(event) {
+			selectedTimeLimit = timeLimit.TimeDuration
+			break
+		}
+	}
+	if selectedTimeLimit > 0 {
+		ctx, cancel = context.WithTimeout(context.Background(), selectedTimeLimit)
 	} else {
-		return fmt.Errorf("failed to convert resource to map during update context from resource")
+		ctx, cancel = context.WithCancel(context.Background())
 	}
-
-	return nil
-}
-
-func (env *Environment) updateResourceFromContextR(resource interface{}, resourceData map[string]interface{}) error {
-	resourceValue := reflect.ValueOf(resource)
-	resourceElem := resourceValue.Elem()
-	resourceElemType := resourceElem.Type()
-
-	if resourceElemType.Kind() != reflect.Struct {
-		panic("resource must be a struct")
-	}
-
-	for i := 0; i < resourceElemType.NumField(); i++ {
-		resourceFieldType := resourceElemType.Field(i)
-		resourceFieldTagDB := resourceFieldType.Tag.Get("db")
-		resourceField := resourceElem.Field(i)
-		val := reflect.ValueOf(resourceData[resourceFieldTagDB])
-
-		if resourceFieldType.Type.Kind() == reflect.Struct {
-			if _, ok := resourceData[resourceFieldTagDB].(map[string]interface{}); ok {
-				env.updateResourceFromContextR(resourceField.Interface(), resourceData[resourceFieldTagDB].(map[string]interface{}))
-			} else if strings.Contains(resourceFieldType.Type.String(), "goext.Null") {
-				if resourceData[resourceFieldTagDB] != nil {
-					if val.Type() == resourceFieldType.Type {
-						resourceField.Set(val)
-					} else {
-						resourceField.Field(0).Set(val)
-						resourceField.Field(1).Set(reflect.ValueOf(true))
-					}
-				} else {
-					resourceField.Field(1).Set(reflect.ValueOf(false))
-				}
-			} else {
-				resourceField.Set(val)
-			}
-		} else {
-			if val.IsValid() {
-				resourceField.Set(val)
-			}
-		}
-	}
-
-	return nil
-}
-
-func (env *Environment) updateResourceFromContext(resource interface{}, context goext.Context) error {
-	if resource == nil {
-		return nil
-	}
-
-	if _, ok := context["resource"]; !ok {
-		return nil
-	}
-
-	if resourceData, ok := context["resource"].(map[string]interface{}); ok {
-		return env.updateResourceFromContextR(resource, resourceData)
-	}
-
-	return fmt.Errorf("failed to convert context resource to map during update resource from context")
-}
-
-func (env *Environment) resourceToMap(resource interface{}) interface{} {
-	resourceValue := reflect.ValueOf(resource)
-	resourceElem := resourceValue.Elem()
-	resourceElemType := resourceElem.Type()
-
-	if resourceElemType.Kind() == reflect.Struct {
-		switch res := resource.(type) {
-		case *goext.NullString:
-			if res.Valid {
-				return res.Value
-			}
-			return nil
-		case *goext.NullInt:
-			if res.Valid {
-				return res.Value
-			}
-			return nil
-		case *goext.NullFloat:
-			if res.Valid {
-				return res.Value
-			}
-			return nil
-		case *goext.NullBool:
-			if res.Valid {
-				return res.Value
-			}
-			return nil
-		case goext.NullString:
-			if res.Valid {
-				return res.Value
-			}
-			return nil
-		case goext.NullInt:
-			if res.Valid {
-				return res.Value
-			}
-			return nil
-		case goext.NullFloat:
-			if res.Valid {
-				return res.Value
-			}
-			return nil
-		case goext.NullBool:
-			if res.Valid {
-				return res.Value
-			}
-			return nil
-		}
-		data := make(map[string]interface{})
-
-		for i := 0; i < resourceElemType.NumField(); i++ {
-			resourceFieldType := resourceElemType.Field(i)
-			resourceFieldTagDB := resourceFieldType.Tag.Get("db")
-			resourceFieldInterface := resourceElem.Field(i).Interface()
-
-			data[resourceFieldTagDB] = env.resourceToMap(&resourceFieldInterface)
-		}
-
-		return data
-	}
-
-	return resourceElem.Interface()
-}
-
-func (env *Environment) resourceFromContext(sch Schema, context map[string]interface{}) (res goext.Resource, err error) {
-	rawSch := sch.raw
-	rawType, ok := env.rawTypes[rawSch.ID]
-
-	if !ok {
-		return nil, fmt.Errorf("no raw type registered for schema: %s", rawSch.ID)
-	}
-
-	resourceData, ok := context["resource"]
-
-	if !ok {
-		return nil, nil
-	}
-
-	resource := reflect.New(rawType)
-	data := resourceData.(map[string]interface{})
-
-	for i := 0; i < rawType.NumField(); i++ {
-		field := resource.Elem().Field(i)
-		fieldType := rawType.Field(i)
-		propertyName := fieldType.Tag.Get("db")
-		if propertyName == "" {
-			return nil, fmt.Errorf("missing tag 'db' for resource %s field %s", rawType.Name(), fieldType.Name)
-		}
-		property, err := rawSch.GetPropertyByID(propertyName)
-		if err != nil {
-			return nil, err
-		}
-		kind := fieldType.Type.Kind()
-		if kind == reflect.Struct || kind == reflect.Ptr || kind == reflect.Slice {
-			mapJSON, err := json.Marshal(data[property.ID])
-			if err != nil {
-				return nil, err
-			}
-			newField := reflect.New(field.Type())
-			fieldJSON := string(mapJSON)
-			fieldInterface := newField.Interface()
-			err = json.Unmarshal([]byte(fieldJSON), &fieldInterface)
-			if err != nil {
-				return nil, err
-			}
-			field.Set(newField.Elem())
-		} else {
-			value := reflect.ValueOf(data[property.ID])
-			if value.IsValid() {
-				if value.Type() == field.Type() {
-					field.Set(value)
-				} else {
-					if field.Kind() == reflect.Int && value.Kind() == reflect.Float64 { // reflect treats number(N, 0) as float
-						field.SetInt(int64(value.Float()))
-					} else {
-						return nil, fmt.Errorf("invalid type of '%s' field (%s, expecting %s)", property.ID, value.Kind(), field.Kind())
-					}
-				}
-			}
-		}
-	}
-
-	return resource.Interface(), nil
+	return ctx, cancel
 }
 
 // RegisterEventHandler registers an event handler
