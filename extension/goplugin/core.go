@@ -17,6 +17,7 @@ package goplugin
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/extension/goext"
@@ -28,12 +29,12 @@ type Core struct {
 }
 
 // RegisterSchemaEventHandler registers a schema handler
-func (core *Core) RegisterSchemaEventHandler(schemaID string, eventName string, handler func(context goext.Context, resource goext.Resource, environment goext.IEnvironment) error, priority int) {
-	core.env.RegisterSchemaEventHandler(schemaID, eventName, handler, priority)
+func (core *Core) RegisterSchemaEventHandler(schemaID string, eventName string, schemaHandler goext.SchemaHandler, priority int) {
+	core.env.RegisterSchemaEventHandler(schemaID, eventName, schemaHandler, priority)
 }
 
 // RegisterEventHandler registers a global handler
-func (core *Core) RegisterEventHandler(eventName string, handler func(context goext.Context, environment goext.IEnvironment) error, priority int) {
+func (core *Core) RegisterEventHandler(eventName string, handler goext.Handler, priority int) {
 	core.env.RegisterEventHandler(eventName, handler, priority)
 }
 
@@ -87,11 +88,11 @@ func parseJSException(context goext.Context) error {
 	return nil
 }
 
-func getJSExceptionCode(exception interface{}) goext.ErrorCode {
+func getJSExceptionCode(exception interface{}) int {
 	if rawCode, hasCode := exception.(map[string]interface{})["code"]; hasCode {
-		return goext.ErrorCode(rawCode.(int64))
+		return int(rawCode.(int64))
 	} else {
-		return goext.ErrorInternalServerError
+		return http.StatusInternalServerError
 	}
 }
 

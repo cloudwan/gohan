@@ -60,6 +60,10 @@ var _ = Describe("Environment", func() {
 		})
 	})
 
+	AfterEach(func() {
+		schema.ClearManager()
+	})
+
 	Describe("Loading an extension", func() {
 		Context("File paths are corrupted", func() {
 			It("should not load plugin with wrong file extension", func() {
@@ -106,7 +110,7 @@ var _ = Describe("Environment", func() {
 		})
 
 		It("should register event handler on environment", func() {
-			handler := func(context goext.Context, environment goext.IEnvironment) error {
+			handler := func(context goext.Context, environment goext.IEnvironment) *goext.Error {
 				return nil
 			}
 
@@ -121,7 +125,7 @@ var _ = Describe("Environment", func() {
 		})
 
 		It("should register event handler on schema", func() {
-			handler := func(context goext.Context, resource goext.Resource, environment goext.IEnvironment) error {
+			handler := func(context goext.Context, resource goext.Resource, environment goext.IEnvironment) *goext.Error {
 				return nil
 			}
 
@@ -156,12 +160,12 @@ var _ = Describe("Environment", func() {
 			var someEventRunCount int = 0
 			var someOtherEventRunCount int = 0
 
-			someEventHandler := func(context goext.Context, environment goext.IEnvironment) error {
+			someEventHandler := func(context goext.Context, environment goext.IEnvironment) *goext.Error {
 				someEventRunCount++
 				return nil
 			}
 
-			someOtherEventHandler := func(context goext.Context, environment goext.IEnvironment) error {
+			someOtherEventHandler := func(context goext.Context, environment goext.IEnvironment) *goext.Error {
 				someOtherEventRunCount++
 				return nil
 			}
@@ -184,12 +188,12 @@ var _ = Describe("Environment", func() {
 			var someEventRunCount int = 0
 			var someOtherEventRunCount int = 0
 
-			someEventHandler := func(context goext.Context, resource goext.Resource, environment goext.IEnvironment) error {
+			someEventHandler := func(context goext.Context, resource goext.Resource, environment goext.IEnvironment) *goext.Error {
 				someEventRunCount++
 				return nil
 			}
 
-			someOtherEventHandler := func(context goext.Context, resource goext.Resource, environment goext.IEnvironment) error {
+			someOtherEventHandler := func(context goext.Context, resource goext.Resource, environment goext.IEnvironment) *goext.Error {
 				someOtherEventRunCount++
 				return nil
 			}
@@ -211,7 +215,7 @@ var _ = Describe("Environment", func() {
 		It("should pass data from context to handler", func() {
 			var returnedResource *test.Test
 
-			eventHandler := func(context goext.Context, resource goext.Resource, environment goext.IEnvironment) error {
+			eventHandler := func(context goext.Context, resource goext.Resource, environment goext.IEnvironment) *goext.Error {
 				returnedResource = resource.(*test.Test)
 				return nil
 			}
@@ -236,12 +240,12 @@ var _ = Describe("Environment", func() {
 		It("should update resource from context after each event dispatched", func() {
 			var returnedResource *test.Test
 
-			eventHandler := func(context goext.Context, resource goext.Resource, environment goext.IEnvironment) error {
+			eventHandler := func(context goext.Context, resource goext.Resource, environment goext.IEnvironment) *goext.Error {
 				returnedResource = resource.(*test.Test)
 				return nil
 			}
 
-			modifingHandler := func(context goext.Context, resource goext.Resource, environment goext.IEnvironment) error {
+			modifingHandler := func(context goext.Context, resource goext.Resource, environment goext.IEnvironment) *goext.Error {
 				res := resource.(*test.Test)
 				res.ID = "other-id"
 				return nil
@@ -266,17 +270,17 @@ var _ = Describe("Environment", func() {
 		It("handlers are executed in priority order", func() {
 			var prioritizedCalled, defaultCalled bool
 			errWrongOrder := fmt.Errorf("wrong order of execution. Prioritized handler should be called first")
-			prioritizedEventHandler := func(context goext.Context, resource goext.Resource, environment goext.IEnvironment) error {
+			prioritizedEventHandler := func(context goext.Context, resource goext.Resource, environment goext.IEnvironment) *goext.Error {
 				if defaultCalled {
-					return errWrongOrder
+					return goext.NewErrorInternalServerError(errWrongOrder)
 				}
 				prioritizedCalled = true
 				return nil
 			}
 
-			defaultPriorityEventHandler := func(context goext.Context, resource goext.Resource, environment goext.IEnvironment) error {
+			defaultPriorityEventHandler := func(context goext.Context, resource goext.Resource, environment goext.IEnvironment) *goext.Error {
 				if !prioritizedCalled {
-					return errWrongOrder
+					return goext.NewErrorInternalServerError(errWrongOrder)
 				}
 				defaultCalled = true
 				return nil

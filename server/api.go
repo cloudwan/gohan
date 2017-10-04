@@ -169,8 +169,8 @@ func handleError(writer http.ResponseWriter, err error) {
 		} else {
 			middleware.HTTPJSONError(writer, message["error"].(string), code)
 		}
-	case goext.Error:
-		middleware.HTTPJSONError(writer, err.Error(), int(err.Code))
+	case *goext.Error:
+		middleware.HTTPJSONError(writer, err.Error(), err.Status)
 	}
 }
 

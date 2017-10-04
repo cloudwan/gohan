@@ -51,7 +51,7 @@ var _ = Describe("Transaction", func() {
 
 	AfterEach(func() {
 		os.Remove(DbFile)
-
+		schema.ClearManager()
 	})
 
 	Describe("CRUD", func() {
