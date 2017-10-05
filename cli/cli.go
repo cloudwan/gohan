@@ -48,11 +48,10 @@ const (
 )
 
 //Run execute main command
-func Run(name, usage, version string) {
+func Run(name, usage string) {
 	app := cli.NewApp()
-	app.Name = "gohan"
-	app.Usage = "Gohan"
-	app.Version = version
+	app.Name = name
+	app.Usage = usage
 	app.Flags = []cli.Flag{
 		cli.BoolFlag{Name: "debug, d", Usage: "Show debug messages"},
 	}

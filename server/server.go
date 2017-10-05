@@ -45,6 +45,7 @@ import (
 	"github.com/cloudwan/gohan/sync"
 	sync_util "github.com/cloudwan/gohan/sync/util"
 	"github.com/cloudwan/gohan/util"
+	"github.com/cloudwan/gohan/version"
 	"github.com/drone/routes"
 	"github.com/go-martini/martini"
 	"github.com/lestrrat/go-server-starter/listener"
@@ -472,7 +473,10 @@ func RunServer(configFile string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Info("Gohan no jikan desuyo (It's time for dinner!) ")
+	log.Info("Gohan no jikan desuyo (It's time for dinner!)")
+	log.Info("Build version: %s", version.Build.Version)
+	log.Info("Build timestamp: %s", version.Build.Timestamp)
+	log.Info("Build host: %s", version.Build.Host)
 	log.Info("Starting Gohan Server...")
 	address := server.address
 	if strings.HasPrefix(address, ":") {
