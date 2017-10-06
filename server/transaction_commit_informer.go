@@ -184,7 +184,7 @@ func (tl *transactionEventLogger) DeleteContext(ctx context.Context, s *schema.S
 	if err != nil {
 		return err
 	}
-	return tl.logEvent(context.Background(), "delete", resource, configVersion)
+	return tl.logEvent(ctx, "delete", resource, configVersion)
 }
 
 func (tl *transactionEventLogger) Commit() error {
