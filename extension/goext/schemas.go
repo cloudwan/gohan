@@ -170,8 +170,6 @@ type ISchema interface {
 
 	// ResourceFromMap converts mapped representation to structure representation of the raw resource registered for schema
 	ResourceFromMap(context map[string]interface{}) (Resource, error)
-
-	RawSchema() interface{}
 }
 
 // SchemaRelationInfo describes schema relation
