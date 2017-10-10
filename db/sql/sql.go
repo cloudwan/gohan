@@ -701,7 +701,7 @@ func makeAliasTableName(tableName string, property schema.Property) string {
 	return fmt.Sprintf("%s__%s", tableName, property.RelationProperty)
 }
 
-// MakeColumns generates an array that has Gohan style colmun names
+// MakeColumns generates an array that has Gohan style column names
 func MakeColumns(s *schema.Schema, tableName string, fields []string, join bool) []string {
 	manager := schema.GetManager()
 
