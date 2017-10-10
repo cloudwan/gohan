@@ -48,7 +48,7 @@ func (core *Core) TriggerEvent(event string, context goext.Context) error {
 	// If a schema is already set, we should overwrite it with proper type and
 	// restore it once we're done with handling the event
 	defer restoreOriginalSchema(context)()
-	context["schema"] = core.env.Schemas().Find(schemaID).RawSchema()
+	context["schema"] = core.env.Schemas().Find(schemaID).(*Schema).raw
 
 	// as above, if present, context["transaction"] should be a transaction.Transaction
 	defer restoreOriginalTransaction(context)()

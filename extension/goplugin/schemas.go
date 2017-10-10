@@ -666,10 +666,6 @@ func (schema *Schema) RegisterType(typeValue interface{}) {
 	schema.env.RegisterType(schema.raw.ID, typeValue)
 }
 
-func (schema *Schema) RawSchema() interface{} {
-	return schema.raw
-}
-
 // NewSchema allocates a new Schema
 func NewSchema(env IEnvironment, raw *gohan_schema.Schema) goext.ISchema {
 	return &Schema{env: env, raw: raw}
