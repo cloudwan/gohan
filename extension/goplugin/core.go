@@ -56,9 +56,47 @@ func (core *Core) TriggerEvent(event string, context goext.Context) error {
 
 	envManager := extension.GetManager()
 	if env, found := envManager.GetEnvironment(schemaID); found {
-		return env.HandleEvent(event, context)
+		err := env.HandleEvent(event, context)
+		return parseHandleEventResult(err, context)
 	}
 	return nil
+}
+
+func parseHandleEventResult(err error, context goext.Context) error {
+	defer cleanUpJSException(context)()
+
+	if err != nil {
+		return err
+	}
+
+	return parseJSException(context)
+}
+
+func cleanUpJSException(context goext.Context) func() {
+	return func() {
+		delete(context, "exception")
+		delete(context, "exception_message")
+	}
+}
+
+func parseJSException(context goext.Context) error {
+	if exception, thrown := context["exception"]; thrown {
+		return goext.NewError(getJSExceptionCode(exception), getJSError(context))
+	}
+
+	return nil
+}
+
+func getJSExceptionCode(exception interface{}) goext.ErrorCode {
+	if rawCode, hasCode := exception.(map[string]interface{})["code"]; hasCode {
+		return goext.ErrorCode(rawCode.(int64))
+	} else {
+		return goext.ErrorInternalServerError
+	}
+}
+
+func getJSError(context goext.Context) error {
+	return fmt.Errorf(context["exception_message"].(string))
 }
 
 func getSchemaId(context goext.Context) (string, error) {
