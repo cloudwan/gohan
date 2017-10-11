@@ -16,9 +16,11 @@
 package goplugin
 
 import (
+	"context"
+	"time"
+
 	"github.com/cloudwan/gohan/extension/goext"
 	gohan_sync "github.com/cloudwan/gohan/sync"
-	"time"
 )
 
 func convertEvent(event *gohan_sync.Event) *goext.Event {
@@ -79,26 +81,19 @@ func (sync *Sync) Delete(path string, prefix bool) error {
 }
 
 // Watch watches a single path in sync
-func (sync *Sync) Watch(path string, timeout time.Duration, revision int64) ([]*goext.Event, error) {
-	eventChan := make(chan *gohan_sync.Event, 32)
-	stopChan := make(chan bool, 1)
-	defer close(stopChan)
-	errorChan := make(chan error, 1)
+func (sync *Sync) Watch(ctx context.Context, path string, timeout time.Duration, revision int64) ([]*goext.Event, error) {
+	eventChan, err := sync.raw.WatchContext(ctx, path, revision)
+	if err != nil {
+		return nil, err
+	}
 
-	go func() {
-		if err := sync.raw.Watch(path, eventChan, stopChan, revision); err != nil {
-			errorChan <- err
-		}
-	}()
-
-	// todo(przemyslaw-dobrowolski-cl): add support for timeouts
 	select {
 	case event := <-eventChan:
 		return []*goext.Event{convertEvent(event)}, nil
 	case <-time.After(timeout):
 		return nil, nil
-	case err := <-errorChan:
-		return nil, err
+	case <-ctx.Done():
+		return nil, context.Canceled
 	}
 }
 

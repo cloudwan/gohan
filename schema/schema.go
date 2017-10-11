@@ -470,6 +470,15 @@ func (schema *Schema) SyncKeyTemplate() (syncKeyTemplate string, ok bool) {
 	return
 }
 
+//SkipConfigPrefix - whether to skip /config/ prefix to pushed paths, defaults to false
+func (schema *Schema) SkipConfigPrefix() bool {
+	syncKeyTemplateRaw, ok := schema.Metadata["sync_skip_config_prefix"]
+	if !ok {
+		return false
+	}
+	return syncKeyTemplateRaw.(bool)
+}
+
 //GenerateCustomPath - returns custom path based on sync_key_template
 func (schema *Schema) GenerateCustomPath(data map[string]interface{}) (path string, err error) {
 	syncKeyTemplate, ok := schema.SyncKeyTemplate()

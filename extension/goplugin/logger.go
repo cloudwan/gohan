@@ -139,11 +139,11 @@ func NewLogger(env IEnvironment) *Logger {
 }
 
 // Clone allocates a clone of Logger; object may be nil
-func (logger *Logger) Clone() *Logger {
+func (logger *Logger) Clone(env *Environment) *Logger {
 	if logger == nil {
 		return nil
 	}
 	return &Logger{
-		env: logger.env,
+		env: env,
 	}
 }

@@ -77,6 +77,53 @@ var _ = Describe("Schemas", func() {
 
 	})
 
+	Context("DerivedSchemas", func() {
+		It("Should get all derived schemas", func() {
+			base := env.Schemas().Find("base")
+			Expect(base).ToNot(BeNil())
+
+			derived := base.DerivedSchemas()
+
+			Expect(derived).To(Equal([]goext.ISchema{env.Schemas().Find("derived")}))
+		})
+	})
+
+	Context("Make columns", func() {
+		It("Should get correct column names", func() {
+			Expect(testSuiteSchema.ColumnNames()).To(Equal([]string{"test_suites.`id` as `test_suites__id`"}))
+		})
+	})
+
+	Context("Properties", func() {
+		It("Should get correct properties", func() {
+			Expect(testSchema.Properties()).To(Equal(
+				[]goext.Property{
+					{
+						ID: "id",
+						Title: "ID",
+					},
+					{
+						ID: "description",
+						Title: "Description",
+					},
+					{
+						ID: "name",
+						Title: "Name",
+					},
+					{
+						ID: "test_suite_id",
+						Title: "Test Suite ID",
+						Relation: "test_suite",
+					},
+					{
+						ID: "subobject",
+						Title: "Subobject",
+					},
+				},
+			))
+		})
+	})
+
 	Context("Relations", func() {
 		It("Returns relation info if schema has relations", func() {
 			relations := env.Schemas().Relations(testSuiteSchema.ID())
@@ -304,4 +351,187 @@ var _ = Describe("Schemas", func() {
 		})
 	})
 
+	Context("Convert", func() {
+		It("should convert context to resource", func() {
+			context := map[string]interface{}{
+				"id":          "42",
+				"description": "test",
+				"subobject": map[string]interface{}{
+					"subproperty": "testproperty",
+				},
+			}
+			expected := &test.Test{
+				ID:          "42",
+				Description: "test",
+				Subobject: &test.Subobject{
+					Subproperty: "testproperty",
+				},
+			}
+
+			resource, err := testSchema.ResourceFromMap(context)
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(resource).To(Equal(expected))
+		})
+		It("should convert resource to context", func() {
+			resource := &test.Test{
+				ID:          "42",
+				Description: "test",
+				Subobject: &test.Subobject{
+					Subproperty: "testproperty",
+				},
+			}
+
+			context := env.Util().ResourceToMap(resource)
+
+			Expect(context).To(HaveKeyWithValue("id", "42"))
+			Expect(context).To(HaveKeyWithValue("description", "test"))
+			Expect(context).To(HaveKey("subobject"))
+			Expect(context["subobject"]).To(HaveKeyWithValue("subproperty", "testproperty"))
+		})
+		It("should not change object after marshal and unmarshal", func() {
+			resource := &test.Test{
+				ID:          "42",
+				Description: "test",
+				Subobject: &test.Subobject{
+					Subproperty: "testproperty",
+				},
+			}
+
+			context := env.Util().ResourceToMap(resource)
+
+			result, err := testSchema.ResourceFromMap(context)
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(resource))
+		})
+		It("should convert context to resource with nil suboject", func() {
+			context := map[string]interface{}{
+				"id":          "42",
+				"description": "test",
+				"subobject":   nil,
+			}
+			expected := &test.Test{
+				ID:          "42",
+				Description: "test",
+				Subobject:   nil,
+			}
+
+			resource, err := testSchema.ResourceFromMap(context)
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(resource).To(Equal(expected))
+		})
+		It("should convert resource to context", func() {
+			resource := &test.Test{
+				ID:          "42",
+				Description: "test",
+				Subobject:   nil,
+			}
+
+			context := env.Util().ResourceToMap(resource)
+
+			Expect(context).To(HaveKeyWithValue("id", "42"))
+			Expect(context).To(HaveKeyWithValue("description", "test"))
+			Expect(context).To(HaveKey("subobject"))
+			Expect(context["subobject"]).To(BeNil())
+		})
+		It("should convert resource to context with null string", func() {
+			resource := &test.Test{
+				ID:          "42",
+				Description: "test",
+				Name:        goext.MakeNullString("testName"),
+				Subobject:   nil,
+			}
+
+			context := env.Util().ResourceToMap(resource)
+
+			Expect(context).To(HaveKeyWithValue("id", "42"))
+			Expect(context).To(HaveKeyWithValue("description", "test"))
+			Expect(context).To(HaveKeyWithValue("name", "testName"))
+			Expect(context).To(HaveKey("subobject"))
+			Expect(context["subobject"]).To(BeNil())
+		})
+		It("should convert resource to context with null string", func() {
+			resource := &test.Test{
+				ID:          "42",
+				Description: "test",
+				Name:        goext.NullString{Valid: false},
+				Subobject:   nil,
+			}
+
+			context := env.Util().ResourceToMap(resource)
+
+			Expect(context).To(HaveKeyWithValue("id", "42"))
+			Expect(context).To(HaveKeyWithValue("description", "test"))
+			Expect(context).To(HaveKey("name"))
+			Expect(context["name"]).To(BeNil())
+			Expect(context).To(HaveKey("subobject"))
+			Expect(context["subobject"]).To(BeNil())
+		})
+		It("should not convert context to resource with int passed as string", func() {
+			context := map[string]interface{}{
+				"id":          42,
+				"description": "test",
+				"subobject":   nil,
+			}
+
+			_, err := testSchema.ResourceFromMap(context)
+
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("invalid type of 'id' field (int, expecting string)"))
+		})
+		It("should convert context to resource with missing fields", func() {
+			context := map[string]interface{}{
+				"id":        nil,
+				"subobject": nil,
+			}
+			expected := &test.Test{
+				ID:          "",
+				Description: "",
+				Subobject:   nil,
+			}
+
+			resource, err := testSchema.ResourceFromMap(context)
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(resource).To(Equal(expected))
+		})
+		It("should convert context to resource with null string", func() {
+			context := map[string]interface{}{
+				"id":        nil,
+				"name":      nil,
+				"subobject": nil,
+			}
+			expected := &test.Test{
+				ID:          "",
+				Description: "",
+				Name:        goext.NullString{Valid: false},
+				Subobject:   nil,
+			}
+
+			resource, err := testSchema.ResourceFromMap(context)
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(resource).To(Equal(expected))
+		})
+		It("should convert context to resource with null string", func() {
+			context := map[string]interface{}{
+				"id":        nil,
+				"name":      "testname",
+				"subobject": nil,
+			}
+			expected := &test.Test{
+				ID:          "",
+				Description: "",
+				Name:        goext.MakeNullString("testname"),
+				Subobject:   nil,
+			}
+
+			resource, err := testSchema.ResourceFromMap(context)
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(resource).To(Equal(expected))
+		})
+	})
 })

@@ -83,3 +83,34 @@ schemas:
           description: "property 0"
           type: "string"
           unique: false
+
+  - id: "with_sync_skip_config_prefix"
+    metadata:
+      state_versioning: true
+      sync_plain: true
+      sync_property: "p0"
+      sync_key_template: "/prefix/{{id}}"
+      sync_skip_config_prefix: true
+    title: "with_sync_skip_config_prefix"
+    description: "with_sync_skip_config_prefix"
+    singular: "with_sync_skip_config_prefix"
+    plural: "with_sync_skip_config_prefixes"
+    prefix: "/v2.0"
+    schema:
+      properties:
+        id:
+          format: "uuid"
+          permission:
+            - "create"
+          title: "ID"
+          description: "ID"
+          type: "string"
+          unique: false
+        p0:
+          permission:
+            - "create"
+            - "update"
+          title: "property 0"
+          description: "property 0"
+          type: "string"
+          unique: false

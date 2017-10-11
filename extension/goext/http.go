@@ -15,6 +15,8 @@
 
 package goext
 
+import "context"
+
 // Header represents HTTP header
 type Header map[string][]string
 
@@ -28,6 +30,6 @@ type Response struct {
 
 // IHTTP is an interface to http in Gohan
 type IHTTP interface {
-	Request(method, rawURL string, headers map[string]interface{}, postData interface{}, opaque bool, timeout int) (*Response, error)
-	RequestRaw(method, rawURL string, headers map[string]string, rawData string) (*Response, error)
+	Request(ctx context.Context, method, rawURL string, headers map[string]interface{}, postData interface{}, opaque bool) (*Response, error)
+	RequestRaw(ctx context.Context, method, rawURL string, headers map[string]string, rawData string) (*Response, error)
 }

@@ -163,6 +163,11 @@ Developers can make a schema as abstract schema specifying type=abstract. The de
 
   Write only the value of the specified property to the sync backend.
 
+- sync_skip_config_prefix (bool)
+
+  Some resources don't require two way sync or path needs to be customized exactly with sync_key_template.
+  Enabling this flag will cause /config prefix to be skipped when generating sync path for etcd.
+
 - resource_group (string)
 
   Used in OpenApi documentation it allows to categorized schema according to given `resource_group` by setting appropriate tags.

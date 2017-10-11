@@ -267,7 +267,9 @@ func generatePath(resourcePath string, body string) string {
 			}
 		}
 	}
-	path = configPrefix + path
+	if !curSchema.SkipConfigPrefix() {
+		path = configPrefix + path
+	}
 	log.Info("Generated path: %s", path)
 	return path
 }
