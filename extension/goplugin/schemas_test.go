@@ -77,6 +77,53 @@ var _ = Describe("Schemas", func() {
 
 	})
 
+	Context("DerivedSchemas", func() {
+		It("Should get all derived schemas", func() {
+			base := env.Schemas().Find("base")
+			Expect(base).ToNot(BeNil())
+
+			derived := base.DerivedSchemas()
+
+			Expect(derived).To(Equal([]goext.ISchema{env.Schemas().Find("derived")}))
+		})
+	})
+
+	Context("Make columns", func() {
+		It("Should get correct column names", func() {
+			Expect(testSuiteSchema.ColumnNames()).To(Equal([]string{"test_suites.`id` as `test_suites__id`"}))
+		})
+	})
+
+	Context("Properties", func() {
+		It("Should get correct properties", func() {
+			Expect(testSchema.Properties()).To(Equal(
+				[]goext.Property{
+					{
+						ID: "id",
+						Title: "ID",
+					},
+					{
+						ID: "description",
+						Title: "Description",
+					},
+					{
+						ID: "name",
+						Title: "Name",
+					},
+					{
+						ID: "test_suite_id",
+						Title: "Test Suite ID",
+						Relation: "test_suite",
+					},
+					{
+						ID: "subobject",
+						Title: "Subobject",
+					},
+				},
+			))
+		})
+	})
+
 	Context("Relations", func() {
 		It("Returns relation info if schema has relations", func() {
 			relations := env.Schemas().Relations(testSuiteSchema.ID())

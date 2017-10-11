@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/cloudwan/gohan/db/sql"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/extension/goext"
 	gohan_schema "github.com/cloudwan/gohan/schema"
@@ -668,6 +669,40 @@ func (schema *Schema) RegisterType(typeValue interface{}) {
 
 func (schema *Schema) RawSchema() interface{} {
 	return schema.raw
+}
+
+// DerivedSchemas returns list of schemas that extend schema with given id
+func (schema *Schema) DerivedSchemas() []goext.ISchema {
+	manager := gohan_schema.GetManager()
+	derived := []goext.ISchema{}
+	for _, raw := range manager.OrderedSchemas() {
+		for _, parent := range raw.Extends {
+			if parent == schema.ID() {
+				derived = append(derived, NewSchema(schema.env, raw))
+				break
+			}
+		}
+	}
+	return derived
+}
+
+// ColumnNames generates an array that has Gohan style column names
+func (schema *Schema) ColumnNames() []string {
+	return sql.MakeColumns(schema.raw, schema.raw.GetDbTableName(), nil, false)
+}
+
+// Properties returns properties of schema
+func (schema *Schema) Properties() []goext.Property {
+	rawProperties := schema.raw.Properties
+	properties := make([]goext.Property, len(rawProperties))
+	for i, property := range rawProperties {
+		properties[i] = goext.Property{
+			ID:       property.ID,
+			Title:    property.Title,
+			Relation: property.Relation,
+		}
+	}
+	return properties
 }
 
 // NewSchema allocates a new Schema
