@@ -172,6 +172,22 @@ type ISchema interface {
 	ResourceFromMap(context map[string]interface{}) (Resource, error)
 
 	RawSchema() interface{}
+
+	// DerivedSchemas returns list of schemas that extend schema with given id
+	DerivedSchemas() []ISchema
+
+	// ColumnNames generates an array that has Gohan style column names
+	ColumnNames() []string
+
+	// Properties returns properties of schema
+	Properties() []Property
+}
+
+// Property represents schema property
+type Property struct {
+	ID string
+	Title string
+	Relation string
 }
 
 // SchemaRelationInfo describes schema relation
