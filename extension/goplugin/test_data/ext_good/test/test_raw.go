@@ -17,6 +17,11 @@ package test
 
 import "github.com/cloudwan/gohan/extension/goext"
 
+// Subsliceobject is a test resource
+type Subsliceobject struct {
+	Subsliceproperty string `json:"subsliceproperty,omitempty"`
+}
+
 // Subobject is a test resource
 type Subobject struct {
 	Subproperty string `json:"subproperty,omitempty"`
@@ -24,11 +29,12 @@ type Subobject struct {
 
 // Test is a test resource
 type Test struct {
-	ID          string           `db:"id" json:"id"`
-	Description string           `db:"description" json:"description"`
-	Name        goext.NullString `db:"name" json:"name,omitempty"`
-	Subobject   *Subobject       `db:"subobject" json:"subobject,omitempty"`
-	TestSuiteID *string          `db:"test_suite_id" json:"test_suite_id"`
+	ID             string            `db:"id" json:"id"`
+	Description    string            `db:"description" json:"description"`
+	Name           goext.NullString  `db:"name" json:"name,omitempty"`
+	Subobject      *Subobject        `db:"subobject" json:"subobject,omitempty"`
+	Subsliceobject []*Subsliceobject `db:"subsliceobject" json:"subsliceobject,omitempty"`
+	TestSuiteID    *string           `db:"test_suite_id" json:"test_suite_id"`
 }
 
 // TestSuite is a test suite resource
