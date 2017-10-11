@@ -606,7 +606,7 @@ func (schema *Schema) delete(filter goext.Filter, requestContext goext.Context, 
 	contextTx := goext.MakeContext()
 	contextSetTransaction(contextTx, tx)
 
-	fetched, err := schema.LockListRaw(filter, nil, contextTx, goext.LockRelatedResources)
+	fetched, err := schema.ListRaw(filter, nil, contextTx)
 	if err != nil {
 		return err
 	}
