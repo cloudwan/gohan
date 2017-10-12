@@ -46,5 +46,5 @@ func main() {
 
 	//Register go based module for javascript
 	otto.RegisterModule("exampleapp", exampleModule)
-	cli.Run("exampleapp", "exampleapp", "0.0.1")
+	cli.Run("exampleapp", "exampleapp")
 }

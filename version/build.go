@@ -1,4 +1,4 @@
-// Copyright (C) 2015 NTT Innovation Institute, Inc.
+// Copyright (C) 2017 NTT Innovation Institute, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,25 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package version
 
-import (
-	"github.com/cloudwan/gohan/cli"
-	"github.com/cloudwan/gohan/version"
-)
-
-var (
-	buildVersion   string = "<unknown>"
-	buildTimestamp string = "<unknown>"
-	buildHost      string = "<unknown>"
-)
-
-func main() {
-	// store build info
-	version.Build.Version = buildVersion
-	version.Build.Timestamp = buildTimestamp
-	version.Build.Host = buildHost
-
-	// run app
-	cli.Run("gohan", "Gohan")
+var Build struct {
+	Version string
+	Timestamp string
+	Host string
 }
