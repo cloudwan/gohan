@@ -3,6 +3,14 @@ OK_COLOR=\033[32;01m
 ERROR_COLOR=\033[31;01m
 WARN_COLOR=\033[33;01m
 
+# tests require a build with race flag enabled
+TEST_BUILD_FLAGS=-race
+
+# don't build in parallel - CircleCI offers limited memory
+ifdef CIRCLECI
+    TEST_BUILD_FLAGS+=-p 1
+endif
+
 all: gen lint build test
 
 deps:
@@ -20,12 +28,11 @@ gen:
 	etc/templates/... \
 	public/...
 
-test: build
+test: deps
 	@echo -e "$(OK_COLOR)==> Testing$(NO_COLOR)"
+	./tools/build.sh $(TEST_BUILD_FLAGS)
+	./tools/build_go_tests.sh "$(TEST_BUILD_FLAGS)"
 	./tools/test_bash_completion.sh
-	# tests require a build with race flag enabled
-	./tools/build.sh -race
-	./tools/build_go_tests.sh -race
 	./run_test.sh
 
 lint:
