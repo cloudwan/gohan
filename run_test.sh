@@ -18,7 +18,7 @@ echo "mode: count" > profile.cov
 for dir in $(find . -maxdepth 10 -not -path './.git*' -not -path '*/_*' -not -path './vendor/*' -not -path '*/test_data/*' -not -path '*/goext_example*' -type d);
 do
 if ls $dir/*.go &> /dev/null; then
-    go test -race -covermode=atomic -coverprofile=$dir/profile.tmp $dir
+    go test -race -p 1 -covermode=atomic -coverprofile=$dir/profile.tmp $dir
     result=$?
     if [ -f $dir/profile.tmp ]
     then
