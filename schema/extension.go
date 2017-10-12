@@ -61,7 +61,7 @@ func NewExtension(raw interface{}) (*Extension, error) {
 	}
 
 	extension.Path = match
-	if extension.URL != "" {
+	if shouldLoadCode(extension) {
 		remoteCode, err := util.GetContent(extension.URL)
 		extension.Code += string(remoteCode)
 		if err != nil {
@@ -69,6 +69,11 @@ func NewExtension(raw interface{}) (*Extension, error) {
 		}
 	}
 	return extension, nil
+}
+
+func shouldLoadCode(extension *Extension) bool {
+	// goext are binary .so files which are loaded separately
+	return extension.URL != "" && extension.CodeType != "goext"
 }
 
 //Match checks if this path matches for extension
