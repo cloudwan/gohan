@@ -346,6 +346,9 @@ func (manager *Manager) LoadSchemaFromFile(filePath string) error {
 
 //loadSchemaFromFile loads schema from json file - recursive version for nested schemas
 func (manager *Manager) loadSchemaFromFile(filePath string) error {
+	if filePath == "" {
+		return nil
+	}
 	log.Info("Loading schema %s ...", filePath)
 	schemas, err := util.LoadMap(filePath)
 	if err != nil {

@@ -413,6 +413,11 @@ var _ = Describe("Schema", func() {
 			Expect(netSchema.ValidateOnCreate(netMap)).To(Succeed())
 		})
 	})
+
+	It("should ignore empty schema file", func() {
+		manager := GetManager()
+		Expect(manager.LoadSchemasFromFiles("")).To(Succeed())
+	})
 })
 
 func getErrorMessage(fieldName string, formatterName string) string {

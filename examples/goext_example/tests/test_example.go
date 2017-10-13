@@ -50,7 +50,7 @@ func Test(env goext.IEnvironment) {
 			Expect(schema).To(Not(BeNil()))
 
 			entry = &todo.Entry{
-				ID:          env.Core().NewUUID(),
+				ID:          env.Util().NewUUID(),
 				Name:        "example name",
 				Description: "example description",
 				TenantID:    "admin",
