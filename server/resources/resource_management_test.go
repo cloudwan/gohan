@@ -666,6 +666,28 @@ var _ = Describe("Resource manager", func() {
 					})
 				})
 
+				Context("Passing a resource to extensions", func() {
+					BeforeEach(func() {
+						events["post_show"] = `
+							context["response"] = {"respondo": "tre bona"};
+							if (context["resource"] === undefined) {
+								throw new CustomException("resource not present in context", 390);
+							}
+							if (context["resource"].test_string !== "Steloj estas en ordo.") {
+								throw new CustomException("invalid resource data", 390);
+							}
+						`
+					})
+
+					It("Should include resource data in the context", func() {
+						err := resources.GetSingleResource(
+							context, testDB, currentSchema, resourceID1)
+						result := context["response"].(map[string]interface{})
+						Expect(err).NotTo(HaveOccurred())
+						Expect(result).To(HaveKeyWithValue("respondo", "tre bona"))
+					})
+				})
+
 				Context("With pre_show throwing exception", func() {
 					BeforeEach(func() {
 						events["pre_show"] = `throw new CustomException("malbona", 390);`

@@ -91,6 +91,7 @@ Comparison of different types of extensions:
   Same as post_show but executed in the DB transaction context.transaction contains transaction object for DB operation
 
   id : request id
+  context.resource contains the resource associated with the event
   context.response contains response data.
   You can also update response here
 
@@ -99,6 +100,7 @@ Comparison of different types of extensions:
   show event after DB operation
 
   id : request id
+  context.resource contains the resource associated with the event
   context.response contains response data.
   You can also update response here
 
