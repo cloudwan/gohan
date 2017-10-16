@@ -24,11 +24,11 @@ import (
 	"time"
 
 	"github.com/cloudwan/gohan/cli/client"
+	"github.com/cloudwan/gohan/converter/app"
 	"github.com/cloudwan/gohan/db"
 	db_options "github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/extension/framework"
 	"github.com/cloudwan/gohan/extension/gohanscript"
-	"github.com/cloudwan/gohan/converter/app"
 	// Import gohan extension autogen lib
 	_ "github.com/cloudwan/gohan/extension/gohanscript/autogen"
 	logger "github.com/cloudwan/gohan/log"
@@ -242,8 +242,12 @@ Useful for development purposes.`,
 			if err := manager.OrderedLoadSchemasFromFiles(strings.Split(multipleSchemaFiles, ";")); err != nil {
 				util.ExitFatal(err)
 			}
-			err := db.InitDBWithSchemas(dbType, dbConnection, dropOnCreate, cascade, false)
-			if err != nil {
+			if err := db.InitDBWithSchemas(dbType, dbConnection, db.InitDBParams{
+				DropOnCreate: dropOnCreate,
+				Cascade:      cascade,
+				AutoMigrate:  false,
+				AllowEmpty:   false,
+			}); err != nil {
 				util.ExitFatal(err)
 			}
 			fmt.Println("DB is initialized")

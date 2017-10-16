@@ -188,7 +188,7 @@ func (testRunner *TestRunner) runSingle(t ginkgo.GinkgoTestingT, reporter *Repor
 			return fmt.Errorf("failed to connect db: %s", err)
 		}
 
-		if err = gohan_db.InitDBConnWithSchemas(db, true, false, false); err != nil {
+		if err = gohan_db.InitDBConnWithSchemas(db, gohan_db.DefaultTestInitDBParams()); err != nil {
 			return fmt.Errorf("failed to init db: %s", err)
 		}
 
