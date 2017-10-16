@@ -76,9 +76,19 @@ func (testRunner *TestRunner) Run() error {
 			break
 		}
 	}
+
 	// display report
 	reporter.Report()
-	return err
+
+	if err != nil {
+		return err
+	}
+
+	if !reporter.AllSuitesSucceed() {
+		return fmt.Errorf("tests are failing")
+	}
+
+	return nil
 }
 
 func readSchemas(p *plugin.Plugin) ([]string, error) {
