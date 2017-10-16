@@ -251,6 +251,54 @@ var _ = Describe("Schemas", func() {
 			})
 		})
 
+		Context("Database functions without transaction", func() {
+			const unknownID = "unknown-id"
+
+			It("should panic when creating resource without transaction", func() {
+				Expect(func() { testSchema.CreateRaw(&createdResource, goext.MakeContext()) }).To(Panic())
+			})
+
+			It("should panic when creating resource with closed transaction", func() {
+				Expect(tx.Close()).To(Succeed())
+				Expect(func() { testSchema.CreateRaw(&createdResource, context) }).To(Panic())
+			})
+
+			It("should panic when updating resource without transaction", func() {
+				Expect(func() { testSchema.UpdateRaw(&createdResource, goext.MakeContext()) }).To(Panic())
+			})
+
+			It("should panic when updating resource with closed transaction", func() {
+				Expect(tx.Close()).To(Succeed())
+				Expect(func() { testSchema.UpdateRaw(&createdResource, context) }).To(Panic())
+			})
+
+			It("should panic when deleting resource without transaction", func() {
+				Expect(func() { testSchema.DeleteRaw(goext.Filter{"id": unknownID}, goext.MakeContext()) }).To(Panic())
+			})
+
+			It("should panic when deleting resource with closed transaction", func() {
+				Expect(tx.Close()).To(Succeed())
+				Expect(func() { testSchema.DeleteRaw(goext.Filter{"id": unknownID}, context) }).To(Panic())
+			})
+
+			It("should panic when fetching resource without transaction", func() {
+				Expect(func() { testSchema.FetchRaw(unknownID, goext.MakeContext()) }).To(Panic())
+			})
+
+			It("should panic when fetching resource with closed transaction", func() {
+				Expect(tx.Close()).To(Succeed())
+				Expect(func() { testSchema.FetchRaw(unknownID, context) }).To(Panic())
+			})
+
+			It("should panic when fetching resources without transaction", func() {
+				Expect(func() { testSchema.ListRaw(goext.Filter{"id": createdResource.ID}, nil, goext.MakeContext()) }).To(Panic())
+			})
+
+			It("should panic when fetching resources with closed transaction", func() {
+				Expect(tx.Close()).To(Succeed())
+				Expect(func() { testSchema.ListRaw(goext.Filter{"id": unknownID}, nil, context) }).To(Panic())
+			})
+		})
 	})
 
 	Context("Locks", func() {
