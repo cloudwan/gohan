@@ -139,3 +139,30 @@ schemas:
   schema:
     properties: {}
     type: object
+- description: Schema without registered extensions and not registered as a type
+  id: test_schema_no_ext
+  plural: test_schema_no_exts
+  prefix: /v0.1
+  schema:
+    properties:
+      id:
+        description: ID
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: false
+      name:
+        description: ""
+        permission:
+        - create
+        - update
+        title: Name
+        type: string
+        maxLength: 255
+    propertiesOrder:
+    - id
+    - name
+    type: object
+  singular: test_schema_no_ext
+  title: Test schema without extensions

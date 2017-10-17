@@ -30,10 +30,11 @@ import (
 var (
 	// ErrNotPointer indicates that a resource was not passed by a pointer
 	ErrNotPointer = fmt.Errorf("raw resource must be passed by a pointer")
-
-	// ErrMissingType indicates that a runtime type was not registered for a resource
-	ErrMissingType = fmt.Errorf("resource type not registered")
 )
+
+func makeErrMissingType(missingType string) error {
+	return fmt.Errorf("resource type '%s' not registered", missingType)
+}
 
 func isPointer(resource interface{}) bool {
 	rv := reflect.ValueOf(resource)
@@ -127,7 +128,8 @@ func (schema *Schema) ResourceFromMap(context map[string]interface{}) (goext.Res
 	rawType, ok := schema.env.getRawType(schema.ID())
 
 	if !ok {
-		return nil, fmt.Errorf("no raw type registered for schema: %s", schema.ID())
+		schema.env.Logger().Warningf("Raw resource type not registered for %s", schema.ID())
+		return nil, makeErrMissingType(schema.ID())
 	}
 
 	return resourceFromMap(context, rawType)
@@ -200,21 +202,21 @@ func (schema *Schema) rawListToResourceList(rawList []interface{}) ([]interface{
 		return rawList, nil
 	}
 	xRaw := reflect.ValueOf(rawList)
-	resourceType, found := schema.env.getType(schema.ID())
-	if !found {
-		return nil, ErrMissingType
+	resourceType, ok := schema.env.getType(schema.ID())
+	if !ok {
+		schema.env.Logger().Warningf("Full resource type not registered for %s", schema.ID())
+		return nil, makeErrMissingType(schema.ID())
 	}
 	resources := reflect.MakeSlice(reflect.SliceOf(resourceType), xRaw.Len(), xRaw.Len())
 	x := reflect.New(resources.Type())
 	x.Elem().Set(resources)
 	x = x.Elem()
 
+	var err error
 	res := make([]interface{}, xRaw.Len(), xRaw.Len())
 	for i := 0; i < xRaw.Len(); i++ {
 		rawResource := xRaw.Index(i)
-		var err error
-		res[i], err = schema.rawToResource(rawResource.Elem())
-		if err != nil {
+		if res[i], err = schema.rawToResource(rawResource.Elem()); err != nil {
 			return nil, err
 		}
 	}
@@ -223,9 +225,10 @@ func (schema *Schema) rawListToResourceList(rawList []interface{}) ([]interface{
 
 func (schema *Schema) rawToResource(xRaw reflect.Value) (interface{}, error) {
 	xRaw = xRaw.Elem()
-	resourceType, found := schema.env.getType(schema.ID())
-	if !found {
-		return nil, ErrMissingType
+	resourceType, ok := schema.env.getType(schema.ID())
+	if !ok {
+		schema.env.Logger().Warningf("Full resource type not registered for %s", schema.ID())
+		return nil, makeErrMissingType(schema.ID())
 	}
 	resource := reflect.New(resourceType).Elem()
 	setValue(resource.FieldByName(xRaw.Type().Name()), xRaw.Addr())
