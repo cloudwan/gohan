@@ -28,6 +28,8 @@ import (
 	db_options "github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/extension/framework"
 	"github.com/cloudwan/gohan/extension/gohanscript"
+	"github.com/cloudwan/gohan/converter/app"
+	// Import gohan extension autogen lib
 	_ "github.com/cloudwan/gohan/extension/gohanscript/autogen"
 	logger "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/schema"
@@ -48,11 +50,10 @@ const (
 )
 
 //Run execute main command
-func Run(name, usage, version string) {
+func Run(name, usage string) {
 	app := cli.NewApp()
-	app.Name = "gohan"
-	app.Usage = "Gohan"
-	app.Version = version
+	app.Name = name
+	app.Usage = usage
 	app.Flags = []cli.Flag{
 		cli.BoolFlag{Name: "debug, d", Usage: "Show debug messages"},
 	}
@@ -74,6 +75,7 @@ func Run(name, usage, version string) {
 		getDotCommand(),
 		getGraceServerCommand(),
 		getGenerateCommand(),
+		getConverterCommand(),
 	}
 	app.Run(os.Args)
 }
@@ -455,6 +457,50 @@ func getCreateInitialMigrationSubcommand() cli.Command {
 			cli.BoolFlag{Name: "cascade", Usage: "If true, FOREIGN KEYS in database will be created with ON DELETE CASCADE"},
 		},
 		Action: actionMigrateCreateInitialMigration(),
+	}
+}
+
+func getConverterCommand() cli.Command {
+	return cli.Command{
+		Name:  "converter",
+		Usage: "Generates code used by golang extensions",
+		Description: `gohan converter [path to file with schemas] [flags...]
+
+Converter generates code from yaml schemas.
+Generated code:
+	* Definition of structs representing objects from each schema
+	* Interfaces for getters and setters for these objects
+	* Implementation of these interfaces by pointers to generated structs
+	* Interfaces that can be extended
+	* Constructors for objects with default values
+	* Database functions for generated structs (fetch, list)
+ARGUMENTS:
+	There is one argument - path to file with yaml schemas
+`,
+		Flags: []cli.Flag{
+			cli.StringFlag{Name: "goext-package", Value: "goext", Usage: "Package name for golang extension interfaces"},
+			cli.StringFlag{Name: "crud-package", Value: "goodies", Usage: "Package name for crud functions"},
+			cli.StringFlag{Name: "raw-package", Value: "resources", Usage: "Package name for raw structs"},
+			cli.StringFlag{Name: "interface-package", Value: "interfaces", Usage: "Package name for interfaces"},
+			cli.StringFlag{Name: "output, o", Value: "", Usage: "Prefix add to output files"},
+			cli.StringFlag{Name: "raw-suffix", Value: "", Usage: "Suffix added to raw struct names"},
+			cli.StringFlag{Name: "interface-suffix", Value: "gen", Usage: "Suffix added to generated interface names"},
+		},
+		Action: func(c *cli.Context) {
+			if err := app.Run(
+				c.Args().First(),
+				c.String("output"),
+				c.String("goext-package"),
+				c.String("crud-package"),
+				c.String("raw-package"),
+				c.String("interface-package"),
+				c.String("raw-suffix"),
+				c.String("interface-suffix"),
+			); err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+		},
 	}
 }
 

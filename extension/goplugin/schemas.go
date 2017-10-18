@@ -17,7 +17,6 @@ package goplugin
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"reflect"
 
@@ -31,10 +30,11 @@ import (
 var (
 	// ErrNotPointer indicates that a resource was not passed by a pointer
 	ErrNotPointer = fmt.Errorf("raw resource must be passed by a pointer")
-
-	// ErrMissingType indicates that a runtime type was not registered for a resource
-	ErrMissingType = fmt.Errorf("resource type not registered")
 )
+
+func makeErrMissingType(missingType string) error {
+	return fmt.Errorf("resource type '%s' not registered", missingType)
+}
 
 func isPointer(resource interface{}) bool {
 	rv := reflect.ValueOf(resource)
@@ -128,7 +128,8 @@ func (schema *Schema) ResourceFromMap(context map[string]interface{}) (goext.Res
 	rawType, ok := schema.env.getRawType(schema.ID())
 
 	if !ok {
-		return nil, fmt.Errorf("no raw type registered for schema: %s", schema.ID())
+		schema.env.Logger().Warningf("Raw resource type not registered for %s", schema.ID())
+		return nil, makeErrMissingType(schema.ID())
 	}
 
 	return resourceFromMap(context, rawType)
@@ -137,26 +138,6 @@ func (schema *Schema) ResourceFromMap(context map[string]interface{}) (goext.Res
 func (schema *Schema) structToResource(resource interface{}) (*gohan_schema.Resource, error) {
 	fieldsMap := schema.env.Util().ResourceToMap(resource)
 	return gohan_schema.NewResource(schema.raw, fieldsMap)
-}
-
-func (schema *Schema) assignField(name string, field reflect.Value, value interface{}) error {
-	if field.Kind() == reflect.Struct || field.Kind() == reflect.Slice || field.Kind() == reflect.Ptr {
-		mapJSON, err := json.Marshal(value)
-		if err != nil {
-			return err
-		}
-		newField := reflect.New(field.Type())
-		fieldJSON := string(mapJSON)
-		fieldInterface := newField.Interface()
-		err = json.Unmarshal([]byte(fieldJSON), &fieldInterface)
-		if err != nil {
-			return err
-		}
-		field.Set(newField.Elem())
-	} else {
-		setValue(field, reflect.ValueOf(value))
-	}
-	return nil
 }
 
 // ListRaw lists schema raw resources
@@ -169,27 +150,7 @@ func (schema *Schema) ListRaw(filter goext.Filter, paginator *goext.Paginator, r
 type listFunc func(ctx context.Context, tx goext.ITransaction) ([]map[string]interface{}, uint64, error)
 
 func (schema *Schema) listImpl(requestContext goext.Context, list listFunc) ([]interface{}, error) {
-	resourceType, ok := schema.env.getRawType(schema.ID())
-	if !ok {
-		log.Warning(fmt.Sprintf("cannot find raw type for: %s", schema.ID()))
-		return nil, ErrMissingType
-	}
-
-	if requestContext == nil {
-		requestContext = goext.MakeContext()
-	}
-
-	tx, hasOpenTransaction := contextGetTransaction(requestContext)
-	if !hasOpenTransaction {
-		var err error
-		tx, err = schema.env.Database().Begin()
-
-		if err != nil {
-			return nil, err
-		}
-
-		defer tx.Close()
-	}
+	tx := mustGetOpenTransactionFromContext(requestContext)
 
 	data, _, err := list(goext.GetContext(requestContext), tx)
 
@@ -197,20 +158,13 @@ func (schema *Schema) listImpl(requestContext goext.Context, list listFunc) ([]i
 		return nil, err
 	}
 
-	mapper := reflectx.NewMapper("db")
 	res := make([]interface{}, len(data), len(data))
 
 	for i := 0; i < len(data); i++ {
-		resource := reflect.New(resourceType)
-		mapped := mapper.FieldMap(resource)
-
-		for name, field := range mapped {
-			value := data[i][name]
-			if err := schema.assignField(name, field, value); err != nil {
-				return nil, err
-			}
+		res[i], err = schema.ResourceFromMap(data[i])
+		if err != nil {
+			return nil, err
 		}
-		res[i] = resource.Interface()
 	}
 
 	return res, nil
@@ -230,7 +184,7 @@ func (schema *Schema) List(filter goext.Filter, paginator *goext.Paginator, cont
 	if err != nil {
 		return nil, err
 	}
-	return schema.rawListToResourceList(fetched), nil
+	return schema.rawListToResourceList(fetched)
 }
 
 // LockList locks and returns list of resources.
@@ -240,37 +194,48 @@ func (schema *Schema) LockList(filter goext.Filter, paginator *goext.Paginator, 
 	if err != nil {
 		return nil, err
 	}
-	return schema.rawListToResourceList(fetched), nil
+	return schema.rawListToResourceList(fetched)
 }
 
-func (schema *Schema) rawListToResourceList(rawList []interface{}) []interface{} {
+func (schema *Schema) rawListToResourceList(rawList []interface{}) ([]interface{}, error) {
 	if len(rawList) == 0 {
-		return rawList
+		return rawList, nil
 	}
 	xRaw := reflect.ValueOf(rawList)
-	resourceType, _ := schema.env.getType(schema.ID())
+	resourceType, ok := schema.env.getType(schema.ID())
+	if !ok {
+		schema.env.Logger().Warningf("Full resource type not registered for %s", schema.ID())
+		return nil, makeErrMissingType(schema.ID())
+	}
 	resources := reflect.MakeSlice(reflect.SliceOf(resourceType), xRaw.Len(), xRaw.Len())
 	x := reflect.New(resources.Type())
 	x.Elem().Set(resources)
 	x = x.Elem()
 
+	var err error
 	res := make([]interface{}, xRaw.Len(), xRaw.Len())
 	for i := 0; i < xRaw.Len(); i++ {
 		rawResource := xRaw.Index(i)
-		res[i] = schema.rawToResource(rawResource.Elem())
+		if res[i], err = schema.rawToResource(rawResource.Elem()); err != nil {
+			return nil, err
+		}
 	}
-	return res
+	return res, nil
 }
 
-func (schema *Schema) rawToResource(xRaw reflect.Value) interface{} {
+func (schema *Schema) rawToResource(xRaw reflect.Value) (interface{}, error) {
 	xRaw = xRaw.Elem()
-	resourceType, _ := schema.env.getType(schema.ID())
+	resourceType, ok := schema.env.getType(schema.ID())
+	if !ok {
+		schema.env.Logger().Warningf("Full resource type not registered for %s", schema.ID())
+		return nil, makeErrMissingType(schema.ID())
+	}
 	resource := reflect.New(resourceType).Elem()
 	setValue(resource.FieldByName(xRaw.Type().Name()), xRaw.Addr())
 	setValue(resource.FieldByName("Schema"), reflect.ValueOf(schema))
 	setValue(resource.FieldByName("Logger"), reflect.ValueOf(NewLogger(schema.env)))
 	setValue(resource.FieldByName("Environment"), reflect.ValueOf(schema.env))
-	return resource.Addr().Interface()
+	return resource.Addr().Interface(), nil
 }
 
 // FetchRaw fetches a raw resource by ID
@@ -290,22 +255,7 @@ func (schema *Schema) LockFetchRaw(id string, requestContext goext.Context, poli
 type fetchFunc func(ctx context.Context, tx goext.ITransaction, filter goext.Filter) (map[string]interface{}, error)
 
 func (schema *Schema) fetchImpl(id string, requestContext goext.Context, fetch fetchFunc) (interface{}, error) {
-	if requestContext == nil {
-		requestContext = goext.MakeContext()
-	}
-	tx, hasOpenTransaction := contextGetTransaction(requestContext)
-	if !hasOpenTransaction {
-		var err error
-		tx, err = schema.env.Database().Begin()
-
-		if err != nil {
-			return nil, err
-		}
-
-		defer tx.Close()
-
-		contextSetTransaction(requestContext, tx)
-	}
+	tx := mustGetOpenTransactionFromContext(requestContext)
 
 	filter := goext.Filter{"id": id}
 
@@ -317,27 +267,8 @@ func (schema *Schema) fetchImpl(id string, requestContext goext.Context, fetch f
 		}
 		return nil, err
 	}
-	resourceType, ok := schema.env.getRawType(schema.raw.ID)
-	if !ok {
-		return nil, fmt.Errorf("No type registered for schema: %s", schema.raw.ID)
-	}
-	rawResources, _ := schema.env.getRawType(schema.ID())
-	resource := reflect.New(rawResources)
 
-	for i := 0; i < resourceType.NumField(); i++ {
-		field := resource.Elem().Field(i)
-
-		fieldType := resourceType.Field(i)
-		propertyName := fieldType.Tag.Get("db")
-		property, err := schema.raw.GetPropertyByID(propertyName)
-		if err != nil {
-			return nil, err
-		}
-		value := data[property.ID]
-		schema.assignField(propertyName, field, value)
-	}
-
-	return resource.Interface(), nil
+	return schema.ResourceFromMap(data)
 }
 
 // Fetch fetches a resource by id.
@@ -348,7 +279,7 @@ func (schema *Schema) Fetch(id string, context goext.Context) (interface{}, erro
 		return nil, err
 	}
 	xRaw := reflect.ValueOf(fetched)
-	return schema.rawToResource(xRaw), nil
+	return schema.rawToResource(xRaw)
 }
 
 // LockFetch fetches a resource by id.
@@ -359,7 +290,7 @@ func (schema *Schema) LockFetch(id string, context goext.Context, lockPolicy goe
 		return nil, err
 	}
 	xRaw := reflect.ValueOf(fetched)
-	return schema.rawToResource(xRaw), nil
+	return schema.rawToResource(xRaw)
 }
 
 func setValue(field, value reflect.Value) {
@@ -387,106 +318,37 @@ func (schema *Schema) create(rawResource interface{}, requestContext goext.Conte
 		return ErrNotPointer
 	}
 
-	if requestContext == nil {
-		requestContext = goext.MakeContext()
-	}
-	ctx := schema.env.Util().ResourceToMap(rawResource)
-	tx, hasOpenTransaction := contextGetTransaction(requestContext)
-	if hasOpenTransaction {
-		contextCopy := goext.MakeContext().
-			WithSchemaID(schema.ID()).
-			WithResource(ctx)
-		contextSetTransaction(contextCopy, tx)
-		return schema.createInTransaction(rawResource, contextCopy, tx, triggerEvents)
-	}
-
-	requestContext.WithSchemaID(schema.ID()).
-		WithResource(ctx)
+	tx := mustGetOpenTransactionFromContext(requestContext)
+	mapFromResource := schema.env.Util().ResourceToMap(rawResource)
+	contextCopy := requestContext.Clone().
+		WithResource(mapFromResource).
+		WithSchemaID(schema.ID())
 
 	if triggerEvents {
-		if err := schema.env.HandleEvent(goext.PreCreate, requestContext); err != nil {
+		if err := schema.env.HandleEvent(goext.PreCreateTx, contextCopy); err != nil {
 			return err
 		}
 	}
 
-	tx, err := schema.env.Database().Begin()
-	if err != nil {
-		return err
-	}
-	defer tx.Close()
-	contextSetTransaction(requestContext, tx)
-
-	if triggerEvents {
-		if err = schema.env.HandleEvent(goext.PreCreateTx, requestContext); err != nil {
-			return err
-		}
-	}
-
-	ctxResource := requestContext["resource"].(map[string]interface{})
-	if err = tx.Create(goext.GetContext(requestContext), schema, ctxResource); err != nil {
+	mapFromContext := contextGetMapResource(contextCopy)
+	if err := tx.Create(goext.GetContext(contextCopy), schema, mapFromContext); err != nil {
 		return err
 	}
 
 	v := reflect.ValueOf(rawResource).Elem()
-	res, err := resourceFromMap(ctxResource, v.Type())
+	res, err := resourceFromMap(mapFromContext, v.Type())
 	if err != nil {
 		return err
 	}
 	v.Set(reflect.ValueOf(res).Elem())
 
 	if triggerEvents {
-		if err = schema.env.HandleEvent(goext.PostCreateTx, requestContext); err != nil {
+		if err = schema.env.HandleEvent(goext.PostCreateTx, contextCopy); err != nil {
 			return err
 		}
 	}
 
-	if err = tx.Commit(); err != nil {
-		return err
-	}
-
-	if err = tx.Close(); err != nil {
-		return err
-	}
-
-	if !triggerEvents {
-		return nil
-	}
-	return schema.env.HandleEvent(goext.PostCreate, requestContext)
-}
-
-func (schema *Schema) createInTransaction(rawResource interface{}, requestContext goext.Context, tx goext.ITransaction, triggerEvents bool) error {
-	var err error
-
-	if triggerEvents {
-		if err = schema.env.HandleEvent(goext.PreCreate, requestContext); err != nil {
-			return err
-		}
-
-		if err = schema.env.HandleEvent(goext.PreCreateTx, requestContext); err != nil {
-			return err
-		}
-	}
-
-	ctxResource := requestContext["resource"].(map[string]interface{})
-	if err = tx.Create(goext.GetContext(requestContext), schema, ctxResource); err != nil {
-		return err
-	}
-
-	v := reflect.ValueOf(rawResource).Elem()
-	res, err := resourceFromMap(ctxResource, v.Type())
-	if err != nil {
-		return err
-	}
-	v.Set(reflect.ValueOf(res).Elem())
-
-	if !triggerEvents {
-		return nil
-	}
-	if err = schema.env.HandleEvent(goext.PostCreateTx, requestContext); err != nil {
-		return err
-	}
-
-	return schema.env.HandleEvent(goext.PostCreate, requestContext)
+	return nil
 }
 
 // UpdateRaw updates a resource and triggers handlers
@@ -503,7 +365,6 @@ func (schema *Schema) update(rawResource interface{}, requestContext goext.Conte
 	if !isPointer(rawResource) {
 		return ErrNotPointer
 	}
-	var tx goext.ITransaction
 	var resourceData *gohan_schema.Resource
 	var err error
 
@@ -511,35 +372,13 @@ func (schema *Schema) update(rawResource interface{}, requestContext goext.Conte
 		return err
 	}
 
-	if requestContext == nil {
-		requestContext = goext.MakeContext()
-	}
+	tx := mustGetOpenTransactionFromContext(requestContext)
 
-	contextCopy := goext.MakeContext()
-	for k, v := range requestContext {
-		contextCopy[k] = v
-	}
-	ctx := schema.env.Util().ResourceToMap(rawResource)
-	contextCopy.WithResource(ctx).
+	mapFromResource := schema.env.Util().ResourceToMap(rawResource)
+	contextCopy := requestContext.Clone().
+		WithResource(mapFromResource).
 		WithResourceID(resourceData.ID()).
 		WithSchemaID(schema.ID())
-
-	if triggerEvents {
-		if err = schema.env.HandleEvent(goext.PreUpdate, contextCopy); err != nil {
-			return err
-		}
-	}
-
-	tx, hasOpenTransaction := contextGetTransaction(contextCopy)
-	if !hasOpenTransaction {
-		if tx, err = schema.env.Database().Begin(); err != nil {
-			return err
-		}
-
-		defer tx.Close()
-		contextSetTransaction(contextCopy, tx)
-		contextSetTransaction(requestContext, tx)
-	}
 
 	if triggerEvents {
 		if err = schema.env.HandleEvent(goext.PreUpdateTx, contextCopy); err != nil {
@@ -547,13 +386,13 @@ func (schema *Schema) update(rawResource interface{}, requestContext goext.Conte
 		}
 	}
 
-	ctxResource := contextCopy["resource"].(map[string]interface{})
-	if err = tx.Update(goext.GetContext(requestContext), schema, ctxResource); err != nil {
+	mapFromContext := contextGetMapResource(contextCopy)
+	if err = tx.Update(goext.GetContext(requestContext), schema, mapFromContext); err != nil {
 		return err
 	}
 
 	v := reflect.ValueOf(rawResource).Elem()
-	res, err := resourceFromMap(ctxResource, v.Type())
+	res, err := resourceFromMap(mapFromContext, v.Type())
 	if err != nil {
 		return err
 	}
@@ -565,16 +404,7 @@ func (schema *Schema) update(rawResource interface{}, requestContext goext.Conte
 		}
 	}
 
-	if !hasOpenTransaction {
-		if err = tx.Commit(); err != nil {
-			return err
-		}
-	}
-
-	if !triggerEvents {
-		return nil
-	}
-	return schema.env.HandleEvent(goext.PostUpdate, contextCopy)
+	return nil
 }
 
 // DeleteRaw deletes resource by ID
@@ -588,25 +418,11 @@ func (schema *Schema) DbDeleteRaw(filter goext.Filter, context goext.Context) er
 }
 
 func (schema *Schema) delete(filter goext.Filter, requestContext goext.Context, triggerEvents bool) error {
-	var tx goext.ITransaction
-	var err error
-	if requestContext == nil {
-		requestContext = goext.MakeContext()
-	}
-	tx, hasOpenTransaction := contextGetTransaction(requestContext)
-	if !hasOpenTransaction {
-		if tx, err = schema.env.Database().Begin(); err != nil {
-			return err
-		}
+	tx := mustGetOpenTransactionFromContext(requestContext)
+	contextTx := goext.MakeContext().
+		WithTransaction(tx)
 
-		defer tx.Close()
-
-		contextSetTransaction(requestContext, tx)
-	}
-	contextTx := goext.MakeContext()
-	contextSetTransaction(contextTx, tx)
-
-	fetched, err := schema.LockListRaw(filter, nil, contextTx, goext.LockRelatedResources)
+	fetched, err := schema.ListRaw(filter, nil, contextTx)
 	if err != nil {
 		return err
 	}
@@ -616,15 +432,11 @@ func (schema *Schema) delete(filter goext.Filter, requestContext goext.Context, 
 		resource := reflect.ValueOf(fetched[i])
 		resourceID := mapper.FieldByName(resource, "id").Interface()
 
-		ctx := schema.env.Util().ResourceToMap(resource.Interface())
-		contextTx = contextTx.WithResource(ctx).
+		mapFromResource := schema.env.Util().ResourceToMap(resource.Interface())
+		contextTx = contextTx.WithResource(mapFromResource).
 			WithSchemaID(schema.ID())
 
 		if triggerEvents {
-			if err = schema.env.HandleEvent(goext.PreDelete, contextTx); err != nil {
-				return err
-			}
-
 			if err = schema.env.HandleEvent(goext.PreDeleteTx, contextTx); err != nil {
 				return err
 			}
@@ -638,15 +450,7 @@ func (schema *Schema) delete(filter goext.Filter, requestContext goext.Context, 
 			if err = schema.env.HandleEvent(goext.PostDeleteTx, contextTx); err != nil {
 				return err
 			}
-
-			if err = schema.env.HandleEvent(goext.PostDelete, contextTx); err != nil {
-				return err
-			}
 		}
-	}
-
-	if !hasOpenTransaction {
-		tx.Commit()
 	}
 
 	return nil
@@ -713,4 +517,19 @@ func NewSchema(env IEnvironment, raw *gohan_schema.Schema) goext.ISchema {
 func contextSetTransaction(ctx goext.Context, tx goext.ITransaction) goext.Context {
 	ctx["transaction"] = tx.RawTransaction()
 	return ctx
+}
+
+func contextGetMapResource(ctx goext.Context) map[string]interface{} {
+	return ctx["resource"].(map[string]interface{})
+}
+
+func mustGetOpenTransactionFromContext(context goext.Context) goext.ITransaction {
+	if context == nil {
+		panic("Database function called without open transaction")
+	}
+	tx, hasTransaction := contextGetTransaction(context)
+	if !hasTransaction || tx.Closed() {
+		panic("Database function called without open transaction")
+	}
+	return tx
 }

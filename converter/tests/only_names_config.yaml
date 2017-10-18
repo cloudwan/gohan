@@ -1,0 +1,4 @@
+schemas:
+- embed://should_ignore_this
+- ../tests/only_names.yaml
+- ../tests/only_names2.yaml

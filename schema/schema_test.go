@@ -16,6 +16,7 @@
 package schema
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/cloudwan/gohan/util"
@@ -157,6 +158,63 @@ var _ = Describe("Schema", func() {
 			Expect(bestInTownIdx).ToNot(Equal(-1))
 			Expect(patronIdx).ToNot(Equal(-1))
 			Expect(bestInTownIdx).Should(BeNumerically("<", patronIdx))
+		})
+
+		AfterEach(func() {
+			ClearManager()
+		})
+	})
+
+	Describe("Order properties before", func() {
+		var manager *Manager
+		type JSONSchema struct {
+			PropertiesOrder []string `json:"propertiesOrder"`
+		}
+		var jsonSchema *JSONSchema
+
+		index := func(properties []string, id string) int {
+			for i, property := range properties {
+				if property == id {
+					return i
+				}
+			}
+			return -1
+		}
+
+		BeforeEach(func() {
+			manager = GetManager()
+			Expect(manager.LoadSchemaFromFile(
+				"../tests/test_schema_order_properties_before.yaml")).To(Succeed())
+			jsonSchema = &JSONSchema{}
+			s, ok := manager.Schema("school")
+			Expect(ok).To(BeTrue())
+			js, _ := json.Marshal(s.JSONSchema)
+			json.Unmarshal(js, jsonSchema)
+		})
+
+		It("should list all extends properties in PropertiesOrder", func() {
+			idIdx := index(jsonSchema.PropertiesOrder, "id")
+			nameIdx := index(jsonSchema.PropertiesOrder, "name")
+			fundingIdx := index(jsonSchema.PropertiesOrder, "funding")
+			fmt.Println(jsonSchema.PropertiesOrder, idIdx, nameIdx, fundingIdx)
+			Expect(idIdx).ToNot(Equal(-1))
+			Expect(nameIdx).ToNot(Equal(-1))
+			Expect(fundingIdx).ToNot(Equal(-1))
+		})
+
+		It("should order properties before order_properties_before in PropertiesOrder", func() {
+			nameIdx := index(jsonSchema.PropertiesOrder, "name")
+			bestInTownIdx := index(jsonSchema.PropertiesOrder, "best_in_town")
+			fundingIdx := index(jsonSchema.PropertiesOrder, "funding")
+			Expect(nameIdx).ToNot(Equal(-1))
+			Expect(bestInTownIdx).ToNot(Equal(-1))
+			Expect(fundingIdx).ToNot(Equal(-1))
+			Expect(nameIdx).Should(BeNumerically("<", bestInTownIdx))
+			Expect(bestInTownIdx).Should(BeNumerically("<", fundingIdx))
+		})
+
+		AfterEach(func() {
+			ClearManager()
 		})
 	})
 
