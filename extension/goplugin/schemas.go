@@ -322,6 +322,7 @@ func (schema *Schema) create(rawResource interface{}, requestContext goext.Conte
 	mapFromResource := schema.env.Util().ResourceToMap(rawResource)
 	contextCopy := requestContext.Clone().
 		WithResource(mapFromResource).
+		WithResourceID(mapFromResource["id"].(string)).
 		WithSchemaID(schema.ID())
 
 	if triggerEvents {
@@ -419,10 +420,9 @@ func (schema *Schema) DbDeleteRaw(filter goext.Filter, context goext.Context) er
 
 func (schema *Schema) delete(filter goext.Filter, requestContext goext.Context, triggerEvents bool) error {
 	tx := mustGetOpenTransactionFromContext(requestContext)
-	contextTx := goext.MakeContext().
-		WithTransaction(tx)
+	contextCopy := requestContext.Clone()
 
-	fetched, err := schema.ListRaw(filter, nil, contextTx)
+	fetched, err := schema.ListRaw(filter, nil, contextCopy)
 	if err != nil {
 		return err
 	}
@@ -430,14 +430,15 @@ func (schema *Schema) delete(filter goext.Filter, requestContext goext.Context, 
 	mapper := reflectx.NewMapper("db")
 	for i := 0; i < len(fetched); i++ {
 		resource := reflect.ValueOf(fetched[i])
-		resourceID := mapper.FieldByName(resource, "id").Interface()
+		resourceID := mapper.FieldByName(resource, "id").Interface().(string)
 
 		mapFromResource := schema.env.Util().ResourceToMap(resource.Interface())
-		contextTx = contextTx.WithResource(mapFromResource).
-			WithSchemaID(schema.ID())
+		contextCopy = contextCopy.WithResource(mapFromResource).
+			WithSchemaID(schema.ID()).
+			WithResourceID(resourceID)
 
 		if triggerEvents {
-			if err = schema.env.HandleEvent(goext.PreDeleteTx, contextTx); err != nil {
+			if err = schema.env.HandleEvent(goext.PreDeleteTx, contextCopy); err != nil {
 				return err
 			}
 		}
@@ -447,7 +448,7 @@ func (schema *Schema) delete(filter goext.Filter, requestContext goext.Context, 
 		}
 
 		if triggerEvents {
-			if err = schema.env.HandleEvent(goext.PostDeleteTx, contextTx); err != nil {
+			if err = schema.env.HandleEvent(goext.PostDeleteTx, contextCopy); err != nil {
 				return err
 			}
 		}
