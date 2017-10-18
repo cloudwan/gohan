@@ -160,6 +160,23 @@ func (util *Util) ResourceToMap(resource interface{}) map[string]interface{} {
 			} else {
 				fieldsMap[field] = util.ResourceToMap(val)
 			}
+		} else if v.Kind() == reflect.Slice {
+			valSlice := []interface{}{}
+			isPtrSlice := false
+			for i := 0; i < v.Len(); i++ {
+				sVal := v.Index(i)
+				if sVal.Kind() == reflect.Ptr {
+					isPtrSlice = true
+					valSlice = append(valSlice, util.ResourceToMap(sVal.Interface()))
+				} else {
+					break
+				}
+			}
+			if isPtrSlice {
+				fieldsMap[field] = valSlice
+			} else {
+				fieldsMap[field] = val
+			}
 		} else {
 			fieldsMap[field] = val
 		}

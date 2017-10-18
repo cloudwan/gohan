@@ -654,5 +654,28 @@ var _ = Describe("Schemas", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(resource).To(Equal(expected))
 		})
+		It("should convert resource to context", func() {
+			resource := &test.Test{
+				ID:          "42",
+				Description: "test",
+				Subsliceobject: []*test.Subsliceobject{
+					&test.Subsliceobject{
+						Subsliceproperty: "testsubsliceproperty1"
+					},
+					&test.Subsliceobject{
+						Subsliceproperty: "testsubsliceproperty2"
+					},
+				},
+			}
+
+			context := env.Util().ResourceToMap(resource)
+
+			Expect(context).To(HaveKeyWithValue("id", "42"))
+			Expect(context).To(HaveKeyWithValue("description", "test"))
+			Expect(context).To(HaveKey("subsliceobject"))
+			Expect(context["subsliceobject"]).To(HaveLen(2))
+			Expect(context["subsliceobject"][0]).To(HaveKeyWithValue("subsliceproperty", "testsubsliceproperty1"))
+			Expect(context["subsliceobject"][1]).To(HaveKeyWithValue("subsliceproperty", "testsubsliceproperty2"))
+		})
 	})
 })
