@@ -820,15 +820,18 @@ func buildSelect(sc *selectContext) (string, []interface{}, error) {
 		return "", nil, err
 	}
 	if sc.paginator != nil {
-		property, err := sc.schema.GetPropertyByID(sc.paginator.Key)
-		if err == nil {
-			q = q.OrderBy(makeColumn(t, *property) + " " + sc.paginator.Order)
-			if sc.paginator.Limit > 0 {
-				q = q.Limit(sc.paginator.Limit)
+		if sc.paginator.Key != "" {
+			property, err := sc.schema.GetPropertyByID(sc.paginator.Key)
+			if err == nil {
+				q = q.OrderBy(makeColumn(t, *property) + " " + sc.paginator.Order)
 			}
-			if sc.paginator.Offset > 0 {
-				q = q.Offset(sc.paginator.Offset)
-			}
+		}
+
+		if sc.paginator.Limit > 0 {
+			q = q.Limit(sc.paginator.Limit)
+		}
+		if sc.paginator.Offset > 0 {
+			q = q.Offset(sc.paginator.Offset)
 		}
 	}
 	if sc.join {

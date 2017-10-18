@@ -43,16 +43,10 @@ type Paginator struct {
 
 //NewPaginator create Paginator
 func NewPaginator(s *schema.Schema, key, order string, limit, offset uint64) (*Paginator, error) {
-	if key == "" {
-		key = defaultSortKey
-	}
-	if order == "" {
-		order = defaultSortOrder
-	}
-	if order != ASC && order != DESC {
+	if order != "" && order != ASC && order != DESC {
 		return nil, fmt.Errorf("Unknown sort order %s", order)
 	}
-	if s != nil {
+	if s != nil && key != "" {
 		found := false
 		for _, p := range s.Properties {
 			if p.ID == key {
@@ -74,11 +68,17 @@ func NewPaginator(s *schema.Schema, key, order string, limit, offset uint64) (*P
 
 //FromURLQuery create Paginator from Query params
 func FromURLQuery(s *schema.Schema, values url.Values) (pg *Paginator, err error) {
-	sortKey := values.Get("sort_key")
-	sortOrder := values.Get("sort_order")
-
+	var sortKey string
+	var sortOrder string
 	var limit uint64
 	var offset uint64
+
+	if sortKey = values.Get("sort_key"); sortKey == "" {
+		sortKey = defaultSortKey
+	}
+	if sortOrder = values.Get("sort_order"); sortOrder == "" {
+		sortOrder = defaultSortOrder
+	}
 
 	if l := values.Get("limit"); l != "" {
 		limit, err = strconv.ParseUint(l, 10, 64)

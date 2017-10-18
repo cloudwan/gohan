@@ -23,6 +23,7 @@ import (
 
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/options"
+	"github.com/cloudwan/gohan/db/pagination"
 	. "github.com/cloudwan/gohan/db/sql"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
@@ -75,6 +76,30 @@ var _ = Describe("Sql", func() {
 		if os.Getenv("MYSQL_TEST") != "true" {
 			os.Remove(conn)
 		}
+	})
+
+	Describe("Select Pagination", func() {
+		var s *schema.Schema
+
+		BeforeEach(func() {
+			manager := schema.GetManager()
+			var ok bool
+			s, ok = manager.Schema("test")
+			Expect(ok).To(BeTrue())
+		})
+
+		It("Empty key doesn't exclude limit/offset pagination", func() {
+
+			Expect(tx.Exec("INSERT INTO `tests` (`id`, `tenant_id`) values ('id1', 'tenant1')")).To(Succeed())
+			Expect(tx.Exec("INSERT INTO `tests` (`id`, `tenant_id`) values ('id2', 'tenant2')")).To(Succeed())
+
+			pg, err := pagination.NewPaginator(s, "", "", 1, 0)
+			Expect(err).To(Succeed())
+			results, _, err := tx.List(s, map[string]interface{}{}, nil, pg)
+			Expect(err).To(Succeed())
+			Expect(len(results)).To(Equal(1))
+		})
+
 	})
 
 	Describe("MakeColumns", func() {
