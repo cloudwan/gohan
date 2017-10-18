@@ -21,6 +21,7 @@ Schemas might also have any of the following optional properties.
 - metadata  -- application specific schema metadata (object)
 - type      -- can be an abstract or empty string (see more in schema inheritance)
 - extends   -- list of base schemas
+- order_properties_before -- to order properties before properties of extended schemas. 
 
 ## Schema Inheritance
 
@@ -357,6 +358,9 @@ eg.
           type: object
           unique: false
 ```
+- order_properties_before
+
+  when resource is extended using 'extends' by default all properties of extended schema gets ordered before the current schema properties. Use this field to order current resource properties before extended resource properties.
 
 ## Indexes
 

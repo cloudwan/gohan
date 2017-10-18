@@ -175,7 +175,9 @@ var _ = Describe("GohanDb", func() {
 					env := newEnvironmentWithExtension(extension, testDB)
 
 					mockTx := tr_mocks.NewMockTransaction(mockCtrl)
-					listCall(mockTx, methodName, s, transaction.Filter{"tenant_id": "tenant0"}, nil).Return(
+					pg, err := pagination.NewPaginator(s, "", pagination.ASC, 0, 0)
+					Expect(err).To(Succeed())
+					listCall(mockTx, methodName, s, transaction.Filter{"tenant_id": "tenant0"}, pg).Return(
 						[]*schema.Resource{r0, r1},
 						uint64(2),
 						nil,
@@ -217,7 +219,9 @@ var _ = Describe("GohanDb", func() {
 					env := newEnvironmentWithExtension(extension, testDB)
 
 					mockTx := tr_mocks.NewMockTransaction(mockCtrl)
-					listCall(mockTx, methodName, s, transaction.Filter{"test_bool": true}, nil).Return(
+					pg, err := pagination.NewPaginator(s, "", pagination.ASC, 0, 0)
+					Expect(err).To(Succeed())
+					listCall(mockTx, methodName, s, transaction.Filter{"test_bool": true}, pg).Return(
 						[]*schema.Resource{r1},
 						uint64(1),
 						nil,
@@ -233,6 +237,54 @@ var _ = Describe("GohanDb", func() {
 							[]map[string]interface{}{
 								map[string]interface{}{"tenant_id": "t1", "test_string": "str1", "test_bool": true},
 							},
+						),
+					)
+				},
+				Entry("gohan_db_list", "gohan_db_list", "List"),
+				Entry("gohan_db_lock_list", "gohan_db_lock_list", "LockList"),
+			)
+		})
+
+		Context("When order key parameter is not given", func() {
+			DescribeTable("returns the list limited to given limit",
+				func(function, methodName string) {
+					extension, err := schema.NewExtension(map[string]interface{}{
+						"id": "test_extension",
+						"code": fmt.Sprintf(`
+					  gohan_register_handler("test_event", function(context){
+					    var tx = context.transaction;
+					    context.resp = %s(
+					      tx,
+					      "test",
+					      {"tenant_id": "tenant0"},
+					      "",
+					      1
+					    );
+					  });`, function),
+						"path": ".*",
+					})
+					Expect(err).ToNot(HaveOccurred())
+					env := newEnvironmentWithExtension(extension, testDB)
+
+					mockTx := tr_mocks.NewMockTransaction(mockCtrl)
+					pg := &pagination.Paginator{
+						Order: pagination.ASC,
+						Limit: 1,
+					}
+					listCall(mockTx, methodName, s, transaction.Filter{"tenant_id": "tenant0"}, pg).Return(
+						[]*schema.Resource{r0},
+						uint64(2),
+						nil,
+					)
+
+					context := map[string]interface{}{
+						"transaction": mockTx,
+					}
+					Expect(env.HandleEvent("test_event", context)).To(Succeed())
+
+					Expect(context["resp"]).To(
+						Equal(
+							[]map[string]interface{}{fakeResources[0]},
 						),
 					)
 				},

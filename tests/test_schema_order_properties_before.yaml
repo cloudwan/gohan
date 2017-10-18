@@ -1,0 +1,112 @@
+schemas:
+
+- id: base_resource
+  type: abstract
+  description: Resource Base
+  singular: base_resource
+  plural: base_resource
+  prefix: /v1.0
+  schema:
+    properties:
+      id:
+        description: ID
+        permission:
+        - create
+        title: ID
+        type: string
+        view:
+        - detail
+      name:
+        description: Name
+        permission:
+        - create
+        - update
+        title: Name
+        type: string
+    propertiesOrder:
+    - id
+    - name
+    type: object
+  title: Base
+
+- id: affiliation
+  type: abstract
+  description: School Affiliation
+  singular: affiliation
+  plural: affiliation
+  prefix: /v1.0
+  schema:
+    properties:
+      funding:
+        description: Funding
+        enum:
+        - public
+        - private
+        nullable: false
+        permission:
+        - create
+        - update
+        title: Funding
+        type: string
+        view:
+        - detail
+    propertiesOrder:
+    - funding
+    type: object
+  title: Affiliation
+
+- id: city
+  description: City
+  singular: city
+  plural: cities
+  title: City
+  prefix: /v1.0
+  schema:
+    properties:
+      id:
+        description: The ID of City
+        title: ID
+        type: string
+        permission:
+        - create
+      name:
+        description: Name
+        title: Name
+        type: string
+        permission:
+        - create
+    propertiesOrder:
+    - id
+    - name
+    type: object
+
+- id: school
+  description: School
+  singular: school
+  extends:
+    - base_resource
+    - affiliation
+  order_properties_before:
+    - affiliation
+  plural: schools
+  title: School
+  prefix: /v1.0
+  schema:
+    properties:
+      city_id:
+        description: City
+        title: City
+        type: string
+        relation: city
+        relation_property: city
+        permission:
+        - create
+      patron:
+        type: string
+      best_in_town:
+        type: bool
+    propertiesOrder:
+    - city_id
+    - patron
+    - best_in_town
+    type: object
