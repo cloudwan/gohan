@@ -689,4 +689,57 @@ var _ = Describe("Schemas", func() {
 			Expect(resource).To(Equal(expected))
 		})
 	})
+
+	Context("Context passed to handlers should be copied from original", func() {
+		var (
+			context      goext.Context
+			tx           goext.ITransaction
+			testResource *test.Test
+		)
+
+		BeforeEach(func() {
+			var err error
+			tx, err = env.Database().Begin()
+			Expect(err).ToNot(HaveOccurred())
+			context = goext.MakeContext().WithTransaction(tx)
+			context["test"] = 42
+			testResource = &test.Test{ID: "13", Name: goext.MakeNullString("123")}
+
+			checkContext := func(ctx goext.Context, resource goext.Resource, environment goext.IEnvironment) error {
+				Expect(&ctx).ToNot(Equal(&context))
+				Expect(ctx).To(HaveKeyWithValue("transaction", tx))
+				Expect(ctx).To(HaveKeyWithValue("test", 42))
+				Expect(ctx).To(HaveKeyWithValue("schema_id", "test"))
+				Expect(ctx).To(HaveKeyWithValue("id", "13"))
+				Expect(ctx).To(HaveKeyWithValue("resource", env.Util().ResourceToMap(testResource)))
+				Expect(resource).To(Equal(testResource))
+				return nil
+			}
+
+			testSchema.RegisterEventHandler(goext.PreCreateTx, checkContext, goext.PriorityDefault)
+			testSchema.RegisterEventHandler(goext.PostCreateTx, checkContext, goext.PriorityDefault)
+			testSchema.RegisterEventHandler(goext.PreUpdateTx, checkContext, goext.PriorityDefault)
+			testSchema.RegisterEventHandler(goext.PostUpdateTx, checkContext, goext.PriorityDefault)
+			testSchema.RegisterEventHandler(goext.PreDeleteTx, checkContext, goext.PriorityDefault)
+			testSchema.RegisterEventHandler(goext.PostDeleteTx, checkContext, goext.PriorityDefault)
+		})
+
+		AfterEach(func() {
+			Expect(tx.Close()).To(Succeed())
+		})
+
+		It("should copy context for create", func() {
+			Expect(testSchema.CreateRaw(testResource, context)).To(Succeed())
+		})
+
+		It("should copy context for update", func() {
+			Expect(testSchema.CreateRaw(testResource, context)).To(Succeed())
+			Expect(testSchema.UpdateRaw(testResource, context)).To(Succeed())
+		})
+
+		It("should copy context for delete", func() {
+			Expect(testSchema.CreateRaw(testResource, context)).To(Succeed())
+			Expect(testSchema.DeleteRaw(goext.Filter{"id": testResource.ID}, context)).To(Succeed())
+		})
+	})
 })
