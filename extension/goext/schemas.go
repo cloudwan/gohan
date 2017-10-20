@@ -168,8 +168,8 @@ type ISchema interface {
 	// RegisterEventHandler registers an event handler for a named event with given priority
 	RegisterEventHandler(event string, handler func(context Context, resource Resource, environment IEnvironment) error, priority int)
 
-	// RegisterType registers a resource type, derived from BaseResource
-	RegisterType(resourceType interface{})
+	// RegisterType registers a resource type, derived from IResourceBase
+	RegisterType(resourceType IResourceBase)
 
 	// RegisterRawType registers a raw resource type, containing db annotations
 	RegisterRawType(rawResourceType interface{})

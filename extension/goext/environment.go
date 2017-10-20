@@ -35,11 +35,38 @@ type IEnvironment interface {
 	Reset()
 }
 
-// ResourceBase is the base class for all resources
+// ResourceBase is the implementation of base class for all resources
 type ResourceBase struct {
-	Environment IEnvironment
-	Logger      ILogger
-	Schema      ISchema
+	environment IEnvironment
+	schema      ISchema
+	logger      ILogger
+}
+
+func (resourceBase *ResourceBase) Environment() IEnvironment {
+	return resourceBase.environment
+}
+
+func (resourceBase *ResourceBase) Logger() ILogger {
+	return resourceBase.logger
+}
+
+func (resourceBase *ResourceBase) Schema() ISchema {
+	return resourceBase.schema
+}
+
+func NewResourceBase(env IEnvironment, schema ISchema, logger ILogger) *ResourceBase {
+	return &ResourceBase{
+		environment: env,
+		schema:      schema,
+		logger:      logger,
+	}
+}
+
+// IResourceBase is the base class for all resources
+type IResourceBase interface {
+	Environment() IEnvironment
+	Schema() ISchema
+	Logger() ILogger
 }
 
 // NullString represents a nullable string
