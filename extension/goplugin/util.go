@@ -41,7 +41,7 @@ func contextGetTransaction(ctx goext.Context) (goext.ITransaction, bool) {
 	case goext.ITransaction:
 		return tx, true
 	case transaction.Transaction:
-		return &Transaction{tx}, true
+		return &Transaction{tx, true}, true
 	default:
 		panic(fmt.Sprintf("Unknown transaction type in context: %+v", ctxTx))
 	}

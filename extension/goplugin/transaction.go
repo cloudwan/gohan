@@ -23,6 +23,8 @@ import (
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/extension/goext"
 	"github.com/cloudwan/gohan/schema"
+	"runtime"
+	"strings"
 )
 
 type cancelableTransaction interface {
@@ -46,7 +48,8 @@ type cancelableTransaction interface {
 
 //Transaction is common interface for handling transaction
 type Transaction struct {
-	tx cancelableTransaction
+	tx       cancelableTransaction
+	isWithin bool
 }
 
 func (t *Transaction) findRawSchema(id string) *schema.Schema {
@@ -60,17 +63,38 @@ func (t *Transaction) findRawSchema(id string) *schema.Schema {
 	return schema
 }
 
+func possibleDeadlockLocation() string {
+	where := ""
+	for n := 0; n < 32; n++ {
+		_, file, line, ok := runtime.Caller(n)
+		if !ok {
+			break
+		}
+		// omit gohan internals
+		if !strings.Contains(file, "github.com/cloudwan/gohan/extension") {
+			where += fmt.Sprintf("\n%s:%d", file, line)
+		}
+	}
+	return where
+}
+
 // Create creates a new resource
 func (t *Transaction) Create(ctx context.Context, s goext.ISchema, resource map[string]interface{}) error {
 	res, err := schema.NewResource(t.findRawSchema(s.ID()), resource)
 	if err != nil {
 		return err
 	}
+	if !t.isWithin {
+		log.Warning("Create called for transaction outside Within scope; expect unrecoverable deadlocks from here:\n%s", possibleDeadlockLocation())
+	}
 	return t.tx.CreateContext(ctx, res)
 }
 
 // Update updates an existing resource
 func (t *Transaction) Update(ctx context.Context, s goext.ISchema, resource map[string]interface{}) error {
+	if !t.isWithin {
+		log.Warning("Update called for transaction outside Within scope; expect unrecoverable deadlocks from here:\n%s", possibleDeadlockLocation())
+	}
 	res, err := schema.NewResource(t.findRawSchema(s.ID()), resource)
 	if err != nil {
 		return err
@@ -103,6 +127,9 @@ func mapTransactionResourceState(resourceState transaction.ResourceState) goext.
 
 // StateUpdate updates state of an existing resource
 func (t *Transaction) StateUpdate(ctx context.Context, s goext.ISchema, resource map[string]interface{}, resourceState *goext.ResourceState) error {
+	if !t.isWithin {
+		log.Warning("StateUpdate called for transaction outside Within scope; expect unrecoverable deadlocks from here:%s", possibleDeadlockLocation())
+	}
 	res, err := schema.NewResource(t.findRawSchema(s.ID()), resource)
 	if err != nil {
 		return err
@@ -112,11 +139,17 @@ func (t *Transaction) StateUpdate(ctx context.Context, s goext.ISchema, resource
 
 // Delete deletes an existing resource
 func (t *Transaction) Delete(ctx context.Context, schema goext.ISchema, resourceID interface{}) error {
+	if !t.isWithin {
+		log.Warning("Delete called for transaction outside Within scope; expect unrecoverable deadlocks from here:%s", possibleDeadlockLocation())
+	}
 	return t.tx.DeleteContext(ctx, t.findRawSchema(schema.ID()), resourceID)
 }
 
 // Fetch fetches an existing resource
 func (t *Transaction) Fetch(ctx context.Context, schema goext.ISchema, filter goext.Filter) (map[string]interface{}, error) {
+	if !t.isWithin {
+		log.Warning("Fetch called for transaction outside Within scope; expect unrecoverable deadlocks from here:%s", possibleDeadlockLocation())
+	}
 	res, err := t.tx.FetchContext(ctx, t.findRawSchema(schema.ID()), transaction.Filter(filter), nil)
 	if err != nil {
 		return nil, err
@@ -126,6 +159,9 @@ func (t *Transaction) Fetch(ctx context.Context, schema goext.ISchema, filter go
 
 // LockFetch locks and fetches an existing resource
 func (t *Transaction) LockFetch(ctx context.Context, schema goext.ISchema, filter goext.Filter, lockPolicy goext.LockPolicy) (map[string]interface{}, error) {
+	if !t.isWithin {
+		log.Warning("LockFetch called for transaction outside Within scope; expect unrecoverable deadlocks from here:%s", possibleDeadlockLocation())
+	}
 	res, err := t.tx.LockFetchContext(ctx, t.findRawSchema(schema.ID()), transaction.Filter(filter), convertLockPolicy(lockPolicy), nil)
 	if err != nil {
 		return nil, err
@@ -148,6 +184,9 @@ func convertLockPolicy(policy goext.LockPolicy) schema.LockPolicy {
 
 // StateFetch fetches a state an existing resource
 func (t *Transaction) StateFetch(ctx context.Context, schema goext.ISchema, filter goext.Filter) (goext.ResourceState, error) {
+	if !t.isWithin {
+		log.Warning("StateFetch called for transaction outside Within scope; expect unrecoverable deadlocks from here:%s", possibleDeadlockLocation())
+	}
 	transactionResourceState, err := t.tx.StateFetchContext(ctx, t.findRawSchema(schema.ID()), transaction.Filter(filter))
 	if err != nil {
 		return goext.ResourceState{}, err
@@ -157,8 +196,10 @@ func (t *Transaction) StateFetch(ctx context.Context, schema goext.ISchema, filt
 
 // List lists existing resources
 func (t *Transaction) List(ctx context.Context, schema goext.ISchema, filter goext.Filter, listOptions *goext.ListOptions, paginator *goext.Paginator) ([]map[string]interface{}, uint64, error) {
+	if !t.isWithin {
+		log.Warning("List called for transaction outside Within scope; expect unrecoverable deadlocks from here:%s", possibleDeadlockLocation())
+	}
 	schemaID := schema.ID()
-
 	data, _, err := t.tx.ListContext(ctx, t.findRawSchema(schemaID), transaction.Filter(filter), nil, (*pagination.Paginator)(paginator))
 	if err != nil {
 		return nil, 0, err
@@ -178,8 +219,10 @@ func resourcesToMap(data []*schema.Resource) ([]map[string]interface{}, uint64, 
 
 // LockList locks and lists existing resources
 func (t *Transaction) LockList(ctx context.Context, schema goext.ISchema, filter goext.Filter, listOptions *goext.ListOptions, paginator *goext.Paginator, lockingPolicy goext.LockPolicy) ([]map[string]interface{}, uint64, error) {
+	if !t.isWithin {
+		log.Warning("LockList called for transaction outside Within scope; expect unrecoverable deadlocks from here:%s", possibleDeadlockLocation())
+	}
 	schemaID := schema.ID()
-
 	data, _, err := t.tx.LockListContext(ctx, t.findRawSchema(schemaID), transaction.Filter(filter), nil, (*pagination.Paginator)(paginator), convertLockPolicy(lockingPolicy))
 	if err != nil {
 		return nil, 0, err
@@ -195,8 +238,10 @@ func (t *Transaction) RawTransaction() interface{} {
 
 // Query executes a query
 func (t *Transaction) Query(ctx context.Context, schema goext.ISchema, query string, args []interface{}) (list []map[string]interface{}, err error) {
+	if !t.isWithin {
+		log.Warning("Query called for transaction outside Within scope; expect unrecoverable deadlocks from here:%s", possibleDeadlockLocation())
+	}
 	schemaID := schema.ID()
-
 	data, err := t.tx.QueryContext(ctx, t.findRawSchema(schemaID), query, args)
 	if err != nil {
 		return nil, err
@@ -217,6 +262,9 @@ func (t *Transaction) Commit() error {
 
 // Exec performs an exec in transaction
 func (t *Transaction) Exec(ctx context.Context, query string, args ...interface{}) error {
+	if !t.isWithin {
+		log.Warning("Exec called for transaction outside Within scope; expect unrecoverable deadlocks from here:%s", possibleDeadlockLocation())
+	}
 	return t.tx.ExecContext(ctx, query, args)
 }
 
