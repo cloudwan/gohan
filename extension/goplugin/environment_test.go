@@ -50,6 +50,16 @@ var _ = Describe("Environment", func() {
 		env = goplugin.NewEnvironment("test", nil, nil)
 	})
 
+	Describe("Internal state consistency", func() {
+		It("should be able to use logger when no plugins are loaded", func() {
+			Expect(env.Start()).To(Succeed())
+			env.Logger().Info("A message from logger just after environment Start()")
+			env.Reset()
+			env.Logger().Info("A message from logger just after environment Reset()")
+			env.Stop()
+		})
+	})
+
 	Describe("Loading an extension", func() {
 		Context("File paths are corrupted", func() {
 			It("should not load plugin with wrong file extension", func() {

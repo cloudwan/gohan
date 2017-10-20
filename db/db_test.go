@@ -369,7 +369,7 @@ var _ = Describe("Database operation test", func() {
 		})
 
 		It("Should initialize the database without error", func() {
-			Expect(db.InitDBWithSchemas(dbType, conn, false, false, true)).To(Succeed())
+			Expect(db.InitDBWithSchemas(dbType, conn, db.DefaultTestInitDBParams())).To(Succeed())
 		})
 	})
 
@@ -383,12 +383,12 @@ var _ = Describe("Database operation test", func() {
 			Expect(err).ToNot(HaveOccurred())
 			defer os.Remove("test_data/conv_in.db")
 
-			db.InitDBWithSchemas("sqlite3", "test_data/conv_out.db", false, false, true)
+			db.InitDBWithSchemas("sqlite3", "test_data/conv_out.db", db.DefaultTestInitDBParams())
 			outDB, err := db.ConnectDB("sqlite3", "test_data/conv_out.db", db.DefaultMaxOpenConn, options.Default())
 			Expect(err).ToNot(HaveOccurred())
 			defer os.Remove("test_data/conv_out.db")
 
-			db.InitDBWithSchemas("yaml", "test_data/conv_verify.yaml", false, false, true)
+			db.InitDBWithSchemas("yaml", "test_data/conv_verify.yaml", db.DefaultTestInitDBParams())
 			verifyDB, err := db.ConnectDB("yaml", "test_data/conv_verify.yaml", db.DefaultMaxOpenConn, options.Default())
 			Expect(err).ToNot(HaveOccurred())
 			defer os.Remove("test_data/conv_verify.yaml")
@@ -426,7 +426,7 @@ var _ = Describe("Database operation test", func() {
 			Expect(err).ToNot(HaveOccurred())
 			defer os.Remove("test_data/conv_in.db")
 
-			db.InitDBWithSchemas("sqlite3", "test_data/conv_out.db", false, false, true)
+			db.InitDBWithSchemas("sqlite3", "test_data/conv_out.db", db.DefaultTestInitDBParams())
 			outDB, err := db.ConnectDB("sqlite3", "test_data/conv_out.db", db.DefaultMaxOpenConn, options.Default())
 			Expect(err).ToNot(HaveOccurred())
 			defer os.Remove("test_data/conv_out.db")
@@ -488,7 +488,7 @@ var _ = Describe("Database operation test", func() {
 		BeforeEach(func() {
 			os.Remove(deadlockDbName)
 			Expect(manager.LoadSchemaFromFile(deadlockDbSchema)).To(Succeed())
-			Expect(db.InitDBWithSchemas(deadlockDbType, deadlockDbName, false, false, true)).To(Succeed())
+			Expect(db.InitDBWithSchemas(deadlockDbType, deadlockDbName, db.DefaultTestInitDBParams())).To(Succeed())
 			firstConn, err = db.ConnectDB(deadlockDbType, deadlockDbName, db.DefaultMaxOpenConn, connOpts)
 			Expect(err).ToNot(HaveOccurred())
 			secondConn, err = db.ConnectDB(deadlockDbType, deadlockDbName, db.DefaultMaxOpenConn, connOpts)

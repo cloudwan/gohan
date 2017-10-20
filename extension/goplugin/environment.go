@@ -225,11 +225,6 @@ func (env *Environment) bindDatabase(db gohan_db.DB) {
 func (env *Environment) Start() error {
 	var err error
 
-	if len(env.initFns) == 0 {
-		log.Debug("Go environment is empty: %s", env.name)
-		return nil
-	}
-
 	log.Debug("Starting go environment: %s", env.name)
 
 	// bind

@@ -72,8 +72,7 @@ var _ = Describe("Schemas", func() {
 		Expect(testSuiteSchema).To(Not(BeNil()))
 		testSchemaNoExtensions = env.Schemas().Find("test_schema_no_ext")
 		Expect(testSchemaNoExtensions).To(Not(BeNil()))
-
-		Expect(db.InitDBWithSchemas(dbType, dbFile, true, true, false)).To(Succeed())
+		Expect(db.InitDBWithSchemas(dbType, dbFile, db.DefaultTestInitDBParams())).To(Succeed())
 	})
 
 	AfterEach(func() {

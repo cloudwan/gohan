@@ -67,9 +67,7 @@ var _ = Describe("Transaction", func() {
 			Expect(env.Start()).To(Succeed())
 			testSchema = env.Schemas().Find("test")
 			Expect(testSchema).To(Not(BeNil()))
-
-			err = db.InitDBWithSchemas(DbType, DbFile, true, true, false)
-			Expect(err).To(BeNil())
+			Expect(db.InitDBWithSchemas(DbType, DbFile, db.DefaultTestInitDBParams())).To(Succeed())
 
 			tx, err = env.Database().Begin()
 			Expect(err).To(BeNil())

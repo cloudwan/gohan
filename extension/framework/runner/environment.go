@@ -112,8 +112,7 @@ func (env *Environment) InitializeEnvironment() error {
 		return fmt.Errorf("Failed to load extensions for '%s': %s", env.testFileName, err)
 	}
 
-	err = db.InitDBWithSchemas("sqlite3", env.memoryDbConn(), true, false, false)
-	if err != nil {
+	if err = db.InitDBWithSchemas("sqlite3", env.memoryDbConn(), db.DefaultTestInitDBParams()); err != nil {
 		schema.ClearManager()
 		return fmt.Errorf("Failed to init DB: %s", err)
 	}
