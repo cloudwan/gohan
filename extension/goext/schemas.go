@@ -132,8 +132,11 @@ type ISchema interface {
 	// Fetch returns a pointer to resource derived from BaseResource
 	Fetch(id string, context Context) (interface{}, error)
 
-	// ListRaw returns a pointer to raw resource, containing db annotations
+	// FetchRaw returns a pointer to raw resource, containing db annotations
 	FetchRaw(id string, context Context) (interface{}, error)
+
+	// StateFetchRaw returns a resource state
+	StateFetchRaw(id string, requestContext Context) (ResourceState, error)
 
 	// LockFetch returns a pointer to locked resource derived from BaseResource, containing db annotations
 	LockFetch(id string, context Context, lockPolicy LockPolicy) (interface{}, error)
@@ -152,6 +155,9 @@ type ISchema interface {
 
 	// DbUpdateRaw updates a raw resource, given by a pointer, no events are emitted
 	DbUpdateRaw(rawResource interface{}, context Context) error
+
+	// DbStateUpdateRaw updates state of a raw resource
+	DbStateUpdateRaw(rawResource interface{}, context Context, state *ResourceState) error
 
 	// DeleteRaw deletes a raw resource, given by a pointer
 	DeleteRaw(filter Filter, context Context) error
@@ -185,8 +191,8 @@ type ISchema interface {
 
 // Property represents schema property
 type Property struct {
-	ID string
-	Title string
+	ID       string
+	Title    string
 	Relation string
 }
 

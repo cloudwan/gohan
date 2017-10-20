@@ -23,6 +23,8 @@ schemas:
   id: test
   plural: tests
   prefix: /v0.1
+  metadata:
+    state_versioning: true
   schema:
     properties:
       id:
