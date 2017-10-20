@@ -50,6 +50,7 @@ type Schema struct {
 	RawData                        interface{}
 	IsolationLevel                 map[string]interface{}
 	OnParentDeleteCascade          bool
+	OrderPropertiesBefore          []string
 }
 
 const (
@@ -86,12 +87,13 @@ func (e *typeAssertionError) Error() string {
 //NewSchema is a constructor for a schema
 func NewSchema(id, plural, title, description, singular string) *Schema {
 	schema := &Schema{
-		ID:          id,
-		Title:       title,
-		Plural:      plural,
-		Description: description,
-		Singular:    singular,
-		Extends:     []string{},
+		ID:                    id,
+		Title:                 title,
+		Plural:                plural,
+		Description:           description,
+		Singular:              singular,
+		Extends:               []string{},
+		OrderPropertiesBefore: []string{},
 	}
 	return schema
 }
@@ -150,6 +152,7 @@ func newSchemaFromObj(rawTypeData interface{}, metaschema *Schema) (*Schema, err
 
 	schema.Metadata = util.MaybeMap(typeData["metadata"])
 	schema.Extends = util.MaybeStringList(typeData["extends"])
+	schema.OrderPropertiesBefore = util.MaybeStringList(typeData["order_properties_before"])
 
 	actions := util.MaybeMap(typeData["actions"])
 	schema.Actions = []Action{}
@@ -390,6 +393,12 @@ func (schema *Schema) ValidateOnCreate(object interface{}) error {
 	return schema.Validate(schema.JSONSchemaOnCreate, object)
 }
 
+//ValidateGoOnCreate validates json object using jsoncschema on object creation
+func (schema *Schema) ValidateGoOnCreate(resource interface{}) error {
+	// FIXME
+	return nil
+}
+
 //ValidateOnUpdate validates json object using jsoncschema on object update
 func (schema *Schema) ValidateOnUpdate(object interface{}) error {
 	return schema.Validate(schema.JSONSchemaOnUpdate, object)
@@ -462,6 +471,15 @@ func (schema *Schema) SyncKeyTemplate() (syncKeyTemplate string, ok bool) {
 	}
 	syncKeyTemplate, ok = syncKeyTemplateRaw.(string)
 	return
+}
+
+//SkipConfigPrefix - whether to skip /config/ prefix to pushed paths, defaults to false
+func (schema *Schema) SkipConfigPrefix() bool {
+	syncKeyTemplateRaw, ok := schema.Metadata["sync_skip_config_prefix"]
+	if !ok {
+		return false
+	}
+	return syncKeyTemplateRaw.(bool)
 }
 
 //GenerateCustomPath - returns custom path based on sync_key_template
@@ -576,9 +594,15 @@ func (schema *Schema) Extend(fromSchema *Schema) error {
 		util.MaybeMap(schema.JSONSchema["properties"]),
 		util.MaybeMap(fromSchema.JSONSchema["properties"]))
 
-	schema.JSONSchema["propertiesOrder"] = util.ExtendStringList(
-		util.MaybeStringList(fromSchema.JSONSchema["propertiesOrder"]),
-		util.MaybeStringList(schema.JSONSchema["propertiesOrder"]))
+	if util.ContainsString(util.MaybeStringList(schema.OrderPropertiesBefore), fromSchema.ID) {
+		schema.JSONSchema["propertiesOrder"] = util.ExtendStringList(
+			util.MaybeStringList(schema.JSONSchema["propertiesOrder"]),
+			util.MaybeStringList(fromSchema.JSONSchema["propertiesOrder"]))
+	} else {
+		schema.JSONSchema["propertiesOrder"] = util.ExtendStringList(
+			util.MaybeStringList(fromSchema.JSONSchema["propertiesOrder"]),
+			util.MaybeStringList(schema.JSONSchema["propertiesOrder"]))
+	}
 
 	schema.JSONSchema["required"] = util.ExtendStringList(
 		util.MaybeStringList(fromSchema.JSONSchema["required"]),

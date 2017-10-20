@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 import subprocess
 import unittest
 
@@ -51,7 +51,7 @@ class GohanTestCases(BashCompletionTest):
         self.run_complete(" ","client validate v init-db idb convert conv server srv test_extensions test_ex migrate mig template run test test openapi markdown dot glace-server gsrv help h")
 
     def run_complete(self, command, expected):
-        completion_file="bash_completion"
+        completion_file="bash_completion.sh"
         program="gohan"
         super(GohanTestCases, self).run_complete(completion_file, program, command, expected)
 

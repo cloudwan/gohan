@@ -16,51 +16,44 @@
 package cli
 
 import (
-	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
 
 	"github.com/cloudwan/gohan/cli/client"
 	"github.com/cloudwan/gohan/db"
-	"github.com/cloudwan/gohan/db/migration"
-	db_opts "github.com/cloudwan/gohan/db/options"
-	"github.com/cloudwan/gohan/db/sql"
-	"github.com/cloudwan/gohan/extension"
+	db_options "github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/extension/framework"
 	"github.com/cloudwan/gohan/extension/gohanscript"
+	"github.com/cloudwan/gohan/converter/app"
 	// Import gohan extension autogen lib
 	_ "github.com/cloudwan/gohan/extension/gohanscript/autogen"
-	"github.com/cloudwan/gohan/extension/otto"
-	l "github.com/cloudwan/gohan/log"
+	logger "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/server"
-	"github.com/cloudwan/gohan/server/middleware"
 	sync_util "github.com/cloudwan/gohan/sync/util"
 	"github.com/cloudwan/gohan/util"
 	"github.com/codegangsta/cli"
 	"github.com/lestrrat/go-server-starter"
 )
 
-var log = l.NewLogger()
+var log = logger.NewLogger()
 
 const (
-	defaultConfigFile  = "gohan.yaml"
-	syncMigrationsPath = "/gohan/cluster/migrations"
-	lockWithEtcd       = "lock-with-etcd"
+	defaultConfigFile = "gohan.yaml"
+
+	// flags
+	flagConfigFile = "config-file"
 )
 
 //Run execute main command
-func Run(name, usage, version string) {
+func Run(name, usage string) {
 	app := cli.NewApp()
-	app.Name = "gohan"
-	app.Usage = "Gohan"
-	app.Version = version
+	app.Name = name
+	app.Usage = usage
 	app.Flags = []cli.Flag{
 		cli.BoolFlag{Name: "debug, d", Usage: "Show debug messages"},
 	}
@@ -82,6 +75,7 @@ func Run(name, usage, version string) {
 		getDotCommand(),
 		getGraceServerCommand(),
 		getGenerateCommand(),
+		getConverterCommand(),
 	}
 	app.Run(os.Args)
 }
@@ -242,8 +236,12 @@ Useful for development purposes.`,
 			dropOnCreate := c.Bool("drop-on-create")
 			cascade := c.Bool("cascade")
 			manager := schema.GetManager()
-			manager.LoadSchemasFromFiles(schemaFile, metaSchemaFile)
-			manager.OrderedLoadSchemasFromFiles(strings.Split(multipleSchemaFiles, ";"))
+			if err := manager.LoadSchemasFromFiles(schemaFile, metaSchemaFile); err != nil {
+				util.ExitFatal(err)
+			}
+			if err := manager.OrderedLoadSchemasFromFiles(strings.Split(multipleSchemaFiles, ";")); err != nil {
+				util.ExitFatal(err)
+			}
 			err := db.InitDBWithSchemas(dbType, dbConnection, dropOnCreate, cascade, false)
 			if err != nil {
 				util.ExitFatal(err)
@@ -293,11 +291,11 @@ Useful for development purposes.`,
 				util.ExitFatal("Error loading schema:", err)
 			}
 
-			inDB, err := db.ConnectDB(inType, in, db.DefaultMaxOpenConn, db_opts.Default())
+			inDB, err := db.ConnectDB(inType, in, db.DefaultMaxOpenConn, db_options.Default())
 			if err != nil {
 				util.ExitFatal(err)
 			}
-			outDB, err := db.ConnectDB(outType, out, db.DefaultMaxOpenConn, db_opts.Default())
+			outDB, err := db.ConnectDB(outType, out, db.DefaultMaxOpenConn, db_options.Default())
 			if err != nil {
 				util.ExitFatal(err)
 			}
@@ -390,45 +388,12 @@ Test files and directories can be supplied as arguments. See Gohan
 documentation for detail information about writing tests.`,
 		Flags: []cli.Flag{
 			cli.BoolFlag{Name: "verbose, v", Usage: "Print logs for passing tests"},
-			cli.StringFlag{Name: "config-file,c", Value: "", Usage: "Config file path"},
-			cli.StringFlag{Name: "run-test,r", Value: "", Usage: "Run only tests matching specified regex"},
+			cli.StringFlag{Name: "config-file, c", Value: "", Usage: "Config file path"},
+			cli.StringFlag{Name: "run-test, r", Value: "", Usage: "Run only tests matching specified regex"},
 			cli.IntFlag{Name: "parallel, p", Value: runtime.NumCPU(), Usage: "Allow parallel execution of test functions"},
-			cli.StringFlag{Name: "type,t", Value: "", Usage: "Run only specific types of tests from a comma separated list (js,go); if not specified, all types of tests are run"},
+			cli.StringFlag{Name: "type, t", Value: "", Usage: "Run only specific types of tests from a comma separated list (js,go); if not specified, all types of tests are run"},
 		},
 		Action: framework.TestExtensions,
-	}
-}
-
-func migrationSubcommandWithLock(action func(*cli.Context)) func(*cli.Context) {
-	return func(context *cli.Context) {
-		configFile := context.String("config-file")
-		if migration.LoadConfig(configFile) != nil {
-			return
-		}
-
-		useEtcd := context.Bool(lockWithEtcd)
-		if !useEtcd {
-			action(context)
-			return
-		}
-
-		config := util.GetConfig()
-		sync, err := sync_util.CreateFromConfig(config)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		if sync == nil {
-			log.Fatal("sync is nil")
-		}
-
-		_, err = sync.Lock(syncMigrationsPath, true)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer sync.Unlock(syncMigrationsPath)
-
-		action(context)
 	}
 }
 
@@ -437,130 +402,27 @@ func getMigrateSubcommand(subcmd, usage string) cli.Command {
 		Name:  subcmd,
 		Usage: usage,
 		Flags: []cli.Flag{
-			cli.StringFlag{Name: "config-file", Value: defaultConfigFile, Usage: "Server config File"},
-			cli.BoolFlag{Name: lockWithEtcd, Usage: "Enable if ETCD should be used to synchronize migrations"},
+			cli.StringFlag{Name: flagConfigFile, Value: defaultConfigFile, Usage: "Server config File"},
+			cli.BoolFlag{Name: FlagLockWithETCD, Usage: "Enable if ETCD should be used to synchronize migrations"},
 		},
-		Action: migrationSubcommandWithLock(func(context *cli.Context) {
-			if migration.Run(subcmd, context.Args()) != nil {
-				os.Exit(1)
-			}
-		}),
+		Action: actionMigrate(subcmd),
 	}
 }
 
-func getMigrateSubcommandWithPostMigrateEvent(subcmd, usage string) cli.Command {
-	const (
-		PostMigrationEventTimeoutFlag = "post-migration-event-timeout"
-		ConfigFileFlag                = "config-file"
-		EmitPostMigrationEventFlag    = "emit-post-migration-event"
-		PostMigrationEvent            = "post-migration"
-		SyncEtcdEventFlag             = "sync-etcd-event"
-	)
+func getMigrateWithPostMigrationEventSubcommand(subcmd, usage string) cli.Command {
 	return cli.Command{
 		Name:  subcmd,
 		Usage: usage,
 		Flags: []cli.Flag{
-			cli.StringFlag{Name: ConfigFileFlag, Value: defaultConfigFile, Usage: "Server config File"},
-			cli.BoolFlag{Name: EmitPostMigrationEventFlag, Usage: "Enable if post-migration event should be emitted to modified schema extensions"},
-			cli.DurationFlag{Name: PostMigrationEventTimeoutFlag, Value: time.Second * 30, Usage: "Maximum duration of post-migration event"},
-			cli.BoolFlag{Name: SyncEtcdEventFlag, Usage: "Enable if ETCD events should be synchronized after migration"},
-			cli.BoolFlag{Name: lockWithEtcd, Usage: "Enable if ETCD should be used to synchronize migrations"},
+			cli.StringFlag{Name: flagConfigFile, Value: defaultConfigFile, Usage: "Server config File"},
+			cli.BoolFlag{Name: FlagLockWithETCD, Usage: "Enable if ETCD should be used to synchronize migrations"},
+			cli.BoolFlag{Name: FlagEmitPostMigrationEvent, Usage: "Enable if post-migration event should be emitted to modified schema extensions"},
+			cli.StringFlag{Name: FlagForcedSchemas, Usage: "A list of comma separated schemas to receive the post-migration event, even if those schemas did not request for the event"},
+			cli.DurationFlag{Name: FlagPostMigrationEventTimeout, Value: time.Second * 30, Usage: "Maximum duration of post-migration event"},
+			cli.BoolFlag{Name: FlagSyncETCDEvent, Usage: "Enable if ETCD events should be synchronized after migration"},
 		},
-		Action: migrationSubcommandWithLock(func(context *cli.Context) {
-			configFile := context.String(ConfigFileFlag)
-			if migration.LoadConfig(configFile) != nil {
-				return
-			}
-			config := util.GetConfig()
-
-			if migration.Run(subcmd, context.Args()) != nil {
-				os.Exit(1)
-			}
-
-			emitEvent := context.Bool(EmitPostMigrationEventFlag)
-			if !emitEvent {
-				return
-			}
-
-			modifiedSchemas := migration.GetModifiedSchemas()
-
-			if len(modifiedSchemas) == 0 {
-				log.Info("No modified schemas, skipping post-migration event")
-				return
-			}
-
-			log.Debug("Modified schemas: %s", modifiedSchemas)
-
-			schemaFiles := config.GetStringList("schemas", nil)
-			if schemaFiles == nil {
-				log.Fatal("No schema specified in configuraion")
-			}
-
-			manager := schema.GetManager()
-			if err := manager.LoadSchemasFromFiles(schemaFiles...); err != nil {
-				log.Fatal(err)
-			}
-
-			rawDbConn, err := db.CreateFromConfig(config)
-			if err != nil {
-				log.Fatal(err)
-			}
-			dbConn := &server.DbSyncWrapper{DB: rawDbConn}
-
-			sync, err := sync_util.CreateFromConfig(config)
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			identity, err := middleware.CreateIdentityServiceFromConfig(config)
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			environmentManager := extension.GetManager()
-
-			for _, s := range manager.Schemas() {
-				if !util.ContainsString(modifiedSchemas, s.ID) {
-					continue
-				}
-				pluralURL := s.GetPluralURL()
-
-				if _, ok := environmentManager.GetEnvironment(s.ID); !ok {
-					env := otto.NewEnvironment("post-migration-env", dbConn, identity, sync)
-					eventTimeout := context.Duration(PostMigrationEventTimeoutFlag)
-					env.SetEventTimeLimit(PostMigrationEvent, eventTimeout)
-					env.LoadExtensionsForPath(manager.Extensions, manager.TimeLimit, manager.TimeLimits, pluralURL)
-					log.Info("Loading environment for %s schema with URL: %s", s.ID, pluralURL)
-					if err != nil {
-						log.Fatal(fmt.Sprintf("[%s] %v", pluralURL, err))
-					}
-					environmentManager.RegisterEnvironment(s.ID, env)
-				}
-
-				env, _ := environmentManager.GetEnvironment(s.ID)
-				eventContext := map[string]interface{}{}
-				eventContext["schema"] = s
-				eventContext["sync"] = sync
-				eventContext["db"] = dbConn
-				eventContext["identity_service"] = identity
-				err := env.HandleEvent(PostMigrationEvent, eventContext)
-				if err != nil {
-					log.Fatalf("Failed to handle event post-migration, err: %s", err)
-				}
-			}
-			etcdEvent := context.Bool(SyncEtcdEventFlag)
-			if !etcdEvent {
-				return
-			}
-
-			syncWriter := server.NewSyncWriter(sync, dbConn)
-			_, err = syncWriter.Sync()
-			if err != nil {
-				log.Fatalf("Failed to synchronize post-migration events, err: %s", err)
-			}
-		}),
+		Action: actionMigrateWithPostMigrationEvent(subcmd),
 	}
-
 }
 
 func getMigrateCommand() cli.Command {
@@ -569,25 +431,23 @@ func getMigrateCommand() cli.Command {
 		ShortName: "mig",
 		Usage:     "Manage migrations",
 		Subcommands: []cli.Command{
-			getMigrateSubcommandWithPostMigrateEvent("up", "Migrate to the most recent version"),
-			getMigrateSubcommandWithPostMigrateEvent("up-by-one", "Migrate one version up"),
-			getMigrateSubcommandWithPostMigrateEvent("up-to", "Migrate up to specific version"),
+			getMigrateWithPostMigrationEventSubcommand("up", "Migrate to the most recent version"),
+			getMigrateWithPostMigrationEventSubcommand("up-by-one", "Migrate one version up"),
+			getMigrateWithPostMigrationEventSubcommand("up-to", "Migrate up to specific version"),
 			getMigrateSubcommand("create", "Create a template for a new migration"),
 			getMigrateSubcommand("create-next", "Create a sequential template for a new migration"),
-			getCreateInitialMigrationCommand(),
+			getCreateInitialMigrationSubcommand(),
 			getMigrateSubcommand("down", "Migrate to the oldest version"),
 			getMigrateSubcommand("down-to", "Migrate to specific version"),
 			getMigrateSubcommand("redo", "Migrate one version back"),
 			getMigrateSubcommand("status", "Display migration status"),
 			getMigrateSubcommand("version", "Display migration version"),
 		},
-		Action: func(c *cli.Context) {
-			migration.Help()
-		},
+		Action: actionMigrateHelp(),
 	}
 }
 
-func getCreateInitialMigrationCommand() cli.Command {
+func getCreateInitialMigrationSubcommand() cli.Command {
 	return cli.Command{
 		Name:        "initial",
 		ShortName:   "init",
@@ -600,67 +460,49 @@ func getCreateInitialMigrationCommand() cli.Command {
 			cli.StringFlag{Name: "path, p", Value: "etc/db/migrations", Usage: "Migrate path"},
 			cli.BoolFlag{Name: "cascade", Usage: "If true, FOREIGN KEYS in database will be created with ON DELETE CASCADE"},
 		},
+		Action: actionMigrateCreateInitialMigration(),
+	}
+}
+
+func getConverterCommand() cli.Command {
+	return cli.Command{
+		Name:  "converter",
+		Usage: "Generates code used by golang extensions",
+		Description: `gohan converter [path to file with schemas] [flags...]
+
+Converter generates code from yaml schemas.
+Generated code:
+	* Definition of structs representing objects from each schema
+	* Interfaces for getters and setters for these objects
+	* Implementation of these interfaces by pointers to generated structs
+	* Interfaces that can be extended
+	* Constructors for objects with default values
+	* Database functions for generated structs (fetch, list)
+ARGUMENTS:
+	There is one argument - path to file with yaml schemas
+`,
+		Flags: []cli.Flag{
+			cli.StringFlag{Name: "goext-package", Value: "goext", Usage: "Package name for golang extension interfaces"},
+			cli.StringFlag{Name: "crud-package", Value: "goodies", Usage: "Package name for crud functions"},
+			cli.StringFlag{Name: "raw-package", Value: "resources", Usage: "Package name for raw structs"},
+			cli.StringFlag{Name: "interface-package", Value: "interfaces", Usage: "Package name for interfaces"},
+			cli.StringFlag{Name: "output, o", Value: "", Usage: "Prefix add to output files"},
+			cli.StringFlag{Name: "raw-suffix", Value: "", Usage: "Suffix added to raw struct names"},
+			cli.StringFlag{Name: "interface-suffix", Value: "gen", Usage: "Suffix added to generated interface names"},
+		},
 		Action: func(c *cli.Context) {
-			schemaFile := c.String("schema")
-			cascade := c.Bool("cascade")
-			manager := schema.GetManager()
-			configFile := c.String("config-file")
-			if configFile != "" {
-				config := util.GetConfig()
-				config.ReadConfig(configFile)
-				schemaFiles := config.GetStringList("schemas", nil)
-				if schemaFiles == nil {
-					log.Fatal("No schema specified in configuraion")
-					return
-				}
-				if err := manager.LoadSchemasFromFiles(schemaFiles...); err != nil {
-					log.Fatal(err)
-					return
-				}
-			}
-			if schemaFile != "" {
-				manager.LoadSchemasFromFiles(schemaFile)
-			}
-			name := c.String("name")
-			now := time.Now()
-			version := fmt.Sprintf("%s_%s.sql", now.Format("20060102150405"), name)
-			path := filepath.Join(c.String("path"), version)
-			var sqlString = bytes.NewBuffer(make([]byte, 0, 100))
-			fmt.Printf("Generating goose migration file to %s ...\n", path)
-			sqlDB := sql.NewDB(db_opts.Default())
-			schemas := manager.OrderedSchemas()
-			sqlString.WriteString("\n")
-			sqlString.WriteString("-- +goose Up\n")
-			sqlString.WriteString("-- SQL in section 'Up' is executed when this migration is applied\n")
-			for _, s := range schemas {
-				if s.IsAbstract() {
-					continue
-				}
-				if s.Metadata["type"] == "metaschema" {
-					continue
-				}
-				createSQL, indices := sqlDB.GenTableDef(s, cascade)
-				sqlString.WriteString(createSQL + "\n")
-				for _, indexSQL := range indices {
-					sqlString.WriteString(indexSQL + "\n")
-				}
-			}
-			sqlString.WriteString("\n")
-			sqlString.WriteString("-- +goose Down\n")
-			sqlString.WriteString("-- SQL section 'Down' is executed when this migration is rolled back\n")
-			for _, s := range schemas {
-				if s.IsAbstract() {
-					continue
-				}
-				if s.Metadata["type"] == "metaschema" {
-					continue
-				}
-				sqlString.WriteString(fmt.Sprintf("drop table %s;", s.GetDbTableName()))
-				sqlString.WriteString("\n\n")
-			}
-			err := ioutil.WriteFile(path, sqlString.Bytes(), os.ModePerm)
-			if err != nil {
+			if err := app.Run(
+				c.Args().First(),
+				c.String("output"),
+				c.String("goext-package"),
+				c.String("crud-package"),
+				c.String("raw-package"),
+				c.String("interface-package"),
+				c.String("raw-suffix"),
+				c.String("interface-suffix"),
+			); err != nil {
 				fmt.Println(err)
+				os.Exit(1)
 			}
 		},
 	}
@@ -737,7 +579,7 @@ func loadConfig(configFile string) {
 		}
 		return
 	}
-	err = l.SetUpLogging(config)
+	err = logger.SetUpLogging(config)
 	if err != nil {
 		fmt.Printf("Logging setup error: %s\n", err)
 		os.Exit(1)

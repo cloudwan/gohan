@@ -72,7 +72,7 @@ func TestExtensions(context *cli.Context) {
 	if hasExtTypes {
 		extTypes := strings.Split(context.String("type"), ",")
 		for _, t := range extTypes {
-			switch (t) {
+			switch t {
 			case "js":
 				runJsExt = true
 			case "so":
@@ -88,7 +88,7 @@ func TestExtensions(context *cli.Context) {
 	}
 	if runSoExt {
 		testFiles := getTestFiles(context.Args(), "so")
-		if err := gorunner.NewGoTestRunner(testFiles, context.Bool("verbose") || config != nil, context.String("run-test"), context.Int("parallel")).Run(); err != nil {
+		if err := gorunner.NewTestRunner(testFiles, context.Bool("verbose") || config != nil, context.String("run-test"), context.Int("parallel")).Run(); err != nil {
 			log.Fatalf("%s", err.Error())
 			os.Exit(1)
 		}

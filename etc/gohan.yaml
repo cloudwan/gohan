@@ -1,5 +1,5 @@
 #######################################################
-#  Gohan API Server example configuraion
+#  Gohan API Server example configuration
 ######################################################
 
 # database connection configuration
@@ -36,12 +36,15 @@ tls:
 # document root of gohan API server
 # embedded webui get served if you use "embed" here
 document_root: "embed"
+
 # list of etcd backend servers
 etcd:
     - "http://127.0.0.1:2379"
+
 # timeout in milliseconds.1000 milliseconds by default
 etcd_timeout_ms: 1000
-# keystone configuraion
+
+# keystone configuration
 keystone:
     use_keystone: false
     fake: true
@@ -50,6 +53,7 @@ keystone:
     user_name: "admin"
     tenant_name: "admin"
     password: "gohan"
+
 # CORS (Cross-origin resource sharing (CORS)) configuraion for javascript based client
 # cors: "*"
 

@@ -37,6 +37,18 @@ extensions:
     });
   id: test
   path: /v2.0/responder
+- code: |
+    gohan_register_handler("test_throw", function (context) {
+        function ValidationException(msg) {
+            CustomException.call(this, msg, 499);
+            this.name = "ValidationException";
+        }
+        ValidationException.prototype = Object.create(CustomException.prototype);
+
+        throw new ValidationException("tested exception");
+    });
+  id: test
+  path: /v2.0/responder
 
 
 networks: []
@@ -57,6 +69,12 @@ policies:
 - action: dobranoc
   effect: allow
   id: member_dobranoc
+  principal: Member
+  resource:
+    path: /v2.0/responder.*
+- action: test_throw
+  effect: allow
+  id: member_test_throw
   principal: Member
   resource:
     path: /v2.0/responder.*
@@ -449,6 +467,11 @@ schemas:
     dobranoc:
       method: GET
       path: /:id/dobranoc
+      output:
+        type: string
+    test_throw:
+      method: GET
+      path: /:id/test_throw
       output:
         type: string
     test_throw:

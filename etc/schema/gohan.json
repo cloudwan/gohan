@@ -60,6 +60,17 @@
                             "type": "string"
                         }
                     },
+                    "order_properties_before": {
+                        "description": "properties will be ordered before extended properties",
+                        "permission": [
+                            "create"
+                        ],
+                        "title": "Order Properties Before",
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
                     "metadata": {
                         "default": {},
                         "description": "metadata for application developer",
@@ -294,7 +305,7 @@
                                                 "type": "boolean"
                                             },
                                             "view": {
-                                                "title": "view configuraion on UI",
+                                                "title": "view configuration on UI",
                                                 "type": "array"
                                             }
                                         },

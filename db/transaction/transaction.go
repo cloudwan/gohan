@@ -18,6 +18,8 @@ package transaction
 import (
 	"errors"
 
+	"context"
+
 	"github.com/cloudwan/gohan/db/pagination"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/jmoiron/sqlx"
@@ -30,9 +32,9 @@ var ErrResourceNotFound = errors.New("resource not found")
 type Type string
 
 const (
-	//ReadUncommited is transaction type for READ UNCOMMITTED
+	//ReadUncommitted is transaction type for READ UNCOMMITTED
 	//You don't need to use this for most case
-	ReadUncommited Type = "READ UNCOMMITTED"
+	ReadUncommitted Type = "READ UNCOMMITTED"
 	//ReadCommited is transaction type for READ COMMITTED
 	//You don't need to use this for most case
 	ReadCommited Type = "READ COMMITTED"
@@ -87,6 +89,18 @@ type Transaction interface {
 	Close() error
 	Closed() bool
 	GetIsolationLevel() Type
+
+	CreateContext(context.Context, *schema.Resource) error
+	UpdateContext(context.Context, *schema.Resource) error
+	StateUpdateContext(context.Context, *schema.Resource, *ResourceState) error
+	DeleteContext(context.Context, *schema.Schema, interface{}) error
+	FetchContext(context.Context, *schema.Schema, Filter, *ViewOptions) (*schema.Resource, error)
+	LockFetchContext(context.Context, *schema.Schema, Filter, schema.LockPolicy, *ViewOptions) (*schema.Resource, error)
+	StateFetchContext(context.Context, *schema.Schema, Filter) (ResourceState, error)
+	ListContext(context.Context, *schema.Schema, Filter, *ViewOptions, *pagination.Paginator) ([]*schema.Resource, uint64, error)
+	LockListContext(context.Context, *schema.Schema, Filter, *ViewOptions, *pagination.Paginator, schema.LockPolicy) ([]*schema.Resource, uint64, error)
+	QueryContext(context.Context, *schema.Schema, string, []interface{}) (list []*schema.Resource, err error)
+	ExecContext(ctx context.Context, query string, args ...interface{}) error
 }
 
 // GetIsolationLevel returns isolation level for an action

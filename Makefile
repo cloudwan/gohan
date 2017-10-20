@@ -20,9 +20,9 @@ gen:
 	etc/templates/... \
 	public/...
 
-test:
+test: build
 	@echo -e "$(OK_COLOR)==> Testing$(NO_COLOR)"
-	./tools/test_bashcompletion.sh
+	./tools/test_bash_completion.sh
 	# tests require a build with race flag enabled
 	./tools/build.sh -race
 	./tools/build_go_tests.sh -race

@@ -138,7 +138,6 @@ func init() {
 						return otto.NullValue()
 					}
 				}
-
 				return otto.NullValue()
 			},
 			"gohan_sync_update": func(call otto.FunctionCall) otto.Value {

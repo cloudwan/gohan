@@ -16,8 +16,10 @@
 package goplugin_test
 
 import (
+	"context"
 	"fmt"
 	"reflect"
+	"time"
 
 	"github.com/cloudwan/gohan/extension/goext"
 	"github.com/cloudwan/gohan/extension/goplugin"
@@ -27,48 +29,50 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+type MyRaw struct {
+	ID          string `db:"id"`
+	Description string `db:"description"`
+}
+
 var _ = Describe("Environment", func() {
 	var (
-		env *goplugin.Environment
+		env     *goplugin.Environment
+		manager *schema.Manager
 	)
 
 	const (
-		SchemaPath = "test_data/test_schema.yaml"
+		schemaPath = "test_data/test_schema.yaml"
 	)
 
 	BeforeEach(func() {
-		manager := schema.GetManager()
-		Expect(manager.LoadSchemaFromFile(SchemaPath)).To(Succeed())
-		env = goplugin.NewEnvironment("test", nil, nil, nil)
+		manager = schema.GetManager()
+		Expect(manager.LoadSchemaFromFile(schemaPath)).To(Succeed())
+		env = goplugin.NewEnvironment("test", nil, nil)
 	})
 
 	Describe("Loading an extension", func() {
 		Context("File paths are corrupted", func() {
 			It("should not load plugin with wrong file extension", func() {
-				loaded, err := env.Load("/wrong/extension.not-so", nil)
-				Expect(loaded).To(BeFalse())
-				Expect(err).To(Equal(fmt.Errorf("golang extensions plugin must be a *.so file, file: /wrong/extension.not-so")))
+				err := env.Load("/wrong/extension.not-so")
+				Expect(err).To(Equal(fmt.Errorf("go extension must be a *.so file, file: /wrong/extension.not-so")))
 			})
 
 			It("should not load plugin from non-existing file", func() {
-				loaded, err := env.Load("/non/existing-plugin.so", nil)
-				Expect(loaded).To(BeFalse())
-				Expect(err).To(Equal(fmt.Errorf("failed to load golang extension: plugin.Open(/non/existing-plugin.so): realpath failed")))
+				err := env.Load("/non/existing-plugin.so")
+				Expect(err).To(Equal(fmt.Errorf("failed to load go extension: plugin.Open(/non/existing-plugin.so): realpath failed")))
 			})
 		})
 
 		Context("File paths are valid", func() {
 			It("should load, start and stop plugin which does export Init and Schemas functions", func() {
-				loaded, err := env.Load("test_data/ext_good/ext_good.so", nil)
-				Expect(loaded).To(BeTrue())
+				err := env.Load("test_data/ext_good/ext_good.so")
 				Expect(err).To(BeNil())
 				Expect(env.Start()).To(Succeed())
 				env.Stop()
 			})
 
 			It("should not load plugin which does not export Init function", func() {
-				loaded, err := env.Load("test_data/ext_no_init/ext_no_init.so", nil)
-				Expect(loaded).To(BeFalse())
+				err := env.Load("test_data/ext_no_init/ext_no_init.so")
 				Expect(err.Error()).To(ContainSubstring("symbol Init not found"))
 			})
 		})
@@ -80,8 +84,7 @@ var _ = Describe("Environment", func() {
 		)
 
 		BeforeEach(func() {
-			loaded, err := env.Load("test_data/ext_good/ext_good.so", nil)
-			Expect(loaded).To(BeTrue())
+			err := env.Load("test_data/ext_good/ext_good.so")
 			Expect(err).To(BeNil())
 			Expect(env.Start()).To(Succeed())
 			testSchema = env.Schemas().Find("test")
@@ -97,12 +100,12 @@ var _ = Describe("Environment", func() {
 				return nil
 			}
 
-			Expect(len(goplugin.GlobHandlers)).To(Equal(0))
+			Expect(len(env.Handlers())).To(Equal(0))
 			env.RegisterEventHandler("some_event", handler, goext.PriorityDefault)
-			Expect(len(goplugin.GlobHandlers["some_event"][goext.PriorityDefault])).To(Equal(1))
+			Expect(len(env.Handlers()["some_event"][goext.PriorityDefault])).To(Equal(1))
 
 			p1 := reflect.ValueOf(handler).Pointer()
-			p2 := reflect.ValueOf(goplugin.GlobHandlers["some_event"][goext.PriorityDefault][0]).Pointer()
+			p2 := reflect.ValueOf(env.Handlers()["some_event"][goext.PriorityDefault][0]).Pointer()
 
 			Expect(p1).To(Equal(p2))
 		})
@@ -113,10 +116,10 @@ var _ = Describe("Environment", func() {
 			}
 
 			testSchema.RegisterEventHandler("some_event", handler, goext.PriorityDefault)
-			Expect(len(goplugin.GlobSchemaHandlers["some_event"]["test"][goext.PriorityDefault])).To(Equal(1))
+			Expect(len(env.SchemaHandlers()["some_event"]["test"][goext.PriorityDefault])).To(Equal(1))
 
 			p1 := reflect.ValueOf(handler).Pointer()
-			p2 := reflect.ValueOf(goplugin.GlobSchemaHandlers["some_event"]["test"][goext.PriorityDefault][0]).Pointer()
+			p2 := reflect.ValueOf(env.SchemaHandlers()["some_event"]["test"][goext.PriorityDefault][0]).Pointer()
 
 			Expect(p1).To(Equal(p2))
 		})
@@ -128,8 +131,7 @@ var _ = Describe("Environment", func() {
 		)
 
 		BeforeEach(func() {
-			loaded, err := env.Load("test_data/ext_good/ext_good.so", nil)
-			Expect(loaded).To(BeTrue())
+			err := env.Load("test_data/ext_good/ext_good.so")
 			Expect(err).To(BeNil())
 			Expect(env.Start()).To(Succeed())
 			testSchema = env.Schemas().Find("test")
@@ -210,6 +212,7 @@ var _ = Describe("Environment", func() {
 			resource := make(map[string]interface{})
 			resource["id"] = "some-id"
 			resource["description"] = "some description"
+			resource["subobject"] = map[string]interface{}{"subproperty": "subvalue"}
 			context = context.WithResource(resource)
 
 			Expect(env.HandleEvent("some_event", context)).To(Succeed())
@@ -217,6 +220,7 @@ var _ = Describe("Environment", func() {
 			Expect(returnedResource).To(Not(BeNil()))
 			Expect(returnedResource.ID).To(Equal("some-id"))
 			Expect(returnedResource.Description).To(Equal("some description"))
+			Expect(returnedResource.Subobject.Subproperty).To(Equal("subvalue"))
 		})
 
 		It("should update resource from context after each event dispatched", func() {
@@ -276,5 +280,96 @@ var _ = Describe("Environment", func() {
 			Expect(prioritizedCalled).To(BeTrue())
 			Expect(defaultCalled).To(BeTrue())
 		})
+
+		It("environment clone should correctly clone runtime types", func() {
+			myEnv := goplugin.NewEnvironment("my_env", nil, nil)
+			myEnv.RegisterRawType("my_raw", MyRaw{})
+			myEnvClone := myEnv.Clone().(*goplugin.Environment)
+			Expect(len(myEnvClone.RawTypes())).To(Equal(1))
+			Expect(myEnvClone.RawTypes()["my_raw"]).To(Equal(myEnv.RawTypes()["my_raw"]))
+		})
+
+		Context("execution termination", func() {
+			It("should exit gracefully when HTTP peer disconnects", func() {
+				closeNotifier := SimpleCloseNotifier{make(chan bool, 1)}
+
+				context := goext.MakeContext()
+				context["http_response"] = closeNotifier
+
+				done := make(chan bool, 1)
+				go func() {
+					defer GinkgoRecover()
+					Expect(env.HandleEvent("wait_for_context_cancel", context)).To(Succeed())
+					done <- true
+				}()
+
+				closeNotifier.Close()
+
+				Eventually(done).Should(Receive())
+			})
+
+			It("should exit gracefully on global execution timeout", func() {
+				err := env.LoadExtensionsForPath(manager.Extensions, time.Millisecond*100, nil, "wait_for_context_cancel")
+				Expect(err).To(Succeed())
+
+				done := make(chan bool, 1)
+				go func() {
+					defer GinkgoRecover()
+					Expect(env.HandleEvent("wait_for_context_cancel", goext.MakeContext())).To(Succeed())
+					done <- true
+				}()
+
+				Eventually(done, time.Millisecond*500).Should(Receive())
+			})
+
+			It("should exit gracefully on path execution timeout", func() {
+				timeLimits := []*schema.PathEventTimeLimit{
+					schema.NewPathEventTimeLimit(".*", "wait_for_context_cancel", time.Millisecond*100),
+				}
+
+				err := env.LoadExtensionsForPath(manager.Extensions, 0, timeLimits, "wait_for_context_cancel")
+				Expect(err).To(Succeed())
+
+				done := make(chan bool, 1)
+				go func() {
+					defer GinkgoRecover()
+					Expect(env.HandleEvent("wait_for_context_cancel", goext.MakeContext())).To(Succeed())
+					done <- true
+				}()
+
+				Eventually(done, time.Millisecond*500).Should(Receive())
+			})
+
+			It("should not overwrite existing timeouts", func() {
+				err := env.LoadExtensionsForPath(manager.Extensions, time.Hour, nil, "wait_for_context_cancel")
+				Expect(err).To(Succeed())
+
+				requestContext := goext.MakeContext()
+				ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
+				requestContext["context"] = ctx
+
+				done := make(chan bool, 1)
+				go func() {
+					defer GinkgoRecover()
+					Expect(env.HandleEvent("wait_for_context_cancel", requestContext)).To(Succeed())
+					done <- true
+				}()
+
+				cancel()
+				Eventually(done, time.Millisecond*500).Should(Receive())
+			})
+		})
 	})
 })
+
+type SimpleCloseNotifier struct {
+	closeCh chan bool
+}
+
+func (s SimpleCloseNotifier) CloseNotify() <-chan bool {
+	return s.closeCh
+}
+
+func (s SimpleCloseNotifier) Close() {
+	s.closeCh <- true
+}

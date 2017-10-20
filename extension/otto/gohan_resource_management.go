@@ -271,7 +271,7 @@ func GohanModelCreate(context map[string]interface{}, schemaID string,
 	}
 
 	if err := resources.CreateResourceInTransaction(
-		context, resourceObj); err != nil {
+		context, currentSchema, resourceObj); err != nil {
 		return nil, err
 	}
 	response, ok := context["response"].(map[string]interface{})

@@ -1,8 +1,8 @@
 #######################################################
-#  Gohan API Server example configuraion
+#  Gohan API Server example configuration
 ######################################################
 
-# Sample Configuraion for testing worker condition we get 401 from etcd
+# Sample configuration for testing worker condition we get 401 from etcd
 # TODO(nati) automate this
 #
 # How to test worker
@@ -19,7 +19,7 @@
 # (7) You should be able to see 20000 lines after some time
 
 
-# database connection configuraion
+# database connection configuration
 database:
     # yaml, json, sqlite3 and mysql supported
     # yaml and json db is for schema development purpose
@@ -51,7 +51,7 @@ document_root: "."
 # list of etcd backend servers
 etcd:
     - "http://127.0.0.1:2379"
-# keystone configuraion
+# keystone configuration
 keystone:
     use_keystone: true
     fake: true
@@ -59,7 +59,7 @@ keystone:
     user_name: "admin"
     tenant_name: "admin"
     password: "gohan"
-# CORS (Cross-origin resource sharing (CORS)) configuraion for javascript based client
+# CORS (Cross-origin resource sharing (CORS)) configuration for javascript based client
 cors: "*"
 
 # allowed levels  "CRITICAL", "ERROR", "WARNING", "NOTICE", "INFO", "DEBUG",

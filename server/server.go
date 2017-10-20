@@ -45,6 +45,7 @@ import (
 	"github.com/cloudwan/gohan/sync"
 	sync_util "github.com/cloudwan/gohan/sync/util"
 	"github.com/cloudwan/gohan/util"
+	"github.com/cloudwan/gohan/version"
 	"github.com/drone/routes"
 	"github.com/go-martini/martini"
 	"github.com/lestrrat/go-server-starter/listener"
@@ -182,7 +183,7 @@ func (server *Server) getDatabaseConfig() (string, string, bool, bool, bool) {
 	}
 	databaseConnection := config.GetString("database/connection", "")
 	if databaseConnection == "" {
-		log.Fatal("no database connection specified in the configuraion file.")
+		log.Fatal("no database connection specified in the configuration file.")
 	}
 	databaseDropOnCreate := config.GetBool("database/drop_on_create", false)
 	databaseCascade := config.GetBool("database/cascade_delete", false)
@@ -274,7 +275,7 @@ func NewServer(configFile string) (*Server, error) {
 
 	schemaFiles := config.GetStringList("schemas", nil)
 	if schemaFiles == nil {
-		log.Fatal("No schema specified in configuraion")
+		log.Fatal("No schema specified in configuration")
 	} else {
 		err = manager.LoadSchemasFromFiles(schemaFiles...)
 		if err != nil {
@@ -472,7 +473,10 @@ func RunServer(configFile string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Info("Gohan no jikan desuyo (It's time for dinner!) ")
+	log.Info("Gohan no jikan desuyo (It's time for dinner!)")
+	log.Info("Build version: %s", version.Build.Version)
+	log.Info("Build timestamp: %s", version.Build.Timestamp)
+	log.Info("Build host: %s", version.Build.Host)
 	log.Info("Starting Gohan Server...")
 	address := server.address
 	if strings.HasPrefix(address, ":") {

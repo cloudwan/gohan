@@ -16,12 +16,14 @@
 package goplugin
 
 import (
-	"github.com/cloudwan/gohan/extension/goext"
-	"github.com/cloudwan/gohan/sync"
+	"context"
 	"time"
+
+	"github.com/cloudwan/gohan/extension/goext"
+	gohan_sync "github.com/cloudwan/gohan/sync"
 )
 
-func convertEvent(event *sync.Event) *goext.Event {
+func convertEvent(event *gohan_sync.Event) *goext.Event {
 	if event == nil {
 		return nil
 	}
@@ -34,7 +36,7 @@ func convertEvent(event *sync.Event) *goext.Event {
 	}
 }
 
-func convertNode(node *sync.Node) *goext.Node {
+func convertNode(node *gohan_sync.Node) *goext.Node {
 	if node == nil {
 		return nil
 	}
@@ -47,7 +49,7 @@ func convertNode(node *sync.Node) *goext.Node {
 	}
 }
 
-func convertNodes(nodes []*sync.Node) []*goext.Node {
+func convertNodes(nodes []*gohan_sync.Node) []*goext.Node {
 	result := []*goext.Node{}
 
 	for _, node := range nodes {
@@ -59,12 +61,12 @@ func convertNodes(nodes []*sync.Node) []*goext.Node {
 
 // Sync is an implementation of ISync
 type Sync struct {
-	environment *Environment
+	raw gohan_sync.Sync
 }
 
 // Fetch fetches a path from sync
-func (thisSync *Sync) Fetch(path string) (*goext.Node, error) {
-	node, err := thisSync.environment.sync.Fetch(path)
+func (sync *Sync) Fetch(path string) (*goext.Node, error) {
+	node, err := sync.raw.Fetch(path)
 
 	if err != nil {
 		return nil, err
@@ -74,40 +76,38 @@ func (thisSync *Sync) Fetch(path string) (*goext.Node, error) {
 }
 
 // Delete deletes a path from sync
-func (thisSync *Sync) Delete(path string, prefix bool) error {
-	return thisSync.environment.sync.Delete(path, prefix)
+func (sync *Sync) Delete(path string, prefix bool) error {
+	return sync.raw.Delete(path, prefix)
 }
 
 // Watch watches a single path in sync
-func (thisSync *Sync) Watch(path string, timeout time.Duration, revision int64) ([]*goext.Event, error) {
-	eventChan := make(chan *sync.Event, 32)
-	stopChan := make(chan bool, 1)
-	defer close(stopChan)
-	errorChan := make(chan error, 1)
+func (sync *Sync) Watch(ctx context.Context, path string, timeout time.Duration, revision int64) ([]*goext.Event, error) {
+	eventChan, err := sync.raw.WatchContext(ctx, path, revision)
+	if err != nil {
+		return nil, err
+	}
 
-	go func() {
-		if err := thisSync.environment.sync.Watch(path, eventChan, stopChan, revision); err != nil {
-			errorChan <- err
-		}
-	}()
-
-	// todo(przemyslaw-dobrowolski-cl): add support for timeouts
 	select {
 	case event := <-eventChan:
 		return []*goext.Event{convertEvent(event)}, nil
 	case <-time.After(timeout):
 		return nil, nil
-	case err := <-errorChan:
-		return nil, err
+	case <-ctx.Done():
+		return nil, context.Canceled
 	}
 }
 
-// Environment returns the parent environment
-func (thisSync *Sync) Environment() goext.IEnvironment {
-	return thisSync.environment
+// NewSync allocates Sync
+func NewSync(sync gohan_sync.Sync) *Sync {
+	return &Sync{raw: sync}
 }
 
-// NewSync allocates Sync
-func NewSync(environment *Environment) goext.ISync {
-	return &Sync{environment: environment}
+// Clone allocates a clone of Sync; object may be nil
+func (sync *Sync) Clone() *Sync {
+	if sync == nil {
+		return nil
+	}
+	return &Sync{
+		raw: sync.raw,
+	}
 }

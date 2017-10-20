@@ -93,7 +93,7 @@ func GohanPolicies() []*schema.Policy {
 	return manager.Policies()
 }
 
-//ReadConfig reads configuraion from file.
+//ReadConfig reads configuration from file.
 func ReadConfig(path string) error {
 	config := util.GetConfig()
 	err := config.ReadConfig(path)

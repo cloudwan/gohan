@@ -205,5 +205,44 @@ var _ = Describe("Server package test", func() {
 				Expect(err).To(HaveOccurred(), "Failed to sync db resource deletion to sync backend")
 			})
 		})
+
+		Context("With sync_skip_config_prefix and sync_key_template", func() {
+			It("should write data to and to exact path specified in template ", func() {
+				manager := schema.GetManager()
+				schema, _ := manager.Schema("with_sync_skip_config_prefix")
+				resource, err := manager.LoadResource(
+					"with_sync_skip_config_prefix", map[string]interface{}{
+						"id": "abcdef", "p0": "property0",
+					})
+				Expect(err).ToNot(HaveOccurred())
+				testDB1 := &srv.DbSyncWrapper{DB: testDB}
+				tx, err := testDB1.Begin()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(tx.Create(resource)).To(Succeed())
+				Expect(tx.Commit()).To(Succeed())
+				tx.Close()
+
+				writer := srv.NewSyncWriterFromServer(server)
+				Expect(writer.Sync()).To(Equal(1))
+
+				sync, err := gohan_etcd.NewSync([]string{"http://127.0.0.1:2379"}, time.Second)
+				Expect(err).ToNot(HaveOccurred())
+
+				writtenConfig, err := sync.Fetch("/prefix/abcdef")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(writtenConfig.Value).To(BeEquivalentTo("property0"))
+
+				tx, err = testDB1.Begin()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(tx.Delete(schema, resource.ID())).To(Succeed())
+				Expect(tx.Commit()).To(Succeed())
+				tx.Close()
+
+				Expect(writer.Sync()).To(Equal(1))
+
+				_, err = sync.Fetch(resource.Path())
+				Expect(err).To(HaveOccurred(), "Failed to sync db resource deletion to sync backend")
+			})
+		})
 	})
 })

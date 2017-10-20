@@ -16,6 +16,7 @@
 package transaction
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 
@@ -146,4 +147,48 @@ func (ft *FuzzyTransaction) Closed() bool {
 // GetIsolationLevel returns the current isolation level
 func (ft *FuzzyTransaction) GetIsolationLevel() Type {
 	return ft.Tx.GetIsolationLevel()
+}
+
+func (ft *FuzzyTransaction) LockListContext(_ context.Context, s *schema.Schema, filter Filter, options *ViewOptions, pg *pagination.Paginator, policy schema.LockPolicy) (list []*schema.Resource, total uint64, err error) {
+	return ft.LockList(s, filter, options, pg, policy)
+}
+
+func (ft *FuzzyTransaction) FetchContext(_ context.Context, s *schema.Schema, filter Filter, options *ViewOptions) (*schema.Resource, error) {
+	return ft.Fetch(s, filter, options)
+}
+
+func (ft *FuzzyTransaction) LockFetchContext(_ context.Context, s *schema.Schema, filter Filter, policy schema.LockPolicy, options *ViewOptions) (*schema.Resource, error) {
+	return ft.LockFetch(s, filter, policy, options)
+}
+
+func (ft *FuzzyTransaction) StateFetchContext(_ context.Context, s *schema.Schema, filter Filter) (state ResourceState, err error) {
+	return ft.StateFetch(s, filter)
+}
+
+func (ft *FuzzyTransaction) QueryContext(_ context.Context, s *schema.Schema, query string, arguments []interface{}) (list []*schema.Resource, err error) {
+	return ft.Query(s, query, arguments)
+}
+
+func (ft *FuzzyTransaction) ExecContext(_ context.Context, sql string, args ...interface{}) error {
+	return ft.Exec(sql, args...)
+}
+
+func (ft *FuzzyTransaction) ListContext(_ context.Context, s *schema.Schema, filter Filter, options *ViewOptions, pg *pagination.Paginator) (list []*schema.Resource, total uint64, err error) {
+	return ft.List(s, filter, options, pg)
+}
+
+func (ft *FuzzyTransaction) DeleteContext(_ context.Context, s *schema.Schema, resourceID interface{}) error {
+	return ft.Delete(s, resourceID)
+}
+
+func (ft *FuzzyTransaction) StateUpdateContext(_ context.Context, resource *schema.Resource, state *ResourceState) error {
+	return ft.StateUpdate(resource, state)
+}
+
+func (ft *FuzzyTransaction) UpdateContext(_ context.Context, resource *schema.Resource) error {
+	return ft.Update(resource)
+}
+
+func (ft *FuzzyTransaction) CreateContext(_ context.Context, resource *schema.Resource) error {
+	return ft.Create(resource)
 }

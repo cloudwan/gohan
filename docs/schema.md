@@ -21,6 +21,7 @@ Schemas might also have any of the following optional properties.
 - metadata  -- application specific schema metadata (object)
 - type      -- can be an abstract or empty string (see more in schema inheritance)
 - extends   -- list of base schemas
+- order_properties_before -- to order properties before properties of extended schemas. 
 
 ## Schema Inheritance
 
@@ -162,6 +163,11 @@ Developers can make a schema as abstract schema specifying type=abstract. The de
 - sync_property (string)
 
   Write only the value of the specified property to the sync backend.
+
+- sync_skip_config_prefix (bool)
+
+  Some resources don't require two way sync or path needs to be customized exactly with sync_key_template.
+  Enabling this flag will cause /config prefix to be skipped when generating sync path for etcd.
 
 - resource_group (string)
 
@@ -352,6 +358,9 @@ eg.
           type: object
           unique: false
 ```
+- order_properties_before
+
+  when resource is extended using 'extends' by default all properties of extended schema gets ordered before the current schema properties. Use this field to order current resource properties before extended resource properties.
 
 ## Indexes
 

@@ -10,7 +10,7 @@ However, Gohan provides helper utility to generate migration file.
 Step1
 -------
 
-Prepare goose configuraion file.
+Prepare goose configuration file.
 We have a example in db/dbconf.yml
 
 ``` yaml

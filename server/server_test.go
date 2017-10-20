@@ -70,7 +70,7 @@ var _ = Describe("Server package test", func() {
 		})).ToNot(HaveOccurred(), "Failed to create or commit transaction.")
 	})
 
-	Describe("Http request", func() {
+	Describe("HTTP request", func() {
 		Context("with invalid request body", func() {
 			malformedRequestBody := "malformed"
 
@@ -699,6 +699,11 @@ var _ = Describe("Server package test", func() {
 		It("should work without input shema", func() {
 			result := testURL("GET", responderPluralURL+"/r1/dobranoc", memberTokenID, nil, http.StatusOK)
 			Expect(result).To(Equal("Dobranoc!"))
+		})
+
+		It("should propagare custom errors", func() {
+			result := testURL("GET", responderPluralURL+"/r1/test_throw", memberTokenID, nil, 499)
+			Expect(result.(map[string]interface{})).To(HaveKeyWithValue("error", "tested exception"))
 		})
 
 		It("should propagare custom errors", func() {

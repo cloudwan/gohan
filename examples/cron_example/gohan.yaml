@@ -1,5 +1,5 @@
 #######################################################
-#  Gohan API Server example configuraion
+#  Gohan API Server example configuration
 ######################################################
 
 database:
@@ -15,7 +15,7 @@ editable_schema: ./example_schema.yaml
 
 address: ":9091"
 
-# keystone configuraion
+# keystone configuration
 keystone:
     use_keystone: true
     fake: true

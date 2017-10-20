@@ -17,11 +17,21 @@ package main
 
 import (
 	"github.com/cloudwan/gohan/cli"
+	"github.com/cloudwan/gohan/version"
 )
 
-//BuildVersion get embbeded on build time
-var BuildVersion string
+var (
+	buildVersion   string = "<unknown>"
+	buildTimestamp string = "<unknown>"
+	buildHost      string = "<unknown>"
+)
 
 func main() {
-	cli.Run("gohan", "Gohan", BuildVersion)
+	// store build info
+	version.Build.Version = buildVersion
+	version.Build.Timestamp = buildTimestamp
+	version.Build.Host = buildHost
+
+	// run app
+	cli.Run("gohan", "Gohan")
 }

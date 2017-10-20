@@ -18,6 +18,8 @@ package goplugin_test
 import (
 	"os"
 
+	"context"
+
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/extension/goext"
@@ -43,7 +45,8 @@ var _ = Describe("Transaction", func() {
 		Expect(manager.LoadSchemaFromFile(SchemaPath)).To(Succeed())
 		db, err := db.ConnectDB(DbType, DbFile, db.DefaultMaxOpenConn, options.Default())
 		Expect(err).To(BeNil())
-		env = goplugin.NewEnvironment("test", db, nil, nil)
+		env = goplugin.NewEnvironment("test", nil, nil)
+		env.SetDatabase(db)
 	})
 
 	AfterEach(func() {
@@ -59,8 +62,7 @@ var _ = Describe("Transaction", func() {
 		)
 
 		BeforeEach(func() {
-			loaded, err := env.Load("test_data/ext_good/ext_good.so", nil)
-			Expect(loaded).To(BeTrue())
+			err := env.Load("test_data/ext_good/ext_good.so")
 			Expect(err).To(BeNil())
 			Expect(env.Start()).To(Succeed())
 			testSchema = env.Schemas().Find("test")
@@ -73,8 +75,11 @@ var _ = Describe("Transaction", func() {
 			Expect(err).To(BeNil())
 
 			createdResource = map[string]interface{}{
-				"id":          "some-id",
-				"description": "description",
+				"id":            "some-id",
+				"description":   "description",
+				"name":          nil,
+				"subobject":     map[string]interface{}{},
+				"test_suite_id": nil,
 			}
 		})
 
@@ -83,12 +88,12 @@ var _ = Describe("Transaction", func() {
 		})
 
 		It("Should create resource", func() {
-			Expect(tx.Create(testSchema, createdResource)).To(Succeed())
+			Expect(tx.Create(context.Background(), testSchema, createdResource)).To(Succeed())
 		})
 
 		It("Lists previously created resource", func() {
-			Expect(tx.Create(testSchema, createdResource)).To(Succeed())
-			res, total, err := tx.List(testSchema, goext.Filter{}, nil, nil)
+			Expect(tx.Create(context.Background(), testSchema, createdResource)).To(Succeed())
+			res, total, err := tx.List(context.Background(), testSchema, goext.Filter{}, nil, nil)
 			Expect(err).To(BeNil())
 			Expect(total).To(Equal(uint64(1)))
 			Expect(res).To(HaveLen(1))
@@ -97,25 +102,33 @@ var _ = Describe("Transaction", func() {
 		})
 
 		It("Fetch previously created resource", func() {
-			Expect(tx.Create(testSchema, createdResource)).To(Succeed())
-			returnedResource, err := tx.Fetch(testSchema, goext.Filter{"id": createdResource["id"]})
+			Expect(tx.Create(context.Background(), testSchema, createdResource)).To(Succeed())
+			returnedResource, err := tx.Fetch(context.Background(), testSchema, goext.Filter{"id": createdResource["id"]})
+			Expect(err).To(BeNil())
+			Expect(createdResource).To(Equal(returnedResource))
+		})
+
+		It("Fetch previously created resource with subobject", func() {
+			createdResource["subobject"] = map[string]interface{}{"subproperty": "subproperty"}
+			Expect(tx.Create(context.Background(), testSchema, createdResource)).To(Succeed())
+			returnedResource, err := tx.Fetch(context.Background(), testSchema, goext.Filter{"id": createdResource["id"]})
 			Expect(err).To(BeNil())
 			Expect(createdResource).To(Equal(returnedResource))
 		})
 
 		It("Delete previously created resource", func() {
-			Expect(tx.Create(testSchema, createdResource)).To(Succeed())
-			Expect(tx.Delete(testSchema, createdResource["id"])).To(Succeed())
-			returnedResource, err := tx.Fetch(testSchema, goext.Filter{"id": createdResource["id"]})
+			Expect(tx.Create(context.Background(), testSchema, createdResource)).To(Succeed())
+			Expect(tx.Delete(context.Background(), testSchema, createdResource["id"])).To(Succeed())
+			returnedResource, err := tx.Fetch(context.Background(), testSchema, goext.Filter{"id": createdResource["id"]})
 			Expect(err).ToNot(BeNil())
 			Expect(returnedResource).To(BeNil())
 		})
 
 		It("Update previously created resource", func() {
-			Expect(tx.Create(testSchema, createdResource)).To(Succeed())
+			Expect(tx.Create(context.Background(), testSchema, createdResource)).To(Succeed())
 			createdResource["description"] = "other-description"
-			Expect(tx.Update(testSchema, createdResource)).To(Succeed())
-			returnedResource, err := tx.Fetch(testSchema, goext.Filter{"id": createdResource["id"]})
+			Expect(tx.Update(context.Background(), testSchema, createdResource)).To(Succeed())
+			returnedResource, err := tx.Fetch(context.Background(), testSchema, goext.Filter{"id": createdResource["id"]})
 			Expect(err).To(BeNil())
 			Expect(returnedResource["description"]).To(Equal("other-description"))
 		})

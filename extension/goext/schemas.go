@@ -15,6 +15,11 @@
 
 package goext
 
+import (
+	"context"
+	"errors"
+)
+
 // LockPolicy indicates lock policy
 type LockPolicy int
 
@@ -93,13 +98,22 @@ func (ctx Context) Clone() Context {
 	return contextCopy
 }
 
+func GetContext(requestContext Context) context.Context {
+	if rawCtx, hasCtx := requestContext["context"]; hasCtx {
+		return rawCtx.(context.Context)
+	} else {
+		return context.Background()
+	}
+}
+
 // PriorityDefault is a default handler priority
 const PriorityDefault = 0
 
+// ErrResourceNotFound represents 'resource not found' error
+var ErrResourceNotFound = errors.New("resource not found")
+
 // ISchema is an interface representing a single schema in Gohan
 type ISchema interface {
-	IEnvironmentRef
-
 	// ID returns the identifier of this resource
 	ID() string
 
@@ -118,8 +132,14 @@ type ISchema interface {
 	// Fetch returns a pointer to resource derived from BaseResource
 	Fetch(id string, context Context) (interface{}, error)
 
-	// ListRaw returns a pointer to raw resource, containing db annotations
+	// FetchRaw returns a pointer to raw resource, containing db annotations
 	FetchRaw(id string, context Context) (interface{}, error)
+
+	// StateFetchRaw returns a resource state
+	StateFetchRaw(id string, requestContext Context) (ResourceState, error)
+
+	// LockFetch returns a pointer to locked resource derived from BaseResource, containing db annotations
+	LockFetch(id string, context Context, lockPolicy LockPolicy) (interface{}, error)
 
 	// LockFetchRaw returns a pointer to locked raw resource, containing db annotations
 	LockFetchRaw(id string, context Context, lockPolicy LockPolicy) (interface{}, error)
@@ -127,14 +147,23 @@ type ISchema interface {
 	// CreateRaw creates a raw resource, given by a pointer
 	CreateRaw(rawResource interface{}, context Context) error
 
+	// DbCreateRaw creates a raw resource, given by a pointer, no events are emitted
+	DbCreateRaw(rawResource interface{}, context Context) error
+
 	// UpdateRaw updates a raw resource, given by a pointer
 	UpdateRaw(rawResource interface{}, context Context) error
 
 	// DbUpdateRaw updates a raw resource, given by a pointer, no events are emitted
 	DbUpdateRaw(rawResource interface{}, context Context) error
 
+	// DbStateUpdateRaw updates state of a raw resource
+	DbStateUpdateRaw(rawResource interface{}, context Context, state *ResourceState) error
+
 	// DeleteRaw deletes a raw resource, given by a pointer
 	DeleteRaw(filter Filter, context Context) error
+
+	// DbDeleteRaw deletes a raw resource, given by a pointer, no events are emitted
+	DbDeleteRaw(filter Filter, context Context) error
 
 	// RegisterEventHandler registers an event handler for a named event with given priority
 	RegisterEventHandler(event string, handler func(context Context, resource Resource, environment IEnvironment) error, priority int)
@@ -144,12 +173,44 @@ type ISchema interface {
 
 	// RegisterRawType registers a raw resource type, containing db annotations
 	RegisterRawType(rawResourceType interface{})
+
+	// ResourceFromMap converts mapped representation to structure representation of the raw resource registered for schema
+	ResourceFromMap(context map[string]interface{}) (Resource, error)
+
+	RawSchema() interface{}
+
+	// DerivedSchemas returns list of schemas that extend schema with given id
+	DerivedSchemas() []ISchema
+
+	// ColumnNames generates an array that has Gohan style column names
+	ColumnNames() []string
+
+	// Properties returns properties of schema
+	Properties() []Property
+}
+
+// Property represents schema property
+type Property struct {
+	ID       string
+	Title    string
+	Relation string
+}
+
+// SchemaRelationInfo describes schema relation
+type SchemaRelationInfo struct {
+	// SchemaID relation to which schema
+	SchemaID string
+	// PropertyID ID of property which relation is referenced
+	PropertyID string
+	// OnDeleteCascade whether cascading delete on related resource delete is enabled
+	OnDeleteCascade bool
 }
 
 // ISchemas is an interface to schemas manager in Gohan
 type ISchemas interface {
-	IEnvironmentRef
-
 	List() []ISchema
 	Find(id string) ISchema
+
+	// Relations returns list of information about schema relations
+	Relations(id string) []SchemaRelationInfo
 }
