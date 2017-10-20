@@ -206,6 +206,40 @@ var _ = Describe("Schemas", func() {
 			Expect(returnedTest.Description).To(Equal("other-description"))
 		})
 
+		It("should fetch resource state", func() {
+			Expect(testSchema.CreateRaw(&createdResource, context)).To(Succeed())
+
+			state, err := testSchema.StateFetchRaw(createdResource.ID, context)
+
+			Expect(err).ToNot(HaveOccurred())
+			expected := goext.ResourceState{Error: "", Monitoring: "", State: "", StateVersion: 0, ConfigVersion: 1}
+			Expect(state).To(Equal(expected))
+		})
+
+		It("should update resource state", func() {
+			Expect(testSchema.CreateRaw(&createdResource, context)).To(Succeed())
+			state := goext.ResourceState{Error: "1", Monitoring: "2", State: "3", StateVersion: 4}
+
+			Expect(testSchema.DbStateUpdateRaw(&createdResource, context, &state)).To(Succeed())
+
+			expected := goext.ResourceState{Error: "1", Monitoring: "2", State: "3", StateVersion: 4, ConfigVersion: 1}
+			state, err := testSchema.StateFetchRaw(createdResource.ID, context)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(state).To(Equal(expected))
+		})
+
+		It("should not update resource state config version", func() {
+			Expect(testSchema.CreateRaw(&createdResource, context)).To(Succeed())
+			state := goext.ResourceState{ConfigVersion: 42}
+
+			Expect(testSchema.DbStateUpdateRaw(&createdResource, context, &state)).To(Succeed())
+
+			expected := goext.ResourceState{ConfigVersion: 1}
+			state, err := testSchema.StateFetchRaw(createdResource.ID, context)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(state).To(Equal(expected))
+		})
+
 		Context("Resource type not registered", func() {
 			resourceID := "testId"
 			filter := map[string]interface{}{

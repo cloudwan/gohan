@@ -252,6 +252,12 @@ func (schema *Schema) LockFetchRaw(id string, requestContext goext.Context, poli
 	})
 }
 
+// StateFetchRaw returns a resource state
+func (schema *Schema) StateFetchRaw(id string, requestContext goext.Context) (goext.ResourceState, error) {
+	tx := mustGetOpenTransactionFromContext(requestContext)
+	return tx.StateFetch(goext.GetContext(requestContext), schema, goext.Filter{"id": id})
+}
+
 type fetchFunc func(ctx context.Context, tx goext.ITransaction, filter goext.Filter) (map[string]interface{}, error)
 
 func (schema *Schema) fetchImpl(id string, requestContext goext.Context, fetch fetchFunc) (interface{}, error) {
@@ -405,6 +411,14 @@ func (schema *Schema) update(rawResource interface{}, requestContext goext.Conte
 	}
 
 	return nil
+}
+
+
+// DbStateUpdateRaw updates states of a raw resource
+func (schema *Schema) DbStateUpdateRaw(rawResource interface{}, requestContext goext.Context, state *goext.ResourceState) error {
+	mapFromResource := schema.env.Util().ResourceToMap(rawResource)
+	tx := mustGetOpenTransactionFromContext(requestContext)
+	return tx.StateUpdate(goext.GetContext(requestContext), schema, mapFromResource, state)
 }
 
 // DeleteRaw deletes resource by ID
