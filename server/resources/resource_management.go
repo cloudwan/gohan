@@ -854,7 +854,6 @@ func DeleteResourceInTransaction(context middleware.Context, resourceSchema *sch
 		resource, err = mainTransaction.LockFetch(resourceSchema, filter, schema.SkipRelatedResources, nil)
 	}
 
-	log.Debug("%s %s", resource, err)
 	if err != nil {
 		return err
 	}

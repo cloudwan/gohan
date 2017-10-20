@@ -447,12 +447,11 @@ func prepareListResources(schemaID string, key string, limit uint64, offset uint
 		return nil, nil, err
 	}
 
-	if key != "" {
-		paginator, err = pagination.NewPaginator(schema, key, "", limit, offset)
-		if err != nil {
-			return nil, nil, fmt.Errorf("Error during gohan_db_list: %s", err.Error())
-		}
+	paginator, err = pagination.NewPaginator(schema, key, pagination.ASC, limit, offset)
+	if err != nil {
+		return nil, nil, fmt.Errorf("Error during gohan_db_list: %s", err.Error())
 	}
+
 	return
 }
 

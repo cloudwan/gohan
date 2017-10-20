@@ -49,6 +49,16 @@ const (
 	configSlowSpecThreshold = float64(0.5) // sec
 )
 
+// AllSuitesSucceed returns whether tests within all suites passed
+func (reporter *Reporter) AllSuitesSucceed() bool {
+	for _, suite := range reporter.suites {
+		if suite.NumberOfFailedSpecs != 0 {
+			return false
+		}
+	}
+	return true
+}
+
 // SpecSuiteWillBegin informs that suite will begin
 func (reporter *Reporter) SpecSuiteWillBegin(config config.GinkgoConfigType, summary *types.SuiteSummary) {
 }

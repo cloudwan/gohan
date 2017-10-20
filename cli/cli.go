@@ -236,8 +236,12 @@ Useful for development purposes.`,
 			dropOnCreate := c.Bool("drop-on-create")
 			cascade := c.Bool("cascade")
 			manager := schema.GetManager()
-			manager.LoadSchemasFromFiles(schemaFile, metaSchemaFile)
-			manager.OrderedLoadSchemasFromFiles(strings.Split(multipleSchemaFiles, ";"))
+			if err := manager.LoadSchemasFromFiles(schemaFile, metaSchemaFile); err != nil {
+				util.ExitFatal(err)
+			}
+			if err := manager.OrderedLoadSchemasFromFiles(strings.Split(multipleSchemaFiles, ";")); err != nil {
+				util.ExitFatal(err)
+			}
 			err := db.InitDBWithSchemas(dbType, dbConnection, dropOnCreate, cascade, false)
 			if err != nil {
 				util.ExitFatal(err)
