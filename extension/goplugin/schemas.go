@@ -237,9 +237,8 @@ func (schema *Schema) rawToResource(xRaw reflect.Value) (interface{}, error) {
 	}
 	resource := reflect.New(resourceType).Elem()
 	setValue(resource.FieldByName(xRaw.Type().Name()), xRaw.Addr())
-	setValue(resource.FieldByName("Schema"), reflect.ValueOf(schema))
-	setValue(resource.FieldByName("Logger"), reflect.ValueOf(NewLogger(schema.env)))
-	setValue(resource.FieldByName("Environment"), reflect.ValueOf(schema.env))
+	resourceBase := goext.NewResourceBase(schema.env, schema, NewLogger(schema.env))
+	setValue(resource.FieldByName("ResourceBase"), reflect.ValueOf(resourceBase))
 	return resource.Addr().Interface(), nil
 }
 
@@ -483,8 +482,8 @@ func (schema *Schema) RegisterRawType(typeValue interface{}) {
 }
 
 // RegisterType registers a runtime type for a resource
-func (schema *Schema) RegisterType(typeValue interface{}) {
-	schema.env.RegisterType(schema.raw.ID, typeValue)
+func (schema *Schema) RegisterType(resourceType goext.IResourceBase) {
+	schema.env.RegisterType(schema.raw.ID, resourceType)
 }
 
 func (schema *Schema) RawSchema() interface{} {
