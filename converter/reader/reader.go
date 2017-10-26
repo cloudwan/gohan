@@ -17,10 +17,11 @@ package reader
 
 import (
 	"fmt"
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
 	"strings"
+
+	"gopkg.in/yaml.v2"
 )
 
 func compareFiles(file os.FileInfo, path string) bool {

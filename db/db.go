@@ -214,10 +214,10 @@ type InitDBParams struct {
 
 func DefaultTestInitDBParams() InitDBParams {
 	return InitDBParams{
-		DropOnCreate: true,		// always drop DB during tests
+		DropOnCreate: true, // always drop DB during tests
 		Cascade:      false,
-		AutoMigrate:  false,	// do not migrate during tests
-		AllowEmpty:   true, 	// allow tests to run without schemas
+		AutoMigrate:  false, // do not migrate during tests
+		AllowEmpty:   true,  // allow tests to run without schemas
 	}
 }
 

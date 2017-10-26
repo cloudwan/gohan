@@ -17,6 +17,7 @@ package schema
 
 import (
 	"fmt"
+
 	"github.com/cloudwan/gohan/converter/item"
 	"github.com/cloudwan/gohan/converter/set"
 	"github.com/cloudwan/gohan/converter/util"

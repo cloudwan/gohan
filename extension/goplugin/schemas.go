@@ -414,7 +414,6 @@ func (schema *Schema) update(rawResource interface{}, requestContext goext.Conte
 	return nil
 }
 
-
 // DbStateUpdateRaw updates states of a raw resource
 func (schema *Schema) DbStateUpdateRaw(rawResource interface{}, requestContext goext.Context, state *goext.ResourceState) error {
 	mapFromResource := schema.env.Util().ResourceToMap(rawResource)

@@ -16,7 +16,7 @@
 package version
 
 var Build struct {
-	Version string
+	Version   string
 	Timestamp string
-	Host string
+	Host      string
 }

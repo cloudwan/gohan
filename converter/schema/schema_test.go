@@ -17,10 +17,11 @@ package schema
 
 import (
 	"fmt"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+
 	"github.com/cloudwan/gohan/converter/item"
 	"github.com/cloudwan/gohan/converter/util"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("schema tests", func() {
