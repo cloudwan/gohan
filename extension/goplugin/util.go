@@ -16,7 +16,6 @@
 package goplugin
 
 import (
-	"encoding/json"
 	"fmt"
 	"reflect"
 	"strings"
@@ -74,58 +73,188 @@ func Finish(testReporter gomock.TestReporter) {
 
 // ResourceFromMapForType converts mapped representation to structure representation of the resource for given type
 func (util *Util) ResourceFromMapForType(context map[string]interface{}, rawResource interface{}) (goext.Resource, error) {
-	return resourceFromMap(context, reflect.TypeOf(rawResource))
+	resource := reflect.New(reflect.TypeOf(rawResource))
+	if err := resourceFromMap(context, resource); err != nil {
+		return nil, err
+	}
+	return resource.Interface(), nil
 }
 
-func resourceFromMap(context map[string]interface{}, rawType reflect.Type) (res goext.Resource, err error) {
-	resource := reflect.New(rawType)
+// expects primitive or allocated pointer to struct
+func resourceFromMap(context map[string]interface{}, resource reflect.Value) error {
+	if isPrimitiveKind(resource.Kind()) {
+		resource.Set(reflect.ValueOf(context))
+		return nil
+	}
+	if resource.Kind() == reflect.Ptr {
+		if context == nil && resource.IsNil() {
+			return nil
+		} else if context != nil && resource.IsNil() {
+			resource.Set(reflect.New(resource.Type().Elem()))
+			return resourceFromMap(context, resource.Elem())
+		}
+		return resourceFromMap(context, resource.Elem())
 
-	for i := 0; i < rawType.NumField(); i++ {
-		field := resource.Elem().Field(i)
-		fieldType := rawType.Field(i)
+	}
+	for i := 0; i < resource.NumField(); i++ {
+		field := resource.Field(i)
+		fieldType := resource.Type().Field(i)
+		if _, isMaybeStateField := field.Interface().(goext.Maybe); isMaybeStateField {
+			field.Set(reflect.ValueOf(goext.Maybe{MaybeState: goext.MaybeValue}))
+			continue
+		}
 		propertyName := strings.Split(fieldType.Tag.Get("json"), ",")[0]
 		if propertyName == "" {
-			return nil, fmt.Errorf("missing tag 'json' for resource %s field %s", rawType.Name(), fieldType.Name)
+			continue
 		}
+		mapValue, mapValueExists := context[propertyName]
 		kind := fieldType.Type.Kind()
-		if strings.Contains(fieldType.Type.String(), "goext.Null") {
-			if context[propertyName] == nil {
-				field.FieldByName("Valid").SetBool(false)
+
+		if kind == reflect.Interface {
+			if field.IsNil() && mapValue == nil {
+				continue
+			}
+			field.Set(reflect.ValueOf(mapValue))
+		} else if isStructureMaybeType(field) {
+			if !mapValueExists {
+				setMaybeState(field, goext.MaybeUndefined)
+			} else if mapValue == nil {
+				setMaybeState(field, goext.MaybeNull)
 			} else {
-				field.FieldByName("Valid").SetBool(true)
-				value := reflect.ValueOf(context[propertyName])
-				field.FieldByName("Value").Set(value)
-			}
-		} else if kind == reflect.Struct || kind == reflect.Ptr || kind == reflect.Slice {
-			mapJSON, err := json.Marshal(context[propertyName])
-			if err != nil {
-				return nil, err
-			}
-			newField := reflect.New(field.Type())
-			fieldJSON := string(mapJSON)
-			fieldInterface := newField.Interface()
-			err = json.Unmarshal([]byte(fieldJSON), &fieldInterface)
-			if err != nil {
-				return nil, err
-			}
-			field.Set(newField.Elem())
-		} else {
-			value := reflect.ValueOf(context[propertyName])
-			if value.IsValid() {
-				if value.Type() == field.Type() {
-					field.Set(value)
-				} else {
-					if field.Kind() == reflect.Int && value.Kind() == reflect.Float64 { // reflect treats number(N, 0) as float
-						field.SetInt(int64(value.Float()))
-					} else {
-						return nil, fmt.Errorf("invalid type of '%s' field (%s, expecting %s)", propertyName, value.Kind(), field.Kind())
-					}
+				field.Set(reflect.ValueOf(reflect.New(field.Type()).Elem().Interface()))
+				if err := resourceFromMap(mapValue.(map[string]interface{}), field); err != nil {
+					return err
 				}
+			}
+		} else if isPrimitiveMaybeType(field) {
+			if kind == reflect.Ptr {
+				if !mapValueExists {
+					continue
+				}
+				field.Set(reflect.New(fieldType.Type.Elem()))
+				field = field.Elem()
+			}
+			if err := primitiveMaybeFromMap(context, propertyName, field); err != nil {
+				return err
+			}
+		} else if kind == reflect.Struct || kind == reflect.Ptr {
+			if mapValue != nil {
+				field.Set(reflect.ValueOf(reflect.New(field.Type()).Elem().Interface()))
+				if err := resourceFromMap(mapValue.(map[string]interface{}), field); err != nil {
+					return err
+				}
+			}
+		} else if kind == reflect.Slice {
+			if err := sliceToMap(context, propertyName, field); err != nil {
+				return err
+			}
+		} else {
+			if err := assignMapValueToField(mapValue, propertyName, field); err != nil {
+				return err
 			}
 		}
 	}
 
-	return resource.Interface(), nil
+	return nil
+}
+
+func assignMapValueToField(mapValue interface{}, fieldName string, field reflect.Value) error {
+	value := reflect.ValueOf(mapValue)
+	if value.IsValid() {
+		if value.Type() == field.Type() {
+			field.Set(value)
+		} else {
+			if field.Kind() == reflect.Int && value.Kind() == reflect.Float64 { // reflect treats number(N, 0) as float
+				field.SetInt(int64(value.Float()))
+			} else {
+				return fmt.Errorf("invalid type of '%s' field (%s, expecting %s)", fieldName, value.Kind(), field.Kind())
+			}
+		}
+	}
+	return nil
+}
+
+func primitiveMaybeFromMap(context map[string]interface{}, fieldName string, field reflect.Value) error {
+	if mapValue, ok := context[fieldName]; !ok {
+		// do nothing, undefined is default value
+	} else if mapValue == nil {
+		field.FieldByName("MaybeState").SetInt(int64(goext.MaybeNull))
+	} else {
+		field.FieldByName("MaybeState").SetInt(int64(goext.MaybeValue))
+		setPrimitiveMaybe(field, mapValue)
+	}
+	return nil
+}
+
+func setPrimitiveMaybe(field reflect.Value, mapValue interface{}) {
+	switch field.Interface().(type) {
+	case goext.MaybeString:
+		field.Set(reflect.ValueOf(goext.MakeString(mapValue.(string))))
+	case goext.MaybeInt:
+		switch mapValue.(type) {
+		case int:
+			field.Set(reflect.ValueOf(goext.MakeInt(mapValue.(int))))
+		case float64:
+			field.Set(reflect.ValueOf(goext.MakeInt(int(mapValue.(float64)))))
+		}
+	case goext.MaybeBool:
+		field.Set(reflect.ValueOf(goext.MakeBool(mapValue.(bool))))
+	case goext.MaybeFloat:
+		field.Set(reflect.ValueOf(goext.MakeFloat(mapValue.(float64))))
+	}
+}
+
+func sliceToMap(context map[string]interface{}, fieldName string, field reflect.Value) error {
+	v, ok := context[fieldName]
+	if !ok {
+		return nil
+	}
+
+	sliceElems := 0
+	interfaces := false
+	structures := false
+	switch v.(type) {
+	case []map[string]interface{}:
+		sliceElems = len(v.([]map[string]interface{}))
+		structures = true
+	case []interface{}:
+		sliceElems = len(v.([]interface{}))
+		interfaces = true
+	default:
+		val := reflect.ValueOf(v)
+		if !val.IsValid() {
+			field.Set(reflect.Zero(field.Type()))
+			return nil
+		}
+		sliceElems = val.Len()
+	}
+	field.Set(reflect.MakeSlice(field.Type(), sliceElems, sliceElems))
+	field.SetLen(sliceElems)
+	for i := 0; i < sliceElems; i++ {
+		elemType := field.Type().Elem()
+		elem := field.Index(i)
+		nestedField := reflect.New(elemType).Elem()
+		if structures {
+			if err := resourceFromMap(v.([]map[string]interface{})[i], nestedField); err != nil {
+				return err
+			}
+		} else if interfaces {
+			nestedValue := v.([]interface{})[i]
+			if nestedMap, ok := nestedValue.(map[string]interface{}); ok {
+				if err := resourceFromMap(nestedMap, nestedField); err != nil {
+					return err
+				}
+			} else {
+				nestedField.Set(reflect.ValueOf(nestedValue))
+			}
+		} else {
+			val := reflect.ValueOf(v)
+			nestedField.Set(val.Index(i))
+		}
+		elem.Set(nestedField)
+	}
+
+	return nil
 }
 
 // ResourceToMap converts structure representation of the resource to mapped representation
@@ -136,34 +265,141 @@ func (util *Util) ResourceToMap(resource interface{}) map[string]interface{} {
 	structMap := mapper.TypeMap(reflect.TypeOf(resource))
 	resourceValue := reflect.ValueOf(resource).Elem()
 
-	for field, fi := range structMap.Names {
+	for fieldName, fi := range structMap.Names {
 		if len(fi.Index) != 1 {
 			continue
 		}
 
 		v := resourceValue.FieldByIndex(fi.Index)
 		val := v.Interface()
-		if field == "id" && v.String() == "" {
+		if fieldName == "id" && v.String() == "" {
 			id := uuid.NewV4().String()
-			fieldsMap[field] = id
+			fieldsMap[fieldName] = id
 			v.SetString(id)
-		} else if strings.Contains(v.Type().String(), "goext.Null") {
-			valid := v.FieldByName("Valid").Bool()
-			if valid {
-				fieldsMap[field] = v.FieldByName("Value").Interface()
-			} else {
-				fieldsMap[field] = nil
+		} else if isPrimitiveMaybeType(v) {
+			primitiveMaybeToMap(fieldsMap, fieldName, v)
+		} else if isStructureMaybeType(v) {
+			switch getMaybeState(v) {
+			case goext.MaybeUndefined:
+				// nothing
+			case goext.MaybeNull:
+				fieldsMap[fieldName] = nil
+			case goext.MaybeValue:
+				fieldsMap[fieldName] = util.ResourceToMap(v.Addr().Interface())
 			}
 		} else if v.Kind() == reflect.Ptr {
 			if v.IsNil() {
-				fieldsMap[field] = nil
+				fieldsMap[fieldName] = nil
 			} else {
-				fieldsMap[field] = util.ResourceToMap(val)
+				rv := util.ResourceToMap(val)
+				fieldsMap[fieldName] = rv
 			}
+		} else if v.Kind() == reflect.Slice {
+			util.sliceToMap(fieldsMap, fieldName, v)
+		} else if v.Kind() == reflect.Struct {
+			fieldsMap[fieldName] = util.ResourceToMap(v.Addr().Interface())
 		} else {
-			fieldsMap[field] = val
+			fieldsMap[fieldName] = val
 		}
 	}
 
 	return fieldsMap
+}
+
+func (util *Util) sliceToMap(fieldsMap map[string]interface{}, fieldName string, v reflect.Value) {
+	if v.IsNil() {
+		return
+	}
+
+	sliceElem := v.Type().Elem()
+	if isPrimitiveKind(sliceElem.Kind()) {
+		slice := make([]interface{}, v.Len())
+		for i := 0; i < v.Len(); i++ {
+			slice[i] = v.Index(i).Interface()
+		}
+		fieldsMap[fieldName] = slice
+		return
+	}
+
+	slice := make([]map[string]interface{}, v.Len())
+	for i := 0; i < v.Len(); i++ {
+		elem := v.Index(i)
+		if isNullableKind(elem.Kind()) {
+			if !elem.IsNil() {
+				slice[i] = util.ResourceToMap(elem.Interface())
+			} else {
+				slice[i] = nil
+			}
+		} else if elem.Kind() == reflect.Struct {
+			slice[i] = util.ResourceToMap(elem.Addr().Interface())
+		}
+	}
+	fieldsMap[fieldName] = slice
+}
+
+func isStructureMaybeType(v reflect.Value) bool {
+	if v.Kind() != reflect.Struct {
+		return false
+	}
+	_, hasMaybeStateField := v.Type().FieldByName("MaybeState")
+	if hasMaybeStateField && !isPrimitiveMaybeType(v) {
+		return true
+	}
+	return false
+}
+
+func isPrimitiveMaybeType(v reflect.Value) bool {
+	switch v.Interface().(type) {
+	case goext.MaybeString, goext.MaybeInt, goext.MaybeFloat, goext.MaybeBool:
+		return true
+	default:
+		return false
+	}
+}
+func getMaybeState(value reflect.Value) goext.MaybeState {
+	return goext.MaybeState(value.FieldByName("MaybeState").Int())
+}
+
+func setMaybeState(v reflect.Value, state goext.MaybeState) {
+	v.FieldByName("MaybeState").SetInt(int64(state))
+}
+
+func primitiveMaybeToMap(fieldsMap map[string]interface{}, fieldName string, value reflect.Value) {
+	if value.Kind() == reflect.Ptr {
+		if value.IsNil() {
+			panic("Nil pointers to Maybe types are not supported")
+		}
+		value = value.Elem()
+	}
+
+	switch getMaybeState(value) {
+	case goext.MaybeUndefined:
+		// nothing
+	case goext.MaybeNull:
+		fieldsMap[fieldName] = nil
+	case goext.MaybeValue:
+		emptyArgumentList := make([]reflect.Value, 0)
+		fieldsMap[fieldName] = value.MethodByName("Value").Call(emptyArgumentList)[0].Interface()
+	}
+}
+
+func isNullableKind(kind reflect.Kind) bool {
+	switch kind {
+	case reflect.Map, reflect.Slice, reflect.Interface, reflect.Ptr:
+		return true
+	}
+	return false
+}
+
+func isPrimitiveKind(kind reflect.Kind) bool {
+	switch kind {
+	case reflect.Bool,
+		reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+		reflect.Uintptr, reflect.Float32, reflect.Float64,
+		reflect.Complex64, reflect.Complex128,
+		reflect.String:
+		return true
+	}
+	return false
 }

@@ -132,7 +132,11 @@ func (schema *Schema) ResourceFromMap(context map[string]interface{}) (goext.Res
 		return nil, makeErrMissingType(schema.ID())
 	}
 
-	return resourceFromMap(context, rawType)
+	resource := reflect.New(rawType)
+	if err := resourceFromMap(context, resource); err != nil {
+		return nil, err
+	}
+	return resource.Interface(), nil
 }
 
 func (schema *Schema) structToResource(resource interface{}) (*gohan_schema.Resource, error) {
@@ -161,10 +165,11 @@ func (schema *Schema) listImpl(requestContext goext.Context, list listFunc) ([]i
 	res := make([]interface{}, len(data), len(data))
 
 	for i := 0; i < len(data); i++ {
-		res[i], err = schema.ResourceFromMap(data[i])
+		resource, err := schema.ResourceFromMap(data[i])
 		if err != nil {
 			return nil, err
 		}
+		res[i] = resource
 	}
 
 	return res, nil
@@ -342,14 +347,12 @@ func (schema *Schema) create(rawResource interface{}, requestContext goext.Conte
 	}
 
 	v := reflect.ValueOf(rawResource).Elem()
-	res, err := resourceFromMap(mapFromContext, v.Type())
-	if err != nil {
+	if err := resourceFromMap(mapFromContext, v); err != nil {
 		return err
 	}
-	v.Set(reflect.ValueOf(res).Elem())
 
 	if triggerEvents {
-		if err = schema.env.HandleEvent(goext.PostCreateTx, contextCopy); err != nil {
+		if err := schema.env.HandleEvent(goext.PostCreateTx, contextCopy); err != nil {
 			return err
 		}
 	}
@@ -398,11 +401,9 @@ func (schema *Schema) update(rawResource interface{}, requestContext goext.Conte
 	}
 
 	v := reflect.ValueOf(rawResource).Elem()
-	res, err := resourceFromMap(mapFromContext, v.Type())
-	if err != nil {
+	if err := resourceFromMap(mapFromContext, v); err != nil {
 		return err
 	}
-	v.Set(reflect.ValueOf(res).Elem())
 
 	if triggerEvents {
 		if err = schema.env.HandleEvent(goext.PostUpdateTx, contextCopy); err != nil {

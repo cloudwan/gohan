@@ -17,6 +17,7 @@ package item
 
 import (
 	"fmt"
+
 	"github.com/cloudwan/gohan/converter/hash"
 	"github.com/cloudwan/gohan/converter/name"
 	"github.com/cloudwan/gohan/converter/set"

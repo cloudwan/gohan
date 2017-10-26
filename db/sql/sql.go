@@ -143,8 +143,8 @@ type stringHandler struct {
 
 func (handler *stringHandler) encode(property *schema.Property, data interface{}) (interface{}, error) {
 	switch t := data.(type) {
-	case goext.NullString:
-		if t.Valid {
+	case goext.MaybeString:
+		if t.HasValue() {
 			return t.Value, nil
 		}
 		return nil, nil
@@ -163,8 +163,8 @@ type boolHandler struct{}
 
 func (handler *boolHandler) encode(property *schema.Property, data interface{}) (interface{}, error) {
 	switch t := data.(type) {
-	case goext.NullBool:
-		if t.Valid {
+	case goext.MaybeBool:
+		if t.HasValue() {
 			return t.Value, nil
 		}
 		return nil, nil
@@ -218,6 +218,12 @@ func (handler *numberHandler) decode(property *schema.Property, data interface{}
 		res = float64(t)
 	case uint64: // sqlite3
 		res = float64(t)
+	case goext.MaybeFloat:
+		if t.HasValue() {
+			res = t.Value
+		} else {
+			res = nil
+		}
 	}
 	return
 }
@@ -230,8 +236,8 @@ type integerHandler struct{}
 
 func (handler *integerHandler) encode(property *schema.Property, data interface{}) (interface{}, error) {
 	switch t := data.(type) {
-	case goext.NullInt:
-		if t.Valid {
+	case goext.MaybeInt:
+		if t.HasValue() {
 			return t.Value, nil
 		}
 		return nil, nil

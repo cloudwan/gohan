@@ -18,10 +18,10 @@ package item
 import (
 	"fmt"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"github.com/cloudwan/gohan/converter/set"
 	"github.com/cloudwan/gohan/converter/util"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("property tests", func() {
@@ -471,7 +471,7 @@ var _ = Describe("property tests", func() {
 
 			result := property.GenerateConstructor("")
 
-			expected := "Test: goext.MakeNullString(\"\")"
+			expected := "Test: goext.MakeString(\"\")"
 			Expect(result).To(Equal(expected))
 		})
 	})
@@ -513,7 +513,7 @@ var _ = Describe("property tests", func() {
 				result := property.GenerateProperty(suffix)
 
 				expected := fmt.Sprintf(
-					"\tDefID goext.NullString `%s:\"%s\" %s:\"%s\"`\n",
+					"\tDefID goext.MaybeString `%s:\"%s\" %s:\"%s\"`\n",
 					dbAnnotation,
 					property.name,
 					jsonAnnotation,
@@ -634,7 +634,7 @@ var _ = Describe("property tests", func() {
 				result := property.GenerateProperty(suffix)
 
 				expected := fmt.Sprintf(
-					"\tDefID string `%s:\"%s,omitempty\"`\n",
+					"\tDefID goext.MaybeString `%s:\"%s,omitempty\"`\n",
 					annotation,
 					property.name,
 				)
@@ -730,7 +730,7 @@ var _ = Describe("property tests", func() {
 
 			result := property.GetterHeader("suffix")
 
-			expected := "GetName() goext.NullString"
+			expected := "GetName() goext.MaybeString"
 			Expect(result).To(Equal(expected))
 		})
 
@@ -760,7 +760,7 @@ var _ = Describe("property tests", func() {
 
 			result := property.SetterHeader("suffix", true)
 
-			expected := "SetName(name goext.NullString)"
+			expected := "SetName(name goext.MaybeString)"
 			Expect(result).To(Equal(expected))
 		})
 
@@ -790,7 +790,7 @@ var _ = Describe("property tests", func() {
 
 			result := property.GenerateGetter("var", "")
 
-			expected := `GetDef() goext.NullInt {
+			expected := `GetDef() goext.MaybeInt {
 	return var.Def
 }`
 			Expect(result).To(Equal(expected))
@@ -824,7 +824,7 @@ var _ = Describe("property tests", func() {
 
 			result := property.GenerateSetter("var", "", "")
 
-			expected := `SetDef(def goext.NullInt) {
+			expected := `SetDef(def goext.MaybeInt) {
 	var.Def = def
 }`
 			Expect(result).To(Equal(expected))

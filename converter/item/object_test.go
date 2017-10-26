@@ -698,7 +698,8 @@ var _ = Describe("object tests", func() {
 
 			expected := `func MakeAbcDefSuffix() *AbcDefSuffix {
 	return &AbcDefSuffix{
-		ID: goext.MakeNullString("test"),
+		Abc: goext.MakeNullString(),
+		ID: goext.MakeString("test"),
 		IP: []int64{},
 		Xyz: MakeAbcDefXyzSuffix(),
 	}
@@ -751,7 +752,7 @@ var _ = Describe("object tests", func() {
 			result := object.GenerateStruct("suffix")
 
 			expected := `type AbcDefSuffix struct {
-	ID goext.NullString ` + "`" + `db:"id" json:"id,omitempty"` + "`" + `
+	ID goext.MaybeString ` + "`" + `db:"id" json:"id,omitempty"` + "`" + `
 	IP []int64 ` + "`" + `db:"ip" json:"ip"` + "`" + `
 	Xyz *AbcDefXyzSuffix ` + "`" + `db:"xyz" json:"xyz"` + "`" + `
 }
@@ -772,7 +773,7 @@ var _ = Describe("object tests", func() {
 			result := object.GenerateStruct("suffix")
 
 			expected := `type AbcDefSuffix struct {
-	ID string ` + "`" + `json:"id,omitempty"` + "`" + `
+	ID goext.MaybeString ` + "`" + `json:"id,omitempty"` + "`" + `
 	IP []int64 ` + "`" + `json:"ip"` + "`" + `
 	Xyz *AbcDefXyzSuffix ` + "`" + `json:"xyz"` + "`" + `
 }
@@ -840,8 +841,8 @@ var _ = Describe("object tests", func() {
 			result := object.GenerateInterface("suffix")
 
 			expected := `type IAbcDefSuffix interface {
-	GetA() goext.NullInt
-	SetA(goext.NullInt)
+	GetA() goext.MaybeInt
+	SetA(goext.MaybeInt)
 	GetID() string
 	SetID(string)
 	GetIP() []int64
@@ -866,8 +867,8 @@ var _ = Describe("object tests", func() {
 			result := object.GenerateInterface("suffix")
 
 			expected := `type IAbcDefSuffix interface {
-	GetA() int64
-	SetA(int64)
+	GetA() goext.MaybeInt
+	SetA(goext.MaybeInt)
 	GetID() string
 	SetID(string)
 	GetIP() []int64
@@ -925,11 +926,11 @@ var _ = Describe("object tests", func() {
 			result := object.GenerateImplementation("interface", "suffix")
 
 			expected := fmt.Sprintf(
-				`%sGetA() goext.NullInt {
+				`%sGetA() goext.MaybeInt {
 	return %s.A
 }
 
-%sSetA(a goext.NullInt) {
+%sSetA(a goext.MaybeInt) {
 	%s.A = a
 }
 
@@ -990,11 +991,11 @@ var _ = Describe("object tests", func() {
 			result := object.GenerateImplementation("interface", "suffix")
 
 			expected := fmt.Sprintf(
-				`%sGetA() int64 {
+				`%sGetA() goext.MaybeInt {
 	return %s.A
 }
 
-%sSetA(a int64) {
+%sSetA(a goext.MaybeInt) {
 	%s.A = a
 }
 
