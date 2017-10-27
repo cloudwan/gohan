@@ -19,12 +19,15 @@ import (
 	"os"
 
 	"github.com/cloudwan/gohan/db"
+	"github.com/cloudwan/gohan/db/mocks"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pkg/errors"
 )
 
 var _ = Describe("Database operation test", func() {
@@ -520,6 +523,30 @@ var _ = Describe("Database operation test", func() {
 				Expect(err).To(Succeed())
 				return nil
 			})).To(Succeed())
+		})
+	})
+
+	Context("Database errors", func() {
+		var (
+			mockCtrl *gomock.Controller
+			mockDB   *mock_db.MockDB
+		)
+
+		BeforeEach(func() {
+			mockCtrl = gomock.NewController(GinkgoT())
+			mockDB = mock_db.NewMockDB(mockCtrl)
+		})
+
+		It("should not panic on DB errors", func() {
+			opts := options.Options{RetryTxCount: 3, RetryTxInterval: 0}
+			mockDB.EXPECT().Options().Return(opts)
+			mockDB.EXPECT().Begin().Return(nil, errors.New("test error"))
+
+			err := db.Within(mockDB, func(_ transaction.Transaction) error {
+				panic("should never be called")
+			})
+
+			Expect(err).To(HaveOccurred())
 		})
 	})
 })
