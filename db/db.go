@@ -68,7 +68,7 @@ func withinTxImpl(db DB, beginStrategy func(db DB) (transaction.Transaction, err
 	var err error
 
 	defer func() {
-		if !tx.Closed() {
+		if tx != nil && !tx.Closed() {
 			tx.Close()
 		}
 	}()
