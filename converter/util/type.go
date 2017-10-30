@@ -17,8 +17,9 @@ package util
 
 import (
 	"fmt"
-	"github.com/serenize/snaker"
 	"strings"
+
+	"github.com/serenize/snaker"
 )
 
 var typeMapping = map[string]string{

@@ -17,9 +17,10 @@ package item
 
 import (
 	"fmt"
+
+	"github.com/cloudwan/gohan/converter/defaults"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/cloudwan/gohan/converter/defaults"
 )
 
 var _ = Describe("plain item tests", func() {
