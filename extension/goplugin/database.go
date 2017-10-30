@@ -17,6 +17,7 @@ package goplugin
 
 import (
 	"context"
+	"runtime"
 
 	gohan_db "github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/transaction"
@@ -51,17 +52,29 @@ func (db *Database) Clone() *Database {
 	}
 }
 
+func isWithin() bool {
+	pc, _, _, ok := runtime.Caller(4)
+	if !ok {
+		panic("runtime.Caller failed")
+	}
+	f := runtime.FuncForPC(pc)
+	if f == nil {
+		panic("runtime.FuncForPC failed")
+	}
+	return f.Name() == "github.com/cloudwan/gohan/extension/goext.within"
+}
+
 // Begin starts a new transaction
 func (db *Database) Begin() (goext.ITransaction, error) {
 	t, _ := db.raw.Begin()
-	return &Transaction{t}, nil
+	return &Transaction{t, isWithin()}, nil
 }
 
 // BeginTx starts a new transaction with options
 func (db *Database) BeginTx(ctx goext.Context, options *goext.TxOptions) (goext.ITransaction, error) {
 	opts := transaction.TxOptions{IsolationLevel: transaction.Type(options.IsolationLevel)}
 	t, _ := db.raw.BeginTx(context.Background(), &opts)
-	return &Transaction{t}, nil
+	return &Transaction{t, isWithin()}, nil
 }
 
 // Options return database options rom configuration file
