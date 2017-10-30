@@ -18,9 +18,11 @@ package goext_test
 import (
 	"fmt"
 	"net/http"
+	"runtime"
 	"testing"
 
 	"github.com/cloudwan/gohan/extension/goext"
+	"github.com/cloudwan/gohan/extension/goext/test"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -66,6 +68,23 @@ var _ = Describe("Error", func() {
 			Expect(fmt.Sprintf("%s", errDouble.ErrorStack())).To(Equal(
 				`HTTP 503 (Service Unavailable) at one.go:1000 from
   <- HTTP 305 (Use Proxy) at two.go:2000: nothing here`))
+		})
+
+		It("Should capture correct stack", func() {
+			error := goext.NewErrorInternalServerError(fmt.Errorf("test error"))
+			_, _, line, _ := runtime.Caller(0)
+			Expect(error.Origin).To(HaveSuffix(fmt.Sprintf("github.com/cloudwan/gohan/extension/goext/error_test.go:%d", line-1)))
+		})
+
+		It("ErrorMatcher should match errors", func() {
+			someError := goext.NewErrorInternalServerError(fmt.Errorf("some internal error"))
+			otherError := goext.NewErrorInternalServerError(fmt.Errorf("other internal error"))
+			errorMatcher := goext_test.MatchError(someError)
+			Expect(errorMatcher.Match(someError)).To(BeTrue())
+			Expect(errorMatcher.Match(otherError)).To(BeFalse())
+			Expect(errorMatcher.FailureMessage(otherError)).To(Equal(fmt.Sprintf("Expected\n\t%#v\nto be\n\t%#v", otherError, someError)))
+			Expect(errorMatcher.NegatedFailureMessage(otherError)).To(Equal(fmt.Sprintf("Expected\n\t%#v\nnot to be\n\t%#v", otherError, someError)))
+			Expect(someError).To(errorMatcher)
 		})
 	})
 })

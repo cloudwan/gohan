@@ -38,20 +38,16 @@ func NewError(status int, err error) *Error {
 }
 
 func captureOrigin() string {
-	const SkipStackFrames = 2
+	const SkipStackFrames = 3
+	// 0: captureOrigin()
+	// 1: NewError(...)
+	// 2: NewErrorXXX(...)
+	// 3: some_extension.go:123
 	_, file, line, ok := runtime.Caller(SkipStackFrames)
 	if !ok {
 		return "<unknown>"
 	}
 	return fmt.Sprintf("%s:%d", file, line)
-}
-
-func MockErrorOrigin(e *Error) *Error {
-	return &Error{
-		Err:    e.Err,
-		Status: e.Status,
-		Origin: "<mocked>",
-	}
 }
 
 // Root returns root error that is at the bottom of the error stack; first error that is not *goext.Error
