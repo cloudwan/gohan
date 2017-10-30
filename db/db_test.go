@@ -17,6 +17,7 @@ package db_test
 
 import (
 	"os"
+	"time"
 
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/mocks"
@@ -477,7 +478,7 @@ var _ = Describe("Database operation test", func() {
 
 			connOpts = options.Options{
 				RetryTxCount:    5,
-				RetryTxInterval: 100,
+				RetryTxInterval: 100 * time.Millisecond,
 			}
 		)
 
