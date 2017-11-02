@@ -23,11 +23,17 @@ type JSONKind struct {
 
 // Type implementation
 func (jsonKind *JSONKind) Type(suffix string, item Item) string {
+	if item.IsNull() {
+		return "goext." + getNullType(suffix, item)
+	}
 	return item.Type(suffix)
 }
 
 // InterfaceType implementation
 func (jsonKind *JSONKind) InterfaceType(suffix string, item Item) string {
+	if item.IsNull() {
+		return jsonKind.Type(suffix, item)
+	}
 	return item.InterfaceType(suffix)
 }
 
@@ -50,5 +56,12 @@ func (jsonKind *JSONKind) Annotation(name string, item Item) string {
 
 // Default implementation
 func (jsonKind *JSONKind) Default(suffix string, item Item) string {
+	if item.IsNull() {
+		return fmt.Sprintf(
+			"goext.Make%s(%s)",
+			getNullType(suffix, item),
+			item.Default(suffix),
+		)
+	}
 	return item.Default(suffix)
 }

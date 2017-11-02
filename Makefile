@@ -19,6 +19,7 @@ gen:
 	etc/extensions/... \
 	etc/templates/... \
 	public/...
+	go fmt util/bindata.go
 
 test: build
 	@echo -e "$(OK_COLOR)==> Testing$(NO_COLOR)"

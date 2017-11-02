@@ -902,11 +902,7 @@ func initBenchmarkDatabase() error {
 	schema.ClearManager()
 	manager := schema.GetManager()
 	manager.LoadSchemasFromFiles("../tests/test_abstract_schema.yaml", "../tests/test_schema.yaml", "../etc/schema/gohan.json")
-	err := db.InitDBWithSchemas("mysql", "root@tcp(localhost:3306)/gohan_test", false, false, false)
-	if err != nil {
-		return err
-	}
-	return nil
+	return db.InitDBWithSchemas("mysql", "root@tcp(localhost:3306)/gohan_test", db.DefaultTestInitDBParams())
 }
 
 func startTestServer(config string) error {

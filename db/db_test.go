@@ -19,12 +19,15 @@ import (
 	"os"
 
 	"github.com/cloudwan/gohan/db"
+	"github.com/cloudwan/gohan/db/mocks"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pkg/errors"
 )
 
 var _ = Describe("Database operation test", func() {
@@ -369,7 +372,7 @@ var _ = Describe("Database operation test", func() {
 		})
 
 		It("Should initialize the database without error", func() {
-			Expect(db.InitDBWithSchemas(dbType, conn, false, false, true)).To(Succeed())
+			Expect(db.InitDBWithSchemas(dbType, conn, db.DefaultTestInitDBParams())).To(Succeed())
 		})
 	})
 
@@ -383,12 +386,12 @@ var _ = Describe("Database operation test", func() {
 			Expect(err).ToNot(HaveOccurred())
 			defer os.Remove("test_data/conv_in.db")
 
-			db.InitDBWithSchemas("sqlite3", "test_data/conv_out.db", false, false, true)
+			db.InitDBWithSchemas("sqlite3", "test_data/conv_out.db", db.DefaultTestInitDBParams())
 			outDB, err := db.ConnectDB("sqlite3", "test_data/conv_out.db", db.DefaultMaxOpenConn, options.Default())
 			Expect(err).ToNot(HaveOccurred())
 			defer os.Remove("test_data/conv_out.db")
 
-			db.InitDBWithSchemas("yaml", "test_data/conv_verify.yaml", false, false, true)
+			db.InitDBWithSchemas("yaml", "test_data/conv_verify.yaml", db.DefaultTestInitDBParams())
 			verifyDB, err := db.ConnectDB("yaml", "test_data/conv_verify.yaml", db.DefaultMaxOpenConn, options.Default())
 			Expect(err).ToNot(HaveOccurred())
 			defer os.Remove("test_data/conv_verify.yaml")
@@ -426,7 +429,7 @@ var _ = Describe("Database operation test", func() {
 			Expect(err).ToNot(HaveOccurred())
 			defer os.Remove("test_data/conv_in.db")
 
-			db.InitDBWithSchemas("sqlite3", "test_data/conv_out.db", false, false, true)
+			db.InitDBWithSchemas("sqlite3", "test_data/conv_out.db", db.DefaultTestInitDBParams())
 			outDB, err := db.ConnectDB("sqlite3", "test_data/conv_out.db", db.DefaultMaxOpenConn, options.Default())
 			Expect(err).ToNot(HaveOccurred())
 			defer os.Remove("test_data/conv_out.db")
@@ -488,7 +491,7 @@ var _ = Describe("Database operation test", func() {
 		BeforeEach(func() {
 			os.Remove(deadlockDbName)
 			Expect(manager.LoadSchemaFromFile(deadlockDbSchema)).To(Succeed())
-			Expect(db.InitDBWithSchemas(deadlockDbType, deadlockDbName, false, false, true)).To(Succeed())
+			Expect(db.InitDBWithSchemas(deadlockDbType, deadlockDbName, db.DefaultTestInitDBParams())).To(Succeed())
 			firstConn, err = db.ConnectDB(deadlockDbType, deadlockDbName, db.DefaultMaxOpenConn, connOpts)
 			Expect(err).ToNot(HaveOccurred())
 			secondConn, err = db.ConnectDB(deadlockDbType, deadlockDbName, db.DefaultMaxOpenConn, connOpts)
@@ -520,6 +523,30 @@ var _ = Describe("Database operation test", func() {
 				Expect(err).To(Succeed())
 				return nil
 			})).To(Succeed())
+		})
+	})
+
+	Context("Database errors", func() {
+		var (
+			mockCtrl *gomock.Controller
+			mockDB   *mock_db.MockDB
+		)
+
+		BeforeEach(func() {
+			mockCtrl = gomock.NewController(GinkgoT())
+			mockDB = mock_db.NewMockDB(mockCtrl)
+		})
+
+		It("should not panic on DB errors", func() {
+			opts := options.Options{RetryTxCount: 3, RetryTxInterval: 0}
+			mockDB.EXPECT().Options().Return(opts)
+			mockDB.EXPECT().Begin().Return(nil, errors.New("test error"))
+
+			err := db.Within(mockDB, func(_ transaction.Transaction) error {
+				panic("should never be called")
+			})
+
+			Expect(err).To(HaveOccurred())
 		})
 	})
 })

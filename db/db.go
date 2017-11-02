@@ -68,7 +68,7 @@ func withinTxImpl(db DB, beginStrategy func(db DB) (transaction.Transaction, err
 	var err error
 
 	defer func() {
-		if !tx.Closed() {
+		if tx != nil && !tx.Closed() {
 			tx.Close()
 		}
 	}()
@@ -208,15 +208,28 @@ func CreateFromConfig(config *util.Config) (DB, error) {
 	return dbConn, nil
 }
 
+type InitDBParams struct {
+	DropOnCreate, Cascade, AutoMigrate, AllowEmpty bool
+}
+
+func DefaultTestInitDBParams() InitDBParams {
+	return InitDBParams{
+		DropOnCreate: true, // always drop DB during tests
+		Cascade:      false,
+		AutoMigrate:  false, // do not migrate during tests
+		AllowEmpty:   true,  // allow tests to run without schemas
+	}
+}
+
 // InitDBConnWithSchemas initializes database connection using schemas stored in Manager
-func InitDBConnWithSchemas(aDb DB, dropOnCreate, cascade, migrate bool) error {
+func InitDBConnWithSchemas(aDb DB, initDBParams InitDBParams) error {
 	var err error
 	schemaManager := schema.GetManager()
 	schemas := schemaManager.OrderedSchemas()
-	if len(schemas) == 0 {
+	if len(schemas) == 0 && !initDBParams.AllowEmpty {
 		return errNoSchemasInManager
 	}
-	if dropOnCreate {
+	if initDBParams.DropOnCreate {
 		for i := len(schemas) - 1; i >= 0; i-- {
 			s := schemas[i]
 			if s.IsAbstract() {
@@ -234,7 +247,7 @@ func InitDBConnWithSchemas(aDb DB, dropOnCreate, cascade, migrate bool) error {
 			continue
 		}
 		log.Debug("Registering schema %s", s.ID)
-		err = aDb.RegisterTable(s, cascade, migrate)
+		err = aDb.RegisterTable(s, initDBParams.Cascade, initDBParams.AutoMigrate)
 		if err != nil {
 			message := "Error during registering table %q: %s"
 			if strings.Contains(err.Error(), "already exists") {
@@ -248,11 +261,11 @@ func InitDBConnWithSchemas(aDb DB, dropOnCreate, cascade, migrate bool) error {
 }
 
 // InitDBWithSchemas initializes database using schemas stored in Manager
-func InitDBWithSchemas(dbType, dbConnection string, dropOnCreate, cascade, migrate bool) error {
+func InitDBWithSchemas(dbType, dbConnection string, initDBParams InitDBParams) error {
 	aDb, err := ConnectDB(dbType, dbConnection, DefaultMaxOpenConn, options.Default())
 	if err != nil {
 		return err
 	}
 	defer aDb.Close()
-	return InitDBConnWithSchemas(aDb, dropOnCreate, cascade, migrate)
+	return InitDBConnWithSchemas(aDb, initDBParams)
 }

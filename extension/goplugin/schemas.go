@@ -132,7 +132,11 @@ func (schema *Schema) ResourceFromMap(context map[string]interface{}) (goext.Res
 		return nil, makeErrMissingType(schema.ID())
 	}
 
-	return resourceFromMap(context, rawType)
+	resource := reflect.New(rawType)
+	if err := resourceFromMap(context, resource); err != nil {
+		return nil, err
+	}
+	return resource.Interface(), nil
 }
 
 func (schema *Schema) structToResource(resource interface{}) (*gohan_schema.Resource, error) {
@@ -161,10 +165,11 @@ func (schema *Schema) listImpl(requestContext goext.Context, list listFunc) ([]i
 	res := make([]interface{}, len(data), len(data))
 
 	for i := 0; i < len(data); i++ {
-		res[i], err = schema.ResourceFromMap(data[i])
+		resource, err := schema.ResourceFromMap(data[i])
 		if err != nil {
 			return nil, err
 		}
+		res[i] = resource
 	}
 
 	return res, nil
@@ -232,9 +237,8 @@ func (schema *Schema) rawToResource(xRaw reflect.Value) (interface{}, error) {
 	}
 	resource := reflect.New(resourceType).Elem()
 	setValue(resource.FieldByName(xRaw.Type().Name()), xRaw.Addr())
-	setValue(resource.FieldByName("Schema"), reflect.ValueOf(schema))
-	setValue(resource.FieldByName("Logger"), reflect.ValueOf(NewLogger(schema.env)))
-	setValue(resource.FieldByName("Environment"), reflect.ValueOf(schema.env))
+	resourceBase := goext.NewResourceBase(schema.env, schema, NewLogger(schema.env))
+	setValue(resource.FieldByName("ResourceBase"), reflect.ValueOf(resourceBase))
 	return resource.Addr().Interface(), nil
 }
 
@@ -343,14 +347,12 @@ func (schema *Schema) create(rawResource interface{}, requestContext goext.Conte
 	}
 
 	v := reflect.ValueOf(rawResource).Elem()
-	res, err := resourceFromMap(mapFromContext, v.Type())
-	if err != nil {
+	if err := resourceFromMap(mapFromContext, v); err != nil {
 		return err
 	}
-	v.Set(reflect.ValueOf(res).Elem())
 
 	if triggerEvents {
-		if err = schema.env.HandleEvent(goext.PostCreateTx, contextCopy); err != nil {
+		if err := schema.env.HandleEvent(goext.PostCreateTx, contextCopy); err != nil {
 			return err
 		}
 	}
@@ -399,11 +401,9 @@ func (schema *Schema) update(rawResource interface{}, requestContext goext.Conte
 	}
 
 	v := reflect.ValueOf(rawResource).Elem()
-	res, err := resourceFromMap(mapFromContext, v.Type())
-	if err != nil {
+	if err := resourceFromMap(mapFromContext, v); err != nil {
 		return err
 	}
-	v.Set(reflect.ValueOf(res).Elem())
 
 	if triggerEvents {
 		if err = schema.env.HandleEvent(goext.PostUpdateTx, contextCopy); err != nil {
@@ -413,7 +413,6 @@ func (schema *Schema) update(rawResource interface{}, requestContext goext.Conte
 
 	return nil
 }
-
 
 // DbStateUpdateRaw updates states of a raw resource
 func (schema *Schema) DbStateUpdateRaw(rawResource interface{}, requestContext goext.Context, state *goext.ResourceState) error {
@@ -482,8 +481,8 @@ func (schema *Schema) RegisterRawType(typeValue interface{}) {
 }
 
 // RegisterType registers a runtime type for a resource
-func (schema *Schema) RegisterType(typeValue interface{}) {
-	schema.env.RegisterType(schema.raw.ID, typeValue)
+func (schema *Schema) RegisterType(resourceType goext.IResourceBase) {
+	schema.env.RegisterType(schema.raw.ID, resourceType)
 }
 
 func (schema *Schema) RawSchema() interface{} {

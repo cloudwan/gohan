@@ -17,9 +17,10 @@ package schema
 
 import (
 	"fmt"
+
+	"github.com/cloudwan/gohan/converter/set"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/cloudwan/gohan/converter/set"
 )
 
 var _ = Describe("inheritance tests", func() {

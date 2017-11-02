@@ -267,12 +267,12 @@ var _ = Describe("converter tests", func() {
 	SetComplex([][]IGeneralComplexGen)
 	GetID() string
 	SetID(string)
-	GetIP() goext.NullFloat
-	SetIP(goext.NullFloat)
+	GetIP() goext.MaybeFloat
+	SetIP(goext.MaybeFloat)
 	GetNested() IMiddleNestedGen
 	SetNested(IMiddleNestedGen)
-	GetNull() goext.NullBool
-	SetNull(goext.NullBool)
+	GetNull() goext.MaybeBool
+	SetNull(goext.MaybeBool)
 	GetObject() IBaseObjectGen
 	SetObject(IBaseObjectGen)
 	GetParentID() string
@@ -284,15 +284,15 @@ var _ = Describe("converter tests", func() {
 			onlyDeriveGenerated := `type IOnlyDeriveGen interface {
 	GetID() string
 	SetID(string)
-	GetIP() goext.NullFloat
-	SetIP(goext.NullFloat)
+	GetIP() goext.MaybeFloat
+	SetIP(goext.MaybeFloat)
 	GetObject() IBaseObjectGen
 	SetObject(IBaseObjectGen)
 }
 `
 			generalTreeLeftLeafSecondGenerated := `type IGeneralTreeLeftLeafSecondGen interface {
-	GetValue() float64
-	SetValue(float64)
+	GetValue() goext.MaybeFloat
+	SetValue(goext.MaybeFloat)
 }
 `
 			middleNestedFirstGenerated := `type IMiddleNestedFirstGen interface {
@@ -306,15 +306,15 @@ var _ = Describe("converter tests", func() {
 }
 `
 			generalComplexGenerated := `type IGeneralComplexGen interface {
-	GetFor() float64
-	SetFor(float64)
-	GetInt() bool
-	SetInt(bool)
+	GetFor() goext.MaybeFloat
+	SetFor(goext.MaybeFloat)
+	GetInt() goext.MaybeBool
+	SetInt(goext.MaybeBool)
 }
 `
 			generalTreeLeftGenerated := `type IGeneralTreeLeftGen interface {
-	GetLeafFirst() string
-	SetLeafFirst(string)
+	GetLeafFirst() goext.MaybeString
+	SetLeafFirst(goext.MaybeString)
 	GetLeafSecond() IGeneralTreeLeftLeafSecondGen
 	SetLeafSecond(IGeneralTreeLeftLeafSecondGen)
 }
@@ -382,9 +382,9 @@ var _ = Describe("converter tests", func() {
 	Array [][]float64 ` + "`" + `db:"array"` + ` json:"array"` + "`" + `
 	Complex [][]*GeneralComplex ` + "`" + `db:"complex"` + ` json:"complex"` + "`" + `
 	ID string ` + "`" + `db:"id"` + ` json:"id"` + "`" + `
-	IP goext.NullFloat ` + "`" + `db:"ip"` + ` json:"ip,omitempty"` + "`" + `
+	IP goext.MaybeFloat ` + "`" + `db:"ip"` + ` json:"ip,omitempty"` + "`" + `
 	Nested *MiddleNested ` + "`" + `db:"nested"` + ` json:"nested"` + "`" + `
-	Null goext.NullBool ` + "`" + `db:"null"` + ` json:"null,omitempty"` + "`" + `
+	Null goext.MaybeBool ` + "`" + `db:"null"` + ` json:"null,omitempty"` + "`" + `
 	Object *BaseObject ` + "`" + `db:"object"` + ` json:"object"` + "`" + `
 	ParentID string ` + "`" + `db:"parent_id"` + ` json:"parent_id"` + "`" + `
 	Tree *GeneralTree ` + "`" + `db:"tree"` + ` json:"tree"` + "`" + `
@@ -392,12 +392,12 @@ var _ = Describe("converter tests", func() {
 `
 			onlyDeriveStruct := `type OnlyDerive struct {
 	ID string ` + "`" + `db:"id"` + ` json:"id"` + "`" + `
-	IP goext.NullFloat ` + "`" + `db:"ip"` + ` json:"ip,omitempty"` + "`" + `
+	IP goext.MaybeFloat ` + "`" + `db:"ip"` + ` json:"ip,omitempty"` + "`" + `
 	Object *BaseObject ` + "`" + `db:"object"` + ` json:"object"` + "`" + `
 }
 `
 			generalTreeLeftLeafSecondStruct := `type GeneralTreeLeftLeafSecond struct {
-	Value float64 ` + "`" + `json:"value,omitempty"` + "`" + `
+	Value goext.MaybeFloat ` + "`" + `json:"value,omitempty"` + "`" + `
 }
 `
 			middleNestedFirstStruct := `type MiddleNestedFirst struct {
@@ -409,12 +409,12 @@ var _ = Describe("converter tests", func() {
 }
 `
 			generalComplexStruct := `type GeneralComplex struct {
-	For float64 ` + "`" + `json:"for,omitempty"` + "`" + `
-	Int bool ` + "`" + `json:"int,omitempty"` + "`" + `
+	For goext.MaybeFloat ` + "`" + `json:"for,omitempty"` + "`" + `
+	Int goext.MaybeBool ` + "`" + `json:"int,omitempty"` + "`" + `
 }
 `
 			generalTreeLeftStruct := `type GeneralTreeLeft struct {
-	LeafFirst string ` + "`" + `json:"leaf_first,omitempty"` + "`" + `
+	LeafFirst goext.MaybeString ` + "`" + `json:"leaf_first,omitempty"` + "`" + `
 	LeafSecond *GeneralTreeLeftLeafSecond ` + "`" + `json:"leaf_second"` + "`" + `
 }
 `
@@ -469,11 +469,11 @@ func (general *General) SetID(id string) {
 	general.ID = id
 }
 
-func (general *General) GetIP() goext.NullFloat {
+func (general *General) GetIP() goext.MaybeFloat {
 	return general.IP
 }
 
-func (general *General) SetIP(ip goext.NullFloat) {
+func (general *General) SetIP(ip goext.MaybeFloat) {
 	general.IP = ip
 }
 
@@ -485,11 +485,11 @@ func (general *General) SetNested(nested IMiddleNestedGen) {
 	general.Nested, _ = nested.(*MiddleNested)
 }
 
-func (general *General) GetNull() goext.NullBool {
+func (general *General) GetNull() goext.MaybeBool {
 	return general.Null
 }
 
-func (general *General) SetNull(null goext.NullBool) {
+func (general *General) SetNull(null goext.MaybeBool) {
 	general.Null = null
 }
 
@@ -525,11 +525,11 @@ func (onlyDerive *OnlyDerive) SetID(id string) {
 	onlyDerive.ID = id
 }
 
-func (onlyDerive *OnlyDerive) GetIP() goext.NullFloat {
+func (onlyDerive *OnlyDerive) GetIP() goext.MaybeFloat {
 	return onlyDerive.IP
 }
 
-func (onlyDerive *OnlyDerive) SetIP(ip goext.NullFloat) {
+func (onlyDerive *OnlyDerive) SetIP(ip goext.MaybeFloat) {
 	onlyDerive.IP = ip
 }
 
@@ -541,11 +541,11 @@ func (onlyDerive *OnlyDerive) SetObject(object IBaseObjectGen) {
 	onlyDerive.Object, _ = object.(*BaseObject)
 }
 `
-			generalTreeLeftLeafSecondImplementation := `func (generalTreeLeftLeafSecond *GeneralTreeLeftLeafSecond) GetValue() float64 {
+			generalTreeLeftLeafSecondImplementation := `func (generalTreeLeftLeafSecond *GeneralTreeLeftLeafSecond) GetValue() goext.MaybeFloat {
 	return generalTreeLeftLeafSecond.Value
 }
 
-func (generalTreeLeftLeafSecond *GeneralTreeLeftLeafSecond) SetValue(value float64) {
+func (generalTreeLeftLeafSecond *GeneralTreeLeftLeafSecond) SetValue(value goext.MaybeFloat) {
 	generalTreeLeftLeafSecond.Value = value
 }
 `
@@ -565,27 +565,27 @@ func (middleNested *MiddleNested) SetFirst(first IMiddleNestedFirstGen) {
 	middleNested.First, _ = first.(*MiddleNestedFirst)
 }
 `
-			generalComplexImplementation := `func (generalComplex *GeneralComplex) GetFor() float64 {
+			generalComplexImplementation := `func (generalComplex *GeneralComplex) GetFor() goext.MaybeFloat {
 	return generalComplex.For
 }
 
-func (generalComplex *GeneralComplex) SetFor(forObject float64) {
+func (generalComplex *GeneralComplex) SetFor(forObject goext.MaybeFloat) {
 	generalComplex.For = forObject
 }
 
-func (generalComplex *GeneralComplex) GetInt() bool {
+func (generalComplex *GeneralComplex) GetInt() goext.MaybeBool {
 	return generalComplex.Int
 }
 
-func (generalComplex *GeneralComplex) SetInt(int bool) {
+func (generalComplex *GeneralComplex) SetInt(int goext.MaybeBool) {
 	generalComplex.Int = int
 }
 `
-			generalTreeLeftImplementation := `func (generalTreeLeft *GeneralTreeLeft) GetLeafFirst() string {
+			generalTreeLeftImplementation := `func (generalTreeLeft *GeneralTreeLeft) GetLeafFirst() goext.MaybeString {
 	return generalTreeLeft.LeafFirst
 }
 
-func (generalTreeLeft *GeneralTreeLeft) SetLeafFirst(leafFirst string) {
+func (generalTreeLeft *GeneralTreeLeft) SetLeafFirst(leafFirst goext.MaybeString) {
 	generalTreeLeft.LeafFirst = leafFirst
 }
 

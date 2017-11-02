@@ -17,6 +17,8 @@ package item
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/cloudwan/gohan/converter/hash"
 	"github.com/cloudwan/gohan/converter/name"
 	"github.com/cloudwan/gohan/converter/set"
@@ -193,6 +195,13 @@ func (property *Property) CollectProperties(limit, offset int) (set.Set, error) 
 // GenerateConstructor creates a constructor for a property
 func (property *Property) GenerateConstructor(suffix string) string {
 	if !property.hasDefault {
+		if property.item != nil && property.item.IsNull() {
+			return fmt.Sprintf(
+				"%s: goext.MakeNull%s()",
+				util.ToGoName(property.name, ""),
+				util.ToGoName(strings.TrimSuffix(property.item.Type(suffix), "64"), ""),
+			)
+		}
 		return ""
 	}
 	return fmt.Sprintf(

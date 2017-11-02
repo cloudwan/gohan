@@ -17,6 +17,7 @@ package item
 
 import (
 	"fmt"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -39,7 +40,7 @@ var _ = Describe("json kind tests", func() {
 
 			result := jsonKind.Type("", newItem)
 
-			expected := typeOfItem
+			expected := "goext.MaybeString"
 			Expect(result).To(Equal(expected))
 		})
 
@@ -71,7 +72,7 @@ var _ = Describe("json kind tests", func() {
 				Prefix:   name,
 				Required: false,
 				Data: map[interface{}]interface{}{
-					"type":       "object",
+					"type": "object",
 					"properties": map[interface{}]interface{}{
 						"a": map[interface{}]interface{}{
 							"type": "string",

@@ -57,19 +57,21 @@ func (dbKind *DBKind) Annotation(name string, item Item) string {
 
 // Default implementation
 func (dbKind *DBKind) Default(suffix string, item Item) string {
+	itemDefault := item.Default(suffix)
+
 	if item.IsNull() {
 		return fmt.Sprintf(
 			"goext.Make%s(%s)",
-			getNullType(suffix, item),
-			item.Default(suffix),
+			util.ToGoName(item.Type(suffix), ""),
+			itemDefault,
 		)
 	}
-	return item.Default(suffix)
+	return itemDefault
 }
 
 func getNullType(suffix string, item Item) string {
 	return util.ToGoName(
-		"Null",
+		"Maybe",
 		strings.TrimSuffix(item.Type(suffix), "64"),
 	)
 }

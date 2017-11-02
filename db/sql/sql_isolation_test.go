@@ -54,8 +54,7 @@ var _ = Describe("Mysql", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manager.LoadSchemasFromFiles(
 			"../../etc/schema/gohan.json", "../../tests/test_abstract_schema.yaml", "../../tests/test_schema.yaml")).To(Succeed())
-		db.InitDBWithSchemas(dbType, conn, true, false, false)
-
+		db.InitDBWithSchemas(dbType, conn, db.DefaultTestInitDBParams())
 		var ok bool
 		s, ok = manager.Schema("test")
 		Expect(ok).To(BeTrue())

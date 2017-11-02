@@ -18,9 +18,9 @@ package item
 import (
 	"fmt"
 
+	"github.com/cloudwan/gohan/converter/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/cloudwan/gohan/converter/util"
 )
 
 var _ = Describe("db kind tests", func() {
@@ -41,7 +41,7 @@ var _ = Describe("db kind tests", func() {
 
 			result := dbKind.Type("", newItem)
 
-			expected := "goext." + util.ToGoName("null", typeOfItem)
+			expected := "goext." + util.ToGoName("maybe", typeOfItem)
 			Expect(result).To(Equal(expected))
 		})
 
@@ -76,7 +76,7 @@ var _ = Describe("db kind tests", func() {
 
 			result := dbKind.InterfaceType("", newItem)
 
-			expected := "goext.NullInt"
+			expected := "goext.MaybeInt"
 			Expect(result).To(Equal(expected))
 		})
 
@@ -89,7 +89,7 @@ var _ = Describe("db kind tests", func() {
 				Prefix:   name,
 				Required: false,
 				Data: map[interface{}]interface{}{
-					"type":       "object",
+					"type": "object",
 					"properties": map[interface{}]interface{}{
 						"a": map[interface{}]interface{}{
 							"type": "string",
@@ -167,7 +167,7 @@ var _ = Describe("db kind tests", func() {
 			result := dbKind.Default("", newItem)
 
 			expected := fmt.Sprintf(
-				"goext.MakeNullInt(%d)",
+				"goext.MakeInt(%d)",
 				value,
 			)
 			Expect(result).To(Equal(expected))
