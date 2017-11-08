@@ -6,10 +6,9 @@ package goext
 
 import (
 	context "context"
+	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 	time "time"
-
-	gomock "github.com/golang/mock/gomock"
 )
 
 // MockICore is a mock of ICore interface
@@ -48,7 +47,7 @@ func (mr *MockICoreMockRecorder) HandleEvent(arg0, arg1 interface{}) *gomock.Cal
 }
 
 // RegisterEventHandler mocks base method
-func (m *MockICore) RegisterEventHandler(arg0 string, arg1 func(Context, IEnvironment) error, arg2 int) {
+func (m *MockICore) RegisterEventHandler(arg0 string, arg1 Handler, arg2 int) {
 	m.ctrl.Call(m, "RegisterEventHandler", arg0, arg1, arg2)
 }
 
@@ -58,7 +57,7 @@ func (mr *MockICoreMockRecorder) RegisterEventHandler(arg0, arg1, arg2 interface
 }
 
 // RegisterSchemaEventHandler mocks base method
-func (m *MockICore) RegisterSchemaEventHandler(arg0, arg1 string, arg2 func(Context, Resource, IEnvironment) error, arg3 int) {
+func (m *MockICore) RegisterSchemaEventHandler(arg0, arg1 string, arg2 SchemaHandler, arg3 int) {
 	m.ctrl.Call(m, "RegisterSchemaEventHandler", arg0, arg1, arg2, arg3)
 }
 

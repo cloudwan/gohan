@@ -471,8 +471,8 @@ func (schema *Schema) delete(filter goext.Filter, requestContext goext.Context, 
 }
 
 // RegisterEventHandler registers a schema handler
-func (schema *Schema) RegisterEventHandler(event string, handler func(context goext.Context, resource goext.Resource, environment goext.IEnvironment) error, priority int) {
-	schema.env.RegisterSchemaEventHandler(schema.raw.ID, event, handler, priority)
+func (schema *Schema) RegisterEventHandler(event string, schemaHandler goext.SchemaHandler, priority int) {
+	schema.env.RegisterSchemaEventHandler(schema.raw.ID, event, schemaHandler, priority)
 }
 
 // RegisterRawType registers a runtime type for a raw resource

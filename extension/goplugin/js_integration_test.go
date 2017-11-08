@@ -124,11 +124,11 @@ var _ = Describe("JS integration", func() {
 		})
 
 		It("should propagate error code", func() {
-			Expect(err.(goext.Error).Code).To(Equal(goext.ErrorCode(456)))
+			Expect(err.(*goext.Error).Status).To(Equal(456))
 		})
 
 		It("should propagate error message", func() {
-			Expect(err.(goext.Error).Error()).To(ContainSubstring("test exception"))
+			Expect(err.(*goext.Error).Error()).To(ContainSubstring("test exception"))
 		})
 	})
 })

@@ -506,6 +506,7 @@ var _ = Describe("Database operation test", func() {
 		AfterEach(func() {
 			firstConn.Close()
 			secondConn.Close()
+			schema.ClearManager()
 		})
 
 		It("Within() should retry a few times after a deadlock", func() {

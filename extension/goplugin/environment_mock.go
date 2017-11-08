@@ -206,8 +206,8 @@ func (mockEnv *MockIEnvironment) RegisterType(name string, typeValue interface{}
 	mockEnv.env.RegisterType(name, typeValue)
 }
 
-func (mockEnv *MockIEnvironment) RegisterSchemaEventHandler(schemaID string, event string, handler func(context goext.Context, resource goext.Resource, environment goext.IEnvironment) error, priority int) {
-	mockEnv.env.RegisterSchemaEventHandler(schemaID, event, handler, priority)
+func (mockEnv *MockIEnvironment) RegisterSchemaEventHandler(schemaID string, event string, schemaHandler goext.SchemaHandler, priority int) {
+	mockEnv.env.RegisterSchemaEventHandler(schemaID, event, schemaHandler, priority)
 }
 
 func (mockEnv *MockIEnvironment) getRawType(schemaID string) (reflect.Type, bool) {
@@ -222,11 +222,11 @@ func (mockEnv *MockIEnvironment) getTraceID() string {
 	return mockEnv.env.getTraceID()
 }
 
-func (mockEnv *MockIEnvironment) getTimelimit() time.Duration {
+func (mockEnv *MockIEnvironment) getTimeLimit() time.Duration {
 	return mockEnv.env.timeLimit
 }
 
-func (mockEnv *MockIEnvironment) getTimelimits() []*schema.EventTimeLimit {
+func (mockEnv *MockIEnvironment) getTimeLimits() []*schema.EventTimeLimit {
 	return mockEnv.env.timeLimits
 }
 

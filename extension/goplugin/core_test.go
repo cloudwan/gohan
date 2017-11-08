@@ -46,6 +46,7 @@ var _ = Describe("Core", func() {
 
 	AfterEach(func() {
 		env.Stop()
+		schema.ClearManager()
 	})
 
 	Context("Triggering an event", func() {

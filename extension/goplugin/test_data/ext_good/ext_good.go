@@ -51,26 +51,26 @@ func Init(env goext.IEnvironment) error {
 	return nil
 }
 
-func handleWaitForContextCancel(requestContext goext.Context, _ goext.Resource, _ goext.IEnvironment) error {
+func handleWaitForContextCancel(requestContext goext.Context, _ goext.Resource, _ goext.IEnvironment) *goext.Error {
 	ctx := requestContext["context"].(context.Context)
 
 	select {
 	case <-ctx.Done():
 		return nil
 	case <-time.After(time.Minute):
-		return fmt.Errorf("context should be canceled")
+		return goext.NewErrorInternalServerError(fmt.Errorf("context should be canceled"))
 	}
 
 	panic("test extension: something went terribly wrong")
 }
 
-func handleEcho(requestContext goext.Context, _ goext.Resource, env goext.IEnvironment) error {
+func handleEcho(requestContext goext.Context, _ goext.Resource, env goext.IEnvironment) *goext.Error {
 	env.Logger().Debug("Handling echo")
 	requestContext["response"] = requestContext["input"]
 	return nil
 }
 
-func handleInvokeJs(requestContext goext.Context, _ goext.Resource, env goext.IEnvironment) error {
+func handleInvokeJs(requestContext goext.Context, _ goext.Resource, env goext.IEnvironment) *goext.Error {
 	env.Logger().Debug("Handling invoke JS")
 
 	ctx := requestContext.Clone()
@@ -81,7 +81,7 @@ func handleInvokeJs(requestContext goext.Context, _ goext.Resource, env goext.IE
 	return nil
 }
 
-func handlePreCreate(requestContext goext.Context, _ goext.Resource, env goext.IEnvironment) error {
+func handlePreCreate(requestContext goext.Context, _ goext.Resource, env goext.IEnvironment) *goext.Error {
 	env.Logger().Debug("Handling pre create")
 	return nil
 }

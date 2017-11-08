@@ -33,7 +33,7 @@ func Init(env goext.IEnvironment) error {
 	schema.RegisterRawType(todo.Entry{})
 
 	// Register schema handler
-	schema.RegisterEventHandler(goext.PreUpdate, func(ctx goext.Context, res goext.Resource, env goext.IEnvironment) error {
+	schema.RegisterEventHandler(goext.PreUpdate, func(ctx goext.Context, res goext.Resource, env goext.IEnvironment) *goext.Error {
 		env.Logger().Infof("Called resource pre-update handler")
 
 		// Cast resource to its runtime type
@@ -47,7 +47,7 @@ func Init(env goext.IEnvironment) error {
 	}, goext.PriorityDefault)
 
 	// Register a custom action handler
-	schema.RegisterEventHandler(entryCustomAction, func(ctx goext.Context, res goext.Resource, env goext.IEnvironment) error {
+	schema.RegisterEventHandler(entryCustomAction, func(ctx goext.Context, res goext.Resource, env goext.IEnvironment) *goext.Error {
 		env.Logger().Infof("Called resource custom action handler")
 
 		return nil
