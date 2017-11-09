@@ -86,7 +86,7 @@ func TestResources(t *testing.T) {
 	RunSpecs(t, "Resources Suite")
 }
 
-var _ = Describe("Suit set up and tear down", func() {
+var _ = Describe("Suite set up and tear down", func() {
 	var _ = BeforeSuite(func() {
 		var err error
 		Expect(os.Chdir(configDir)).To(Succeed())

@@ -165,8 +165,7 @@ policies:
   - type: property
     action: update
     match:
-      status:
-      - ACTIVE
+      status: ACTIVE
   - type: property
     action: delete
     match:
@@ -290,6 +289,7 @@ schemas:
       network_id:
         permission:
         - create
+        - update
         relation: network
         relation_property: network
         on_delete_cascade: true

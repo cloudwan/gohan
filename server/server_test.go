@@ -612,6 +612,43 @@ var _ = Describe("Server package test", func() {
 		})
 	})
 
+	Describe("Error codes", func() {
+		It("should return BadRequest(400) when creating a resource with reference to an invalid resource", func() {
+			someNetwork := map[string]interface{}{
+				"id":   "networkred",
+				"name": "networkred",
+			}
+			testURL("POST", networkPluralURL, memberTokenID, someNetwork, http.StatusCreated)
+			someServer := map[string]interface{}{
+				"id":         "serverred",
+				"name":       "serverred",
+				"network_id": "networkmagenta",
+				"status":     "ACTIVE",
+			}
+			testURL("POST", serverPluralURL, memberTokenID, someServer, http.StatusBadRequest)
+		})
+
+		It("should return BadRequest(400) when updating a resource with reference to an invalid resource", func() {
+			someNetwork := map[string]interface{}{
+				"id":   "networkred",
+				"name": "networkred",
+			}
+			testURL("POST", networkPluralURL, memberTokenID, someNetwork, http.StatusCreated)
+			someServer := map[string]interface{}{
+				"id":         "serverred",
+				"name":       "serverred",
+				"network_id": "networkmagenta",
+				"status":     "ACTIVE",
+			}
+			testURL("POST", serverPluralURL, memberTokenID, someServer, http.StatusBadRequest)
+			updatedServer := map[string]interface{}{
+				"network_id": "networkmagenta",
+				"status":     "ACTIVE",
+			}
+			testURL("PUT", getServerSingularURL("red"), memberTokenID, updatedServer, http.StatusBadRequest)
+		})
+	})
+
 	Describe("ResourceSharing", func() {
 		It("should work", func() {
 			memberNetwork := map[string]interface{}{
@@ -993,6 +1030,11 @@ func getParent(name, boyID, girlID string) map[string]interface{} {
 func getNetworkSingularURL(color string) string {
 	s, _ := schema.GetManager().Schema("network")
 	return baseURL + s.URL + "/network" + color
+}
+
+func getServerSingularURL(color string) string {
+	s, _ := schema.GetManager().Schema("server")
+	return baseURL + s.URL + "/server" + color
 }
 
 func getSubnetSingularURL(color string) string {
