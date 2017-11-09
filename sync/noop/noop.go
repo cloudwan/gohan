@@ -71,8 +71,8 @@ func (sync *Sync) Watch(path string, responseChan chan *sync.Event, stopChan cha
 }
 
 //WatchContext keep watch update under the path until context is canceled
-func (sync *Sync) WatchContext(ctx context.Context, path string, revision int64) (<-chan *sync.Event, error) {
-	return nil, nil
+func (sync *Sync) WatchContext(ctx context.Context, path string, revision int64) <-chan *sync.Event {
+	return nil
 }
 
 // Close sync

@@ -41,7 +41,7 @@ type Sync interface {
 	// Returns an error when gets any error including connection failures.
 	Watch(path string, responseChan chan *Event, stopChan chan bool, revision int64) error
 	//WatchContext keep watch update under the path until context is canceled.
-	WatchContext(ctx context.Context, path string, revision int64) (<-chan *Event, error)
+	WatchContext(ctx context.Context, path string, revision int64) <-chan *Event
 	GetProcessID() string
 	Close()
 }
