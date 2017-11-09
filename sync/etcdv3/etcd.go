@@ -31,6 +31,7 @@ import (
 	pb "github.com/coreos/etcd/mvcc/mvccpb"
 	cmap "github.com/streamrail/concurrent-map"
 	"github.com/twinj/uuid"
+	"google.golang.org/grpc"
 )
 
 const (
@@ -327,26 +328,33 @@ func (s *Sync) Watch(path string, responseChan chan *sync.Event, stopChan chan b
 }
 
 // WatchContext keep watch update under the path until context is canceled
-func (s *Sync) WatchContext(ctx context.Context, path string, revision int64) (<-chan *sync.Event, error) {
-	stopChan := make(chan bool)
+func (s *Sync) WatchContext(ctx context.Context, path string, revision int64) <-chan *sync.Event {
+	eventCh := make(chan *sync.Event, 32)
+	stopCh := make(chan bool)
+	errCh := make(chan error, 1)
 	go func() {
-		<-ctx.Done()
-		close(stopChan)
+		errCh <- s.Watch(path, eventCh, stopCh, revision)
 	}()
-
-	responseChan := make(chan *sync.Event)
-
 	go func() {
-		defer close(responseChan)
-		err := s.Watch(path, responseChan, stopChan, revision)
-		if err != nil {
-			responseChan <- &sync.Event{
-				Err: err,
+		select {
+		case <-ctx.Done():
+			stopCh <- true
+			err := <-errCh
+			if err != nil && err != grpc.ErrClientConnClosing {
+				log.Warning("Watch returned an unexpected error after context was cancelled: %v", err)
+			}
+		case err := <-errCh:
+			if err != nil {
+				eventCh <- &sync.Event{
+					Err: err,
+				}
 			}
 		}
+		close(errCh)
+		close(stopCh)
+		close(eventCh)
 	}()
-
-	return responseChan, nil
+	return eventCh
 }
 
 // Close closes etcd client

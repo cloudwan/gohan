@@ -82,11 +82,7 @@ func (sync *Sync) Delete(path string, prefix bool) error {
 
 // Watch watches a single path in sync
 func (sync *Sync) Watch(ctx context.Context, path string, timeout time.Duration, revision int64) ([]*goext.Event, error) {
-	eventChan, err := sync.raw.WatchContext(ctx, path, revision)
-	if err != nil {
-		return nil, err
-	}
-
+	eventChan := sync.raw.WatchContext(ctx, path, revision)
 	select {
 	case event := <-eventChan:
 		return []*goext.Event{convertEvent(event)}, nil
