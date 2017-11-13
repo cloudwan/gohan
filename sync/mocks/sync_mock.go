@@ -122,11 +122,10 @@ func (mr *MockSyncMockRecorder) Watch(path, responseChan, stopChan, revision int
 }
 
 // WatchContext mocks base method
-func (m *MockSync) WatchContext(ctx context.Context, path string, revision int64) (<-chan *sync.Event, error) {
+func (m *MockSync) WatchContext(ctx context.Context, path string, revision int64) <-chan *sync.Event {
 	ret := m.ctrl.Call(m, "WatchContext", ctx, path, revision)
 	ret0, _ := ret[0].(<-chan *sync.Event)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	return ret0
 }
 
 // WatchContext indicates an expected call of WatchContext

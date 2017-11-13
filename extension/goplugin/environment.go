@@ -498,10 +498,9 @@ func cancelOnPeerDisconnect(requestContext map[string]interface{}, cancel contex
 	go func() {
 		select {
 		case <-closeNotify:
-			cancel()
 		case <-done:
-			return
 		}
+		cancel()
 	}()
 }
 

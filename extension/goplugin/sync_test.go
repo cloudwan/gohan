@@ -43,7 +43,7 @@ var _ = Describe("Sync", func() {
 
 	It("cancels Watch of context cancel", func() {
 		mockSync := mock_sync.NewMockSync(mockCtrl)
-		mockSync.EXPECT().WatchContext(gomock.Any(), "key", int64(1)).Return(make(chan *sync.Event, 1), nil)
+		mockSync.EXPECT().WatchContext(gomock.Any(), "key", int64(1)).Return(make(chan *sync.Event, 1))
 
 		mockEnv := goplugin.Environment{}
 		mockEnv.SetSync(mockSync)
