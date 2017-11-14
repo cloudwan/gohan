@@ -187,7 +187,11 @@ func (testRunner *TestRunner) runSingle(t ginkgo.GinkgoTestingT, reporter *Repor
 
 		if os.Getenv("MYSQL_TEST") == "true" {
 			dbType = "mysql"
-			dbConn = "root@/gohan_test"
+			if dsn, ok := os.LookupEnv("MYSQL_DSN"); ok {
+				dbConn = dsn
+			} else {
+				dbConn = "root@/gohan_test"
+			}
 		} else {
 			dbType = "sqlite3"
 			dbFileName := dbBaseFileName + "_" + uuid.NewV4().String()
