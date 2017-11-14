@@ -126,6 +126,7 @@ func CreateIdentityServiceFromConfig(config *util.Config) (IdentityService, erro
 
 		}
 		log.Info("Keystone backend server configured")
+		var keystoneIdentity IdentityService
 		keystoneIdentity, err := cloud.NewKeystoneIdentity(
 			config.GetString("keystone/auth_url", "http://localhost:35357/v3"),
 			config.GetString("keystone/user_name", "admin"),
@@ -135,6 +136,13 @@ func CreateIdentityServiceFromConfig(config *util.Config) (IdentityService, erro
 			config.GetString("keystone/version", ""))
 		if err != nil {
 			log.Fatal(fmt.Sprintf("Failed to create keystone identity service, err: %s", err))
+		}
+		if config.GetBool("keystone/use_auth_cache", false) {
+			ttl, err := time.ParseDuration(config.GetString("keystone/cache_ttl", "15m"))
+			if err != nil {
+				log.Fatal("Failed to parse keystone cache TTL")
+			}
+			keystoneIdentity = NewCachedIdentityService(keystoneIdentity, ttl)
 		}
 		return keystoneIdentity, nil
 	}
