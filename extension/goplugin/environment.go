@@ -499,6 +499,7 @@ func cancelOnPeerDisconnect(requestContext map[string]interface{}, cancel contex
 		select {
 		case <-closeNotify:
 		case <-done:
+			time.Sleep(time.Millisecond * 5)
 		}
 		cancel()
 	}()
