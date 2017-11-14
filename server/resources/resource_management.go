@@ -34,7 +34,9 @@ import (
 	"github.com/cloudwan/gohan/metrics"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/server/middleware"
+	"github.com/mattn/go-sqlite3"
 	"github.com/twinj/uuid"
+	"github.com/go-sql-driver/mysql"
 )
 
 //ResourceProblem describes the kind of problem that occurred during resource manipulation.
@@ -49,9 +51,8 @@ const (
 	DeleteFailed
 	CreateFailed
 	UpdateFailed
-	hlsearch
-
 	Unauthorized
+	ForeignKeyFailed
 )
 
 // ResourceError is created when an anticipated problem has occurred during resource manipulations.
@@ -72,6 +73,20 @@ func NewResourceError(err error, message string, problem ResourceProblem) Resour
 type ExtensionError struct {
 	error
 	ExceptionInfo map[string]interface{}
+}
+
+func isForeignKeyFailed(err error) bool {
+	if sqliteError, ok := err.(sqlite3.Error); ok {
+		if sqliteError.Code == sqlite3.ErrConstraint && sqliteError.ExtendedCode == sqlite3.ErrConstraintForeignKey {
+			return true
+		}
+	}
+	if mysqlError, ok := err.(*mysql.MySQLError); ok {
+		if mysqlError.Number == 1452 {
+			return true
+		}
+	}
+	return false
 }
 
 func measureRequestTime(timeStarted time.Time, requestType string, schemaID string) {
@@ -587,6 +602,12 @@ func CreateResourceInTransaction(context middleware.Context, resourceSchema *sch
 	}
 	if err := mainTransaction.Create(resource); err != nil {
 		log.Debug("%s transaction error", err)
+		if isForeignKeyFailed(err) {
+			return ResourceError{
+				err,
+				fmt.Sprintf("Foreign resource not found: %v", err),
+				ForeignKeyFailed}
+		}
 		return ResourceError{
 			err,
 			fmt.Sprintf("Failed to store data in database: %v", err),
@@ -744,7 +765,17 @@ func UpdateResourceInTransaction(
 
 	err = mainTransaction.Update(resource)
 	if err != nil {
-		return ResourceError{err, fmt.Sprintf("Failed to store data in database: %v", err), UpdateFailed}
+		if isForeignKeyFailed(err) {
+			return ResourceError{
+				err,
+				fmt.Sprintf("Foreign resource not found: %v", err),
+				ForeignKeyFailed}
+		}
+		return ResourceError{
+			err,
+			fmt.Sprintf("Failed to store data in database: %v", err),
+			UpdateFailed,
+		}
 	}
 
 	response := map[string]interface{}{}
