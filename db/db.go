@@ -18,6 +18,7 @@ package db
 import (
 	"context"
 	"errors"
+	"math/rand"
 	"strings"
 	"time"
 
@@ -97,12 +98,19 @@ func withinTxImpl(db DB, beginStrategy func(db DB) (transaction.Transaction, err
 			return err
 		}
 
-		log.Warning("scoped transaction deadlocked, retrying %d / %d", attempt, db.Options().RetryTxCount)
-		time.Sleep(db.Options().RetryTxInterval)
+		retryInterval := getRetryInterval(db)
+		log.Warning("scoped transaction deadlocked, retrying %d / %d, after %dms", attempt, db.Options().RetryTxCount, retryInterval.Nanoseconds()/int64(time.Millisecond))
+		time.Sleep(retryInterval)
 	}
 
 	log.Warning("scoped transaction still deadlocked after %d retries; gave up", db.Options().RetryTxCount)
 	return err
+}
+func getRetryInterval(db DB) time.Duration {
+	retryInterval := db.Options().RetryTxInterval
+	// Add random duration between [0, interval/2] to decrease collision chance
+	retryInterval += time.Duration(rand.Intn(int(db.Options().RetryTxInterval.Nanoseconds() / 2)))
+	return retryInterval
 }
 
 // Within executes a scoped transaction on a database

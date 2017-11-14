@@ -76,8 +76,9 @@ var _ = Describe("Schemas", func() {
 	})
 
 	AfterEach(func() {
+		env.Stop()
 		os.Remove(dbFile)
-
+		schema.ClearManager()
 	})
 
 	Context("DerivedSchemas", func() {
@@ -705,7 +706,7 @@ var _ = Describe("Schemas", func() {
 			context["test"] = 42
 			testResource = &test.Test{ID: "13", Name: goext.MakeString("123"), TestSuiteID: goext.MakeNullString()}
 
-			checkContext := func(ctx goext.Context, resource goext.Resource, environment goext.IEnvironment) error {
+			checkContext := func(ctx goext.Context, resource goext.Resource, environment goext.IEnvironment) *goext.Error {
 				Expect(&ctx).ToNot(Equal(&context))
 				Expect(ctx).To(HaveKeyWithValue("transaction", tx))
 				Expect(ctx).To(HaveKeyWithValue("test", 42))

@@ -49,14 +49,7 @@ func (http *HTTP) RequestRaw(ctx context.Context, method, rawURL string, headers
 		req.Header.Set(header, value)
 	}
 
-	var resp *net_http.Response
-
-	// run query
-	done := make(chan struct{})
-	go func() {
-		resp, err = net_http.DefaultTransport.RoundTrip(req)
-		close(done)
-	}()
+	resp, err := net_http.DefaultTransport.RoundTrip(req)
 	if err != nil {
 		return nil, err
 	}
