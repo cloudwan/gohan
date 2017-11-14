@@ -17,10 +17,12 @@ package otto
 
 import (
 	"fmt"
+	go_sync "sync"
+	"time"
+
 	"github.com/cloudwan/gohan/sync"
 	"github.com/xyproto/otto"
 	"golang.org/x/net/context"
-	"time"
 )
 
 func convertSyncEvent(event *sync.Event) map[string]interface{} {
@@ -63,12 +65,12 @@ func init() {
 		builtins := map[string]interface{}{
 			"gohan_sync_fetch": func(call otto.FunctionCall) otto.Value {
 				var path string
-				var err error
 				var node *sync.Node
 				var value otto.Value
 
 				VerifyCallArguments(&call, "gohan_sync_fetch", 1)
 
+				var err error
 				if path, err = GetString(call.Argument(0)); err != nil {
 					ThrowOttoException(&call, "Invalid type of first argument: expected a string")
 					return otto.NullValue()
@@ -76,16 +78,23 @@ func init() {
 
 				errCh := make(chan error)
 				defer close(errCh)
+
+				var wg go_sync.WaitGroup
+				wg.Add(1)
+				defer wg.Wait()
+
 				go func() {
+					var err error
 					node, err = env.Sync.Fetch(path)
 					errCh <- err
+					wg.Done()
 				}()
 
 				select {
 				case interrupt := <-call.Otto.Interrupt:
 					log.Debug("Received otto interrupt in gohan_sync_fetch")
 					interrupt()
-				case err = <-errCh:
+				case err := <-errCh:
 					if err == context.DeadlineExceeded {
 						ThrowOtto(&call, "TimeOutException", "Context Deadline Exceeded")
 						return otto.NullValue()
@@ -93,18 +102,15 @@ func init() {
 						ThrowOttoException(&call, "Failed to fetch sync: "+err.Error())
 						return otto.NullValue()
 					}
-
 					if value, err = vm.ToValue(convertSyncNode(node)); err == nil {
 						return value
 					}
 				}
-
 				return otto.NullValue()
 			},
 			"gohan_sync_delete": func(call otto.FunctionCall) otto.Value {
 				var path string
 				var prefix bool
-				var err error
 
 				if len(call.ArgumentList) == 1 {
 					defaultPrefix, _ := otto.ToValue(false)
@@ -112,6 +118,7 @@ func init() {
 				}
 				VerifyCallArguments(&call, "gohan_sync_delete", 2)
 
+				var err error
 				if path, err = GetString(call.Argument(0)); err != nil {
 					ThrowOttoException(&call, "Invalid type of first argument: expected a string")
 					return otto.NullValue()
@@ -123,16 +130,22 @@ func init() {
 
 				errCh := make(chan error)
 				defer close(errCh)
+
+				var wg go_sync.WaitGroup
+				wg.Add(1)
+				defer wg.Wait()
+
 				go func() {
-					err = env.Sync.Delete(path, prefix)
+					err := env.Sync.Delete(path, prefix)
 					errCh <- err
+					wg.Done()
 				}()
 
 				select {
 				case interrupt := <-call.Otto.Interrupt:
 					log.Debug("Received otto interrupt in gohan_sync_delete")
 					interrupt()
-				case err = <-errCh:
+				case err := <-errCh:
 					if err != nil {
 						ThrowOttoException(&call, "Failed to delete sync: "+err.Error())
 						return otto.NullValue()
@@ -143,10 +156,10 @@ func init() {
 			"gohan_sync_update": func(call otto.FunctionCall) otto.Value {
 				var path string
 				var value string
-				var err error
 
 				VerifyCallArguments(&call, "gohan_sync_update", 2)
 
+				var err error
 				if path, err = GetString(call.Argument(0)); err != nil {
 					ThrowOttoException(&call, "Invalid type of first argument: expected a string")
 					return otto.NullValue()
@@ -158,16 +171,22 @@ func init() {
 
 				errCh := make(chan error)
 				defer close(errCh)
+
+				var wg go_sync.WaitGroup
+				wg.Add(1)
+				defer wg.Wait()
+
 				go func() {
-					err = env.Sync.Update(path, value)
+					err := env.Sync.Update(path, value)
 					errCh <- err
+					wg.Done()
 				}()
 
 				select {
 				case interrupt := <-call.Otto.Interrupt:
 					log.Debug("Received otto interrupt in gohan_sync_update")
 					interrupt()
-				case err = <-errCh:
+				case err := <-errCh:
 					if err != nil {
 						ThrowOttoException(&call, "Failed to update sync: "+err.Error())
 						return otto.NullValue()
@@ -179,11 +198,11 @@ func init() {
 				var path string
 				var timeoutMsec int64
 				var revision int64
-				var err error
 				var value otto.Value
 
 				VerifyCallArguments(&call, "gohan_sync_watch", 3)
 
+				var err error
 				if path, err = GetString(call.Argument(0)); err != nil {
 					ThrowOttoException(&call, "Invalid type of first argument: expected a string")
 					return otto.NullValue()
@@ -201,13 +220,21 @@ func init() {
 
 				eventChan := make(chan *sync.Event, 32) // non-blocking
 				stopChan := make(chan bool, 1)          // non-blocking
+				errorChan := make(chan error, 1)        // non-blocking
 				defer close(stopChan)
-				errorChan := make(chan error, 1) // non-blocking
+
+				var wg go_sync.WaitGroup
+				wg.Add(1)
+				defer func() {
+					stopChan <- true
+					wg.Wait()
+				}()
 
 				go func() {
 					if err := env.Sync.Watch(path, eventChan, stopChan, revision); err != nil {
 						errorChan <- err
 					}
+					wg.Done()
 				}()
 
 				select {
@@ -215,11 +242,13 @@ func init() {
 					log.Debug("Received otto interrupt in gohan_sync_watch when watching on %s since revision %d", path, revision)
 					interrupt()
 				case event := <-eventChan:
+					var err error
 					if value, err = vm.ToValue(convertSyncEvent(event)); err == nil {
 						return value
 					}
 				case <-time.NewTimer(time.Duration(timeoutMsec) * time.Millisecond).C:
 					log.Debug("Watch on %s since revision %d timed out after %d [ms]", path, revision, timeoutMsec)
+					var err error
 					if value, err = vm.ToValue(map[string]interface{}{}); err == nil {
 						return value
 					}
