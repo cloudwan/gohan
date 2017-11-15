@@ -31,7 +31,6 @@ import (
 	pb "github.com/coreos/etcd/mvcc/mvccpb"
 	cmap "github.com/streamrail/concurrent-map"
 	"github.com/twinj/uuid"
-	"google.golang.org/grpc"
 )
 
 const (
@@ -244,7 +243,7 @@ func (s *Sync) Unlock(path string) error {
 	return nil
 }
 
-func eventsFromNode(action string, kvs []*pb.KeyValue, responseChan chan *sync.Event) {
+func eventsFromNode(action string, kvs []*pb.KeyValue, responseChan chan *sync.Event, stopChan chan bool) {
 	for _, kv := range kvs {
 		event := &sync.Event{
 			Action:   action,
@@ -257,7 +256,12 @@ func eventsFromNode(action string, kvs []*pb.KeyValue, responseChan chan *sync.E
 				log.Warning("failed to unmarshal watch response value %s: %s", kv.Value, err)
 			}
 		}
-		responseChan <- event
+		select {
+		case <-stopChan:
+			log.Debug("Events from node interrupted by stop")
+			return
+		case responseChan <- event:
+		}
 	}
 }
 
@@ -271,7 +275,7 @@ func (s *Sync) Watch(path string, responseChan chan *sync.Event, stopChan chan b
 	if err != nil {
 		return err
 	}
-	eventsFromNode("get", node.Kvs, responseChan)
+	eventsFromNode("get", node.Kvs, responseChan, stopChan)
 	revision = node.Header.Revision + 1
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -296,7 +300,7 @@ func (s *Sync) Watch(path string, responseChan chan *sync.Event, stopChan chan b
 					case etcd.EventTypeDelete:
 						action = "delete"
 					}
-					eventsFromNode(action, []*pb.KeyValue{ev.Kv}, responseChan)
+					eventsFromNode(action, []*pb.KeyValue{ev.Kv}, responseChan, stopChan)
 				}
 			}
 
@@ -336,13 +340,11 @@ func (s *Sync) WatchContext(ctx context.Context, path string, revision int64) <-
 		errCh <- s.Watch(path, eventCh, stopCh, revision)
 	}()
 	go func() {
+		defer close(eventCh)
+		defer close(stopCh)
+
 		select {
 		case <-ctx.Done():
-			stopCh <- true
-			err := <-errCh
-			if err != nil && err != grpc.ErrClientConnClosing {
-				log.Warning("Watch returned an unexpected error after context was cancelled: %v", err)
-			}
 		case err := <-errCh:
 			if err != nil {
 				eventCh <- &sync.Event{
@@ -350,9 +352,6 @@ func (s *Sync) WatchContext(ctx context.Context, path string, revision int64) <-
 				}
 			}
 		}
-		close(errCh)
-		close(stopCh)
-		close(eventCh)
 	}()
 	return eventCh
 }

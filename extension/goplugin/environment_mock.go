@@ -41,62 +41,57 @@ type MockIEnvironment struct {
 	util     goext.IUtil
 }
 
+func (mockEnv *MockIEnvironment) setModules() {
+	mockEnv.mockModules = goext.MockModules{}
+	mockEnv.core = mockEnv.env.Core()
+	mockEnv.logger = mockEnv.env.Logger()
+	mockEnv.schemas = mockEnv.env.Schemas()
+	mockEnv.sync = mockEnv.env.Sync()
+	mockEnv.database = mockEnv.env.Database()
+	mockEnv.http = mockEnv.env.HTTP()
+	mockEnv.auth = mockEnv.env.Auth()
+	mockEnv.config = mockEnv.env.Config()
+	mockEnv.util = mockEnv.env.Util()
+}
+
 func (mockEnv *MockIEnvironment) SetMockModules(modules goext.MockModules) {
 	mockEnv.mockModules = modules
 	ctrl := NewController(mockEnv.testReporter)
 
 	if mockEnv.mockModules.Core {
 		mockEnv.core = goext.NewMockICore(ctrl)
-	} else {
-		mockEnv.core = mockEnv.env.Core()
 	}
 
 	if mockEnv.mockModules.Logger {
 		mockEnv.logger = goext.NewMockILogger(ctrl)
-	} else {
-		mockEnv.logger = mockEnv.env.Logger()
 	}
 
 	if mockEnv.mockModules.Schemas {
 		mockEnv.schemas = goext.NewMockISchemas(ctrl)
-	} else {
-		mockEnv.schemas = mockEnv.env.Schemas()
 	}
 
 	if mockEnv.mockModules.Sync {
 		mockEnv.sync = goext.NewMockISync(ctrl)
-	} else {
-		mockEnv.sync = mockEnv.env.Sync()
 	}
 
 	if mockEnv.mockModules.Database {
 		mockEnv.database = goext.NewMockIDatabase(ctrl)
-	} else {
-		mockEnv.database = mockEnv.env.Database()
 	}
 
 	if mockEnv.mockModules.Http {
 		mockEnv.http = goext.NewMockIHTTP(ctrl)
-	} else {
-		mockEnv.http = mockEnv.env.HTTP()
 	}
 
 	if mockEnv.mockModules.Auth {
 		mockEnv.auth = goext.NewMockIAuth(ctrl)
-	} else {
-		mockEnv.auth = mockEnv.env.Auth()
 	}
 
 	if mockEnv.mockModules.Config {
 		mockEnv.config = goext.NewMockIConfig(ctrl)
-	} else {
-		mockEnv.config = mockEnv.env.Config()
 	}
 
 	if mockEnv.mockModules.Util {
 		mockEnv.util = goext.NewMockIUtil(ctrl)
-	} else {
-		mockEnv.util = mockEnv.env.Util()
 	}
 }
 
@@ -173,7 +168,7 @@ func (mockEnv *MockIEnvironment) MockUtil() *goext.MockIUtil {
 }
 
 func (mockEnv *MockIEnvironment) Reset() {
-	mockEnv.SetMockModules(goext.MockModules{})
+	mockEnv.setModules()
 	mockEnv.env.Reset()
 	mockEnv.env.bindSchemasToEnv(mockEnv)
 }

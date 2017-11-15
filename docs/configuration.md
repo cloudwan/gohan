@@ -240,6 +240,17 @@ Gohan supports OpenStack Keystone authentication backend.
 
   v2.0 or v3 is supported
 
+- use_auth_cache
+
+  enable memory cache which stores keystone authorization responses for configurable time duration.    
+  Please note that any token may be revoked before TTL expiration.   
+  Revoke operation on cache is not supported. Such tokens will be authorized until TTL expires.  
+
+- cache_ttl
+
+  TTL of each cache entry.   
+  Please note that this TTL must not exceed Keystone token expiration time.
+
 ```yaml
   keystone:
       use_keystone: false
@@ -248,6 +259,9 @@ Gohan supports OpenStack Keystone authentication backend.
       user_name: "admin"
       tenant_name: "admin"
       password: "gohan"
+      use_auth_cache: false
+      cache_ttl: 15m
+
 ```
 
 ## CORS

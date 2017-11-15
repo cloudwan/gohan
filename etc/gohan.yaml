@@ -53,6 +53,10 @@ keystone:
     user_name: "admin"
     tenant_name: "admin"
     password: "gohan"
+    # Whether should use cache for storing and fetching authorizations
+    use_auth_cache: false
+    # TTL of cache entry
+    cache_ttl: 15m
 
 # CORS (Cross-origin resource sharing (CORS)) configuraion for javascript based client
 # cors: "*"

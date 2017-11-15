@@ -74,8 +74,7 @@ func init() {
 					return otto.NullValue()
 				}
 
-				errCh := make(chan error)
-				defer close(errCh)
+				errCh := make(chan error, 1)
 				go func() {
 					node, err = env.Sync.Fetch(path)
 					errCh <- err
@@ -121,8 +120,7 @@ func init() {
 					return otto.NullValue()
 				}
 
-				errCh := make(chan error)
-				defer close(errCh)
+				errCh := make(chan error, 1)
 				go func() {
 					err = env.Sync.Delete(path, prefix)
 					errCh <- err
@@ -156,8 +154,7 @@ func init() {
 					return otto.NullValue()
 				}
 
-				errCh := make(chan error)
-				defer close(errCh)
+				errCh := make(chan error, 1)
 				go func() {
 					err = env.Sync.Update(path, value)
 					errCh <- err
