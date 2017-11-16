@@ -637,6 +637,248 @@ func (generalTreeRight *GeneralTreeRight) SetLeafThird(leafThird []bool) {
 	generalTreeRight.LeafThird = leafThird
 }
 `
+			baseObjectConstructor := `func MakeBaseObject() *BaseObject {
+	return &BaseObject{
+		X: "abc",
+	}
+}
+`
+
+			generalConstructor := `func MakeGeneral() *General {
+	return &General{
+		IP: goext.MakeNullFloat(),
+		Null: goext.MakeNullBool(),
+	}
+}
+`
+			generalComlexConstructor := `func MakeGeneralComplex() *GeneralComplex {
+	return &GeneralComplex{
+		For: goext.MakeNullFloat(),
+		Int: goext.MakeNullBool(),
+	}
+}
+`
+			generalTreeConstructor := `func MakeGeneralTree() *GeneralTree {
+	return &GeneralTree{
+	}
+}
+`
+
+			generalTreeLeftConstructor := `func MakeGeneralTreeLeft() *GeneralTreeLeft {
+	return &GeneralTreeLeft{
+		LeafFirst: goext.MakeNullString(),
+	}
+}
+`
+
+			generalTreeLeftLeafSecondConstructor := `func MakeGeneralTreeLeftLeafSecond() *GeneralTreeLeftLeafSecond {
+	return &GeneralTreeLeftLeafSecond{
+		Value: goext.MakeNullFloat(),
+	}
+}
+`
+
+			generalTreeRightConstructor := `func MakeGeneralTreeRight() *GeneralTreeRight {
+	return &GeneralTreeRight{
+	}
+}
+`
+
+			middleNestedConstructor := `func MakeMiddleNested() *MiddleNested {
+	return &MiddleNested{
+	}
+}
+`
+
+			middleNestedFirstConstructor := `func MakeMiddleNestedFirst() *MiddleNestedFirst {
+	return &MiddleNestedFirst{
+	}
+}
+`
+
+			onlyDeriveConstructor := `func MakeOnlyDerive() *OnlyDerive {
+	return &OnlyDerive{
+		IP: goext.MakeNullFloat(),
+	}
+}
+`
+
+			generalFetch := `func FetchGeneral(schema goext.ISchema, id string, context goext.Context) (IGeneral, error) {
+	result, err := schema.Fetch(id, context)
+	if err != nil {
+		return nil, err
+	}
+	return result.(IGeneral), nil
+}
+`
+
+			generalLockFetch := `func LockFetchGeneral(schema goext.ISchema, id string, context goext.Context, policy goext.LockPolicy) (IGeneral, error) {
+	result, err := schema.LockFetch(id, context, policy)
+	if err != nil {
+		return nil, err
+	}
+	return result.(IGeneral), nil
+}
+`
+
+			generalList := `func ListGeneral(schema goext.ISchema, filter goext.Filter, paginator *goext.Paginator, context goext.Context) ([]IGeneral, error) {
+	list, err := schema.List(filter, paginator, context)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]IGeneral, len(list))
+	for i, object := range list {
+		result[i] = object.(IGeneral)
+	}
+	return result, nil
+}
+`
+
+			generalLockList := `func LockListGeneral(schema goext.ISchema, filter goext.Filter, paginator *goext.Paginator, context goext.Context, policy goext.LockPolicy) ([]IGeneral, error) {
+	list, err := schema.LockList(filter, paginator, context, policy)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]IGeneral, len(list))
+	for i, object := range list {
+		result[i] = object.(IGeneral)
+	}
+	return result, nil
+}
+`
+
+			onlyDeriveFetch := `func FetchOnlyDerive(schema goext.ISchema, id string, context goext.Context) (IOnlyDerive, error) {
+	result, err := schema.Fetch(id, context)
+	if err != nil {
+		return nil, err
+	}
+	return result.(IOnlyDerive), nil
+}
+`
+
+			onlyDeriveLockFetch := `func LockFetchOnlyDerive(schema goext.ISchema, id string, context goext.Context, policy goext.LockPolicy) (IOnlyDerive, error) {
+	result, err := schema.LockFetch(id, context, policy)
+	if err != nil {
+		return nil, err
+	}
+	return result.(IOnlyDerive), nil
+}
+`
+
+			onlyDeriveList := `func ListOnlyDerive(schema goext.ISchema, filter goext.Filter, paginator *goext.Paginator, context goext.Context) ([]IOnlyDerive, error) {
+	list, err := schema.List(filter, paginator, context)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]IOnlyDerive, len(list))
+	for i, object := range list {
+		result[i] = object.(IOnlyDerive)
+	}
+	return result, nil
+}
+`
+
+			onlyDeriveLockList := `func LockListOnlyDerive(schema goext.ISchema, filter goext.Filter, paginator *goext.Paginator, context goext.Context, policy goext.LockPolicy) ([]IOnlyDerive, error) {
+	list, err := schema.LockList(filter, paginator, context, policy)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]IOnlyDerive, len(list))
+	for i, object := range list {
+		result[i] = object.(IOnlyDerive)
+	}
+	return result, nil
+}
+`
+
+			generalRawFetch := `func FetchRawGeneral(schema goext.ISchema, id string, context goext.Context) (*General, error) {
+	result, err := schema.FetchRaw(id, context)
+	if err != nil {
+		return nil, err
+	}
+	return result.(*General), nil
+}
+`
+
+			generalRawLockFetch := `func LockFetchRawGeneral(schema goext.ISchema, id string, context goext.Context, policy goext.LockPolicy) (*General, error) {
+	result, err := schema.LockFetchRaw(id, context, policy)
+	if err != nil {
+		return nil, err
+	}
+	return result.(*General), nil
+}
+`
+
+			generalRawList := `func ListRawGeneral(schema goext.ISchema, filter goext.Filter, paginator *goext.Paginator, context goext.Context) ([]*General, error) {
+	list, err := schema.ListRaw(filter, paginator, context)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*General, len(list))
+	for i, object := range list {
+		result[i] = object.(*General)
+	}
+	return result, nil
+}
+`
+
+			generalRawLockList := `func LockListRawGeneral(schema goext.ISchema, filter goext.Filter, paginator *goext.Paginator, context goext.Context, policy goext.LockPolicy) ([]*General, error) {
+	list, err := schema.LockListRaw(filter, paginator, context, policy)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*General, len(list))
+	for i, object := range list {
+		result[i] = object.(*General)
+	}
+	return result, nil
+}
+`
+
+			onlyDeriveRawFetch := `func FetchRawOnlyDerive(schema goext.ISchema, id string, context goext.Context) (*OnlyDerive, error) {
+	result, err := schema.FetchRaw(id, context)
+	if err != nil {
+		return nil, err
+	}
+	return result.(*OnlyDerive), nil
+}
+`
+
+			onlyDeriveRawLockFetch := `func LockFetchRawOnlyDerive(schema goext.ISchema, id string, context goext.Context, policy goext.LockPolicy) (*OnlyDerive, error) {
+	result, err := schema.LockFetchRaw(id, context, policy)
+	if err != nil {
+		return nil, err
+	}
+	return result.(*OnlyDerive), nil
+}
+`
+
+			onlyDeriveRawList := `func ListRawOnlyDerive(schema goext.ISchema, filter goext.Filter, paginator *goext.Paginator, context goext.Context) ([]*OnlyDerive, error) {
+	list, err := schema.ListRaw(filter, paginator, context)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*OnlyDerive, len(list))
+	for i, object := range list {
+		result[i] = object.(*OnlyDerive)
+	}
+	return result, nil
+}
+`
+
+			onlyDeriveRawLockList := `func LockListRawOnlyDerive(schema goext.ISchema, filter goext.Filter, paginator *goext.Paginator, context goext.Context, policy goext.LockPolicy) ([]*OnlyDerive, error) {
+	list, err := schema.LockListRaw(filter, paginator, context, policy)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*OnlyDerive, len(list))
+	for i, object := range list {
+		result[i] = object.(*OnlyDerive)
+	}
+	return result, nil
+}
+`
+
 			expectedGenerated := []string{
 				baseObjectGenerated,
 				generalGenerated,
@@ -686,10 +928,48 @@ func (generalTreeRight *GeneralTreeRight) SetLeafThird(leafThird []bool) {
 				onlyDeriveImplementation,
 			}
 
+			expectedConstructors := []string{
+				baseObjectConstructor,
+				generalConstructor,
+				generalComlexConstructor,
+				generalTreeConstructor,
+				generalTreeLeftConstructor,
+				generalTreeLeftLeafSecondConstructor,
+				generalTreeRightConstructor,
+				middleNestedConstructor,
+				middleNestedFirstConstructor,
+				onlyDeriveConstructor,
+			}
+
+			expectedCrud := []string {
+				generalFetch,
+				generalLockFetch,
+				generalList,
+				generalLockList,
+				onlyDeriveFetch,
+				onlyDeriveLockFetch,
+				onlyDeriveList,
+				onlyDeriveLockList,
+			}
+
+			expectedRawCrud := []string {
+				generalRawFetch,
+				generalRawLockFetch,
+				generalRawList,
+				generalRawLockList,
+				onlyDeriveRawFetch,
+				onlyDeriveRawLockFetch,
+				onlyDeriveRawList,
+				onlyDeriveRawLockList,
+			}
+
 			Expect(generated.RawInterfaces).To(Equal(expectedGenerated))
 			Expect(generated.Interfaces).To(Equal(expectedInterfaces))
 			Expect(generated.Structs).To(Equal(expectedStructs))
 			Expect(generated.Implementations).To(Equal(expectedImplementations))
+			Expect(generated.Constructors).To(Equal(expectedConstructors))
+			Expect(generated.Crud).To(Equal(expectedCrud))
+			Expect(generated.RawCrud).To(Equal(expectedRawCrud))
 		})
 	})
 })
