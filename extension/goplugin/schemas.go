@@ -523,6 +523,11 @@ func (schema *Schema) Properties() []goext.Property {
 	return properties
 }
 
+// Extends returns schema_ids which given schema extends
+func (schema *Schema) Extends() []string {
+	return schema.raw.Extends
+}
+
 // NewSchema allocates a new Schema
 func NewSchema(env IEnvironment, raw *gohan_schema.Schema) goext.ISchema {
 	return &Schema{env: env, raw: raw}

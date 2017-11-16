@@ -81,6 +81,14 @@ var _ = Describe("Schemas", func() {
 		schema.ClearManager()
 	})
 
+	It("Extends returns list of schema ids which schema extends", func() {
+		derivedSchema := env.Schemas().Find("derived")
+		Expect(derivedSchema).ToNot(BeNil())
+		parents := derivedSchema.Extends()
+		Expect(parents).To(HaveLen(1))
+		Expect(parents[0]).To(Equal("base"))
+	})
+
 	Context("DerivedSchemas", func() {
 		It("Should get all derived schemas", func() {
 			base := env.Schemas().Find("base")
