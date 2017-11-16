@@ -23,7 +23,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/cloudwan/gohan/db"
-	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/schema"
 )
 
@@ -51,20 +50,15 @@ func TestServer(t *testing.T) {
 	RunSpecs(t, "Server Suite")
 }
 
-var _ = Describe("Suit set up and tear down", func() {
-	var conn, dbType string
-	if os.Getenv("MYSQL_TEST") == "true" {
-		conn = "root@/gohan_test"
-		dbType = "mysql"
-	} else {
-		conn = "./test.db"
-		dbType = "sqlite3"
-	}
+var _ = Describe("Suite set up and tear down", func() {
+	var (
+		testDB db.DB
+	)
 
 	var _ = BeforeSuite(func() {
 		var err error
-		testDB, err = db.ConnectDB(dbType, conn, db.DefaultMaxOpenConn, options.Default())
-		Expect(err).ToNot(HaveOccurred(), "Failed to connect database.")
+		testDB, err = db.ConnectLocal()
+		Expect(err).To(Succeed())
 		if os.Getenv("MYSQL_TEST") == "true" {
 			err = startTestServer("./server_test_mysql_config.yaml")
 		} else {
@@ -75,6 +69,6 @@ var _ = Describe("Suit set up and tear down", func() {
 
 	var _ = AfterSuite(func() {
 		schema.ClearManager()
-		os.Remove(conn)
+		testDB.Purge()
 	})
 })

@@ -235,5 +235,6 @@ func (mockEnv *MockIEnvironment) LoadExtensionsForPath(extensions []*schema.Exte
 
 func NewMockIEnvironment(env *Environment, testReporter gomock.TestReporter) *MockIEnvironment {
 	mockIEnvironment := &MockIEnvironment{env: env, testReporter: testReporter}
+	mockIEnvironment.Reset()
 	return mockIEnvironment
 }

@@ -113,14 +113,14 @@ func GohanLoadSchema(src string) (interface{}, error) {
 	return nil, err
 }
 
-//ConnectDB start connection to db
-func ConnectDB(dbType string, connection string, maxOpenConn int) (db.DB, error) {
-	return db.ConnectDB(dbType, connection, maxOpenConn, options.Default())
+//Connect connects to DB
+func Connect(dbType string, dbConn string, maxOpenConn int) (db.DB, error) {
+	return db.Connect(dbType, dbConn, maxOpenConn, options.Default())
 }
 
-//InitDB initializes database using schema.
-func InitDB(dbType string, connection string, dropOnCreate bool, cascade bool) error {
-	err := db.InitDBWithSchemas(dbType, connection, db.InitDBParams{
+//InitSchema initializes database using schema.
+func InitSchema(dbType string, connection string, dropOnCreate bool, cascade bool) error {
+	err := db.InitSchema(dbType, connection, db.SchemaParams{
 		DropOnCreate: dropOnCreate,
 		Cascade:      cascade,
 		AutoMigrate:  false,

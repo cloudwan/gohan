@@ -29,7 +29,7 @@ func TestCli(t *testing.T) {
 	RunSpecs(t, "Cli Suite")
 }
 
-var _ = Describe("Suit set up and tear down", func() {
+var _ = Describe("Suite set up and tear down", func() {
 	var _ = BeforeSuite(func() {
 		os.Unsetenv("OS_AUTH_URL")
 		os.Unsetenv("OS_USERNAME")

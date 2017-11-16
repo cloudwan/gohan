@@ -36,45 +36,34 @@ var _ = Describe("Sql", func() {
 	const testFixtures = "test_fixture.json"
 
 	var (
-		conn    string
-		tx      transaction.Transaction
-		sqlConn *DB
+		tx     transaction.Transaction
+		testDB *DB
 	)
 
 	BeforeEach(func() {
-		var dbType string
-		if os.Getenv("MYSQL_TEST") == "true" {
-			conn = "gohan:gohan@/gohan_test"
-			dbType = "mysql"
-		} else {
-			conn = "./test.db"
-			dbType = "sqlite3"
-		}
-
 		manager := schema.GetManager()
-		dbc, err := db.ConnectDB(dbType, conn, db.DefaultMaxOpenConn, options.Default())
-		sqlConn = dbc.(*DB)
+		testDBraw, err := db.ConnectLocal()
 		Expect(err).ToNot(HaveOccurred())
+		testDB := testDBraw.(*DB)
 		Expect(manager.LoadSchemasFromFiles(
-			"../../etc/schema/gohan.json", "../../tests/test_abstract_schema.yaml", "../../tests/test_schema.yaml")).To(Succeed())
-		db.InitDBWithSchemas(dbType, conn, db.DefaultTestInitDBParams())
+			"../../etc/schema/gohan.json",
+			"../../tests/test_abstract_schema.yaml",
+			"../../tests/test_schema.yaml")).To(Succeed())
+		err = db.InitSchemaConn(testDB, db.DefaultTestSchemaParams())
+		Expect(err).To(Succeed())
 		// Insert fixture data
-		fixtureDB, err := db.ConnectDB("json", testFixtures, db.DefaultMaxOpenConn, options.Default())
+		fixtureDB, err := db.Connect("json", testFixtures, db.DefaultMaxOpenConn, options.Default())
 		Expect(err).ToNot(HaveOccurred())
-		db.CopyDBResources(fixtureDB, dbc, true)
+		db.CopyDBResources(fixtureDB, testDB, true)
 
-		tx, err = dbc.Begin()
+		tx, err = testDB.Begin()
 		Expect(err).ToNot(HaveOccurred())
 	})
 
 	AfterEach(func() {
 		tx.Close()
-		sqlConn.Close()
-
+		testDB.Close()
 		schema.ClearManager()
-		if os.Getenv("MYSQL_TEST") != "true" {
-			os.Remove(conn)
-		}
 	})
 
 	Describe("Select Pagination", func() {
@@ -242,7 +231,7 @@ var _ = Describe("Sql", func() {
 
 		Context("Index on multiple columns", func() {
 			It("Should create unique index on tenant_id and id", func() {
-				_, indices := sqlConn.GenTableDef(test, false)
+				_, indices := testDB.GenTableDef(test, false)
 				Expect(indices).To(HaveLen(2))
 				Expect(indices[1]).To(ContainSubstring("CREATE UNIQUE INDEX unique_id_and_tenant_id ON `tests`(`id`,`tenant_id`);"))
 			})
@@ -250,7 +239,7 @@ var _ = Describe("Sql", func() {
 
 		Context("Index in schema", func() {
 			It("Should create index, if schema property should be indexed", func() {
-				_, indices := sqlConn.GenTableDef(test, false)
+				_, indices := testDB.GenTableDef(test, false)
 				Expect(indices).To(HaveLen(2))
 				Expect(indices[0]).To(ContainSubstring("CREATE INDEX tests_tenant_id_idx ON `tests`(`tenant_id`(255));"))
 			})
@@ -258,7 +247,7 @@ var _ = Describe("Sql", func() {
 
 		Context("Relation column name", func() {
 			It("Generate foreign key with default column name when relationColumn not available", func() {
-				table, _ := sqlConn.GenTableDef(server, false)
+				table, _ := testDB.GenTableDef(server, false)
 				Expect(table).To(ContainSubstring("REFERENCES `networks`(id)"))
 			})
 
@@ -280,7 +269,7 @@ var _ = Describe("Sql", func() {
 					nil,
 					false,
 				))
-				table, _, err := sqlConn.AlterTableDef(server, false)
+				table, _, err := testDB.AlterTableDef(server, false)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(table).To(ContainSubstring("REFERENCES `subnets`(cidr)"))
 			})
@@ -288,18 +277,18 @@ var _ = Describe("Sql", func() {
 
 		Context("With default cascade option", func() {
 			It("Generate proper table with cascade delete", func() {
-				table, _ := sqlConn.GenTableDef(server, true)
+				table, _ := testDB.GenTableDef(server, true)
 				Expect(table).To(ContainSubstring("REFERENCES `networks`(id) on delete cascade);"))
-				table, _ = sqlConn.GenTableDef(subnet, true)
+				table, _ = testDB.GenTableDef(subnet, true)
 				Expect(table).To(ContainSubstring("REFERENCES `networks`(id) on delete cascade);"))
 			})
 		})
 
 		Context("Without default cascade option", func() {
 			It("Generate proper table with cascade delete", func() {
-				table, _ := sqlConn.GenTableDef(server, false)
+				table, _ := testDB.GenTableDef(server, false)
 				Expect(table).To(ContainSubstring("REFERENCES `networks`(id) on delete cascade);"))
-				table, _ = sqlConn.GenTableDef(subnet, false)
+				table, _ = testDB.GenTableDef(subnet, false)
 				Expect(table).ToNot(ContainSubstring("REFERENCES `networks`(id) on delete cascade);"))
 			})
 		})
@@ -323,7 +312,7 @@ var _ = Describe("Sql", func() {
 					nil,
 					false,
 				))
-				table, _, err := sqlConn.AlterTableDef(server, true)
+				table, _, err := testDB.AlterTableDef(server, true)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(table).To(ContainSubstring("alter table`servers` add (`test` varchar(255) not null);"))
 			})
@@ -346,7 +335,7 @@ var _ = Describe("Sql", func() {
 					nil,
 					true,
 				))
-				_, indices, err := sqlConn.AlterTableDef(server, true)
+				_, indices, err := testDB.AlterTableDef(server, true)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(indices).To(HaveLen(1))
 				Expect(indices[0]).To(ContainSubstring("CREATE INDEX servers_test_idx ON `servers`(`test`);"))

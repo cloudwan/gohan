@@ -22,10 +22,7 @@ import (
 	"regexp"
 	"testing"
 
-	"os"
-
 	gohan_db "github.com/cloudwan/gohan/db"
-	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/extension/goext"
 	"github.com/cloudwan/gohan/extension/goplugin"
@@ -34,11 +31,6 @@ import (
 	"github.com/cloudwan/gohan/sync/noop"
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
-	"github.com/twinj/uuid"
-)
-
-const (
-	dbBaseFileName = "test.db"
 )
 
 var log = gohan_logger.NewLogger()
@@ -182,29 +174,13 @@ func (testRunner *TestRunner) runSingle(t ginkgo.GinkgoTestingT, reporter *Repor
 	// create env
 	beforeStartHook := func(env *goplugin.Environment) error {
 		// db
-		dbType := ""
-		dbConn := ""
-
-		if os.Getenv("MYSQL_TEST") == "true" {
-			dbType = "mysql"
-			if dsn, ok := os.LookupEnv("MYSQL_DSN"); ok {
-				dbConn = dsn
-			} else {
-				dbConn = "root@/gohan_test"
-			}
-		} else {
-			dbType = "sqlite3"
-			dbFileName := dbBaseFileName + "_" + uuid.NewV4().String()
-			dbConn = fmt.Sprintf("file:%s?mode=memory&cache=shared", dbFileName)
-		}
-
-		db, err := gohan_db.ConnectDB(dbType, dbConn, gohan_db.DefaultMaxOpenConn, options.Default())
+		db, err := gohan_db.ConnectLocal()
 
 		if err != nil {
 			return fmt.Errorf("failed to connect db: %s", err)
 		}
 
-		if err = gohan_db.InitDBConnWithSchemas(db, gohan_db.DefaultTestInitDBParams()); err != nil {
+		if err = gohan_db.InitSchemaConn(db, gohan_db.DefaultTestSchemaParams()); err != nil {
 			return fmt.Errorf("failed to init db: %s", err)
 		}
 

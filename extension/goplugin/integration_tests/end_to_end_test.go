@@ -22,7 +22,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/cloudwan/gohan/db"
@@ -37,8 +36,6 @@ import (
 
 var _ = Describe("Environment", func() {
 	const (
-		conn         = "../test_data/test.db"
-		dbType       = "sqlite3"
 		baseURL      = "http://localhost:19090"
 		adminTokenID = "admin_token"
 	)
@@ -87,17 +84,16 @@ var _ = Describe("Environment", func() {
 	}
 
 	BeforeSuite(func() {
-		removeFileDb(conn)
 		var err error
-		testDB, err = db.ConnectDB(dbType, conn, db.DefaultMaxOpenConn, options.Default())
-		Expect(err).ToNot(HaveOccurred(), "Failed to connect database.")
+		testDB, err = db.Connect("sqlite3", "../test_data/test.db", db.DefaultMaxOpenConn, options.Default())
+		Expect(err).To(Succeed())
 		err = startTestServer("../test_data/test_config.yaml")
-		Expect(err).ToNot(HaveOccurred(), "Failed to start test server.")
+		Expect(err).To(Succeed())
 	})
 
 	AfterSuite(func() {
+		testDB.Purge()
 		schema.ClearManager()
-		removeFileDb(conn)
 	})
 
 	AfterEach(func() {
@@ -229,8 +225,4 @@ func clearTable(tx transaction.Transaction, s *schema.Schema) error {
 		}
 	}
 	return nil
-}
-
-func removeFileDb(fileName string) {
-	os.Remove(fileName)
 }

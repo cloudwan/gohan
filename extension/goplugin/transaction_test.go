@@ -16,12 +16,9 @@
 package goplugin_test
 
 import (
-	"os"
-
 	"context"
 
 	"github.com/cloudwan/gohan/db"
-	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/extension/goext"
 	"github.com/cloudwan/gohan/extension/goplugin"
 	"github.com/cloudwan/gohan/schema"
@@ -31,27 +28,27 @@ import (
 
 var _ = Describe("Transaction", func() {
 	var (
-		env *goplugin.Environment
+		env    *goplugin.Environment
+		testDB db.DB
 	)
 
 	const (
-		DbFile     = "test.db"
-		DbType     = "sqlite3"
-		SchemaPath = "test_data/test_schema.yaml"
+		schemaPath = "test_data/test_schema.yaml"
 	)
 
 	BeforeEach(func() {
 		manager := schema.GetManager()
-		Expect(manager.LoadSchemaFromFile(SchemaPath)).To(Succeed())
-		db, err := db.ConnectDB(DbType, DbFile, db.DefaultMaxOpenConn, options.Default())
+		Expect(manager.LoadSchemaFromFile(schemaPath)).To(Succeed())
+		var err error
+		testDB, err = db.ConnectLocal()
 		Expect(err).To(BeNil())
 		env = goplugin.NewEnvironment("test", nil, nil)
-		env.SetDatabase(db)
+		env.SetDatabase(testDB)
 	})
 
 	AfterEach(func() {
-		os.Remove(DbFile)
 		schema.ClearManager()
+		testDB.Purge()
 	})
 
 	Describe("CRUD", func() {
@@ -67,7 +64,7 @@ var _ = Describe("Transaction", func() {
 			Expect(env.Start()).To(Succeed())
 			testSchema = env.Schemas().Find("test")
 			Expect(testSchema).To(Not(BeNil()))
-			Expect(db.InitDBWithSchemas(DbType, DbFile, db.DefaultTestInitDBParams())).To(Succeed())
+			Expect(db.InitSchemaConn(testDB, db.DefaultTestSchemaParams())).To(Succeed())
 
 			tx, err = env.Database().Begin()
 			Expect(err).To(BeNil())

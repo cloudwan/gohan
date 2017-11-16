@@ -242,7 +242,7 @@ Useful for development purposes.`,
 			if err := manager.OrderedLoadSchemasFromFiles(strings.Split(multipleSchemaFiles, ";")); err != nil {
 				util.ExitFatal(err)
 			}
-			if err := db.InitDBWithSchemas(dbType, dbConnection, db.InitDBParams{
+			if err := db.InitSchema(dbType, dbConnection, db.SchemaParams{
 				DropOnCreate: dropOnCreate,
 				Cascade:      cascade,
 				AutoMigrate:  false,
@@ -295,11 +295,11 @@ Useful for development purposes.`,
 				util.ExitFatal("Error loading schema:", err)
 			}
 
-			inDB, err := db.ConnectDB(inType, in, db.DefaultMaxOpenConn, db_options.Default())
+			inDB, err := db.Connect(inType, in, db.DefaultMaxOpenConn, db_options.Default())
 			if err != nil {
 				util.ExitFatal(err)
 			}
-			outDB, err := db.ConnectDB(outType, out, db.DefaultMaxOpenConn, db_options.Default())
+			outDB, err := db.Connect(outType, out, db.DefaultMaxOpenConn, db_options.Default())
 			if err != nil {
 				util.ExitFatal(err)
 			}

@@ -23,19 +23,18 @@ import (
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
-	"github.com/cloudwan/gohan/util"
-
-	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/sync/etcdv3"
+	"github.com/cloudwan/gohan/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/cloudwan/gohan/db/options"
 )
 
 const (
 	configDir         = "../../server"
 	configFile        = "./server_test_config.yaml"
 	dbType            = "sqlite3"
-	dbFile            = "./test.db"
+ 	dbConn            = "./test.db"
 	testSyncEndpoint  = "localhost:2379"
 	adminTokenID      = "admin_token"
 	memberTokenID     = "demo_token"
@@ -91,8 +90,8 @@ var _ = Describe("Suite set up and tear down", func() {
 	var _ = BeforeSuite(func() {
 		var err error
 		Expect(os.Chdir(configDir)).To(Succeed())
-		testDB, err = db.ConnectDB(dbType, dbFile, db.DefaultMaxOpenConn, options.Default())
-		Expect(err).ToNot(HaveOccurred(), "Failed to connect database.")
+		testDB, err = db.Connect(dbType, dbConn, db.DefaultMaxOpenConn, options.Default())
+		Expect(err).To(Succeed())
 		testSync, err = etcdv3.NewSync([]string{testSyncEndpoint}, time.Second)
 		Expect(err).NotTo(HaveOccurred(), "Failed to connect to etcd")
 		manager := schema.GetManager()
@@ -101,12 +100,12 @@ var _ = Describe("Suite set up and tear down", func() {
 		schemaFiles := config.GetStringList("schemas", nil)
 		Expect(schemaFiles).NotTo(BeNil())
 		Expect(manager.LoadSchemasFromFiles(schemaFiles...)).To(Succeed())
-		Expect(db.InitDBWithSchemas(dbType, dbFile, db.DefaultTestInitDBParams())).To(Succeed())
+		Expect(db.InitSchemaConn(testDB, db.DefaultTestSchemaParams())).To(Succeed())
 	})
 
 	var _ = AfterSuite(func() {
 		schema.ClearManager()
 		testSync.Close()
-		os.Remove(dbFile)
+		testDB.Purge()
 	})
 })

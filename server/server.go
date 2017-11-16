@@ -158,7 +158,7 @@ func (server *Server) resetRouter() {
 }
 
 func (server *Server) initDB() error {
-	return db.InitDBWithSchemas(server.getDatabaseConfig())
+	return db.InitSchema(server.getDatabaseConfig())
 }
 
 func (server *Server) connectDB() error {
@@ -175,7 +175,7 @@ func (server *Server) connectDB() error {
 	return err
 }
 
-func (server *Server) getDatabaseConfig() (string, string, db.InitDBParams) {
+func (server *Server) getDatabaseConfig() (string, string, db.SchemaParams) {
 	config := util.GetConfig()
 	databaseType := config.GetString("database/type", "sqlite3")
 	if databaseType == "json" || databaseType == "yaml" {
@@ -188,7 +188,7 @@ func (server *Server) getDatabaseConfig() (string, string, db.InitDBParams) {
 	databaseDropOnCreate := config.GetBool("database/drop_on_create", false)
 	databaseCascade := config.GetBool("database/cascade_delete", false)
 	databaseAutoMigrate := config.GetBool("database/auto_migrate", true)
-	return databaseType, databaseConnection, db.InitDBParams{
+	return databaseType, databaseConnection, db.SchemaParams{
 		DropOnCreate: databaseDropOnCreate,
 		Cascade:      databaseCascade,
 		AutoMigrate:  databaseAutoMigrate,
@@ -303,7 +303,7 @@ func NewServer(configFile string) (*Server, error) {
 			inType := initialDataConfig["type"].(string)
 			inConnection := initialDataConfig["connection"].(string)
 			log.Info("Importing data from %s ...", inConnection)
-			inDB, err := db.ConnectDB(inType, inConnection, db.DefaultMaxOpenConn, options.Default())
+			inDB, err := db.Connect(inType, inConnection, db.DefaultMaxOpenConn, options.Default())
 			if err != nil {
 				log.Fatal(err)
 			}

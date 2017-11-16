@@ -210,7 +210,7 @@ func init() {
 
 				result1,
 					err :=
-					lib.ConnectDB(
+					lib.Connect(
 						dbType, connection, maxOpenConn)
 
 				return result1, err
@@ -226,7 +226,7 @@ func init() {
 
 			result1,
 				err :=
-				lib.ConnectDB(
+				lib.Connect(
 					dbType, connection, maxOpenConn)
 			return []interface{}{
 				result1,
@@ -260,14 +260,14 @@ func init() {
 				}
 
 				err :=
-					lib.InitDB(
+					lib.InitSchema(
 						dbType, connection, dropOnCreate, cascade)
 
 				return nil, err
 
 			}, nil
 		})
-	gohanscript.RegisterMiniGoFunc("InitDB",
+	gohanscript.RegisterMiniGoFunc("InitSchema",
 		func(vm *gohanscript.VM, args []interface{}) []interface{} {
 
 			dbType, _ := args[0].(string)
@@ -276,7 +276,7 @@ func init() {
 			cascade, _ := args[0].(bool)
 
 			err :=
-				lib.InitDB(
+				lib.InitSchema(
 					dbType, connection, dropOnCreate, cascade)
 			return []interface{}{
 				err}

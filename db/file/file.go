@@ -16,24 +16,24 @@
 package file
 
 import (
+	"context"
 	"fmt"
+	"os"
 	"sort"
 	"strconv"
-
-	"github.com/jmoiron/sqlx"
-
-	"context"
 
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/pagination"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
+	"github.com/jmoiron/sqlx"
 )
 
 //DB is yaml implementation of DB
 //This db backend is intended for development and test purpose only
 type DB struct {
+	format   string
 	filePath string
 	data     map[string]interface{}
 
@@ -59,6 +59,7 @@ func (db *DB) Options() options.Options {
 
 //Connect connec to the db
 func (db *DB) Connect(format, conn string, maxOpenConn int) error {
+	db.format = format
 	db.filePath = conn
 	db.load()
 	return nil
@@ -400,4 +401,21 @@ func boolInSlice(a bool, list []string) bool {
 		}
 	}
 	return false
+}
+
+// Purge removes database files if present
+func (db *DB) Purge() {
+	if err := os.Remove(db.filePath); err != nil {
+		log.Warning("Failed to remove database file: %s", err)
+	}
+}
+
+// Type returns database type
+func (db *DB) Type() string {
+	return db.format
+}
+
+// Conn returns connection string
+func (db *DB) Conn() string {
+	return db.filePath
 }

@@ -16,6 +16,7 @@
 package runner
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -25,18 +26,12 @@ import (
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/extension"
+	gohan_otto "github.com/cloudwan/gohan/extension/otto"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/server/middleware"
 	"github.com/cloudwan/gohan/sync/noop"
 	"github.com/xyproto/otto"
-
-	// Import otto underscore lib
 	_ "github.com/xyproto/otto/underscore"
-
-	"context"
-
-	"github.com/cloudwan/gohan/db/options"
-	gohan_otto "github.com/cloudwan/gohan/extension/otto"
 )
 
 const (
@@ -71,7 +66,7 @@ func NewEnvironment(testFileName string, testSource []byte) *Environment {
 func (env *Environment) InitializeEnvironment() error {
 	var err error
 
-	env.dbConnection, err = newDBConnection(env.memoryDbConn())
+	env.dbConnection, err = db.ConnectLocal()
 	if err != nil {
 		return fmt.Errorf("Failed to connect to database: %s", err)
 	}
@@ -112,16 +107,12 @@ func (env *Environment) InitializeEnvironment() error {
 		return fmt.Errorf("Failed to load extensions for '%s': %s", env.testFileName, err)
 	}
 
-	if err = db.InitDBWithSchemas("sqlite3", env.memoryDbConn(), db.DefaultTestInitDBParams()); err != nil {
+	if err = db.InitSchemaConn(env.dbConnection, db.DefaultTestSchemaParams()); err != nil {
 		schema.ClearManager()
 		return fmt.Errorf("Failed to init DB: %s", err)
 	}
 
 	return nil
-}
-
-func (env *Environment) memoryDbConn() string {
-	return fmt.Sprintf("file:%s?mode=memory&cache=shared", env.testFileName)
 }
 
 // ClearEnvironment clears mock calls between tests and rollbacks test transaction
@@ -153,14 +144,6 @@ func (env *Environment) CheckAllMockCallsMade() error {
 		}
 	}
 	return nil
-}
-
-func newDBConnection(dbfilename string) (db.DB, error) {
-	connection, err := db.ConnectDB("sqlite3", dbfilename, db.DefaultMaxOpenConn, options.Default())
-	if err != nil {
-		return nil, err
-	}
-	return connection, nil
 }
 
 func (env *Environment) addTestingAPI() {

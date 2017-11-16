@@ -36,9 +36,6 @@ var _ = Describe("Database operation test", func() {
 		err error
 		ok  bool
 
-		conn   string
-		dbType string
-
 		manager          *schema.Manager
 		networkSchema    *schema.Schema
 		serverSchema     *schema.Schema
@@ -47,7 +44,7 @@ var _ = Describe("Database operation test", func() {
 		subnetResource   *schema.Resource
 		serverResource   *schema.Resource
 
-		dataStore db.DB
+		testDB db.DB
 	)
 
 	BeforeEach(func() {
@@ -57,9 +54,6 @@ var _ = Describe("Database operation test", func() {
 
 	AfterEach(func() {
 		schema.ClearManager()
-		if os.Getenv("MYSQL_TEST") != "true" {
-			os.Remove(conn)
-		}
 	})
 
 	Describe("Base operations", func() {
@@ -122,33 +116,23 @@ var _ = Describe("Database operation test", func() {
 		})
 
 		JustBeforeEach(func() {
-			os.Remove(conn)
-			dataStore, err = db.ConnectDB(dbType, conn, db.DefaultMaxOpenConn, options.Default())
+			testDB, err = db.ConnectLocal()
 			Expect(err).ToNot(HaveOccurred())
 
 			for _, s := range manager.Schemas() {
-				Expect(dataStore.RegisterTable(s, false, true)).To(Succeed())
+				Expect(testDB.RegisterTable(s, false, true)).To(Succeed())
 			}
 
-			tx, err = dataStore.Begin()
+			tx, err = testDB.Begin()
 			Expect(err).ToNot(HaveOccurred())
 		})
 
 		AfterEach(func() {
 			tx.Close()
+			testDB.Purge()
 		})
 
 		Describe("Using sql", func() {
-			BeforeEach(func() {
-				if os.Getenv("MYSQL_TEST") == "true" {
-					conn = "root@/gohan_test"
-					dbType = "mysql"
-				} else {
-					conn = "./test.db"
-					dbType = "sqlite3"
-				}
-			})
-
 			Context("When the database is empty", func() {
 				It("Returns an empty list", func() {
 					list, num, err := tx.List(networkSchema, nil, nil, nil)
@@ -172,7 +156,7 @@ var _ = Describe("Database operation test", func() {
 					Expect(tx.Create(serverResource)).To(Succeed())
 					Expect(tx.Commit()).To(Succeed())
 					tx.Close()
-					tx, err = dataStore.Begin()
+					tx, err = testDB.Begin()
 					Expect(err).ToNot(HaveOccurred())
 				})
 
@@ -366,14 +350,12 @@ var _ = Describe("Database operation test", func() {
 
 	Context("Initialization", func() {
 		BeforeEach(func() {
-			conn = "test.db"
-			dbType = "sqlite3"
 			Expect(manager.LoadSchemaFromFile("../tests/test_abstract_schema.yaml")).To(Succeed())
 			Expect(manager.LoadSchemaFromFile("../tests/test_schema.yaml")).To(Succeed())
 		})
 
 		It("Should initialize the database without error", func() {
-			Expect(db.InitDBWithSchemas(dbType, conn, db.DefaultTestInitDBParams())).To(Succeed())
+			Expect(db.InitSchemaConn(testDB, db.DefaultTestSchemaParams())).To(Succeed())
 		})
 	})
 
@@ -383,22 +365,19 @@ var _ = Describe("Database operation test", func() {
 		})
 
 		It("Should do it properly", func() {
-			inDB, err := db.ConnectDB("yaml", "test_data/conv_in.yaml", db.DefaultMaxOpenConn, options.Default())
+			inDB, err := db.Connect("yaml", "test_data/conv_in.yaml", db.DefaultMaxOpenConn, options.Default())
 			Expect(err).ToNot(HaveOccurred())
-			defer os.Remove("test_data/conv_in.db")
 
-			db.InitDBWithSchemas("sqlite3", "test_data/conv_out.db", db.DefaultTestInitDBParams())
-			outDB, err := db.ConnectDB("sqlite3", "test_data/conv_out.db", db.DefaultMaxOpenConn, options.Default())
+			db.InitSchema("sqlite3", "test_data/conv_out.db", db.DefaultTestSchemaParams())
+			outDB, err := db.Connect("sqlite3", "test_data/conv_out.db", db.DefaultMaxOpenConn, options.Default())
 			Expect(err).ToNot(HaveOccurred())
-			defer os.Remove("test_data/conv_out.db")
+			defer outDB.Purge()
 
-			db.InitDBWithSchemas("yaml", "test_data/conv_verify.yaml", db.DefaultTestInitDBParams())
-			verifyDB, err := db.ConnectDB("yaml", "test_data/conv_verify.yaml", db.DefaultMaxOpenConn, options.Default())
+			db.InitSchema("yaml", "test_data/conv_verify.yaml", db.DefaultTestSchemaParams())
+			verifyDB, err := db.Connect("yaml", "test_data/conv_verify.yaml", db.DefaultMaxOpenConn, options.Default())
 			Expect(err).ToNot(HaveOccurred())
-			defer os.Remove("test_data/conv_verify.yaml")
 
 			Expect(db.CopyDBResources(inDB, outDB, true)).To(Succeed())
-
 			Expect(db.CopyDBResources(outDB, verifyDB, true)).To(Succeed())
 
 			inTx, err := inDB.Begin()
@@ -426,17 +405,13 @@ var _ = Describe("Database operation test", func() {
 		})
 
 		It("Should not override existing rows", func() {
-			inDB, err := db.ConnectDB("yaml", "test_data/conv_in.yaml", db.DefaultMaxOpenConn, options.Default())
+			inDB, err := db.Connect("yaml", "test_data/conv_in.yaml", db.DefaultMaxOpenConn, options.Default())
 			Expect(err).ToNot(HaveOccurred())
-			defer os.Remove("test_data/conv_in.db")
 
-			db.InitDBWithSchemas("sqlite3", "test_data/conv_out.db", db.DefaultTestInitDBParams())
-			outDB, err := db.ConnectDB("sqlite3", "test_data/conv_out.db", db.DefaultMaxOpenConn, options.Default())
+			db.InitSchema("sqlite3", "test_data/conv_out.db", db.DefaultTestSchemaParams())
+			outDB, err := db.Connect("sqlite3", "test_data/conv_out.db", db.DefaultMaxOpenConn, options.Default())
 			Expect(err).ToNot(HaveOccurred())
-			defer os.Remove("test_data/conv_out.db")
-
-			Expect(err).ToNot(HaveOccurred())
-			defer os.Remove("test_data/conv_verify.yaml")
+			defer outDB.Purge()
 
 			Expect(db.CopyDBResources(inDB, outDB, false)).To(Succeed())
 			subnetSchema, _ := manager.Schema("subnet")
@@ -492,12 +467,12 @@ var _ = Describe("Database operation test", func() {
 		BeforeEach(func() {
 			os.Remove(deadlockDbName)
 			Expect(manager.LoadSchemaFromFile(deadlockDbSchema)).To(Succeed())
-			Expect(db.InitDBWithSchemas(deadlockDbType, deadlockDbName, db.DefaultTestInitDBParams())).To(Succeed())
-			firstConn, err = db.ConnectDB(deadlockDbType, deadlockDbName, db.DefaultMaxOpenConn, connOpts)
+			Expect(db.InitSchema(deadlockDbType, deadlockDbName, db.DefaultTestSchemaParams())).To(Succeed())
+			firstConn, err = db.Connect(deadlockDbType, deadlockDbName, db.DefaultMaxOpenConn, connOpts)
 			Expect(err).ToNot(HaveOccurred())
-			secondConn, err = db.ConnectDB(deadlockDbType, deadlockDbName, db.DefaultMaxOpenConn, connOpts)
+			secondConn, err = db.Connect(deadlockDbType, deadlockDbName, db.DefaultMaxOpenConn, connOpts)
 			Expect(err).ToNot(HaveOccurred())
-			initDB, err := db.ConnectDB("yaml", deadlockDbInitial, db.DefaultMaxOpenConn, options.Default())
+			initDB, err := db.Connect("yaml", deadlockDbInitial, db.DefaultMaxOpenConn, options.Default())
 			defer initDB.Close()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(db.CopyDBResources(initDB, firstConn, false)).To(Succeed())

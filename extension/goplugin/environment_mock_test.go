@@ -16,10 +16,7 @@
 package goplugin_test
 
 import (
-	"os"
-
 	"github.com/cloudwan/gohan/db"
-	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/extension/goext"
 	"github.com/cloudwan/gohan/extension/goplugin"
 	"github.com/cloudwan/gohan/extension/goplugin/test_data/ext_good/test"
@@ -31,46 +28,36 @@ import (
 var _ = Describe("Mocks", func() {
 	var (
 		env        *goplugin.MockIEnvironment
-		dbFile     string
 		testSchema goext.ISchema
 		context    goext.Context
+		testDB     db.DB
 	)
 
 	const (
-		SchemaPath = "test_data/test_schema.yaml"
+		schemaPath = "test_data/test_schema.yaml"
 	)
 
 	BeforeEach(func() {
-		var dbType string
-		if os.Getenv("MYSQL_TEST") == "true" {
-			dbFile = "root@/gohan_test"
-			dbType = "mysql"
-		} else {
-			dbFile = "test.db"
-			dbType = "sqlite3"
-		}
-
 		schemaManager := schema.GetManager()
-		Expect(schemaManager.LoadSchemaFromFile(SchemaPath)).To(Succeed())
-		rawDB, err := db.ConnectDB(dbType, dbFile, db.DefaultMaxOpenConn, options.Default())
+		Expect(schemaManager.LoadSchemaFromFile(schemaPath)).To(Succeed())
+		var err error
+		testDB, err = db.ConnectLocal()
 		Expect(err).ToNot(HaveOccurred())
 		envReal := goplugin.NewEnvironment("test", nil, nil)
-
 		Expect(envReal.Load("test_data/ext_good/ext_good.so")).To(Succeed())
 		Expect(envReal.Start()).To(Succeed())
-		envReal.SetDatabase(rawDB)
+		envReal.SetDatabase(testDB)
 		env = goplugin.NewMockIEnvironment(envReal, GinkgoT())
-		env.Reset()
 		testSchema = env.Schemas().Find("test")
 		Expect(testSchema).To(Not(BeNil()))
-		Expect(db.InitDBWithSchemas(dbType, dbFile, db.DefaultTestInitDBParams())).To(Succeed())
+		Expect(db.InitSchemaConn(testDB, db.DefaultTestSchemaParams())).To(Succeed())
 		context = goext.MakeContext()
 	})
 
 	AfterEach(func() {
 		env.Reset()
-		os.Remove(dbFile)
 		schema.ClearManager()
+		testDB.Purge()
 	})
 
 	Context("Mocking module", func() {

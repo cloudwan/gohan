@@ -1174,3 +1174,38 @@ func (db *DB) SetMaxOpenConns(maxIdleConns int) {
 	// db.DB.SetMaxOpenConns(maxIdleConns)
 	// db.DB.SetMaxIdleConns(maxIdleConns)
 }
+
+func extractSQLite3FileName(conn string) string {
+	parts := strings.Split(conn, "?")
+	for _, part := range parts {
+		// no need to remove memory DB
+		if part == "mode=memory" {
+			return ""
+		}
+	}
+	if len(parts) > 0 {
+		return parts[0]
+	}
+	return ""
+}
+
+// Purge removes database files if present
+func (db *DB) Purge() {
+	if db.sqlType == "sqlite3" {
+		if fileName := extractSQLite3FileName(db.connectionString); fileName != "" {
+			if err := os.Remove(fileName); err != nil {
+				log.Warning("Failed to remove database file: %s", err)
+			}
+		}
+	}
+}
+
+// Type returns database type
+func (db *DB) Type() string {
+	return db.sqlType
+}
+
+// Conn returns connection string
+func (db *DB) Conn() string {
+	return db.connectionString
+}

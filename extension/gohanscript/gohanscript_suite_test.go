@@ -20,7 +20,6 @@ import (
 	"testing"
 
 	"github.com/cloudwan/gohan/db"
-	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
@@ -31,8 +30,6 @@ import (
 const (
 	configDir         = "."
 	configFile        = "./server_test_config.yaml"
-	dbType            = "sqlite3"
-	dbFile            = "./test.db"
 	adminTokenID      = "admin_token"
 	memberTokenID     = "demo_token"
 	powerUserTokenID  = "power_user_token"
@@ -83,10 +80,10 @@ func TestGohanScriptExtension(t *testing.T) {
 
 var _ = Describe("Suite set up and tear down", func() {
 	var _ = BeforeSuite(func() {
-		var err error
 		Expect(os.Chdir(configDir)).To(Succeed())
-		testDB, err = db.ConnectDB(dbType, dbFile, db.DefaultMaxOpenConn, options.Default())
-		Expect(err).ToNot(HaveOccurred(), "Failed to connect database.")
+		var err error
+		testDB, err = db.ConnectLocal()
+		Expect(err).To(Succeed())
 		manager := schema.GetManager()
 		schema.DefaultExtension = "gohanscript"
 		config := util.GetConfig()
@@ -94,11 +91,11 @@ var _ = Describe("Suite set up and tear down", func() {
 		schemaFiles := config.GetStringList("schemas", nil)
 		Expect(schemaFiles).NotTo(BeNil())
 		Expect(manager.LoadSchemasFromFiles(schemaFiles...)).To(Succeed())
-		Expect(db.InitDBWithSchemas(dbType, dbFile, db.DefaultTestInitDBParams())).To(Succeed())
+		Expect(db.InitSchemaConn(testDB, db.DefaultTestSchemaParams())).To(Succeed())
 	})
 
 	var _ = AfterSuite(func() {
 		schema.ClearManager()
-		os.Remove(dbFile)
+		testDB.Purge()
 	})
 })

@@ -2299,7 +2299,7 @@ var _ = Describe("Using gohan_file builtin", func() {
 				"id": "read_file",
 				"code": `
 					gohan_register_handler("test_event", function(context){
-						context.dir= gohan_file_dir('./test.db');
+						context.dir = gohan_file_dir('./test.db');
 					});`,
 				"path": ".*",
 			})

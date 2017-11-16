@@ -39,10 +39,19 @@ var errNoSchemasInManager = errors.New("No schemas in Manager. Did you remember 
 type DB interface {
 	Connect(string, string, int) error
 	Close()
+	Purge()
+
+	// tx
 	Begin() (transaction.Transaction, error)
 	BeginTx(ctx context.Context, options *transaction.TxOptions) (transaction.Transaction, error)
+
+	// db schema
 	RegisterTable(s *schema.Schema, cascade, migrate bool) error
 	DropTable(*schema.Schema) error
+
+	// info
+	Type() string
+	Conn() string
 
 	// options
 	Options() options.Options
@@ -129,8 +138,8 @@ func WithinTx(ctx context.Context, db DB, options *transaction.TxOptions, fn fun
 		}, fn)
 }
 
-//ConnectDB is builder function of DB
-func ConnectDB(dbType, conn string, maxOpenConn int, opt options.Options) (DB, error) {
+//Connect is builder function of DB
+func Connect(dbType, conn string, maxOpenConn int, opt options.Options) (DB, error) {
 	var db DB
 
 	if dbType == "json" || dbType == "yaml" {
@@ -143,6 +152,8 @@ func ConnectDB(dbType, conn string, maxOpenConn int, opt options.Options) (DB, e
 	if err != nil {
 		return nil, err
 	}
+
+	log.Debug("Database connection opened: type=%s, conn=%s", db.Type(), db.Conn())
 	return db, nil
 }
 
@@ -216,12 +227,12 @@ func CreateFromConfig(config *util.Config) (DB, error) {
 	return dbConn, nil
 }
 
-type InitDBParams struct {
+type SchemaParams struct {
 	DropOnCreate, Cascade, AutoMigrate, AllowEmpty bool
 }
 
-func DefaultTestInitDBParams() InitDBParams {
-	return InitDBParams{
+func DefaultTestSchemaParams() SchemaParams {
+	return SchemaParams{
 		DropOnCreate: true, // always drop DB during tests
 		Cascade:      false,
 		AutoMigrate:  false, // do not migrate during tests
@@ -229,15 +240,15 @@ func DefaultTestInitDBParams() InitDBParams {
 	}
 }
 
-// InitDBConnWithSchemas initializes database connection using schemas stored in Manager
-func InitDBConnWithSchemas(aDb DB, initDBParams InitDBParams) error {
+// InitSchemaConn initializes database schema using schemas stored in Manager - version with DB connection
+func InitSchemaConn(aDb DB, schemaParams SchemaParams) error {
 	var err error
 	schemaManager := schema.GetManager()
 	schemas := schemaManager.OrderedSchemas()
-	if len(schemas) == 0 && !initDBParams.AllowEmpty {
+	if len(schemas) == 0 && !schemaParams.AllowEmpty {
 		return errNoSchemasInManager
 	}
-	if initDBParams.DropOnCreate {
+	if schemaParams.DropOnCreate {
 		for i := len(schemas) - 1; i >= 0; i-- {
 			s := schemas[i]
 			if s.IsAbstract() {
@@ -255,7 +266,7 @@ func InitDBConnWithSchemas(aDb DB, initDBParams InitDBParams) error {
 			continue
 		}
 		log.Debug("Registering schema %s", s.ID)
-		err = aDb.RegisterTable(s, initDBParams.Cascade, initDBParams.AutoMigrate)
+		err = aDb.RegisterTable(s, schemaParams.Cascade, schemaParams.AutoMigrate)
 		if err != nil {
 			message := "Error during registering table %q: %s"
 			if strings.Contains(err.Error(), "already exists") {
@@ -268,12 +279,12 @@ func InitDBConnWithSchemas(aDb DB, initDBParams InitDBParams) error {
 	return nil
 }
 
-// InitDBWithSchemas initializes database using schemas stored in Manager
-func InitDBWithSchemas(dbType, dbConnection string, initDBParams InitDBParams) error {
-	aDb, err := ConnectDB(dbType, dbConnection, DefaultMaxOpenConn, options.Default())
+// InitSchema initializes database schema using schemas stored in Manager
+func InitSchema(dbType, dbConnection string, schemaParams SchemaParams) error {
+	aDb, err := Connect(dbType, dbConnection, DefaultMaxOpenConn, options.Default())
 	if err != nil {
 		return err
 	}
 	defer aDb.Close()
-	return InitDBConnWithSchemas(aDb, initDBParams)
+	return InitSchemaConn(aDb, schemaParams)
 }
