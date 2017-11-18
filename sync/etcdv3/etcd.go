@@ -341,14 +341,19 @@ func (s *Sync) WatchContext(ctx context.Context, path string, revision int64) <-
 	}()
 	go func() {
 		defer close(eventCh)
-		defer close(stopCh)
 
 		select {
 		case <-ctx.Done():
+			close(stopCh)
+			// don't return without ensuring Watch finished or we risk panic: send on closed channel
+			<-errCh
 		case err := <-errCh:
+			close(stopCh)
 			if err != nil {
-				eventCh <- &sync.Event{
-					Err: err,
+				select {
+				case eventCh <- &sync.Event{Err: err}:
+				default:
+					log.Debug("Unable to send error: '%s' via response chan. Don't linger.", err)
 				}
 			}
 		}
