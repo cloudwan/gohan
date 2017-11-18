@@ -16,14 +16,14 @@
 package server
 
 import (
+	"errors"
 	"fmt"
+	"runtime/debug"
 	"strings"
 
-	"github.com/robfig/cron"
-
-	"errors"
 	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/util"
+	"github.com/robfig/cron"
 )
 
 //CRON Process
@@ -78,7 +78,7 @@ func startCRONProcess(server *Server) {
 			}
 			defer func() {
 				if r := recover(); r != nil {
-					log.Error("Cron job '%s' panicked: %s", path, r)
+					log.Error("Cron job '%s' panicked: %s %s", path, r, string(debug.Stack()))
 				}
 				log.Debug("Unlocking %s", lockKey)
 				jobLocks[lockKey] <- 1
