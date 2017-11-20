@@ -187,6 +187,9 @@ type ISchema interface {
 
 	// Properties returns properties of schema
 	Properties() []Property
+
+	// Extends return list of schema_ids which given schema extends
+	Extends() []string
 }
 
 // Property represents schema property
