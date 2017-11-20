@@ -15,7 +15,11 @@
 
 package item
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/cloudwan/gohan/converter/util"
+)
 
 // JSONKind is an implementation of Kind interface
 type JSONKind struct {
@@ -59,7 +63,7 @@ func (jsonKind *JSONKind) Default(suffix string, item Item) string {
 	if item.IsNull() {
 		return fmt.Sprintf(
 			"goext.Make%s(%s)",
-			getNullType(suffix, item),
+			util.ToGoName(item.Type(suffix), ""),
 			item.Default(suffix),
 		)
 	}
