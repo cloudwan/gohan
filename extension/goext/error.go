@@ -76,6 +76,10 @@ func (e Error) ErrorStack() string {
 }
 
 func walkErrorStack(e *Error) string {
+	if e == nil {
+		return ""
+	}
+
 	switch e.Err.(type) {
 	case *Error:
 		return fmt.Sprintf("\n  <- HTTP %d (%s) at %s from", e.Status, http.StatusText(e.Status), e.Origin) + walkErrorStack(e.Err.(*Error))

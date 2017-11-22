@@ -35,8 +35,9 @@ func TestGoext(t *testing.T) {
 var _ = Describe("Error", func() {
 	Context("Error stacking should work", func() {
 		var (
-			errSingle *goext.Error
-			errDouble *goext.Error
+			errSingle      *goext.Error
+			errDouble      *goext.Error
+			errDefaultCtor *goext.Error
 		)
 		BeforeEach(func() {
 			errSingle = goext.NewError(http.StatusInternalServerError, fmt.Errorf("it does not work"))
@@ -45,6 +46,8 @@ var _ = Describe("Error", func() {
 			errDouble = goext.NewError(http.StatusServiceUnavailable, goext.NewError(http.StatusUseProxy, fmt.Errorf("nothing here")))
 			errDouble.Origin = "one.go:1000"
 			errDouble.Err.(*goext.Error).Origin = "two.go:2000"
+
+			errDefaultCtor = &goext.Error{}
 		})
 
 		It("Should stack errors", func() {
@@ -56,6 +59,10 @@ var _ = Describe("Error", func() {
 			Expect(errDouble.Status).To(Equal(http.StatusServiceUnavailable))
 			Expect(errDouble.Err.(*goext.Error).Status).To(Equal(http.StatusUseProxy))
 			Expect(errDouble.Err.(*goext.Error).Err).To(Equal(fmt.Errorf("nothing here")))
+		})
+
+		It("Shouldn't panic when inner err is nil", func() {
+			Expect(func() { errDefaultCtor.ErrorStack() }).To(Not(Panic()))
 		})
 
 		It("Should return top stack error by default", func() {
