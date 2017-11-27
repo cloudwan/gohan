@@ -113,23 +113,28 @@ var _ = Describe("Schemas", func() {
 					{
 						ID:    "id",
 						Title: "ID",
+						Type:  "string",
 					},
 					{
 						ID:    "description",
 						Title: "Description",
+						Type:  "string",
 					},
 					{
 						ID:    "name",
 						Title: "Name",
+						Type:  "string",
 					},
 					{
 						ID:       "test_suite_id",
 						Title:    "Test Suite ID",
 						Relation: "test_suite",
+						Type:     "string",
 					},
 					{
 						ID:    "subobject",
 						Title: "Subobject",
+						Type:  "object",
 					},
 				},
 			))

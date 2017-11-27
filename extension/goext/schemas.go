@@ -197,6 +197,7 @@ type Property struct {
 	ID       string
 	Title    string
 	Relation string
+	Type     string
 }
 
 // SchemaRelationInfo describes schema relation

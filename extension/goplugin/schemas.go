@@ -518,6 +518,7 @@ func (schema *Schema) Properties() []goext.Property {
 			ID:       property.ID,
 			Title:    property.Title,
 			Relation: property.Relation,
+			Type:     property.Type,
 		}
 	}
 	return properties
