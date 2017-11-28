@@ -722,7 +722,10 @@ func MakeColumns(s *schema.Schema, tableName string, fields []string, join bool)
 	var cols []string
 	for _, property := range s.Properties {
 		if property.RelationProperty != "" && join {
-			relatedSchema, _ := manager.Schema(property.Relation)
+			relatedSchema, ok := manager.Schema(property.Relation)
+			if !ok {
+				panic(fmt.Sprintf("missing schema %s", property.Relation))
+			}
 			aliasTableName := makeAliasTableName(tableName, property)
 			cols = append(cols, MakeColumns(relatedSchema, aliasTableName, fields, true)...)
 		}
