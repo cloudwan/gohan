@@ -29,6 +29,7 @@ import (
 	db_options "github.com/cloudwan/gohan/db/options"
 	db_sql "github.com/cloudwan/gohan/db/sql"
 	"github.com/cloudwan/gohan/extension"
+	"github.com/cloudwan/gohan/extension/goplugin"
 	"github.com/cloudwan/gohan/extension/otto"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/server"
@@ -235,17 +236,21 @@ func publishEventWithOptions(envName string, modifiedSchemas []string, eventName
 		pluralURL := s.GetPluralURL()
 
 		if _, ok := envManager.GetEnvironment(s.ID); !ok {
-			env := otto.NewEnvironment(envName, db, ident, sync)
-
 			now := time.Now()
-
+			left := deadline.Sub(now)
 			if now.After(deadline) {
 				log.Fatalf("Timeout after '%s' secs while publishing event to schemas", eventTimeout.Seconds())
 			}
 
-			left := deadline.Sub(now)
+			envOtto := otto.NewEnvironment(envName, db, ident, sync)
+			envOtto.SetEventTimeLimit(eventName, left)
 
-			env.SetEventTimeLimit(eventName, left)
+			envGoplugin := goplugin.NewEnvironment(envName, nil, nil)
+			envGoplugin.SetDatabase(db)
+			envGoplugin.SetSync(sync)
+
+			env := extension.NewEnvironment([]extension.Environment{envOtto, envGoplugin})
+
 			log.Info("Loading environment for %s schema with URL: %s", s.ID, pluralURL)
 
 			if err := env.LoadExtensionsForPath(manager.Extensions, manager.TimeLimit, manager.TimeLimits, pluralURL); err != nil {
