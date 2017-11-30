@@ -17,6 +17,7 @@ package goplugin_test
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/cloudwan/gohan/extension/goext"
 	"github.com/cloudwan/gohan/extension/goplugin"
@@ -180,6 +181,75 @@ var _ = Describe("Types tests", func() {
 				Expect(string(buf)).To(Equal(`{"value":null}`))
 			})
 		})
+	})
 
+	Describe("Pretty printing", func() {
+		Context("String", func() {
+			It("value defined", func() {
+				s := goext.MakeString("hello")
+				Expect(fmt.Sprintf("%s", s)).To(Equal("hello"))
+			})
+
+			It("value undefined", func() {
+				s := goext.MakeUndefinedString()
+				Expect(fmt.Sprintf("%s", s)).To(Equal("<undefined>"))
+			})
+
+			It("null value", func() {
+				s := goext.MakeNullString()
+				Expect(fmt.Sprintf("%s", s)).To(Equal("<null>"))
+			})
+		})
+
+		Context("Float", func() {
+			It("value defined", func() {
+				s := goext.MakeFloat(1.0)
+				Expect(fmt.Sprintf("%s", s)).To(Equal(fmt.Sprintf("%f", 1.0)))
+			})
+
+			It("value undefined", func() {
+				s := goext.MakeUndefinedFloat()
+				Expect(fmt.Sprintf("%s", s)).To(Equal("<undefined>"))
+			})
+
+			It("null value", func() {
+				s := goext.MakeNullFloat()
+				Expect(fmt.Sprintf("%s", s)).To(Equal("<null>"))
+			})
+		})
+
+		Context("Bool", func() {
+			It("value defined", func() {
+				s := goext.MakeBool(true)
+				Expect(fmt.Sprintf("%s", s)).To(Equal("true"))
+			})
+
+			It("value undefined", func() {
+				s := goext.MakeUndefinedBool()
+				Expect(fmt.Sprintf("%s", s)).To(Equal("<undefined>"))
+			})
+
+			It("null value", func() {
+				s := goext.MakeNullBool()
+				Expect(fmt.Sprintf("%s", s)).To(Equal("<null>"))
+			})
+		})
+
+		Context("Int", func() {
+			It("value defined", func() {
+				s := goext.MakeInt(42)
+				Expect(fmt.Sprintf("%s", s)).To(Equal("42"))
+			})
+
+			It("value undefined", func() {
+				s := goext.MakeUndefinedInt()
+				Expect(fmt.Sprintf("%s", s)).To(Equal("<undefined>"))
+			})
+
+			It("null value", func() {
+				s := goext.MakeNullInt()
+				Expect(fmt.Sprintf("%s", s)).To(Equal("<null>"))
+			})
+		})
 	})
 })

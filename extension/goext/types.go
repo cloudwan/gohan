@@ -15,7 +15,11 @@
 
 package goext
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+	"strconv"
+)
 
 type MaybeState int
 
@@ -88,6 +92,19 @@ func (m Maybe) IsNull() bool {
 // HasValue returns whether value is defined and not null
 func (m Maybe) HasValue() bool {
 	return m.MaybeState == MaybeValue
+}
+
+func (m Maybe) String() string {
+	switch m.MaybeState {
+	case MaybeNull:
+		return "<null>"
+	case MaybeUndefined:
+		return "<undefined>"
+	case MaybeValue:
+		return "<value>"
+	default:
+		panic(fmt.Errorf("unknown state: %d", m.MaybeState))
+	}
 }
 
 // MaybeString represents 3-valued string
@@ -326,4 +343,36 @@ func MakeUndefinedBool() MaybeBool {
 	return MaybeBool{
 		Maybe: Maybe{MaybeState: MaybeUndefined},
 	}
+}
+
+func (m MaybeString) String() string {
+	if m.HasValue() {
+		return m.value
+	}
+
+	return m.Maybe.String()
+}
+
+func (m MaybeBool) String() string {
+	if m.HasValue() {
+		return strconv.FormatBool(m.value)
+	}
+
+	return m.Maybe.String()
+}
+
+func (m MaybeInt) String() string {
+	if m.HasValue() {
+		return strconv.Itoa(m.value)
+	}
+
+	return m.Maybe.String()
+}
+
+func (m MaybeFloat) String() string {
+	if m.HasValue() {
+		return fmt.Sprintf("%f", m.value)
+	}
+
+	return m.Maybe.String()
 }
