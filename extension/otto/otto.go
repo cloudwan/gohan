@@ -252,8 +252,10 @@ func (env *Environment) HandleEvent(event string, context map[string]interface{}
 		if closers, err := getClosers(vm.Otto); err == nil {
 			log.Debug("Closers for vm %p: %v", vm.Otto, closers)
 			for _, closer := range closers {
-				if err = closer.Close(); err != nil {
-					log.Error("Error when closing object %T %p : %s", closer, closer, err)
+				if closer != nil {
+					if err = closer.Close(); err != nil {
+						log.Error("Error when closing object %T %p : %s", closer, closer, err)
+					}
 				}
 			}
 		} else {
