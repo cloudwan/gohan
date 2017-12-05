@@ -340,7 +340,8 @@ func dispatchSchemaEventForEnv(env IEnvironment, prioritizedSchemaHandlers Prior
 	var err error
 	if ctxResource, ok := context["resource"]; ok {
 		if resource, err = sch.ResourceFromMap(ctxResource.(map[string]interface{})); err != nil {
-			env.Logger().Warningf("failed to parse resource from context with schema '%s' for event '%s': %s", sch.ID(), event, err)
+			env.Logger().Warningf("failed to parse resource from context with schema '%s' for event '%s'", sch.ID(), event)
+			dumpErrorToLog(env.Logger(), err)
 			return goext.NewErrorBadRequest(err)
 		}
 	}
@@ -348,7 +349,8 @@ func dispatchSchemaEventForEnv(env IEnvironment, prioritizedSchemaHandlers Prior
 		for index, schemaEventHandler := range prioritizedSchemaHandlers[priority] {
 			context["go_validation"] = true
 			if err := schemaEventHandler(context, resource, env); err != nil {
-				env.Logger().Warningf("failed to handle schema '%s' event '%s' at priority '%d' with index '%d': %s", sch.ID(), event, priority, index, err)
+				env.Logger().Warningf("failed to handle schema '%s' event '%s' at priority '%d' with index '%d'", sch.ID(), event, priority, index)
+				dumpErrorToLog(env.Logger(), err)
 				return err
 			}
 			if resource != nil {
@@ -413,17 +415,17 @@ func (env *Environment) getTimeLimits() []*schema.EventTimeLimit {
 func (env *Environment) HandleEvent(event string, context map[string]interface{}) error {
 	err := handleEventForEnv(env, event, context)
 	if err != nil {
-		env.dumpErrorToLog(err)
+		dumpErrorToLog(env.Logger(), err)
 	}
 	return err
 }
 
-func (env *Environment) dumpErrorToLog(err error) {
+func dumpErrorToLog(logger goext.ILogger, err error) {
 	switch err.(type) {
 	case *goext.Error:
-		env.Logger().Warningf("Error:\n%s", err.(*goext.Error).ErrorStack())
+		logger.Warningf("Error:\n%s", err.(*goext.Error).ErrorStack())
 	default:
-		env.Logger().Warningf("Error: %s", err)
+		logger.Warningf("Error: %s", err)
 	}
 }
 

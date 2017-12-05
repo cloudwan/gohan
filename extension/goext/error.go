@@ -71,7 +71,7 @@ func (e Error) ErrorStack() string {
 	case *Error:
 		return fmt.Sprintf("HTTP %d (%s) at %s from", e.Status, http.StatusText(e.Status), e.Origin) + walkErrorStack(e.Err.(*Error))
 	default:
-		return fmt.Sprintf("HTTP %d (%s) at %s: %s", e.Status, http.StatusText(e.Status), e.Origin, e.Err)
+		return fmt.Sprintf("HTTP %d (%s) at %s: %+v", e.Status, http.StatusText(e.Status), e.Origin, e.Err)
 	}
 }
 
@@ -84,7 +84,7 @@ func walkErrorStack(e *Error) string {
 	case *Error:
 		return fmt.Sprintf("\n  <- HTTP %d (%s) at %s from", e.Status, http.StatusText(e.Status), e.Origin) + walkErrorStack(e.Err.(*Error))
 	default:
-		return fmt.Sprintf("\n  <- HTTP %d (%s) at %s: %s", e.Status, http.StatusText(e.Status), e.Origin, e.Err)
+		return fmt.Sprintf("\n  <- HTTP %d (%s) at %s: %+v", e.Status, http.StatusText(e.Status), e.Origin, e.Err)
 	}
 }
 

@@ -25,6 +25,7 @@ import (
 	"github.com/cloudwan/gohan/extension/goext/test"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pkg/errors"
 )
 
 func TestGoext(t *testing.T) {
@@ -81,6 +82,57 @@ var _ = Describe("Error", func() {
 			error := goext.NewErrorInternalServerError(fmt.Errorf("test error"))
 			_, _, line, _ := runtime.Caller(0)
 			Expect(error.Origin).To(HaveSuffix(fmt.Sprintf("github.com/cloudwan/gohan/extension/goext/error_test.go:%d", line-1)))
+		})
+
+		It("Should capture full stack for wrapped errors", func() {
+			var innerLine int
+			innerFunc := func() *goext.Error {
+				_, _, line, _ := runtime.Caller(0)
+				innerLine = line + 2
+				return goext.NewErrorBadGateway(errors.New("test error"))
+			}
+
+			var outerLine int
+			outerFunc := func() *goext.Error {
+				_, _, line, _ := runtime.Caller(0)
+				outerLine = line + 2
+				return goext.NewErrorBadRequest(innerFunc())
+			}
+
+			_, _, line, _ := runtime.Caller(0)
+			callLine := line + 2
+			err := outerFunc()
+			Expect(err.ErrorStack()).To(ContainSubstring(fmt.Sprintf("error_test.go:%d", innerLine)))
+			Expect(err.ErrorStack()).To(ContainSubstring(fmt.Sprintf("error_test.go:%d", outerLine)))
+			Expect(err.ErrorStack()).To(ContainSubstring(fmt.Sprintf("error_test.go:%d", callLine)))
+
+			Expect(err.ErrorStack()).To(ContainSubstring("Bad Gateway"))
+			Expect(err.ErrorStack()).To(ContainSubstring("Bad Request"))
+		})
+
+		It("Should capture full stack for built-in errors", func() {
+			var innerLine int
+			innerFunc := func() error {
+				_, _, line, _ := runtime.Caller(0)
+				innerLine = line + 2
+				return errors.New("test error")
+			}
+
+			var outerLine int
+			outerFunc := func() *goext.Error {
+				_, _, line, _ := runtime.Caller(0)
+				outerLine = line + 2
+				return goext.NewErrorBadRequest(innerFunc())
+			}
+
+			_, _, line, _ := runtime.Caller(0)
+			callLine := line + 2
+			err := outerFunc()
+			Expect(err.ErrorStack()).To(ContainSubstring(fmt.Sprintf("error_test.go:%d", innerLine)))
+			Expect(err.ErrorStack()).To(ContainSubstring(fmt.Sprintf("error_test.go:%d", outerLine)))
+			Expect(err.ErrorStack()).To(ContainSubstring(fmt.Sprintf("error_test.go:%d", callLine)))
+
+			Expect(err.ErrorStack()).To(ContainSubstring("Bad Request"))
 		})
 
 		It("ErrorMatcher should match errors", func() {
