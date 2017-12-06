@@ -341,8 +341,7 @@ func dispatchSchemaEventForEnv(env IEnvironment, prioritizedSchemaHandlers Prior
 	var err error
 	if ctxResource, ok := context["resource"]; ok {
 		if resource, err = sch.ResourceFromMap(ctxResource.(map[string]interface{})); err != nil {
-			env.Logger().Warningf("failed to parse resource from context with schema '%s' for event '%s'", sch.ID(), event)
-			dumpErrorToLog(env.Logger(), err)
+			env.Logger().Warningf("failed to parse resource from context with schema '%s' for event '%s': %s", sch.ID(), event, err)
 			return goext.NewErrorBadRequest(err)
 		}
 	}
@@ -350,8 +349,7 @@ func dispatchSchemaEventForEnv(env IEnvironment, prioritizedSchemaHandlers Prior
 		for index, schemaEventHandler := range prioritizedSchemaHandlers[priority] {
 			context["go_validation"] = true
 			if err := schemaEventHandler(context, resource, env); err != nil {
-				env.Logger().Warningf("failed to handle schema '%s' event '%s' at priority '%d' with index '%d'", sch.ID(), event, priority, index)
-				dumpErrorToLog(env.Logger(), err)
+				env.Logger().Warningf("failed to handle schema '%s' event '%s' at priority '%d' with index '%d': %s", sch.ID(), event, priority, index, err)
 				return err
 			}
 			if resource != nil {
@@ -414,15 +412,21 @@ func (env *Environment) getTimeLimits() []*schema.EventTimeLimit {
 
 // HandleEvent handles an event
 func (env *Environment) HandleEvent(event string, context map[string]interface{}) error {
-	err := handleEventForEnv(env, event, context)
-	if err != nil {
-		dumpErrorToLog(env.Logger(), err)
+	var hasParent bool
+	if _, hasParent = context[goext.KeyTopLevelHandler]; !hasParent {
+		context[goext.KeyTopLevelHandler] = true
+		defer delete(context, goext.KeyTopLevelHandler)
 	}
+
+	err := handleEventForEnv(env, event, context)
+	if err != nil && !hasParent {
+		dumpStackTrace(env.Logger(), err)
+	}
+
 	return err
 }
 
-func dumpErrorToLog(logger goext.ILogger, err error) {
-	logger.Warningf("Error: %s", err)
+func dumpStackTrace(logger goext.ILogger, err error) {
 	switch err.(type) {
 	case *goext.Error:
 		logger.Debugf("Stack trace:\n%s", err.(*goext.Error).ErrorStack())

@@ -42,3 +42,7 @@ const (
 	PostDeleteTx = "post_delete_in_transaction"
 	PostDelete   = "post_delete"
 )
+
+const (
+	KeyTopLevelHandler = "top_level_handler"
+)
