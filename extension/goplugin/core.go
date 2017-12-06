@@ -16,11 +16,11 @@
 package goplugin
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/extension/goext"
+	"github.com/pkg/errors"
 )
 
 // Core is an implementation of ICore interface
@@ -97,13 +97,13 @@ func getJSExceptionCode(exception interface{}) int {
 }
 
 func getJSError(context goext.Context) error {
-	return fmt.Errorf(context["exception_message"].(string))
+	return errors.New(context["exception_message"].(string))
 }
 
 func getSchemaId(context goext.Context) (string, error) {
 	rawSchemaID, ok := context["schema_id"]
 	if !ok {
-		return "", fmt.Errorf("TriggerEvent: schema_id missing in context")
+		return "", errors.New("TriggerEvent: schema_id missing in context")
 	}
 
 	return rawSchemaID.(string), nil

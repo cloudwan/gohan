@@ -33,6 +33,7 @@ import (
 	"github.com/cloudwan/gohan/schema"
 	gohan_sync "github.com/cloudwan/gohan/sync"
 	"github.com/mohae/deepcopy"
+	"github.com/pkg/errors"
 	"github.com/twinj/uuid"
 )
 
@@ -270,26 +271,26 @@ func (env *Environment) Load(fileName string) error {
 	var ok bool
 
 	if filepath.Ext(fileName) != ".so" {
-		return fmt.Errorf("go extension must be a *.so file, file: %s", fileName)
+		return errors.Errorf("go extension must be a *.so file, file: %s", fileName)
 	}
 
 	pl, err := plugin.Open(fileName)
 
 	if err != nil {
-		return fmt.Errorf("failed to load go extension: %s", err)
+		return errors.Errorf("failed to load go extension: %s", err)
 	}
 
 	// Init
 	initFnRaw, err := pl.Lookup("Init")
 
 	if err != nil {
-		return fmt.Errorf("go extension does not export Init: %s", err)
+		return errors.Errorf("go extension does not export Init: %s", err)
 	}
 
 	initFn, ok := initFnRaw.(func(goext.IEnvironment) error)
 
 	if !ok {
-		return fmt.Errorf("invalid signature of Init function in go extension: %s", fileName)
+		return errors.Errorf("invalid signature of Init function in go extension: %s", fileName)
 	}
 
 	env.initFns[fileName] = initFn
@@ -310,7 +311,7 @@ func (env *Environment) LoadExtensionsForPath(extensions []*schema.Extension, ti
 				continue
 			}
 			if err := env.Load(url); err != nil {
-				return fmt.Errorf("failed to load binary: %s", err)
+				return errors.Errorf("failed to load binary: %s", err)
 			}
 		}
 	}
@@ -421,11 +422,10 @@ func (env *Environment) HandleEvent(event string, context map[string]interface{}
 }
 
 func dumpErrorToLog(logger goext.ILogger, err error) {
+	logger.Warningf("Error: %s", err)
 	switch err.(type) {
 	case *goext.Error:
-		logger.Warningf("Error:\n%s", err.(*goext.Error).ErrorStack())
-	default:
-		logger.Warningf("Error: %s", err)
+		logger.Debugf("Stack trace:\n%s", err.(*goext.Error).ErrorStack())
 	}
 }
 
@@ -460,7 +460,7 @@ func handleEventForEnv(env IEnvironment, event string, requestContext map[string
 						return err
 					}
 				} else {
-					return goext.NewErrorInternalServerError(fmt.Errorf("could not find schema: %s", schemaID))
+					return goext.NewErrorInternalServerError(errors.Errorf("could not find schema: %s", schemaID))
 				}
 			}
 		}

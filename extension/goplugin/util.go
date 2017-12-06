@@ -24,6 +24,7 @@ import (
 	"github.com/cloudwan/gohan/extension/goext"
 	"github.com/golang/mock/gomock"
 	"github.com/jmoiron/sqlx/reflectx"
+	"github.com/pkg/errors"
 	"github.com/twinj/uuid"
 )
 
@@ -167,7 +168,7 @@ func assignMapValueToField(mapValue interface{}, fieldName string, field reflect
 			if field.Kind() == reflect.Int && value.Kind() == reflect.Float64 { // reflect treats number(N, 0) as float
 				field.SetInt(int64(value.Float()))
 			} else {
-				return fmt.Errorf("invalid type of '%s' field (%s, expecting %s)", fieldName, value.Kind(), field.Kind())
+				return errors.Errorf("invalid type of '%s' field (%s, expecting %s)", fieldName, value.Kind(), field.Kind())
 			}
 		}
 	}

@@ -41,10 +41,10 @@ var _ = Describe("Error", func() {
 			errDefaultCtor *goext.Error
 		)
 		BeforeEach(func() {
-			errSingle = goext.NewError(http.StatusInternalServerError, fmt.Errorf("it does not work"))
+			errSingle = goext.NewError(http.StatusInternalServerError, errors.New("it does not work"))
 			errSingle.Origin = "first.go:100"
 
-			errDouble = goext.NewError(http.StatusServiceUnavailable, goext.NewError(http.StatusUseProxy, fmt.Errorf("nothing here")))
+			errDouble = goext.NewError(http.StatusServiceUnavailable, goext.NewError(http.StatusUseProxy, errors.New("nothing here")))
 			errDouble.Origin = "one.go:1000"
 			errDouble.Err.(*goext.Error).Origin = "two.go:2000"
 
@@ -54,12 +54,12 @@ var _ = Describe("Error", func() {
 		It("Should stack errors", func() {
 			Expect(errSingle).To(Not(BeNil()))
 			Expect(errSingle.Status).To(Equal(http.StatusInternalServerError))
-			Expect(errSingle.Err).To(Equal(fmt.Errorf("it does not work")))
+			Expect(errSingle.Err.Error()).To(Equal("it does not work"))
 
 			Expect(errDouble).To(Not(BeNil()))
 			Expect(errDouble.Status).To(Equal(http.StatusServiceUnavailable))
 			Expect(errDouble.Err.(*goext.Error).Status).To(Equal(http.StatusUseProxy))
-			Expect(errDouble.Err.(*goext.Error).Err).To(Equal(fmt.Errorf("nothing here")))
+			Expect(errDouble.Err.(*goext.Error).Err.Error()).To(Equal("nothing here"))
 		})
 
 		It("Shouldn't panic when inner err is nil", func() {
@@ -72,14 +72,14 @@ var _ = Describe("Error", func() {
 		})
 
 		It("Should return full error stack on request", func() {
-			Expect(fmt.Sprintf("%s", errSingle.ErrorStack())).To(Equal("HTTP 500 (Internal Server Error) at first.go:100: it does not work"))
-			Expect(fmt.Sprintf("%s", errDouble.ErrorStack())).To(Equal(
+			Expect(fmt.Sprintf("%s", errSingle.ErrorStack())).To(ContainSubstring("HTTP 500 (Internal Server Error) at first.go:100: it does not work"))
+			Expect(fmt.Sprintf("%s", errDouble.ErrorStack())).To(ContainSubstring(
 				`HTTP 503 (Service Unavailable) at one.go:1000 from
   <- HTTP 305 (Use Proxy) at two.go:2000: nothing here`))
 		})
 
 		It("Should capture correct stack", func() {
-			error := goext.NewErrorInternalServerError(fmt.Errorf("test error"))
+			error := goext.NewErrorInternalServerError(errors.New("test error"))
 			_, _, line, _ := runtime.Caller(0)
 			Expect(error.Origin).To(HaveSuffix(fmt.Sprintf("github.com/cloudwan/gohan/extension/goext/error_test.go:%d", line-1)))
 		})
@@ -136,8 +136,8 @@ var _ = Describe("Error", func() {
 		})
 
 		It("ErrorMatcher should match errors", func() {
-			someError := goext.NewErrorInternalServerError(fmt.Errorf("some internal error"))
-			otherError := goext.NewErrorInternalServerError(fmt.Errorf("other internal error"))
+			someError := goext.NewErrorInternalServerError(errors.New("some internal error"))
+			otherError := goext.NewErrorInternalServerError(errors.New("other internal error"))
 			errorMatcher := goext_test.MatchError(someError)
 			Expect(errorMatcher.Match(someError)).To(BeTrue())
 			Expect(errorMatcher.Match(otherError)).To(BeFalse())
