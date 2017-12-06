@@ -18,7 +18,10 @@ package goext
 import (
 	"fmt"
 	"net/http"
+	"reflect"
 	"runtime"
+
+	"github.com/pkg/errors"
 )
 
 // Error represents an error code with related HTTP status
@@ -30,6 +33,17 @@ type Error struct {
 
 // NewError returns a new error
 func NewError(status int, err error) *Error {
+	switch err.(type) {
+	case *Error:
+		// don't decorate goext.Error - the stack is already there
+		break
+	default:
+		errType := reflect.TypeOf(err).String()
+		if errType != "*errors.fundamental" {
+			err = errors.WithStack(err)
+		}
+	}
+
 	return &Error{
 		Err:    err,
 		Status: status,

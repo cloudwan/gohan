@@ -18,6 +18,7 @@ package goext_test
 import (
 	"fmt"
 	"net/http"
+	"reflect"
 	"runtime"
 	"testing"
 
@@ -89,25 +90,43 @@ var _ = Describe("Error", func() {
 			innerFunc := func() *goext.Error {
 				_, _, line, _ := runtime.Caller(0)
 				innerLine = line + 2
-				return goext.NewErrorBadGateway(errors.New("test error"))
+				return goext.NewErrorBadGateway(fmt.Errorf("test error"))
+			}
+
+			var middleLine int
+			middleFunc := func() error {
+				_, _, line, _ := runtime.Caller(0)
+				middleLine = line + 2
+				return innerFunc()
 			}
 
 			var outerLine int
 			outerFunc := func() *goext.Error {
 				_, _, line, _ := runtime.Caller(0)
 				outerLine = line + 2
-				return goext.NewErrorBadRequest(innerFunc())
+				return goext.NewErrorBadRequest(middleFunc())
 			}
 
 			_, _, line, _ := runtime.Caller(0)
 			callLine := line + 2
 			err := outerFunc()
 			Expect(err.ErrorStack()).To(ContainSubstring(fmt.Sprintf("error_test.go:%d", innerLine)))
+			Expect(err.ErrorStack()).To(ContainSubstring(fmt.Sprintf("error_test.go:%d", middleLine)))
 			Expect(err.ErrorStack()).To(ContainSubstring(fmt.Sprintf("error_test.go:%d", outerLine)))
 			Expect(err.ErrorStack()).To(ContainSubstring(fmt.Sprintf("error_test.go:%d", callLine)))
 
 			Expect(err.ErrorStack()).To(ContainSubstring("Bad Gateway"))
 			Expect(err.ErrorStack()).To(ContainSubstring("Bad Request"))
+		})
+
+		It("Should detect dependent library changes", func() {
+			// if this test fails it means that the implementation of github.com/pkg/errors has changed.
+			// you probably should adapt the reflection code in NewError.
+			errType := reflect.TypeOf(errors.New("test error")).String()
+			Expect(errType).To(Equal("*errors.fundamental"))
+
+			errType = reflect.TypeOf(errors.Errorf("test %s", "error")).String()
+			Expect(errType).To(Equal("*errors.fundamental"))
 		})
 
 		It("Should capture full stack for built-in errors", func() {
