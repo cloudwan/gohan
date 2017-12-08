@@ -428,13 +428,10 @@ func (env *Environment) dumpErrorToLog(err error) {
 }
 
 func handleEventForEnv(env IEnvironment, event string, requestContext map[string]interface{}) error {
-	if !hasCancel(requestContext) {
-		done := make(chan bool, 1)
-		addCancel(env, event, requestContext, done)
-
+	if !hasInterrupt(requestContext) {
+		interrupt := newInterrupt(env, event, requestContext)
 		defer func() {
-			done <- true
-			delete(requestContext, "context")
+			interrupt.Cleanup()
 		}()
 	}
 
@@ -482,26 +479,74 @@ func handleEventForEnv(env IEnvironment, event string, requestContext map[string
 	return nil
 }
 
-func hasCancel(requestContext map[string]interface{}) bool {
+func hasInterrupt(requestContext map[string]interface{}) bool {
 	_, cancelFound := requestContext["context"]
 	return cancelFound
 }
 
-func addCancel(env IEnvironment, event string, requestContext map[string]interface{}, done <-chan bool) {
-	ctx, cancel := buildCancel(env, event)
-	cancelOnPeerDisconnect(requestContext, cancel, done)
-	requestContext["context"] = ctx
+// interrupt decorates a request identified by requestContext with a context.Context
+// inserted into requestContext["context"]. This context will be canceled when
+// a. extension timeout expires
+// b. HTTP client disconnects
+// Interrupts are constructed
+// Users of interrupt are supposed to call Cleanup() when request processing is done
+type interrupt struct {
+	env            IEnvironment
+	event          string
+	requestContext map[string]interface{}
+	done           chan struct{}
+	ctx            context.Context
+	cancel         context.CancelFunc
 }
 
-func cancelOnPeerDisconnect(requestContext map[string]interface{}, cancel context.CancelFunc, done <-chan bool) {
-	closeNotify := getCloseChannel(requestContext)
+func newInterrupt(env IEnvironment, event string, requestContext map[string]interface{}) *interrupt {
+	ctx, cancel := context.WithCancel(context.Background())
+	doneCh := make(chan struct{}, 1)
+	interrupt := &interrupt{env, event, requestContext, doneCh, ctx, cancel}
+
+	interrupt.cancelOnTimeout()
+	interrupt.cancelOnPeerDisconnect()
+	interrupt.cancelOnDone()
+
+	requestContext["context"] = interrupt.ctx
+	return interrupt
+}
+
+func (i *interrupt) cancelOnTimeout() {
+	selectedTimeLimit := i.env.getTimeLimit()
+	for _, timeLimit := range i.env.getTimeLimits() {
+		if timeLimit.Match(i.event) {
+			selectedTimeLimit = timeLimit.TimeDuration
+			break
+		}
+	}
+	if selectedTimeLimit == 0 {
+		return
+	}
+
+	timer := time.AfterFunc(selectedTimeLimit, func() {
+		i.env.Logger().Warningf("Timeout expired for event %s", i.event)
+		i.cancel()
+	})
+
+	go func() {
+		select {
+		case <-i.done:
+			timer.Stop()
+		}
+	}()
+}
+
+func (i *interrupt) cancelOnPeerDisconnect() {
+	closeNotify := getCloseChannel(i.requestContext)
 	go func() {
 		select {
 		case <-closeNotify:
-		case <-done:
-			time.Sleep(time.Millisecond * 5)
+			i.env.Logger().Infof("Client disconnected for event %s", i.event)
+			i.cancel()
+		case <-i.done:
+			return
 		}
-		cancel()
 	}()
 }
 
@@ -516,20 +561,24 @@ func getCloseChannel(requestContext map[string]interface{}) <-chan bool {
 	return closeNotify
 }
 
-func buildCancel(env IEnvironment, event string) (ctx context.Context, cancel context.CancelFunc) {
-	selectedTimeLimit := env.getTimeLimit()
-	for _, timeLimit := range env.getTimeLimits() {
-		if timeLimit.Match(event) {
-			selectedTimeLimit = timeLimit.TimeDuration
-			break
+func (i *interrupt) cancelOnDone() {
+	go func() {
+		select {
+		case <-i.done:
+			// workaround for https://github.com/mattn/go-sqlite3/issues/380
+			// canceling the context immediately causes a race in go-sqlite3
+			// when we're done with the request the context does not matter any more,
+			// so the delay is harmless. for code clarity the goroutine + the delay
+			// should be removed then the go-sqlite3 bug is fixed.
+			time.Sleep(time.Millisecond * 5)
+			i.cancel()
 		}
-	}
-	if selectedTimeLimit > 0 {
-		ctx, cancel = context.WithTimeout(context.Background(), selectedTimeLimit)
-	} else {
-		ctx, cancel = context.WithCancel(context.Background())
-	}
-	return ctx, cancel
+	}()
+}
+
+func (i *interrupt) Cleanup() {
+	close(i.done) // closes any waiting goroutines
+	delete(i.requestContext, "context")
 }
 
 // RegisterEventHandler registers an event handler
