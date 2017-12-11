@@ -1,0 +1,89 @@
+// Copyright (C) 2017 NTT Innovation Institute, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+// implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package goplugin_test
+
+import (
+	"fmt"
+
+	"github.com/cloudwan/gohan/db/mocks"
+	"github.com/cloudwan/gohan/db/options"
+	"github.com/cloudwan/gohan/db/transaction/mocks"
+	"github.com/cloudwan/gohan/extension/goext"
+	"github.com/cloudwan/gohan/extension/goplugin"
+	"github.com/golang/mock/gomock"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+)
+
+var _ = Describe("Database", func() {
+	var (
+		db       *goplugin.Database
+		mockCtrl *gomock.Controller
+		mockDB   *mock_db.MockDB
+	)
+
+	BeforeEach(func() {
+		mockCtrl = gomock.NewController(GinkgoT())
+		mockDB = mock_db.NewMockDB(mockCtrl)
+		mockDB.EXPECT().Options().Return(options.Default())
+		db = goplugin.NewDatabase(mockDB)
+	})
+
+	Describe("Error handling", func() {
+		Context("Begin", func() {
+			It("should return an error on error", func() {
+				expectedErr := fmt.Errorf("dummy error")
+				mockDB.EXPECT().Begin().Return(&mocks.MockTransaction{}, expectedErr)
+
+				tx, err := db.Begin()
+
+				Expect(err).To(Equal(expectedErr))
+				Expect(tx).To(BeNil())
+			})
+
+			It("should return an error on nil transaction received", func() {
+				mockDB.EXPECT().Begin().Return(nil, nil)
+
+				tx, err := db.Begin()
+
+				Expect(err).To(HaveOccurred())
+				Expect(tx).To(BeNil())
+			})
+		})
+
+		Context("BeginTx", func() {
+			It("should return an error on error", func() {
+				expectedErr := fmt.Errorf("dummy error")
+				mockDB.EXPECT().BeginTx(gomock.Any(), gomock.Any()).Return(&mocks.MockTransaction{}, expectedErr)
+
+				tx, err := db.BeginTx(goext.MakeContext(), &goext.TxOptions{})
+
+				Expect(err).To(Equal(expectedErr))
+				Expect(tx).To(BeNil())
+			})
+
+			It("should return an error on nil transaction received", func() {
+				mockDB.EXPECT().BeginTx(gomock.Any(), gomock.Any()).Return(nil, nil)
+
+				tx, err := db.BeginTx(goext.MakeContext(), &goext.TxOptions{})
+
+				Expect(err).To(HaveOccurred())
+				Expect(tx).To(BeNil())
+			})
+		})
+	})
+
+})
