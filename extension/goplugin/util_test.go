@@ -304,6 +304,14 @@ var _ = Describe("Util tests", func() {
 				} `json:"obj"`
 			}
 
+			type TestResourceWithPointerToStruct struct {
+				Obj struct {
+					NestedObj *struct {
+						String string `json:"string"`
+					} `json:"nested_obj"`
+				} `json:"obj"`
+			}
+
 			type TestResourceWithSlice struct {
 				Obj struct {
 					NestedSliceOfObj []struct {
@@ -311,6 +319,33 @@ var _ = Describe("Util tests", func() {
 					} `json:"nested_slice_of_obj"`
 				} `json:"obj"`
 			}
+
+			It("nil pointer to nested object results in undefined", func() {
+				input := map[string]interface{}{
+					"obj": map[string]interface{}{
+						"nested_obj": map[string]interface{}{
+							"string": "hello",
+						},
+					},
+				}
+
+				rawResource, err := env.Util().ResourceFromMapForType(input, TestResourceWithPointerToStruct{})
+				Expect(err).To(BeNil())
+				resource := rawResource.(*TestResourceWithPointerToStruct)
+				Expect(resource.Obj.NestedObj).ToNot(BeNil())
+				Expect(resource.Obj.NestedObj.String).To(Equal("hello"))
+
+				mapRepresentation := env.Util().ResourceToMap(resource)
+				Expect(mapRepresentation).To(Equal(input))
+
+				resource.Obj.NestedObj = nil
+
+				expectedOutput := map[string]interface{}{
+					"obj": map[string]interface{}{},
+				}
+				mapRepresentation = env.Util().ResourceToMap(resource)
+				Expect(mapRepresentation).To(Equal(expectedOutput))
+			})
 
 			It("nested with empty slice of objects", func() {
 				input := map[string]interface{}{
