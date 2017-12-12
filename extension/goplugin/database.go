@@ -17,10 +17,12 @@ package goplugin
 
 import (
 	"context"
+	"reflect"
 
 	gohan_db "github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/extension/goext"
+	"github.com/pkg/errors"
 )
 
 // Database in an implementation of IDatabase
@@ -53,15 +55,26 @@ func (db *Database) Clone() *Database {
 
 // Begin starts a new transaction
 func (db *Database) Begin() (goext.ITransaction, error) {
-	t, _ := db.raw.Begin()
-	return &Transaction{t}, nil
+	t, err := db.raw.Begin()
+	return handleBeginError(t, err)
 }
 
 // BeginTx starts a new transaction with options
 func (db *Database) BeginTx(ctx goext.Context, options *goext.TxOptions) (goext.ITransaction, error) {
 	opts := transaction.TxOptions{IsolationLevel: transaction.Type(options.IsolationLevel)}
-	t, _ := db.raw.BeginTx(context.Background(), &opts)
-	return &Transaction{t}, nil
+	t, err := db.raw.BeginTx(context.Background(), &opts)
+	return handleBeginError(t, err)
+}
+
+func handleBeginError(t transaction.Transaction, err error) (goext.ITransaction, error) {
+	if err != nil {
+		return nil, err
+	} else if t == nil || reflect.ValueOf(t).IsNil() {
+		// it's unclear when this happens. cf. https://github.com/cloudwan/gohan/pull/592
+		return nil, errors.New("Creating transaction failed: the database returned nil")
+	} else {
+		return &Transaction{t}, nil
+	}
 }
 
 // Options return database options rom configuration file
