@@ -49,7 +49,8 @@ func (db *Database) Clone() *Database {
 		return nil
 	}
 	return &Database{
-		raw: db.raw,
+		raw:  db.raw,
+		opts: db.opts,
 	}
 }
 
