@@ -18,7 +18,10 @@ package goext
 import (
 	"fmt"
 	"net/http"
+	"reflect"
 	"runtime"
+
+	"github.com/pkg/errors"
 )
 
 // Error represents an error code with related HTTP status
@@ -30,6 +33,17 @@ type Error struct {
 
 // NewError returns a new error
 func NewError(status int, err error) *Error {
+	switch err.(type) {
+	case *Error:
+		// don't decorate goext.Error - the stack is already there
+		break
+	default:
+		errType := reflect.TypeOf(err).String()
+		if errType != "*errors.fundamental" {
+			err = errors.WithStack(err)
+		}
+	}
+
 	return &Error{
 		Err:    err,
 		Status: status,
@@ -71,7 +85,7 @@ func (e Error) ErrorStack() string {
 	case *Error:
 		return fmt.Sprintf("HTTP %d (%s) at %s from", e.Status, http.StatusText(e.Status), e.Origin) + walkErrorStack(e.Err.(*Error))
 	default:
-		return fmt.Sprintf("HTTP %d (%s) at %s: %s", e.Status, http.StatusText(e.Status), e.Origin, e.Err)
+		return fmt.Sprintf("HTTP %d (%s) at %s: %+v", e.Status, http.StatusText(e.Status), e.Origin, e.Err)
 	}
 }
 
@@ -84,7 +98,7 @@ func walkErrorStack(e *Error) string {
 	case *Error:
 		return fmt.Sprintf("\n  <- HTTP %d (%s) at %s from", e.Status, http.StatusText(e.Status), e.Origin) + walkErrorStack(e.Err.(*Error))
 	default:
-		return fmt.Sprintf("\n  <- HTTP %d (%s) at %s: %s", e.Status, http.StatusText(e.Status), e.Origin, e.Err)
+		return fmt.Sprintf("\n  <- HTTP %d (%s) at %s: %+v", e.Status, http.StatusText(e.Status), e.Origin, e.Err)
 	}
 }
 

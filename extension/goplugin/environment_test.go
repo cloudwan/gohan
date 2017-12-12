@@ -17,7 +17,6 @@ package goplugin_test
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"time"
 
@@ -27,6 +26,7 @@ import (
 	"github.com/cloudwan/gohan/schema"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pkg/errors"
 )
 
 type MyRaw struct {
@@ -68,12 +68,12 @@ var _ = Describe("Environment", func() {
 		Context("File paths are corrupted", func() {
 			It("should not load plugin with wrong file extension", func() {
 				err := env.Load("/wrong/extension.not-so")
-				Expect(err).To(Equal(fmt.Errorf("go extension must be a *.so file, file: /wrong/extension.not-so")))
+				Expect(err.Error()).To(Equal("go extension must be a *.so file, file: /wrong/extension.not-so"))
 			})
 
 			It("should not load plugin from non-existing file", func() {
 				err := env.Load("/non/existing-plugin.so")
-				Expect(err).To(Equal(fmt.Errorf("failed to load go extension: plugin.Open(/non/existing-plugin.so): realpath failed")))
+				Expect(err.Error()).To(Equal("failed to load go extension: plugin.Open(/non/existing-plugin.so): realpath failed"))
 			})
 		})
 
@@ -269,7 +269,7 @@ var _ = Describe("Environment", func() {
 
 		It("handlers are executed in priority order", func() {
 			var prioritizedCalled, defaultCalled bool
-			errWrongOrder := fmt.Errorf("wrong order of execution. Prioritized handler should be called first")
+			errWrongOrder := errors.New("wrong order of execution. Prioritized handler should be called first")
 			prioritizedEventHandler := func(context goext.Context, resource goext.Resource, environment goext.IEnvironment) *goext.Error {
 				if defaultCalled {
 					return goext.NewErrorInternalServerError(errWrongOrder)

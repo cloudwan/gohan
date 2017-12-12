@@ -19,6 +19,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+
+	"github.com/pkg/errors"
 )
 
 type MaybeState int
@@ -103,7 +105,7 @@ func (m Maybe) String() string {
 	case MaybeValue:
 		return "<value>"
 	default:
-		panic(fmt.Errorf("unknown state: %d", m.MaybeState))
+		panic(errors.Errorf("unknown state: %d", m.MaybeState))
 	}
 }
 

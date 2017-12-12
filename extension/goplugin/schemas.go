@@ -17,7 +17,6 @@ package goplugin
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 
 	"github.com/cloudwan/gohan/db/sql"
@@ -25,15 +24,16 @@ import (
 	"github.com/cloudwan/gohan/extension/goext"
 	gohan_schema "github.com/cloudwan/gohan/schema"
 	"github.com/jmoiron/sqlx/reflectx"
+	"github.com/pkg/errors"
 )
 
 var (
 	// ErrNotPointer indicates that a resource was not passed by a pointer
-	ErrNotPointer = fmt.Errorf("raw resource must be passed by a pointer")
+	ErrNotPointer = errors.New("raw resource must be passed by a pointer")
 )
 
 func makeErrMissingType(missingType string) error {
-	return fmt.Errorf("resource type '%s' not registered", missingType)
+	return errors.Errorf("resource type '%s' not registered", missingType)
 }
 
 func isPointer(resource interface{}) bool {
@@ -90,7 +90,7 @@ func (schemas *Schemas) Find(id string) goext.ISchema {
 	sch, ok := manager.Schema(id)
 
 	if !ok {
-		log.Warning(fmt.Sprintf("cannot find schema: %s", id))
+		schemas.env.Logger().Warningf("Cannot find schema: %s", id)
 		return nil
 	}
 
