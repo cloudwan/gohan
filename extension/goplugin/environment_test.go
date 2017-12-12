@@ -20,10 +20,13 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/cloudwan/gohan/db/mocks"
+	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/extension/goext"
 	"github.com/cloudwan/gohan/extension/goplugin"
 	"github.com/cloudwan/gohan/extension/goplugin/test_data/ext_good/test"
 	"github.com/cloudwan/gohan/schema"
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
@@ -295,12 +298,38 @@ var _ = Describe("Environment", func() {
 			Expect(defaultCalled).To(BeTrue())
 		})
 
-		It("environment clone should correctly clone runtime types", func() {
-			myEnv := goplugin.NewEnvironment("my_env", nil, nil)
-			myEnv.RegisterRawType("my_raw", MyRaw{})
-			myEnvClone := myEnv.Clone().(*goplugin.Environment)
-			Expect(len(myEnvClone.RawTypes())).To(Equal(1))
-			Expect(myEnvClone.RawTypes()["my_raw"]).To(Equal(myEnv.RawTypes()["my_raw"]))
+		Context("Cloning", func() {
+			var (
+				mockCtrl *gomock.Controller
+				mockDB   *mock_db.MockDB
+				env      *goplugin.Environment
+			)
+
+			BeforeEach(func() {
+				mockCtrl = gomock.NewController(GinkgoT())
+				mockDB = mock_db.NewMockDB(mockCtrl)
+
+				env = goplugin.NewEnvironment("cloning_env", nil, nil)
+			})
+
+			It("should correctly clone runtime types", func() {
+				env.RegisterRawType("my_raw", MyRaw{})
+
+				clone := env.Clone().(*goplugin.Environment)
+
+				Expect(len(clone.RawTypes())).To(Equal(1))
+				Expect(clone.RawTypes()["my_raw"]).To(Equal(env.RawTypes()["my_raw"]))
+			})
+
+			It("should clone database options", func() {
+				expectedOptions := goext.DbOptions{RetryTxCount: 1, RetryTxInterval: 2}
+				mockDB.EXPECT().Options().Return(options.Options{expectedOptions.RetryTxCount, expectedOptions.RetryTxInterval})
+
+				env.SetDatabase(mockDB)
+				clone := env.Clone().(*goplugin.Environment)
+
+				Expect(clone.Database().Options()).To(Equal(expectedOptions))
+			})
 		})
 
 		Context("execution termination", func() {
