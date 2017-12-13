@@ -602,8 +602,6 @@ var _ = Describe("Schemas", func() {
 
 			Expect(context).To(HaveKeyWithValue("id", "42"))
 			Expect(context).To(HaveKeyWithValue("description", "test"))
-			Expect(context).To(HaveKey("subobject"))
-			Expect(context["subobject"]).To(BeNil())
 		})
 		It("should convert resource to context with null string defined", func() {
 			resource := &test.Test{
@@ -618,8 +616,6 @@ var _ = Describe("Schemas", func() {
 			Expect(context).To(HaveKeyWithValue("id", "42"))
 			Expect(context).To(HaveKeyWithValue("description", "test"))
 			Expect(context).To(HaveKeyWithValue("name", "testName"))
-			Expect(context).To(HaveKey("subobject"))
-			Expect(context["subobject"]).To(BeNil())
 		})
 		It("should convert resource to context with null string", func() {
 			resource := &test.Test{
@@ -635,8 +631,6 @@ var _ = Describe("Schemas", func() {
 			Expect(context).To(HaveKeyWithValue("description", "test"))
 			Expect(context).To(HaveKey("name"))
 			Expect(context["name"]).To(BeNil())
-			Expect(context).To(HaveKey("subobject"))
-			Expect(context["subobject"]).To(BeNil())
 		})
 		It("should not convert context to resource with int passed as string", func() {
 			context := map[string]interface{}{

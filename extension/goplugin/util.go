@@ -290,7 +290,9 @@ func (util *Util) ResourceToMap(resource interface{}) map[string]interface{} {
 			}
 		} else if v.Kind() == reflect.Ptr {
 			if v.IsNil() {
-				fieldsMap[fieldName] = nil
+				if v.Type().Elem().Kind() != reflect.Struct {
+					fieldsMap[fieldName] = nil
+				}
 			} else {
 				rv := util.ResourceToMap(val)
 				fieldsMap[fieldName] = rv

@@ -135,8 +135,15 @@ var _ = Describe("Environment", func() {
 				"name":          nil,
 			}
 
+			expectedResponse := map[string]interface{}{
+				"id":            "testId",
+				"description":   "test description",
+				"test_suite_id": nil,
+				"name":          nil,
+			}
+
 			result := testURL("PUT", baseURL+"/v0.1/tests/testId", adminTokenID, resource, http.StatusCreated)
-			Expect(result).To(HaveKeyWithValue("test", util.MatchAsJSON(resource)))
+			Expect(result).To(HaveKeyWithValue("test", expectedResponse))
 		})
 
 		It("Fails to create when string field given as int", func() {
