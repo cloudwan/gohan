@@ -264,6 +264,7 @@ func publishEventWithOptions(envName string, modifiedSchemas []string, eventName
 
 		eventContext := map[string]interface{}{}
 		eventContext["schema"] = s
+		eventContext["schema_id"] = s.ID
 		eventContext["sync"] = sync
 		eventContext["db"] = db
 		eventContext["identity_service"] = ident
