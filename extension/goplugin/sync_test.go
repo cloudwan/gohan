@@ -16,12 +16,13 @@
 package goplugin_test
 
 import (
+	"context"
 	"time"
 
-	"context"
-
+	"github.com/cloudwan/gohan/extension/goext"
 	"github.com/cloudwan/gohan/extension/goplugin"
 	"github.com/cloudwan/gohan/sync"
+	"github.com/cloudwan/gohan/sync/etcdv3"
 	"github.com/cloudwan/gohan/sync/mocks"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
@@ -60,5 +61,38 @@ var _ = Describe("Sync", func() {
 
 		cancel()
 		Eventually(doneCh).Should(Receive())
+	})
+
+	It("returns nil data on delete", func() {
+		rawSync, err := etcdv3.NewSync([]string{"localhost:2379"}, time.Second)
+		Expect(err).NotTo(HaveOccurred())
+
+		const testKey = "/test/goplugin/sync"
+		Expect(rawSync.Update(testKey, "{}")).To(Succeed())
+
+		node, err := rawSync.Fetch(testKey)
+		Expect(err).NotTo(HaveOccurred())
+
+		env := goplugin.Environment{}
+		env.SetSync(rawSync)
+		gopluginSync := env.Sync()
+
+		watchDone := make(chan struct{})
+
+		var events []*goext.Event
+		go func() {
+			events, err = gopluginSync.Watch(context.Background(), testKey, time.Second*5, node.Revision+1)
+			watchDone <- struct{}{}
+		}()
+
+		// assuming the Watch will start in (up to) 500ms
+		<-time.After(time.Millisecond * 500)
+		Expect(rawSync.Delete(testKey, false)).To(Succeed())
+
+		Eventually(watchDone).Should(Receive())
+
+		Expect(events).To(HaveLen(1))
+		Expect(events[0].Action).To(Equal("delete"))
+		Expect(events[0].Data).To(BeNil())
 	})
 })
