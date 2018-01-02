@@ -42,6 +42,7 @@ type cancelableTransaction interface {
 	LockListContext(context.Context, *schema.Schema, transaction.Filter, *transaction.ViewOptions, *pagination.Paginator, schema.LockPolicy) ([]*schema.Resource, uint64, error)
 	QueryContext(context.Context, *schema.Schema, string, []interface{}) (list []*schema.Resource, err error)
 	ExecContext(ctx context.Context, query string, args ...interface{}) error
+	CountContext(context.Context, *schema.Schema, transaction.Filter) (uint64, error)
 }
 
 //Transaction is common interface for handling transaction
@@ -233,4 +234,10 @@ func (t *Transaction) Closed() bool {
 // GetIsolationLevel returns the isolation level of the transaction
 func (t *Transaction) GetIsolationLevel() goext.Type {
 	return goext.Type(t.tx.GetIsolationLevel())
+}
+
+func (t *Transaction) Count(ctx context.Context, schema goext.ISchema, filter goext.Filter) (uint64, error) {
+	schemaID := schema.ID()
+
+	return t.tx.CountContext(ctx, t.findRawSchema(schemaID), transaction.Filter(filter))
 }

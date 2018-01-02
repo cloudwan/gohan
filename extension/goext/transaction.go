@@ -71,6 +71,7 @@ type ITransaction interface {
 	StateFetch(ctx context.Context, schema ISchema, filter Filter) (ResourceState, error)
 	List(ctx context.Context, schema ISchema, filter Filter, listOptions *ListOptions, paginator *Paginator) ([]map[string]interface{}, uint64, error)
 	LockList(ctx context.Context, schema ISchema, filter Filter, listOptions *ListOptions, paginator *Paginator, lockPolicy LockPolicy) ([]map[string]interface{}, uint64, error)
+	Count(ctx context.Context, schema ISchema, filter Filter) (uint64, error)
 	RawTransaction() interface{} // *sqlx.Tx
 	Query(ctx context.Context, schema ISchema, query string, args []interface{}) (list []map[string]interface{}, err error)
 	Commit() error

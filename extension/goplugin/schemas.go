@@ -529,6 +529,12 @@ func (schema *Schema) Extends() []string {
 	return schema.raw.Extends
 }
 
+// Count returns number of resources matching the filter
+func (schema *Schema) Count(filter goext.Filter, requestContext goext.Context) (uint64, error) {
+	tx := mustGetOpenTransactionFromContext(requestContext)
+	return tx.Count(goext.GetContext(requestContext), schema, filter)
+}
+
 // NewSchema allocates a new Schema
 func NewSchema(env IEnvironment, raw *gohan_schema.Schema) goext.ISchema {
 	return &Schema{env: env, raw: raw}

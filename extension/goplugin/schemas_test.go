@@ -197,6 +197,31 @@ var _ = Describe("Schemas", func() {
 			Expect(&createdResource).To(Equal(returnedResource))
 		})
 
+		It("Should count resources", func() {
+			c, err := testSchema.Count(goext.Filter{}, context)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(c).To(Equal(uint64(0)))
+			for i := 0; i < 2; i++ {
+				createdResource.ID = string(i)
+				createdResource.Name = goext.MakeString("test1")
+				Expect(testSchema.CreateRaw(&createdResource, context)).To(Succeed())
+			}
+			for i := 2; i < 5; i++ {
+				createdResource.ID = string(i)
+				createdResource.Name = goext.MakeString("test2")
+				Expect(testSchema.CreateRaw(&createdResource, context)).To(Succeed())
+			}
+			c, err = testSchema.Count(goext.Filter{}, context)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(c).To(Equal(uint64(5)))
+			c, err = testSchema.Count(goext.Filter{"name": "test2"}, context)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(c).To(Equal(uint64(3)))
+			c, err = testSchema.Count(goext.Filter{"name": "test1"}, context)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(c).To(Equal(uint64(2)))
+		})
+
 		It("Fetch previously created resource", func() {
 			Expect(testSchema.CreateRaw(&createdResource, context)).To(Succeed())
 			returnedResource, err := testSchema.FetchRaw(createdResource.ID, context)

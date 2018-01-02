@@ -129,6 +129,9 @@ type ISchema interface {
 	// LockListRaw returns a list of pointers to locked raw resources, containing db annotations
 	LockListRaw(filter Filter, paginator *Paginator, context Context, lockPolicy LockPolicy) ([]interface{}, error)
 
+	// Count returns number of resources matching the filter
+	Count(filter Filter, context Context) (uint64, error)
+
 	// Fetch returns a pointer to resource derived from BaseResource
 	Fetch(id string, context Context) (interface{}, error)
 
