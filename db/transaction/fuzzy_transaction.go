@@ -153,6 +153,15 @@ func (ft *FuzzyTransaction) LockListContext(_ context.Context, s *schema.Schema,
 	return ft.LockList(s, filter, options, pg, policy)
 }
 
+func (ft *FuzzyTransaction) CountContext(ctx context.Context, s *schema.Schema, filter Filter) (uint64, error) {
+	var total uint64
+	return total, ft.fuzzIt(func() error {
+		var err error
+		total, err = ft.Tx.CountContext(ctx, s, filter)
+		return err
+	})
+}
+
 func (ft *FuzzyTransaction) FetchContext(_ context.Context, s *schema.Schema, filter Filter, options *ViewOptions) (*schema.Resource, error) {
 	return ft.Fetch(s, filter, options)
 }

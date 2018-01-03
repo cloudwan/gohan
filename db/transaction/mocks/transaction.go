@@ -358,6 +358,19 @@ func (mr *MockTransactionMockRecorder) LockListContext(arg0, arg1, arg2, arg3, a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockListContext", reflect.TypeOf((*MockTransaction)(nil).LockListContext), arg0, arg1, arg2, arg3, arg4, arg5)
 }
 
+// CountContext mocks base method
+func (m *MockTransaction) CountContext(arg0 context.Context, arg1 *schema.Schema, arg2 transaction.Filter) (uint64, error) {
+	ret := m.ctrl.Call(m, "CountContext", arg0, arg1, arg2)
+	ret0, _ := ret[0].(uint64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CountContext indicates an expected call of CountContext
+func (mr *MockTransactionMockRecorder) CountContext(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountContext", reflect.TypeOf((*MockTransaction)(nil).CountContext), arg0, arg1, arg2)
+}
+
 // QueryContext mocks base method
 func (m *MockTransaction) QueryContext(arg0 context.Context, arg1 *schema.Schema, arg2 string, arg3 []interface{}) ([]*schema.Resource, error) {
 	ret := m.ctrl.Call(m, "QueryContext", arg0, arg1, arg2, arg3)

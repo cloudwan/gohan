@@ -315,6 +315,11 @@ func (tx *Transaction) LockListContext(_ context.Context, s *schema.Schema, filt
 	return tx.LockList(s, filter, options, pg, policy)
 }
 
+func (tx *Transaction) CountContext(_ context.Context, s *schema.Schema, filter transaction.Filter) (uint64, error) {
+	_, total, err := tx.List(s, filter, nil, nil)
+	return total, err
+}
+
 // LockList locks resources in the db. Not supported in file db
 func (tx *Transaction) LockList(s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions, pg *pagination.Paginator, policy schema.LockPolicy) (list []*schema.Resource, total uint64, err error) {
 	return tx.List(s, filter, options, pg)

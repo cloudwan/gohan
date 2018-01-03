@@ -99,6 +99,7 @@ type Transaction interface {
 	StateFetchContext(context.Context, *schema.Schema, Filter) (ResourceState, error)
 	ListContext(context.Context, *schema.Schema, Filter, *ViewOptions, *pagination.Paginator) ([]*schema.Resource, uint64, error)
 	LockListContext(context.Context, *schema.Schema, Filter, *ViewOptions, *pagination.Paginator, schema.LockPolicy) ([]*schema.Resource, uint64, error)
+	CountContext(context.Context, *schema.Schema, Filter) (uint64, error)
 	QueryContext(context.Context, *schema.Schema, string, []interface{}) (list []*schema.Resource, err error)
 	ExecContext(ctx context.Context, query string, args ...interface{}) error
 }

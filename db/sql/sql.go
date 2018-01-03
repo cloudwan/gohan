@@ -861,7 +861,7 @@ func (tx *Transaction) executeSelect(ctx context.Context, sc *selectContext, sql
 	if err != nil {
 		return nil, 0, err
 	}
-	total, err = tx.count(ctx, sc.schema, sc.filter)
+	total, err = tx.CountContext(ctx, sc.schema, sc.filter)
 	return
 }
 
@@ -1006,8 +1006,8 @@ func (tx *Transaction) decode(s *schema.Schema, tableName string, skipNil, recur
 	return resourceData
 }
 
-//count count all matching resources in the db
-func (tx *Transaction) count(ctx context.Context, s *schema.Schema, filter transaction.Filter) (res uint64, err error) {
+//CountContext count all matching resources in the db
+func (tx *Transaction) CountContext(ctx context.Context, s *schema.Schema, filter transaction.Filter) (res uint64, err error) {
 	q := sq.Select("Count(id) as count").From(quote(s.GetDbTableName()))
 	//Filter get already tested
 	q, _ = addFilterToQuery(s, q, filter, false)
