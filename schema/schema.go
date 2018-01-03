@@ -254,10 +254,7 @@ func (schema *Schema) Init() error {
 	schema.Properties = []Property{}
 	for id, property := range properties {
 		propertyRequired := util.ContainsString(required, id)
-		propertyObj, err := NewPropertyFromObj(id, property, propertyRequired)
-		if err != nil {
-			return fmt.Errorf("Invalid schema: Properties is missing %v", err)
-		}
+		propertyObj := NewPropertyFromObj(id, property, propertyRequired)
 		schema.Properties = append(schema.Properties, *propertyObj)
 	}
 

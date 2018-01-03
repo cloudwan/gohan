@@ -57,7 +57,7 @@ func NewProperty(id, title, description, typeID, format, relation, relationColum
 }
 
 //NewPropertyFromObj make Property  from obj
-func NewPropertyFromObj(id string, rawTypeData interface{}, required bool) (*Property, error) {
+func NewPropertyFromObj(id string, rawTypeData interface{}, required bool) *Property {
 	typeData := rawTypeData.(map[string]interface{})
 	title, _ := typeData["title"].(string)
 	description, _ := typeData["description"].(string)
@@ -92,5 +92,5 @@ func NewPropertyFromObj(id string, rawTypeData interface{}, required bool) (*Pro
 	indexed, _ := typeData["indexed"].(bool)
 	Property := NewProperty(id, title, description, typeID, format, relation, relationColumn, relationProperty,
 		sqlType, unique, nullable, cascade, properties, defaultValue, indexed)
-	return &Property, nil
+	return &Property
 }

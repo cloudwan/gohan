@@ -139,5 +139,6 @@ func (resource *Resource) PopulateDefaults() error {
 			resource.properties[property.ID] = property.Default
 		}
 	}
+
 	return nil
 }
