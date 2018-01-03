@@ -22,6 +22,7 @@ type IEnvironment interface {
 	Config() IConfig
 	Core() ICore
 	Logger() ILogger
+	LoggerForSchema(schema ISchema) ILogger
 	Schemas() ISchemas
 	Sync() ISync
 	Database() IDatabase

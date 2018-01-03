@@ -202,7 +202,7 @@ func (testRunner *TestRunner) runSingle(t ginkgo.GinkgoTestingT, reporter *Repor
 	}
 
 	// create env
-	envName := "Go test environment"
+	envName := "test"
 
 	env := goplugin.NewEnvironment(envName, beforeStartHook, nil)
 	mockEnv := goplugin.NewMockIEnvironment(env, ginkgo.GinkgoT())

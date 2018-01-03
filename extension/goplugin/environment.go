@@ -84,6 +84,8 @@ type Environment struct {
 	types    map[string]reflect.Type
 }
 
+var _ goext.IEnvironment = &Environment{}
+
 // Internal interface for goplugin environment
 type IEnvironment interface {
 	goext.IEnvironment
@@ -99,6 +101,7 @@ type IEnvironment interface {
 	getRawType(schemaID string) (reflect.Type, bool)
 	getType(schemaID string) (reflect.Type, bool)
 	getTraceID() string
+	getName() string
 	getTimeLimit() time.Duration
 	getTimeLimits() []*schema.EventTimeLimit
 }
@@ -151,6 +154,10 @@ func (env *Environment) Core() goext.ICore {
 // Logger returns an implementation to Logger interface
 func (env *Environment) Logger() goext.ILogger {
 	return env.loggerImpl
+}
+
+func (env *Environment) LoggerForSchema(schema goext.ISchema) goext.ILogger {
+	return NewLoggerForSchema(schema.(*Schema))
 }
 
 // Schemas returns an implementation to Schemas interface
@@ -222,6 +229,8 @@ func (env *Environment) Start() error {
 
 	log.Debug("Starting go environment: %s", env.name)
 
+	env.traceID = newTraceID()
+
 	// bind
 	env.bindCore()
 	env.bindLogger()
@@ -238,8 +247,6 @@ func (env *Environment) Start() error {
 	} else {
 		log.Debug("Before start init is not set for go environment: %s", env.name)
 	}
-
-	env.traceID = newTraceID()
 
 	// init extensions
 	log.Debug("Start go extension: %s", env.name)
@@ -400,6 +407,10 @@ func (env *Environment) getType(schemaID string) (reflect.Type, bool) {
 
 func (env *Environment) getTraceID() string {
 	return env.traceID
+}
+
+func (env *Environment) getName() string {
+	return env.name
 }
 
 func (env *Environment) getTimeLimit() time.Duration {
