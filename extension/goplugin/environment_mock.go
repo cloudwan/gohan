@@ -106,7 +106,8 @@ func (mockEnv *MockIEnvironment) Logger() goext.ILogger {
 }
 
 func (mockEnv *MockIEnvironment) LoggerForSchema(schema goext.ISchema) goext.ILogger {
-	return mockEnv.env.LoggerForSchema(schema)
+	// test should use just one logger - this way mocking is much easier
+	return mockEnv.logger
 }
 
 func (mockEnv *MockIEnvironment) Schemas() goext.ISchemas {
