@@ -130,5 +130,13 @@ var _ = Describe("Transaction", func() {
 			Expect(err).To(BeNil())
 			Expect(returnedResource["description"]).To(Equal("other-description"))
 		})
+
+		It("Exec update is effective", func() {
+			Expect(tx.Create(context.Background(), testSchema, createdResource)).To(Succeed())
+			Expect(tx.Exec(context.Background(), "UPDATE `tests` SET `description`=? WHERE `id`=?", "updated description", createdResource["id"].(string)))
+			returnedResource, err := tx.Fetch(context.Background(), testSchema, goext.Filter{"id": createdResource["id"]})
+			Expect(err).To(BeNil())
+			Expect(returnedResource["description"]).To(Equal("updated description"))
+		})
 	})
 })
