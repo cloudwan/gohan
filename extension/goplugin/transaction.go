@@ -218,7 +218,7 @@ func (t *Transaction) Commit() error {
 
 // Exec performs an exec in transaction
 func (t *Transaction) Exec(ctx context.Context, query string, args ...interface{}) error {
-	return t.tx.ExecContext(ctx, query, args)
+	return t.tx.ExecContext(ctx, query, args...)
 }
 
 // Close closes the transaction
