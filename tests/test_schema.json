@@ -143,6 +143,87 @@
                         "type": "array",
                         "unique": false
                     },
+                    "config": {
+                        "description": "Config",
+                        "title": "Config",
+                        "type": "object",
+                        "properties": {
+                            "default_vlan": {
+                                "description": "Default VLAN",
+                                "title": "Default VLAN",
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "default": "default_vlan",
+                                        "title": "Name",
+                                        "description": "Name"
+                                    },
+                                    "vlan_id": {
+                                        "type": "integer",
+                                        "default": 1,
+                                        "title": "VlanID",
+                                        "description": "Vlan ID"
+                                    }
+                                }
+                            },
+                            "vpn_vlan": {
+                                "description": "VPN VLAN",
+                                "title": "VPN VLAN",
+                                "type": "object",
+                                "default": {
+                                    "name": "vpn_vlan"
+                                },
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "title": "Name",
+                                        "description": "Name"
+                                    },
+                                    "vlan_id": {
+                                        "type": "integer",
+                                        "title": "VlanID",
+                                        "description": "Vlan ID"
+                                    }
+                                }
+                            },
+                            "user_vlan": {
+                                "description": "User VLAN",
+                                "title": "User VLAN",
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "title": "Name",
+                                        "description": "Name"
+                                    },
+                                    "vlan_id": {
+                                        "type": "integer",
+                                        "title": "VlanID",
+                                        "description": "Vlan ID"
+                                    }
+                                }
+                            },
+                            "empty_vlan": {
+                                "description": "Empty VLAN",
+                                "title": "Empty VLAN",
+                                "type": "object",
+                                "default": {},
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "title": "Name",
+                                        "description": "Name"
+                                    },
+                                    "vlan_id": {
+                                        "type": "integer",
+                                        "title": "VlanID",
+                                        "description": "Vlan ID"
+                                    }
+                                }
+                            }
+                        }
+                    },
                     "tenant_id": {
                         "permission": [
                             "create"
@@ -159,6 +240,7 @@
                     "name",
                     "providor_networks",
                     "route_targets",
+                    "config",
                     "tenant_id"
                 ],
                 "type": "object"

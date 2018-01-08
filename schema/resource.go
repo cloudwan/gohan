@@ -132,11 +132,49 @@ func (resource *Resource) Update(updateData map[string]interface{}) error {
 	return nil
 }
 
+func fillObjectDefaults(objectProperty Property, resourceMap, objectMask map[string]interface{}) {
+	for objectPropertyID, objectPropertyIface := range objectProperty.Properties {
+		objectPropertyMap := objectPropertyIface.(map[string]interface{})
+		innerProperty := NewPropertyFromObj(objectPropertyID, objectPropertyMap, false)
+		if objectMaskInnerProperty, ok := objectMask[objectPropertyID]; ok {
+			resourceFilledProperty, resourceFilled := resourceMap[objectPropertyID]
+			if innerProperty.Type == "object" {
+				innerPropertyMaskMap := objectMaskInnerProperty.(map[string]interface{})
+				if resourceFilled {
+					fillObjectDefaults(*innerProperty, resourceFilledProperty.(map[string]interface{}), innerPropertyMaskMap)
+				} else {
+					if innerPropertyMaskMap != nil && innerProperty.Default != nil {
+						resourceMap[objectPropertyID] = innerPropertyMaskMap
+					}
+				}
+			} else {
+				if !resourceFilled {
+					resourceMap[objectPropertyID] = objectMaskInnerProperty
+				}
+			}
+		}
+	}
+}
+
 //PopulateDefaults Populates not provided data with defaults
 func (resource *Resource) PopulateDefaults() error {
 	for _, property := range resource.Schema().Properties {
-		if _, ok := resource.properties[property.ID]; !ok && property.Default != nil {
-			resource.properties[property.ID] = property.Default
+		defaultValueMask := property.getDefaultMask()
+		resourceProperty, propertyFilled := resource.properties[property.ID]
+		if defaultValueMask != nil {
+			if property.Type == "object" {
+				defaultValueMaskMap := defaultValueMask.(map[string]interface{})
+				if propertyFilled {
+					resourceMap := resourceProperty.(map[string]interface{})
+					fillObjectDefaults(property, resourceMap, defaultValueMaskMap)
+				} else if defaultValueMaskMap != nil {
+					resource.properties[property.ID] = defaultValueMaskMap
+				}
+			} else {
+				if !propertyFilled {
+					resource.properties[property.ID] = defaultValueMask
+				}
+			}
 		}
 	}
 

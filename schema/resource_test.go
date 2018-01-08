@@ -37,7 +37,7 @@ var _ = Describe("Resources", func() {
 		ClearManager()
 	})
 
-	It("tests defaults", func() {
+	It("default value array", func() {
 		networkSchema, exists := manager.Schema("network")
 		Expect(exists).To(BeTrue())
 		networkRedObj := map[string]interface{}{
@@ -56,5 +56,123 @@ var _ = Describe("Resources", func() {
 		actualRT, ok := networkRed.Data()["route_targets"]
 		Expect(ok).To(BeTrue(), "networkRed should contain route_targets")
 		Expect(actualRT).To(Equal(expectedRT))
+	})
+
+	It("default values inside nested object", func() {
+		networkSchema, exists := manager.Schema("network")
+		Expect(exists).To(BeTrue())
+		networkRedObj := map[string]interface{}{
+			"id":                "networkRed",
+			"name":              "NetworkRed",
+			"tenant_id":         "red",
+			"providor_networks": map[string]interface{}{"segmentation_id": 10, "segmentation_type": "vlan"},
+			"route_targets":     []interface{}{},
+			"config": map[string]interface{}{
+				"default_vlan": map[string]interface{}{
+					"name": "my_vlan",
+				},
+			},
+		}
+		networkRed, err := NewResource(networkSchema, networkRedObj)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(networkRed.PopulateDefaults()).To(Succeed())
+		expectedConfig := map[string]interface{}{
+			"default_vlan": map[string]interface{}{
+				"name":    "my_vlan",
+				"vlan_id": float64(1),
+			},
+			"empty_vlan": map[string]interface{}{},
+			"vpn_vlan": map[string]interface{}{
+				"name": "vpn_vlan",
+			},
+		}
+		actualConfig, ok := networkRed.Data()["config"]
+		Expect(ok).To(BeTrue(), "networkRed should contain config")
+		Expect(actualConfig).To(Equal(expectedConfig))
+	})
+
+	It("fills all default values", func() {
+		networkSchema, exists := manager.Schema("network")
+		Expect(exists).To(BeTrue())
+		networkRedObj := map[string]interface{}{
+			"id":                "networkRed",
+			"name":              "NetworkRed",
+			"tenant_id":         "red",
+			"providor_networks": map[string]interface{}{"segmentation_id": 10, "segmentation_type": "vlan"},
+			"route_targets":     []interface{}{},
+			"config": map[string]interface{}{
+				"default_vlan": map[string]interface{}{},
+			},
+		}
+		networkRed, err := NewResource(networkSchema, networkRedObj)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(networkRed.PopulateDefaults()).To(Succeed())
+		expectedConfig := map[string]interface{}{
+			"default_vlan": map[string]interface{}{
+				"name":    "default_vlan",
+				"vlan_id": float64(1),
+			},
+			"vpn_vlan": map[string]interface{}{
+				"name": "vpn_vlan",
+			},
+			"empty_vlan": map[string]interface{}{},
+		}
+		actualConfig, ok := networkRed.Data()["config"]
+		Expect(ok).To(BeTrue(), "networkRed should contain config")
+		Expect(actualConfig).To(Equal(expectedConfig))
+	})
+
+	It("empty object as default value", func() {
+		networkSchema, exists := manager.Schema("network")
+		Expect(exists).To(BeTrue())
+		networkRedObj := map[string]interface{}{
+			"id":                "networkRed",
+			"name":              "NetworkRed",
+			"tenant_id":         "red",
+			"providor_networks": map[string]interface{}{"segmentation_id": 10, "segmentation_type": "vlan"},
+			"route_targets":     []interface{}{},
+			"config":            map[string]interface{}{},
+		}
+		networkRed, err := NewResource(networkSchema, networkRedObj)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(networkRed.PopulateDefaults()).To(Succeed())
+		expectedConfig := map[string]interface{}{
+			"empty_vlan": map[string]interface{}{},
+			"vpn_vlan": map[string]interface{}{
+				"name": "vpn_vlan",
+			},
+		}
+		actualConfig, ok := networkRed.Data()["config"]
+		Expect(ok).To(BeTrue(), "networkRed should contain config")
+		Expect(actualConfig).To(Equal(expectedConfig))
+	})
+
+	It("override property which has default object", func() {
+		networkSchema, exists := manager.Schema("network")
+		Expect(exists).To(BeTrue())
+		networkRedObj := map[string]interface{}{
+			"id":                "networkRed",
+			"name":              "NetworkRed",
+			"tenant_id":         "red",
+			"providor_networks": map[string]interface{}{"segmentation_id": 10, "segmentation_type": "vlan"},
+			"route_targets":     []interface{}{},
+			"config": map[string]interface{}{
+				"vpn_vlan": map[string]interface{}{
+					"name": "my_vpn_vlan",
+				},
+			},
+		}
+		networkRed, err := NewResource(networkSchema, networkRedObj)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(networkRed.PopulateDefaults()).To(Succeed())
+		expectedConfig := map[string]interface{}{
+			"empty_vlan": map[string]interface{}{},
+			"vpn_vlan": map[string]interface{}{
+				"name": "my_vpn_vlan",
+			},
+		}
+		actualConfig, ok := networkRed.Data()["config"]
+		Expect(ok).To(BeTrue(), "networkRed should contain config")
+		Expect(actualConfig).To(Equal(expectedConfig))
 	})
 })

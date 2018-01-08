@@ -983,6 +983,16 @@ func getNetwork(color string, tenant string) map[string]interface{} {
 		"route_targets":     []string{"1000:10000", "2000:20000"},
 		"shared":            false,
 		"providor_networks": map[string]interface{}{"segmentation_id": 12, "segmentation_type": "vlan"},
+		"config": map[string]interface{}{
+			"default_vlan": map[string]interface{}{
+				"vlan_id": float64(1),
+				"name":    "default_vlan",
+			},
+			"empty_vlan": map[string]interface{}{},
+			"vpn_vlan": map[string]interface{}{
+				"name": "vpn_vlan",
+			},
+		},
 	}
 }
 

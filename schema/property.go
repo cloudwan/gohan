@@ -94,3 +94,25 @@ func NewPropertyFromObj(id string, rawTypeData interface{}, required bool) *Prop
 		sqlType, unique, nullable, cascade, properties, defaultValue, indexed)
 	return &Property
 }
+
+func (p *Property) getDefaultMask() interface{} {
+	if p.Default != nil {
+		return p.Default
+	}
+	if p.Type == "object" {
+		var defaultValue map[string]interface{}
+		for innerPropertyID, innerPropertyValue := range p.Properties {
+			prop := NewPropertyFromObj(innerPropertyID, innerPropertyValue, false)
+			innerDefaultMask := prop.getDefaultMask()
+			if innerDefaultMask != nil {
+				if defaultValue == nil {
+					defaultValue = map[string]interface{}{}
+				}
+				defaultValue[innerPropertyID] = innerDefaultMask
+			}
+		}
+		return defaultValue
+	}
+
+	return nil
+}
