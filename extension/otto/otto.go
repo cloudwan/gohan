@@ -24,6 +24,7 @@ import (
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/transaction"
 	ext "github.com/cloudwan/gohan/extension"
+	"github.com/cloudwan/gohan/metrics"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/server/middleware"
 	"github.com/cloudwan/gohan/sync"
@@ -225,6 +226,7 @@ func (env *Environment) HandleEvent(event string, context map[string]interface{}
 		for {
 			select {
 			case <-closeNotify:
+				metrics.UpdateCounter(1, "req.peer_disconnect")
 				vm.Interrupt <- func() {
 					panic(disconnected)
 				}

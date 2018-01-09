@@ -30,6 +30,7 @@ import (
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/extension/goext"
 	gohan_logger "github.com/cloudwan/gohan/log"
+	"github.com/cloudwan/gohan/metrics"
 	"github.com/cloudwan/gohan/schema"
 	gohan_sync "github.com/cloudwan/gohan/sync"
 	"github.com/mohae/deepcopy"
@@ -549,6 +550,7 @@ func (i *interrupt) cancelOnPeerDisconnect() {
 		select {
 		case <-closeNotify:
 			i.env.Logger().Infof("Client disconnected for event %s", i.event)
+			metrics.UpdateCounter(1, "req.peer_disconnect")
 			i.cancel()
 		case <-i.done:
 			return
