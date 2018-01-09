@@ -25,6 +25,7 @@ import (
 	syn "sync"
 	"time"
 
+	"github.com/cloudwan/gohan/metrics"
 	"github.com/cloudwan/gohan/sync"
 	etcd "github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/clientv3/concurrency"
@@ -77,10 +78,20 @@ func (s *Sync) GetProcessID() string {
 	return s.processID
 }
 
+func measureTime(timeStarted time.Time, action string) {
+	metrics.UpdateTimer(timeStarted, "sync.v3.%s", action)
+}
+
+func updateCounter(delta int64, counter string) {
+	metrics.UpdateCounter(delta, "sync.v3.%s", counter)
+}
+
 //Update sync update sync
 //When jsonString is empty, this method do nothing because
 //etcd v3 doesn't support directories.
 func (s *Sync) Update(key, jsonString string) error {
+	defer measureTime(time.Now(), "update")
+
 	var err error
 	if jsonString == "" {
 		// do nothing, because clientv3 doesn't have directories
@@ -89,6 +100,7 @@ func (s *Sync) Update(key, jsonString string) error {
 	_, err = s.etcdClient.Put(s.withTimeout(), key, jsonString)
 	if err != nil {
 		log.Error(fmt.Sprintf("failed to sync with backend %s", err))
+		updateCounter(1, "update.error")
 		return err
 	}
 	return nil
@@ -96,22 +108,31 @@ func (s *Sync) Update(key, jsonString string) error {
 
 //Delete sync update sync
 func (s *Sync) Delete(key string, prefix bool) error {
+	defer measureTime(time.Now(), "delete")
+
 	opts := []etcd.OpOption{}
 	if prefix {
 		opts = append(opts, etcd.WithPrefix())
 	}
 	_, err := s.etcdClient.Delete(s.withTimeout(), key, opts...)
+	if err != nil {
+		updateCounter(1, "delete.error")
+	}
 	return err
 }
 
 //Fetch data from sync
 func (s *Sync) Fetch(key string) (*sync.Node, error) {
+	defer measureTime(time.Now(), "fetch")
+
 	node, err := s.etcdClient.Get(s.withTimeout(), key, etcd.WithSort(etcd.SortByKey, etcd.SortAscend))
 	if err != nil {
+		updateCounter(1, "fetch.node.error")
 		return nil, err
 	}
 	dir, err := s.etcdClient.Get(s.withTimeout(), key, etcd.WithPrefix(), etcd.WithSort(etcd.SortByKey, etcd.SortAscend))
 	if err != nil {
+		updateCounter(1, "fetch.dir.error")
 		return nil, err
 	}
 
@@ -175,6 +196,10 @@ func (s *Sync) HasLock(path string) bool {
 // Lock locks resources on sync
 // This call blocks until you can get lock
 func (s *Sync) Lock(path string, block bool) (chan struct{}, error) {
+	defer measureTime(time.Now(), "lock")
+	updateCounter(1, "lock.waiting")
+	defer updateCounter(-1, "lock.waiting")
+
 	for {
 		var err error
 		lease, err := s.etcdClient.Grant(s.withTimeout(), masterTTL)
@@ -187,6 +212,7 @@ func (s *Sync) Lock(path string, block bool) (chan struct{}, error) {
 		if err != nil || !resp.Succeeded {
 			msg := fmt.Sprintf("failed to lock path %s", path)
 			if err != nil {
+				updateCounter(1, "lock.error")
 				msg = fmt.Sprintf("failed to lock path %s: %s", path, err)
 			}
 			log.Notice(msg)
@@ -199,16 +225,19 @@ func (s *Sync) Lock(path string, block bool) (chan struct{}, error) {
 		}
 		s.locks.Set(path, lease.ID)
 		log.Info("Locked %s", path)
+		updateCounter(1, "lock.granted")
 
 		//Refresh master token
 		lost := make(chan struct{})
 		go func() {
 			defer s.abortLock(path)
 			defer close(lost)
+			defer updateCounter(-1, "lock.granted")
 
 			for s.HasLock(path) {
 				resp, err := s.etcdClient.KeepAliveOnce(s.withTimeout(), lease.ID)
 				if err != nil || resp.TTL <= 0 {
+					updateCounter(1, "lock.keepalive.error")
 					log.Notice("failed to keepalive lock for %s %s", path, err)
 					return
 				}
@@ -232,6 +261,8 @@ func (s *Sync) abortLock(path string) etcd.LeaseID {
 
 //Unlock path
 func (s *Sync) Unlock(path string) error {
+	defer measureTime(time.Now(), "unlock")
+
 	leaseID := s.abortLock(path)
 	if leaseID > 0 {
 		s.etcdClient.Revoke(s.withTimeout(), leaseID)
@@ -273,6 +304,7 @@ func (s *Sync) Watch(path string, responseChan chan *sync.Event, stopChan chan b
 	}
 	node, err := s.etcdClient.Get(s.withTimeout(), path, options...)
 	if err != nil {
+		updateCounter(1, "watch.get.error")
 		return err
 	}
 	eventsFromNode("get", node.Kvs, responseChan, stopChan)
@@ -283,6 +315,9 @@ func (s *Sync) Watch(path string, responseChan chan *sync.Event, stopChan chan b
 	var wg syn.WaitGroup
 	wg.Add(1)
 	go func() {
+		updateCounter(1, "watch.active")
+		defer updateCounter(-1, "watch.active")
+
 		defer wg.Done()
 		err := func() error {
 			rch := s.etcdClient.Watch(ctx, path, etcd.WithPrefix(), etcd.WithRev(revision))
@@ -290,6 +325,7 @@ func (s *Sync) Watch(path string, responseChan chan *sync.Event, stopChan chan b
 			for wresp := range rch {
 				err := wresp.Err()
 				if err != nil {
+					updateCounter(1, "watch.client_watch.error")
 					return err
 				}
 				for _, ev := range wresp.Events {
@@ -317,6 +353,7 @@ func (s *Sync) Watch(path string, responseChan chan *sync.Event, stopChan chan b
 	// it gets an error, we need a side channel to see the connection state.
 	session, err := concurrency.NewSession(s.etcdClient, concurrency.WithTTL(masterTTL))
 	if err != nil {
+		updateCounter(1, "watch.session.error")
 		return err
 	}
 	defer session.Close()
@@ -363,5 +400,6 @@ func (s *Sync) WatchContext(ctx context.Context, path string, revision int64) <-
 
 // Close closes etcd client
 func (s *Sync) Close() {
+	defer measureTime(time.Now(), "close")
 	s.etcdClient.Close()
 }
