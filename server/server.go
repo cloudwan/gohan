@@ -219,6 +219,7 @@ func NewServer(configFile string) (*Server, error) {
 	m := martini.Classic()
 	m.Handlers()
 	m.Use(middleware.Logging())
+	m.Use(middleware.Metrics())
 	m.Use(martini.Recovery())
 	m.Use(middleware.JSONURLs())
 	m.Use(middleware.WithContext())
