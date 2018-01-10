@@ -78,7 +78,7 @@ func withinTxImpl(db DB, beginStrategy func(db DB) (transaction.Transaction, err
 		tx, err = beginStrategy(db)
 
 		if err != nil {
-			log.Warning("failed to begin scoped transaction")
+			log.Warning("failed to begin scoped transaction: %s", err)
 			return err
 		}
 
