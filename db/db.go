@@ -108,8 +108,8 @@ func withinTxImpl(db DB, beginStrategy func(db DB) (transaction.Transaction, err
 }
 func getRetryInterval(db DB) time.Duration {
 	retryInterval := db.Options().RetryTxInterval
-	// Add random duration between [0, interval/2] to decrease collision chance
-	retryInterval += time.Duration(rand.Intn(int(db.Options().RetryTxInterval.Nanoseconds() / 2)))
+	// Add random duration between [0, interval] to decrease collision chance
+	retryInterval += time.Duration(rand.Intn(int(db.Options().RetryTxInterval.Nanoseconds())))
 	return retryInterval
 }
 
