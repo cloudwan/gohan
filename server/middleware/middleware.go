@@ -27,6 +27,7 @@ import (
 	"fmt"
 
 	"github.com/cloudwan/gohan/cloud"
+	"github.com/cloudwan/gohan/metrics"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
 	"github.com/go-martini/martini"
@@ -90,6 +91,21 @@ func Logging() martini.Handler {
 		log.Debug("Response headers: %v", rh.Header())
 		log.Debug("Response body: %s", string(response))
 		log.Info("Completed %v %s in %v", rw.Status(), http.StatusText(rw.Status()), time.Since(start))
+	}
+}
+
+func Metrics() martini.Handler {
+	return func(res http.ResponseWriter, req *http.Request, c martini.Context) {
+		c.Next()
+
+		rw := res.(martini.ResponseWriter)
+		metrics.UpdateCounter(1, "http.%s.status.%d", req.Method, rw.Status())
+		if 200 <= rw.Status() && rw.Status() < 300 {
+			metrics.UpdateCounter(1, "http.%s.ok", req.Method)
+		} else {
+			metrics.UpdateCounter(1, "http.%s.failed", req.Method)
+		}
+
 	}
 }
 

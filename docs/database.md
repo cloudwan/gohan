@@ -86,3 +86,36 @@ To enable fuzzing, set environment variable FUZZY_DB_TX to 'true' before gohan i
 ``` bash
 FUZZY_DB_TX=true gohan [options]
 ```
+
+## Metrics
+
+The following metrics are exported:
+
+- [prefix].db.connect (timer) - duration of establishing a database connection
+- [prefix].db.close (timer) - duration of closing a database connection
+- [prefix].db.active (counter) - number of active transactions
+- [prefix].db.begin (timer) - duration of BEGIN TRANSACTION
+- [prefix].db.begin_tx (timer) - duration of BEGIN TRANSACTION with custom options
+- [prefix].db.begin.waiting (counter) - number of goroutines waiting for an available transaction
+- [prefix].db.begin.failed (counter) - number of times a transaction could not be started
+- [prefix].db.commit (timer) - duration of COMMIT
+- [prefix].db.commit.failed (counter) - number of times the commit failed
+- [prefix].db.rollback (timer) - duration of ROLLBACK
+- [prefix].db.rollback.failed (counter) - number of times the ROLLBACK failed
+
+For each schema:
+
+- [prefix].tx.SCHEMA_ID.create (timer)
+- [prefix].tx.SCHEMA_ID.update (timer)
+- [prefix].tx.SCHEMA_ID.delete (timer)
+- [prefix].tx.SCHEMA_ID.list (timer)
+- [prefix].tx.SCHEMA_ID.lock_list (timer)
+- [prefix].tx.SCHEMA_ID.fetch (timer)
+- [prefix].tx.SCHEMA_ID.lock_fetch (timer)
+- [prefix].tx.SCHEMA_ID.state_fetch (timer)
+- [prefix].tx.SCHEMA_ID.state_update (timer)
+- [prefix].tx.SCHEMA_ID.query (timer)
+- [prefix].tx.SCHEMA_ID.count (timer)
+
+
+- [prefix].tx.unknown_schema.exec (timer) - duration of Exec operations

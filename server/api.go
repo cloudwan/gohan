@@ -145,7 +145,7 @@ func unwrapExtensionException(exceptionInfo map[string]interface{}) (message map
 			return map[string]interface{}{"error": fmt.Sprintf(exceptionPropertyIsNotExpectedTypeError, "code", "int")}, http.StatusInternalServerError
 		}
 	}
-	if 200 <= code && code < 300 {
+	if isSuccess(code) {
 		message, ok = messageRaw.(map[string]interface{})
 		if !ok {
 			return map[string]interface{}{"error": fmt.Sprintf(exceptionPropertyIsNotExpectedTypeError, "message", "map[string]interface{}")}, http.StatusInternalServerError
@@ -154,6 +154,10 @@ func unwrapExtensionException(exceptionInfo map[string]interface{}) (message map
 		message = map[string]interface{}{"error": fmt.Sprintf("%v", messageRaw)}
 	}
 	return message, code
+}
+
+func isSuccess(code int) bool {
+	return 200 <= code && code < 300
 }
 
 func handleError(writer http.ResponseWriter, err error) {
@@ -165,7 +169,7 @@ func handleError(writer http.ResponseWriter, err error) {
 		middleware.HTTPJSONError(writer, err.Message, code)
 	case extension.Error:
 		message, code := unwrapExtensionException(err.ExceptionInfo)
-		if 200 <= code && code < 300 {
+		if isSuccess(code) {
 			writer.WriteHeader(code)
 			routes.ServeJson(writer, message)
 		} else {
