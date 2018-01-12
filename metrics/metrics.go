@@ -88,3 +88,10 @@ func UpdateTimer(since time.Time, format string, args ...interface{}) {
 		m.UpdateSince(since)
 	}
 }
+
+func UpdateCounter(delta int64, format string, args ...interface{}) {
+	if monitoringEnabled {
+		m := metrics.GetOrRegisterCounter(fmt.Sprintf(format, args...), metrics.DefaultRegistry)
+		m.Inc(delta)
+	}
+}
