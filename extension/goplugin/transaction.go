@@ -63,20 +63,29 @@ func (t *Transaction) findRawSchema(id string) *schema.Schema {
 
 // Create creates a new resource
 func (t *Transaction) Create(ctx context.Context, s goext.ISchema, resource map[string]interface{}) error {
+	if err := ctx.Err(); err != nil {
+		return ctx.Err()
+	}
 	res, err := schema.NewResource(t.findRawSchema(s.ID()), resource)
 	if err != nil {
 		return err
 	}
-	return t.tx.CreateContext(ctx, res)
+	// use context.Background to avoid cancellation mid-query for all Queries/Exec
+	// ESI-16552 context cancellation tends to break next Begin
+	// It doesn't work in mysql driver anyway https://github.com/go-sql-driver/mysql/issues/731
+	return t.tx.CreateContext(context.Background(), res)
 }
 
 // Update updates an existing resource
 func (t *Transaction) Update(ctx context.Context, s goext.ISchema, resource map[string]interface{}) error {
+	if err := ctx.Err(); err != nil {
+		return ctx.Err()
+	}
 	res, err := schema.NewResource(t.findRawSchema(s.ID()), resource)
 	if err != nil {
 		return err
 	}
-	return t.tx.UpdateContext(ctx, res)
+	return t.tx.UpdateContext(context.Background(), res)
 }
 
 func mapGoExtResourceState(resourceState *goext.ResourceState) *transaction.ResourceState {
@@ -104,21 +113,30 @@ func mapTransactionResourceState(resourceState transaction.ResourceState) goext.
 
 // StateUpdate updates state of an existing resource
 func (t *Transaction) StateUpdate(ctx context.Context, s goext.ISchema, resource map[string]interface{}, resourceState *goext.ResourceState) error {
+	if err := ctx.Err(); err != nil {
+		return ctx.Err()
+	}
 	res, err := schema.NewResource(t.findRawSchema(s.ID()), resource)
 	if err != nil {
 		return err
 	}
-	return t.tx.StateUpdateContext(ctx, res, mapGoExtResourceState(resourceState))
+	return t.tx.StateUpdateContext(context.Background(), res, mapGoExtResourceState(resourceState))
 }
 
 // Delete deletes an existing resource
 func (t *Transaction) Delete(ctx context.Context, schema goext.ISchema, resourceID interface{}) error {
-	return t.tx.DeleteContext(ctx, t.findRawSchema(schema.ID()), resourceID)
+	if err := ctx.Err(); err != nil {
+		return ctx.Err()
+	}
+	return t.tx.DeleteContext(context.Background(), t.findRawSchema(schema.ID()), resourceID)
 }
 
 // Fetch fetches an existing resource
 func (t *Transaction) Fetch(ctx context.Context, schema goext.ISchema, filter goext.Filter) (map[string]interface{}, error) {
-	res, err := t.tx.FetchContext(ctx, t.findRawSchema(schema.ID()), transaction.Filter(filter), nil)
+	if err := ctx.Err(); err != nil {
+		return nil, ctx.Err()
+	}
+	res, err := t.tx.FetchContext(context.Background(), t.findRawSchema(schema.ID()), transaction.Filter(filter), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +145,10 @@ func (t *Transaction) Fetch(ctx context.Context, schema goext.ISchema, filter go
 
 // LockFetch locks and fetches an existing resource
 func (t *Transaction) LockFetch(ctx context.Context, schema goext.ISchema, filter goext.Filter, lockPolicy goext.LockPolicy) (map[string]interface{}, error) {
-	res, err := t.tx.LockFetchContext(ctx, t.findRawSchema(schema.ID()), transaction.Filter(filter), convertLockPolicy(lockPolicy), nil)
+	if err := ctx.Err(); err != nil {
+		return nil, ctx.Err()
+	}
+	res, err := t.tx.LockFetchContext(context.Background(), t.findRawSchema(schema.ID()), transaction.Filter(filter), convertLockPolicy(lockPolicy), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +170,10 @@ func convertLockPolicy(policy goext.LockPolicy) schema.LockPolicy {
 
 // StateFetch fetches a state an existing resource
 func (t *Transaction) StateFetch(ctx context.Context, schema goext.ISchema, filter goext.Filter) (goext.ResourceState, error) {
-	transactionResourceState, err := t.tx.StateFetchContext(ctx, t.findRawSchema(schema.ID()), transaction.Filter(filter))
+	if err := ctx.Err(); err != nil {
+		return goext.ResourceState{}, ctx.Err()
+	}
+	transactionResourceState, err := t.tx.StateFetchContext(context.Background(), t.findRawSchema(schema.ID()), transaction.Filter(filter))
 	if err != nil {
 		return goext.ResourceState{}, err
 	}
@@ -160,7 +184,10 @@ func (t *Transaction) StateFetch(ctx context.Context, schema goext.ISchema, filt
 func (t *Transaction) List(ctx context.Context, schema goext.ISchema, filter goext.Filter, listOptions *goext.ListOptions, paginator *goext.Paginator) ([]map[string]interface{}, uint64, error) {
 	schemaID := schema.ID()
 
-	data, _, err := t.tx.ListContext(ctx, t.findRawSchema(schemaID), transaction.Filter(filter), nil, (*pagination.Paginator)(paginator))
+	if err := ctx.Err(); err != nil {
+		return nil, 0, ctx.Err()
+	}
+	data, _, err := t.tx.ListContext(context.Background(), t.findRawSchema(schemaID), transaction.Filter(filter), nil, (*pagination.Paginator)(paginator))
 	if err != nil {
 		return nil, 0, err
 	}
@@ -181,7 +208,10 @@ func resourcesToMap(data []*schema.Resource) ([]map[string]interface{}, uint64, 
 func (t *Transaction) LockList(ctx context.Context, schema goext.ISchema, filter goext.Filter, listOptions *goext.ListOptions, paginator *goext.Paginator, lockingPolicy goext.LockPolicy) ([]map[string]interface{}, uint64, error) {
 	schemaID := schema.ID()
 
-	data, _, err := t.tx.LockListContext(ctx, t.findRawSchema(schemaID), transaction.Filter(filter), nil, (*pagination.Paginator)(paginator), convertLockPolicy(lockingPolicy))
+	if err := ctx.Err(); err != nil {
+		return nil, 0, ctx.Err()
+	}
+	data, _, err := t.tx.LockListContext(context.Background(), t.findRawSchema(schemaID), transaction.Filter(filter), nil, (*pagination.Paginator)(paginator), convertLockPolicy(lockingPolicy))
 	if err != nil {
 		return nil, 0, err
 	}
@@ -198,7 +228,10 @@ func (t *Transaction) RawTransaction() interface{} {
 func (t *Transaction) Query(ctx context.Context, schema goext.ISchema, query string, args []interface{}) (list []map[string]interface{}, err error) {
 	schemaID := schema.ID()
 
-	data, err := t.tx.QueryContext(ctx, t.findRawSchema(schemaID), query, args)
+	if err := ctx.Err(); err != nil {
+		return nil, ctx.Err()
+	}
+	data, err := t.tx.QueryContext(context.Background(), t.findRawSchema(schemaID), query, args)
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +251,10 @@ func (t *Transaction) Commit() error {
 
 // Exec performs an exec in transaction
 func (t *Transaction) Exec(ctx context.Context, query string, args ...interface{}) error {
-	return t.tx.ExecContext(ctx, query, args...)
+	if err := ctx.Err(); err != nil {
+		return ctx.Err()
+	}
+	return t.tx.ExecContext(context.Background(), query, args...)
 }
 
 // Close closes the transaction
@@ -239,5 +275,8 @@ func (t *Transaction) GetIsolationLevel() goext.Type {
 func (t *Transaction) Count(ctx context.Context, schema goext.ISchema, filter goext.Filter) (uint64, error) {
 	schemaID := schema.ID()
 
-	return t.tx.CountContext(ctx, t.findRawSchema(schemaID), transaction.Filter(filter))
+	if err := ctx.Err(); err != nil {
+		return 0, ctx.Err()
+	}
+	return t.tx.CountContext(context.Background(), t.findRawSchema(schemaID), transaction.Filter(filter))
 }

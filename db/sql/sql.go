@@ -39,6 +39,7 @@ import (
 	"github.com/cloudwan/gohan/db/pagination"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/extension/goext"
+	"github.com/cloudwan/gohan/metrics"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
 )
@@ -305,8 +306,18 @@ func foreignKeyName(fromTable, fromProperty, toTable, toProperty string) string 
 	return name
 }
 
+func (db *DB) measureTime(timeStarted time.Time, action string) {
+	metrics.UpdateTimer(timeStarted, "db.%s", action)
+}
+
+func (db *DB) updateCounter(delta int64, counter string) {
+	metrics.UpdateCounter(delta, "db.%s", counter)
+}
+
 //Connect connects to the db
 func (db *DB) Connect(sqlType, conn string, maxOpenConn int) (err error) {
+	defer db.measureTime(time.Now(), "connect")
+
 	db.sqlType = sqlType
 	db.connectionString = conn
 	rawDB, err := sql.Open(db.sqlType, db.connectionString)
@@ -335,15 +346,23 @@ func (db *DB) Connect(sqlType, conn string, maxOpenConn int) (err error) {
 
 // Close closes db connection
 func (db *DB) Close() {
+	defer db.measureTime(time.Now(), "close")
 	db.DB.Close()
 }
 
 //Begin starts new transaction
 func (db *DB) Begin() (tx transaction.Transaction, err error) {
+	defer db.measureTime(time.Now(), "begin")
+	db.updateCounter(1, "begin.waiting")
+	defer db.updateCounter(-1, "begin.waiting")
+
 	rawTx, err := db.DB.Beginx()
 	if err != nil {
+		db.updateCounter(1, "begin.failed")
 		return nil, err
 	}
+	db.updateCounter(1, "active")
+
 	if db.sqlType == "sqlite3" {
 		rawTx.Exec("PRAGMA foreign_keys = ON;")
 	}
@@ -363,6 +382,10 @@ func (db *DB) Begin() (tx transaction.Transaction, err error) {
 
 //BeginTx starts new transaction with given transaction options
 func (db *DB) BeginTx(ctx context.Context, options *transaction.TxOptions) (tx transaction.Transaction, err error) {
+	defer db.measureTime(time.Now(), "begin_tx")
+	db.updateCounter(1, "begin.waiting")
+	defer db.updateCounter(-1, "begin.waiting")
+
 	sqlOptions, err := mapTxOptions(options)
 	if err != nil {
 		return nil, err
@@ -370,8 +393,10 @@ func (db *DB) BeginTx(ctx context.Context, options *transaction.TxOptions) (tx t
 
 	rawTx, err := db.DB.BeginTxx(ctx, sqlOptions)
 	if err != nil {
+		db.updateCounter(1, "begin.failed")
 		return nil, err
 	}
+	db.updateCounter(1, "active")
 	if db.sqlType == "sqlite3" {
 		rawTx.Exec("PRAGMA foreign_keys = ON;")
 	}
@@ -563,12 +588,21 @@ func (tx *Transaction) logQuery(sql string, args ...interface{}) {
 	log.Debug("[%p] Executing SQL query '%s'", tx.transaction, query)
 }
 
+func (tx *Transaction) measureTime(timeStarted time.Time, schemaId, action string) {
+	metrics.UpdateTimer(timeStarted, "tx.%s.%s", schemaId, action)
+}
+
 func (tx *Transaction) Exec(sql string, args ...interface{}) error {
 	return tx.ExecContext(context.Background(), sql, args...)
 }
 
 // Exec executes sql in transaction
 func (tx *Transaction) ExecContext(ctx context.Context, sql string, args ...interface{}) error {
+	defer tx.measureTime(time.Now(), "unknown_schema", "exec")
+	return tx.exec(ctx, sql, args...)
+}
+
+func (tx *Transaction) exec(ctx context.Context, sql string, args ...interface{}) error {
 	tx.logQuery(sql, args...)
 	_, err := tx.transaction.ExecContext(ctx, sql, args...)
 	return err
@@ -580,6 +614,8 @@ func (tx *Transaction) Create(resource *schema.Resource) error {
 
 //Create create resource in the db
 func (tx *Transaction) CreateContext(ctx context.Context, resource *schema.Resource) error {
+	defer tx.measureTime(time.Now(), resource.Schema().ID, "create")
+
 	var cols []string
 	var values []interface{}
 	db := tx.db
@@ -603,7 +639,7 @@ func (tx *Transaction) CreateContext(ctx context.Context, resource *schema.Resou
 	if err != nil {
 		return err
 	}
-	return tx.ExecContext(ctx, sql, args...)
+	return tx.exec(ctx, sql, args...)
 }
 
 func (tx *Transaction) updateQuery(resource *schema.Resource) (sq.UpdateBuilder, error) {
@@ -634,6 +670,8 @@ func (tx *Transaction) Update(resource *schema.Resource) error {
 
 //Update update resource in the db
 func (tx *Transaction) UpdateContext(ctx context.Context, resource *schema.Resource) error {
+	defer tx.measureTime(time.Now(), resource.Schema().ID, "update")
+
 	q, err := tx.updateQuery(resource)
 	if err != nil {
 		return err
@@ -647,7 +685,7 @@ func (tx *Transaction) UpdateContext(ctx context.Context, resource *schema.Resou
 	}
 	sql += " WHERE id = ?"
 	args = append(args, resource.ID())
-	return tx.ExecContext(ctx, sql, args...)
+	return tx.exec(ctx, sql, args...)
 }
 
 func (tx *Transaction) StateUpdate(resource *schema.Resource, state *transaction.ResourceState) error {
@@ -656,6 +694,8 @@ func (tx *Transaction) StateUpdate(resource *schema.Resource, state *transaction
 
 //StateUpdate update resource state
 func (tx *Transaction) StateUpdateContext(ctx context.Context, resource *schema.Resource, state *transaction.ResourceState) error {
+	defer tx.measureTime(time.Now(), resource.Schema().ID, "state_update")
+
 	q, err := tx.updateQuery(resource)
 	if err != nil {
 		return err
@@ -671,7 +711,7 @@ func (tx *Transaction) StateUpdateContext(ctx context.Context, resource *schema.
 	if err != nil {
 		return err
 	}
-	return tx.ExecContext(ctx, sql, args...)
+	return tx.exec(ctx, sql, args...)
 }
 
 func (tx *Transaction) Delete(s *schema.Schema, resourceID interface{}) error {
@@ -680,11 +720,13 @@ func (tx *Transaction) Delete(s *schema.Schema, resourceID interface{}) error {
 
 //Delete delete resource from db
 func (tx *Transaction) DeleteContext(ctx context.Context, s *schema.Schema, resourceID interface{}) error {
+	defer tx.measureTime(time.Now(), s.ID, "delete")
+
 	sql, args, err := sq.Delete(quote(s.GetDbTableName())).Where(sq.Eq{"id": resourceID}).ToSql()
 	if err != nil {
 		return err
 	}
-	return tx.ExecContext(ctx, sql, args...)
+	return tx.exec(ctx, sql, args...)
 }
 
 func (db *DB) handler(property *schema.Property) propertyHandler {
@@ -871,6 +913,8 @@ func (tx *Transaction) List(s *schema.Schema, filter transaction.Filter, options
 
 //List resources in the db
 func (tx *Transaction) ListContext(ctx context.Context, s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions, pg *pagination.Paginator) (list []*schema.Resource, total uint64, err error) {
+	defer tx.measureTime(time.Now(), s.ID, "list")
+
 	sc := &selectContext{
 		schema:    s,
 		filter:    filter,
@@ -908,6 +952,8 @@ func (tx *Transaction) LockList(s *schema.Schema, filter transaction.Filter, opt
 
 // LockList locks resources in the db
 func (tx *Transaction) LockListContext(ctx context.Context, s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions, pg *pagination.Paginator, lockPolicy schema.LockPolicy) (list []*schema.Resource, total uint64, err error) {
+	defer tx.measureTime(time.Now(), s.ID, "lock_list")
+
 	policyJoin := shouldJoin(lockPolicy)
 
 	sc := &selectContext{
@@ -946,6 +992,8 @@ func (tx *Transaction) Query(s *schema.Schema, query string, arguments []interfa
 
 // Query with raw sql string
 func (tx *Transaction) QueryContext(ctx context.Context, s *schema.Schema, query string, arguments []interface{}) (list []*schema.Resource, err error) {
+	defer tx.measureTime(time.Now(), s.ID, "query")
+
 	tx.logQuery(query, arguments...)
 	rows, err := tx.transaction.QueryxContext(ctx, query, arguments...)
 	if err != nil {
@@ -1008,6 +1056,8 @@ func (tx *Transaction) decode(s *schema.Schema, tableName string, skipNil, recur
 
 //CountContext count all matching resources in the db
 func (tx *Transaction) CountContext(ctx context.Context, s *schema.Schema, filter transaction.Filter) (res uint64, err error) {
+	defer tx.measureTime(time.Now(), s.ID, "count")
+
 	q := sq.Select("Count(id) as count").From(quote(s.GetDbTableName()))
 	//Filter get already tested
 	q, _ = addFilterToQuery(s, q, filter, false)
@@ -1037,6 +1087,8 @@ func (tx *Transaction) Fetch(s *schema.Schema, filter transaction.Filter, option
 
 //Fetch resources by ID in the db
 func (tx *Transaction) FetchContext(ctx context.Context, s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions) (*schema.Resource, error) {
+	defer tx.measureTime(time.Now(), s.ID, "fetch")
+
 	list, _, err := tx.ListContext(ctx, s, filter, options, nil)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to fetch %s: %s", filter, err)
@@ -1053,6 +1105,8 @@ func (tx *Transaction) LockFetch(s *schema.Schema, filter transaction.Filter, lo
 
 // LockFetch fetches & locks a resource
 func (tx *Transaction) LockFetchContext(ctx context.Context, s *schema.Schema, filter transaction.Filter, lockPolicy schema.LockPolicy, options *transaction.ViewOptions) (*schema.Resource, error) {
+	defer tx.measureTime(time.Now(), s.ID, "lock_fetch")
+
 	list, _, err := tx.LockListContext(ctx, s, filter, nil, nil, lockPolicy)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to fetch and lock %s: %s", filter, err)
@@ -1069,6 +1123,8 @@ func (tx *Transaction) StateFetch(s *schema.Schema, filter transaction.Filter) (
 
 //StateFetch fetches the state of the specified resource
 func (tx *Transaction) StateFetchContext(ctx context.Context, s *schema.Schema, filter transaction.Filter) (state transaction.ResourceState, err error) {
+	defer tx.measureTime(time.Now(), s.ID, "state_fetch")
+
 	if !s.StateVersioning() {
 		err = fmt.Errorf("Schema %s does not support state versioning", s.ID)
 		return
@@ -1103,10 +1159,14 @@ func (tx *Transaction) RawTransaction() *sqlx.Tx {
 
 //Commit commits transaction
 func (tx *Transaction) Commit() error {
+	defer tx.db.measureTime(time.Now(), "commit")
+	defer tx.db.updateCounter(-1, "active")
+
 	log.Debug("[%p] Committing transaction %#v", tx.transaction, tx)
 	err := tx.transaction.Commit()
 	if err != nil {
 		log.Error("[%p] Commit %#v failed: %s", tx.transaction, tx, err)
+		tx.db.updateCounter(1, "commit.failed")
 		return err
 	}
 	tx.closed = true
@@ -1115,14 +1175,18 @@ func (tx *Transaction) Commit() error {
 
 //Close closes connection
 func (tx *Transaction) Close() error {
+	defer tx.db.measureTime(time.Now(), "rollback")
+
 	//Rollback if it isn't committed yet
 	log.Debug("[%p] Closing transaction %#v", tx.transaction, tx)
 	var err error
 	if !tx.closed {
+		defer tx.db.updateCounter(-1, "active")
 		log.Debug("[%p] Rolling back %#v", tx.transaction, tx)
 		err = tx.transaction.Rollback()
 		if err != nil {
 			log.Error("[%p] Rolling back %#v failed: %s", tx.transaction, tx, err)
+			tx.db.updateCounter(1, "rollback.failed")
 			return err
 		}
 		tx.closed = true
