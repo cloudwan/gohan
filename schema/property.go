@@ -57,7 +57,7 @@ func NewProperty(id, title, description, typeID, format, relation, relationColum
 }
 
 //NewPropertyFromObj make Property  from obj
-func NewPropertyFromObj(id string, rawTypeData interface{}, required bool) (*Property, error) {
+func NewPropertyFromObj(id string, rawTypeData interface{}, required bool) *Property {
 	typeData := rawTypeData.(map[string]interface{})
 	title, _ := typeData["title"].(string)
 	description, _ := typeData["description"].(string)
@@ -92,5 +92,27 @@ func NewPropertyFromObj(id string, rawTypeData interface{}, required bool) (*Pro
 	indexed, _ := typeData["indexed"].(bool)
 	Property := NewProperty(id, title, description, typeID, format, relation, relationColumn, relationProperty,
 		sqlType, unique, nullable, cascade, properties, defaultValue, indexed)
-	return &Property, nil
+	return &Property
+}
+
+func (p *Property) getDefaultMask() interface{} {
+	if p.Default != nil {
+		return p.Default
+	}
+	if p.Type == "object" {
+		var defaultValue map[string]interface{}
+		for innerPropertyID, innerPropertyValue := range p.Properties {
+			prop := NewPropertyFromObj(innerPropertyID, innerPropertyValue, false)
+			innerDefaultMask := prop.getDefaultMask()
+			if innerDefaultMask != nil {
+				if defaultValue == nil {
+					defaultValue = map[string]interface{}{}
+				}
+				defaultValue[innerPropertyID] = innerDefaultMask
+			}
+		}
+		return defaultValue
+	}
+
+	return nil
 }

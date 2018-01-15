@@ -652,6 +652,7 @@ var _ = Describe("Otto extension manager", func() {
 				"providor_networks": map[string]interface{}{},
 				"route_targets":     []interface{}{},
 				"shared":            false,
+				"config":            nil,
 			}
 			network2 = map[string]interface{}{
 				"id":                "test2",
@@ -898,7 +899,7 @@ var _ = Describe("Otto extension manager", func() {
 
 							Expect(env.HandleEvent("test", context)).To(Succeed())
 							Expect(tx.Commit()).To(Succeed())
-							Expect(context).To(HaveKeyWithValue("networks", ConsistOf(util.MatchAsJSON(network1))))
+							Expect(context["networks"]).To(ConsistOf(util.MatchAsJSON(network1)))
 						})
 					})
 
@@ -1183,7 +1184,8 @@ var _ = Describe("Otto extension manager", func() {
 							Expect(env.HandleEvent("test", context)).To(Succeed())
 							Expect(tx.Commit()).To(Succeed())
 							for key, value := range network2 {
-								Expect(context).To(HaveKeyWithValue("network", HaveKeyWithValue(key, value)))
+								Expect(context["network"]).To(HaveKey(key))
+								Expect(context["network"].(map[string]interface{})[key]).To(Equal(value))
 							}
 						})
 					})
