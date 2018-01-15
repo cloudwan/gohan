@@ -168,8 +168,11 @@ type ISchema interface {
 	// DbDeleteRaw deletes a raw resource, given by a pointer, no events are emitted
 	DbDeleteRaw(filter Filter, context Context) error
 
-	// RegisterEventHandler registers an event handler for a named event with given priority
-	RegisterEventHandler(event string, schemaHandler SchemaHandler, priority int)
+	// RegisterResourceEventHandler registers an event handler with resource for a named event with given priority
+	RegisterResourceEventHandler(event ResourceEvent, schemaHandler SchemaHandler, priority int)
+
+	// RegisterCustomEventHandler registers an event handler without resource for a custom event with given priority
+	RegisterCustomEventHandler(event CustomEvent, handler Handler, priority int)
 
 	// RegisterType registers a resource type, derived from IResourceBase
 	RegisterType(resourceType IResourceBase)

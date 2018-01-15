@@ -336,7 +336,7 @@ func (schema *Schema) create(rawResource interface{}, requestContext goext.Conte
 		WithSchemaID(schema.ID())
 
 	if triggerEvents {
-		if err := schema.env.HandleEvent(goext.PreCreateTx, contextCopy); err != nil {
+		if err := schema.env.HandleEvent(string(goext.PreCreateTx), contextCopy); err != nil {
 			return err
 		}
 	}
@@ -352,7 +352,7 @@ func (schema *Schema) create(rawResource interface{}, requestContext goext.Conte
 	}
 
 	if triggerEvents {
-		if err := schema.env.HandleEvent(goext.PostCreateTx, contextCopy); err != nil {
+		if err := schema.env.HandleEvent(string(goext.PostCreateTx), contextCopy); err != nil {
 			return err
 		}
 	}
@@ -390,7 +390,7 @@ func (schema *Schema) update(rawResource interface{}, requestContext goext.Conte
 		WithSchemaID(schema.ID())
 
 	if triggerEvents {
-		if err = schema.env.HandleEvent(goext.PreUpdateTx, contextCopy); err != nil {
+		if err = schema.env.HandleEvent(string(goext.PreUpdateTx), contextCopy); err != nil {
 			return err
 		}
 	}
@@ -406,7 +406,7 @@ func (schema *Schema) update(rawResource interface{}, requestContext goext.Conte
 	}
 
 	if triggerEvents {
-		if err = schema.env.HandleEvent(goext.PostUpdateTx, contextCopy); err != nil {
+		if err = schema.env.HandleEvent(string(goext.PostUpdateTx), contextCopy); err != nil {
 			return err
 		}
 	}
@@ -451,7 +451,7 @@ func (schema *Schema) delete(filter goext.Filter, requestContext goext.Context, 
 			WithResourceID(resourceID)
 
 		if triggerEvents {
-			if err = schema.env.HandleEvent(goext.PreDeleteTx, contextCopy); err != nil {
+			if err = schema.env.HandleEvent(string(goext.PreDeleteTx), contextCopy); err != nil {
 				return err
 			}
 		}
@@ -461,7 +461,7 @@ func (schema *Schema) delete(filter goext.Filter, requestContext goext.Context, 
 		}
 
 		if triggerEvents {
-			if err = schema.env.HandleEvent(goext.PostDeleteTx, contextCopy); err != nil {
+			if err = schema.env.HandleEvent(string(goext.PostDeleteTx), contextCopy); err != nil {
 				return err
 			}
 		}
@@ -470,9 +470,37 @@ func (schema *Schema) delete(filter goext.Filter, requestContext goext.Context, 
 	return nil
 }
 
-// RegisterEventHandler registers a schema handler
-func (schema *Schema) RegisterEventHandler(event string, schemaHandler goext.SchemaHandler, priority int) {
-	schema.env.RegisterSchemaEventHandler(schema.raw.ID, event, schemaHandler, priority)
+// RegisterResourceEventHandler registers a schema handler
+func (schema *Schema) RegisterResourceEventHandler(event goext.ResourceEvent, schemaHandler goext.SchemaHandler, priority int) {
+	strEvent := string(event)
+	if schema.isCustomAction(strEvent) {
+		panic(errors.Errorf(
+			"Cannot register an event handler: %s is a custom action for schema %s",
+			event,
+			schema.ID(),
+		))
+	}
+	schema.env.RegisterSchemaEventHandler(schema.raw.ID, strEvent, schemaHandler, priority)
+}
+
+// RegisterCustomEventHandler registers an event handler without resource for a custom event with given priority
+func (schema *Schema) RegisterCustomEventHandler(event goext.CustomEvent, handler goext.Handler, priority int) {
+	schema.env.RegisterSchemaEventHandler(schema.raw.ID, string(event), customActionWrapper(handler), priority)
+}
+
+func (schema *Schema) isCustomAction(event string) bool {
+	for _, action := range schema.raw.Actions {
+		if action.ID == event {
+			return true
+		}
+	}
+	return false
+}
+
+func customActionWrapper(customActionHandler goext.Handler) goext.SchemaHandler {
+	return func(context goext.Context, resource goext.Resource, env goext.IEnvironment) *goext.Error {
+		return customActionHandler(context, env)
+	}
 }
 
 // RegisterRawType registers a runtime type for a raw resource

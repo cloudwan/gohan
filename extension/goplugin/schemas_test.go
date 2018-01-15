@@ -106,6 +106,45 @@ var _ = Describe("Schemas", func() {
 		})
 	})
 
+	Context("Register event handler", func() {
+		var (
+			eventHandler = func(goext.Context, goext.Resource, goext.IEnvironment) *goext.Error {
+				return nil
+			}
+			customActionHandler = func(goext.Context, goext.IEnvironment) *goext.Error {
+				return nil
+			}
+		)
+
+		Context("RegisterResourceEventHandler", func() {
+			It("Should panic when trying to register custom action as event", func() {
+				Expect(func() {
+					testSchema.RegisterResourceEventHandler("echo", eventHandler, 0)
+				}).To(Panic())
+			})
+
+			It("Should not panic when trying to register event as event", func() {
+				Expect(func() {
+					testSchema.RegisterResourceEventHandler("pre_create", eventHandler, 0)
+				}).NotTo(Panic())
+			})
+		})
+
+		Context("RegisterCustomEventHandler", func() {
+			It("Should not panic when trying to register event as custom action", func() {
+				Expect(func() {
+					testSchema.RegisterCustomEventHandler("pre_create", customActionHandler, 0)
+				}).NotTo(Panic())
+			})
+
+			It("Should not panic when trying to register custom action as custom action", func() {
+				Expect(func() {
+					testSchema.RegisterCustomEventHandler("echo", customActionHandler, 0)
+				}).NotTo(Panic())
+			})
+		})
+	})
+
 	Context("Properties", func() {
 		It("Should get correct properties", func() {
 			Expect(testSchema.Properties()).To(Equal(
@@ -749,12 +788,12 @@ var _ = Describe("Schemas", func() {
 				return nil
 			}
 
-			testSchema.RegisterEventHandler(goext.PreCreateTx, checkContext, goext.PriorityDefault)
-			testSchema.RegisterEventHandler(goext.PostCreateTx, checkContext, goext.PriorityDefault)
-			testSchema.RegisterEventHandler(goext.PreUpdateTx, checkContext, goext.PriorityDefault)
-			testSchema.RegisterEventHandler(goext.PostUpdateTx, checkContext, goext.PriorityDefault)
-			testSchema.RegisterEventHandler(goext.PreDeleteTx, checkContext, goext.PriorityDefault)
-			testSchema.RegisterEventHandler(goext.PostDeleteTx, checkContext, goext.PriorityDefault)
+			testSchema.RegisterResourceEventHandler(goext.PreCreateTx, checkContext, goext.PriorityDefault)
+			testSchema.RegisterResourceEventHandler(goext.PostCreateTx, checkContext, goext.PriorityDefault)
+			testSchema.RegisterResourceEventHandler(goext.PreUpdateTx, checkContext, goext.PriorityDefault)
+			testSchema.RegisterResourceEventHandler(goext.PostUpdateTx, checkContext, goext.PriorityDefault)
+			testSchema.RegisterResourceEventHandler(goext.PreDeleteTx, checkContext, goext.PriorityDefault)
+			testSchema.RegisterResourceEventHandler(goext.PostDeleteTx, checkContext, goext.PriorityDefault)
 		})
 
 		AfterEach(func() {
