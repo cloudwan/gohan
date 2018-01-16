@@ -147,6 +147,26 @@ var _ = Describe("Resources", func() {
 		Expect(actualConfig).To(Equal(expectedConfig))
 	})
 
+	It("allows nil property when type is object", func() {
+		networkSchema, exists := manager.Schema("network")
+		Expect(exists).To(BeTrue())
+		networkRedObj := map[string]interface{}{
+			"id":                "networkRed",
+			"name":              "NetworkRed",
+			"tenant_id":         "red",
+			"providor_networks": nil,
+			"route_targets":     []interface{}{},
+			"config":            map[string]interface{}{},
+		}
+		networkRed, err := NewResource(networkSchema, networkRedObj)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(networkRed.PopulateDefaults()).To(Succeed())
+		expectedProvidorNetworks := map[string]interface{}{}
+		actualProvidorNetworks, ok := networkRed.Data()["providor_networks"]
+		Expect(ok).To(BeTrue(), "networkRed should contain config")
+		Expect(actualProvidorNetworks).To(Equal(expectedProvidorNetworks))
+	})
+
 	It("override property which has default object", func() {
 		networkSchema, exists := manager.Schema("network")
 		Expect(exists).To(BeTrue())
