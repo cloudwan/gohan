@@ -164,7 +164,7 @@ func (resource *Resource) PopulateDefaults() error {
 		if defaultValueMask != nil {
 			if property.Type == "object" {
 				defaultValueMaskMap := defaultValueMask.(map[string]interface{})
-				if propertyFilled {
+				if propertyFilled && resourceProperty != nil {
 					resourceMap := resourceProperty.(map[string]interface{})
 					fillObjectDefaults(property, resourceMap, defaultValueMaskMap)
 				} else if defaultValueMaskMap != nil {
