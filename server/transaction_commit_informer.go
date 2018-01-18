@@ -16,16 +16,13 @@
 package server
 
 import (
+	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/transaction"
-
-	"context"
-
-	"sync"
-
 	"github.com/cloudwan/gohan/schema"
 )
 

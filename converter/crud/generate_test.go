@@ -39,8 +39,7 @@ var _ = Describe("generate tests", func() {
 				"goext",
 				"A",
 				"esi.IA",
-				false,
-				false,
+				Params{Raw: false, Lock: false, Filter: false},
 			)
 
 			Expect(result).To(Equal(expected))
@@ -64,8 +63,31 @@ var _ = Describe("generate tests", func() {
 				"goext",
 				"B",
 				"*resources.B",
-				true,
-				true,
+				Params{Raw: true, Lock: true, Filter: false},
+			)
+
+			Expect(result).To(Equal(expected))
+		})
+
+		It("Should generate a correct lock fetch filter raw function", func() {
+			expected := `func LockFetchFilterRawB(` +
+				`schema goext.ISchema, ` +
+				`filter goext.Filter, ` +
+				`context goext.Context, ` +
+				`policy goext.LockPolicy` +
+				`) (*resources.B, error) {
+	result, err := schema.LockFetchFilterRaw(filter, context, policy)
+	if err != nil {
+		return nil, err
+	}
+	return result.(*resources.B), nil
+}
+`
+			result := GenerateFetch(
+				"goext",
+				"B",
+				"*resources.B",
+				Params{Raw: true, Lock: true, Filter: true},
 			)
 
 			Expect(result).To(Equal(expected))
@@ -95,8 +117,7 @@ var _ = Describe("generate tests", func() {
 				"goext",
 				"A",
 				"esi.IA",
-				false,
-				false,
+				Params{Raw: false, Lock: false},
 			)
 			Expect(result).To(Equal(expected))
 		})
@@ -124,8 +145,7 @@ var _ = Describe("generate tests", func() {
 				"goext",
 				"B",
 				"*resources.B",
-				true,
-				true,
+				Params{Raw: true, Lock: true},
 			)
 			Expect(result).To(Equal(expected))
 		})

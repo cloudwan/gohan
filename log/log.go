@@ -21,9 +21,8 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/op/go-logging"
-
 	"github.com/cloudwan/gohan/util"
+	"github.com/op/go-logging"
 )
 
 // Level defines all available log levels for log messages.

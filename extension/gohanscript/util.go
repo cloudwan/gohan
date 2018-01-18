@@ -22,12 +22,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/k0kubun/pp"
-	"github.com/nati/yaml"
-
 	"github.com/cloudwan/gohan/job"
 	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/util"
+	"github.com/k0kubun/pp"
+	"github.com/nati/yaml"
 )
 
 var log = l.NewLoggerForModule("gohanscript")

@@ -22,14 +22,13 @@ import (
 	"os"
 	"sort"
 
+	l "github.com/cloudwan/gohan/log"
+	"github.com/cloudwan/gohan/schema"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/ghttp"
 	"github.com/rackspace/gophercloud"
 	"github.com/twinj/uuid"
-
-	l "github.com/cloudwan/gohan/log"
-	"github.com/cloudwan/gohan/schema"
 )
 
 var _ = Describe("CLI functions", func() {
@@ -427,7 +426,7 @@ var _ = Describe("CLI functions", func() {
 			It("Should show error - Could not retrieve schemas - could not parse schema", func() {
 				wrongSchemas := map[string]interface{}{
 					"schemas": []map[string]interface{}{
-						map[string]interface{}{
+						{
 							"wrong": "key",
 						},
 					},

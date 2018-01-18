@@ -18,11 +18,10 @@ package otto
 import (
 	"bytes"
 
-	"github.com/xyproto/otto"
-	"golang.org/x/crypto/ssh"
-
 	"github.com/Juniper/go-netconf/netconf"
 	"github.com/cloudwan/gohan/util"
+	"github.com/xyproto/otto"
+	"golang.org/x/crypto/ssh"
 	//Import otto underscore lib
 	_ "github.com/xyproto/otto/underscore"
 )

@@ -16,10 +16,10 @@
 package cloud_test
 
 import (
+	"testing"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"testing"
 )
 
 func TestCloud(t *testing.T) {

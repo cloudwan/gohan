@@ -20,14 +20,12 @@ import (
 	"io/ioutil"
 	"os"
 	"regexp"
-
-	"github.com/xyproto/otto"
-	"github.com/xyproto/otto/ast"
-	"github.com/xyproto/otto/parser"
-
 	"time"
 
 	l "github.com/cloudwan/gohan/log"
+	"github.com/xyproto/otto"
+	"github.com/xyproto/otto/ast"
+	"github.com/xyproto/otto/parser"
 )
 
 const (

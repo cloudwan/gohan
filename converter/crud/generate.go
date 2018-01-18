@@ -17,24 +17,24 @@ package crud
 
 import "fmt"
 
+type Params struct {
+	Lock   bool
+	Filter bool
+	Raw    bool
+}
+
 // GenerateList generates a list function
-func GenerateList(
-	goextPackage,
-	name,
-	typeName string,
-	lock,
-	raw bool,
-) string {
+func GenerateList(goextPackage, name, typeName string, params Params) string {
 	var (
 		prefix,
 		suffix,
 		arg,
 		argType string
 	)
-	if raw {
+	if params.Raw {
 		suffix = "Raw"
 	}
-	if lock {
+	if params.Lock {
 		prefix = "Lock"
 		arg = ", policy"
 		argType = " " + goextPackage + ".LockPolicy"
@@ -76,34 +76,38 @@ func GenerateList(
 }
 
 // GenerateFetch generates a fetch function
-func GenerateFetch(
-	goextPackage,
-	name,
-	typeName string,
-	lock,
-	raw bool,
-) string {
+func GenerateFetch(goextPackage, name, typeName string, params Params) string {
 	var (
 		prefix,
 		suffix,
-		arg,
-		argType string
+		filterArg,
+		filterType,
+		lockArg,
+		lockType string
 	)
-	if raw {
-		suffix = "Raw"
+	if params.Filter {
+		suffix = "Filter"
+		filterArg = "filter"
+		filterType = goextPackage + ".Filter"
+	} else {
+		filterArg = "id"
+		filterType = "string"
 	}
-	if lock {
+	if params.Raw {
+		suffix += "Raw"
+	}
+	if params.Lock {
 		prefix = "Lock"
-		arg = ", policy"
-		argType = " " + goextPackage + ".LockPolicy"
+		lockArg = ", policy"
+		lockType = " " + goextPackage + ".LockPolicy"
 	}
 
 	return fmt.Sprintf(
 		`func %sFetch%s%s(`+
 			`schema %s.ISchema, `+
-			`id string, `+
+			`%s %s, `+
 			`context %s.Context%s%s) (%s, error) {
-	result, err := schema.%sFetch%s(id, context%s)
+	result, err := schema.%sFetch%s(%s, context%s)
 	if err != nil {
 		return nil, err
 	}
@@ -114,13 +118,16 @@ func GenerateFetch(
 		suffix,
 		name,
 		goextPackage,
+		filterArg,
+		filterType,
 		goextPackage,
-		arg,
-		argType,
+		lockArg,
+		lockType,
 		typeName,
 		prefix,
 		suffix,
-		arg,
+		filterArg,
+		lockArg,
 		typeName,
 	)
 }

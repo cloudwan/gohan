@@ -47,13 +47,13 @@ type role struct {
 }
 
 var allTenants = []tenant{
-	tenant{
+	{
 		ID:          "fc394f2ab2df4114bde39905f800dc57",
 		Name:        "demo",
 		Description: "Demo tenant",
 		Enabled:     true,
 	},
-	tenant{
+	{
 		ID:          "acf5662bbff44060b93ac3db3c25a590",
 		Name:        "other",
 		Description: "Other tenant",
@@ -94,7 +94,7 @@ var fakeTokens = map[string]interface{}{
 				"id":   "admin",
 				"name": "admin",
 				"roles": []role{
-					role{
+					{
 						Name: "admin",
 					},
 				},
@@ -111,7 +111,7 @@ var fakeTokens = map[string]interface{}{
 				"id":   "demo",
 				"name": "demo",
 				"roles": []role{
-					role{
+					{
 						Name: "Member",
 					},
 				},
@@ -128,7 +128,7 @@ var fakeTokens = map[string]interface{}{
 				"id":   "power_user",
 				"name": "power_user",
 				"roles": []role{
-					role{
+					{
 						Name: "Member",
 					},
 				},

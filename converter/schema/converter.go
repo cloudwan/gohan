@@ -16,6 +16,7 @@
 package schema
 
 import (
+	"github.com/cloudwan/gohan/converter/crud"
 	"github.com/cloudwan/gohan/converter/item"
 	"github.com/cloudwan/gohan/converter/set"
 )
@@ -69,49 +70,55 @@ func Convert(
 	}
 
 	result := &Generated{}
-	for _, object := range dbObjects.ToArray() {
-		item := object.(*item.Object)
-		if !item.Empty() {
-			result.RawCrud = append(
-				result.RawCrud,
-				item.GenerateFetch(packageName, rawSuffix, false, true),
-				item.GenerateFetch(packageName, rawSuffix, true, true),
-				item.GenerateList(packageName, rawSuffix, false, true),
-				item.GenerateList(packageName, rawSuffix, true, true),
-			)
-
-			result.Crud = append(
-				result.Crud,
-				item.GenerateFetch(packageName, rawSuffix, false, false),
-				item.GenerateFetch(packageName, rawSuffix, true, false),
-				item.GenerateList(packageName, rawSuffix, false, false),
-				item.GenerateList(packageName, rawSuffix, true, false),
-			)
+	generatedCrud := map[bool][]string{}
+	for _, rawObject := range dbObjects.ToArray() {
+		boolean := []bool{false, true}
+		object := rawObject.(*item.Object)
+		if !object.Empty() {
+			for _, raw := range boolean {
+				for _, lock := range boolean {
+					for _, filter := range boolean {
+						generatedCrud[raw] = append(generatedCrud[raw], object.GenerateFetch(
+							packageName,
+							rawSuffix,
+							crud.Params{Raw: raw, Lock: lock, Filter: filter},
+						))
+					}
+					generatedCrud[raw] = append(generatedCrud[raw], object.GenerateList(
+						packageName,
+						rawSuffix,
+						crud.Params{Raw: raw, Lock: lock},
+					))
+				}
+			}
 		}
 	}
+	result.Crud = generatedCrud[false]
+	result.RawCrud = generatedCrud[true]
+
 	dbObjects.InsertAll(jsonObjects)
-	for _, object := range dbObjects.ToArray() {
-		item := object.(*item.Object)
-		if !item.Empty() {
+	for _, rawObject := range dbObjects.ToArray() {
+		object := rawObject.(*item.Object)
+		if !object.Empty() {
 			result.RawInterfaces = append(
 				result.RawInterfaces,
-				item.GenerateInterface(interfaceSuffix),
+				object.GenerateInterface(interfaceSuffix),
 			)
 			result.Interfaces = append(
 				result.Interfaces,
-				item.GenerateMutableInterface(interfaceSuffix, rawSuffix),
+				object.GenerateMutableInterface(interfaceSuffix, rawSuffix),
 			)
 			result.Structs = append(
 				result.Structs,
-				item.GenerateStruct(rawSuffix),
+				object.GenerateStruct(rawSuffix),
 			)
 			result.Implementations = append(
 				result.Implementations,
-				item.GenerateImplementation(interfaceSuffix, rawSuffix),
+				object.GenerateImplementation(interfaceSuffix, rawSuffix),
 			)
 			result.Constructors = append(
 				result.Constructors,
-				item.GenerateConstructor(rawSuffix),
+				object.GenerateConstructor(rawSuffix),
 			)
 		}
 	}

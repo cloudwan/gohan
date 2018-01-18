@@ -712,8 +712,26 @@ func (generalTreeRight *GeneralTreeRight) SetLeafThird(leafThird []bool) {
 }
 `
 
+			generalFetchFilter := `func FetchFilterGeneral(schema goext.ISchema, filter goext.Filter, context goext.Context) (IGeneral, error) {
+	result, err := schema.FetchFilter(filter, context)
+	if err != nil {
+		return nil, err
+	}
+	return result.(IGeneral), nil
+}
+`
+
 			generalLockFetch := `func LockFetchGeneral(schema goext.ISchema, id string, context goext.Context, policy goext.LockPolicy) (IGeneral, error) {
 	result, err := schema.LockFetch(id, context, policy)
+	if err != nil {
+		return nil, err
+	}
+	return result.(IGeneral), nil
+}
+`
+
+			generalLockFetchFilter := `func LockFetchFilterGeneral(schema goext.ISchema, filter goext.Filter, context goext.Context, policy goext.LockPolicy) (IGeneral, error) {
+	result, err := schema.LockFetchFilter(filter, context, policy)
 	if err != nil {
 		return nil, err
 	}
@@ -756,8 +774,26 @@ func (generalTreeRight *GeneralTreeRight) SetLeafThird(leafThird []bool) {
 }
 `
 
+			onlyDeriveFetchFilter := `func FetchFilterOnlyDerive(schema goext.ISchema, filter goext.Filter, context goext.Context) (IOnlyDerive, error) {
+	result, err := schema.FetchFilter(filter, context)
+	if err != nil {
+		return nil, err
+	}
+	return result.(IOnlyDerive), nil
+}
+`
+
 			onlyDeriveLockFetch := `func LockFetchOnlyDerive(schema goext.ISchema, id string, context goext.Context, policy goext.LockPolicy) (IOnlyDerive, error) {
 	result, err := schema.LockFetch(id, context, policy)
+	if err != nil {
+		return nil, err
+	}
+	return result.(IOnlyDerive), nil
+}
+`
+
+			onlyDeriveLockFetchFilter := `func LockFetchFilterOnlyDerive(schema goext.ISchema, filter goext.Filter, context goext.Context, policy goext.LockPolicy) (IOnlyDerive, error) {
+	result, err := schema.LockFetchFilter(filter, context, policy)
 	if err != nil {
 		return nil, err
 	}
@@ -800,8 +836,26 @@ func (generalTreeRight *GeneralTreeRight) SetLeafThird(leafThird []bool) {
 }
 `
 
+			generalRawFetchFilter := `func FetchFilterRawGeneral(schema goext.ISchema, filter goext.Filter, context goext.Context) (*General, error) {
+	result, err := schema.FetchFilterRaw(filter, context)
+	if err != nil {
+		return nil, err
+	}
+	return result.(*General), nil
+}
+`
+
 			generalRawLockFetch := `func LockFetchRawGeneral(schema goext.ISchema, id string, context goext.Context, policy goext.LockPolicy) (*General, error) {
 	result, err := schema.LockFetchRaw(id, context, policy)
+	if err != nil {
+		return nil, err
+	}
+	return result.(*General), nil
+}
+`
+
+			generalRawLockFetchFilter := `func LockFetchFilterRawGeneral(schema goext.ISchema, filter goext.Filter, context goext.Context, policy goext.LockPolicy) (*General, error) {
+	result, err := schema.LockFetchFilterRaw(filter, context, policy)
 	if err != nil {
 		return nil, err
 	}
@@ -844,8 +898,26 @@ func (generalTreeRight *GeneralTreeRight) SetLeafThird(leafThird []bool) {
 }
 `
 
+			onlyDeriveRawFetchFilter := `func FetchFilterRawOnlyDerive(schema goext.ISchema, filter goext.Filter, context goext.Context) (*OnlyDerive, error) {
+	result, err := schema.FetchFilterRaw(filter, context)
+	if err != nil {
+		return nil, err
+	}
+	return result.(*OnlyDerive), nil
+}
+`
+
 			onlyDeriveRawLockFetch := `func LockFetchRawOnlyDerive(schema goext.ISchema, id string, context goext.Context, policy goext.LockPolicy) (*OnlyDerive, error) {
 	result, err := schema.LockFetchRaw(id, context, policy)
+	if err != nil {
+		return nil, err
+	}
+	return result.(*OnlyDerive), nil
+}
+`
+
+			onlyDeriveRawLockFetchFilter := `func LockFetchFilterRawOnlyDerive(schema goext.ISchema, filter goext.Filter, context goext.Context, policy goext.LockPolicy) (*OnlyDerive, error) {
+	result, err := schema.LockFetchFilterRaw(filter, context, policy)
 	if err != nil {
 		return nil, err
 	}
@@ -941,25 +1013,33 @@ func (generalTreeRight *GeneralTreeRight) SetLeafThird(leafThird []bool) {
 				onlyDeriveConstructor,
 			}
 
-			expectedCrud := []string {
+			expectedCrud := []string{
 				generalFetch,
-				generalLockFetch,
+				generalFetchFilter,
 				generalList,
+				generalLockFetch,
+				generalLockFetchFilter,
 				generalLockList,
 				onlyDeriveFetch,
-				onlyDeriveLockFetch,
+				onlyDeriveFetchFilter,
 				onlyDeriveList,
+				onlyDeriveLockFetch,
+				onlyDeriveLockFetchFilter,
 				onlyDeriveLockList,
 			}
 
-			expectedRawCrud := []string {
+			expectedRawCrud := []string{
 				generalRawFetch,
-				generalRawLockFetch,
+				generalRawFetchFilter,
 				generalRawList,
+				generalRawLockFetch,
+				generalRawLockFetchFilter,
 				generalRawLockList,
 				onlyDeriveRawFetch,
-				onlyDeriveRawLockFetch,
+				onlyDeriveRawFetchFilter,
 				onlyDeriveRawList,
+				onlyDeriveRawLockFetch,
+				onlyDeriveRawLockFetchFilter,
 				onlyDeriveRawLockList,
 			}
 

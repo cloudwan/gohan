@@ -16,9 +16,10 @@
 package cli
 
 import (
+	"testing"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"testing"
 )
 
 func TestSchema(t *testing.T) {

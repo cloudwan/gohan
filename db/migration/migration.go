@@ -27,7 +27,7 @@ import (
 )
 
 var (
-	log             = logger.NewLogger()
+	log                             = logger.NewLogger()
 	modifiedSchemas map[string]bool = map[string]bool{}
 )
 

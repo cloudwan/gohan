@@ -138,6 +138,12 @@ type ISchema interface {
 	// FetchRaw returns a pointer to raw resource, containing db annotations
 	FetchRaw(id string, context Context) (interface{}, error)
 
+	// FetchFilter returns a pointer to resource derived from BaseResource
+	FetchFilter(filter Filter, context Context) (interface{}, error)
+
+	// FetchFilterRaw returns a pointer to raw resource, containing db annotations
+	FetchFilterRaw(filter Filter, context Context) (interface{}, error)
+
 	// StateFetchRaw returns a resource state
 	StateFetchRaw(id string, requestContext Context) (ResourceState, error)
 
@@ -146,6 +152,12 @@ type ISchema interface {
 
 	// LockFetchRaw returns a pointer to locked raw resource, containing db annotations
 	LockFetchRaw(id string, context Context, lockPolicy LockPolicy) (interface{}, error)
+
+	// LockFetchFilter returns a pointer to locked resource derived from BaseResource, containing db annotations
+	LockFetchFilter(filter Filter, context Context, lockPolicy LockPolicy) (interface{}, error)
+
+	// LockFetchFilterRaw returns a pointer to locked raw resource, containing db annotations
+	LockFetchFilterRaw(filter Filter, context Context, lockPolicy LockPolicy) (interface{}, error)
 
 	// CreateRaw creates a raw resource, given by a pointer
 	CreateRaw(rawResource interface{}, context Context) error

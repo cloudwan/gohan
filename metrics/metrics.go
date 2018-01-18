@@ -1,15 +1,15 @@
 package metrics
 
 import (
-	l "github.com/cloudwan/gohan/log"
-	"github.com/cloudwan/gohan/util"
-	"github.com/cyberdelia/go-metrics-graphite"
-	"github.com/rcrowley/go-metrics"
-
 	"fmt"
 	"net"
 	"strconv"
 	"time"
+
+	l "github.com/cloudwan/gohan/log"
+	"github.com/cloudwan/gohan/util"
+	"github.com/cyberdelia/go-metrics-graphite"
+	"github.com/rcrowley/go-metrics"
 )
 
 var (

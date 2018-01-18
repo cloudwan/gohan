@@ -69,9 +69,9 @@ var (
 	fieldsEnvKey = "GOHAN_FIELDS"
 
 	commonParams = map[string]struct{}{
-		outputFormatKey: struct{}{},
-		logLevelKey:     struct{}{},
-		fieldsKey:       struct{}{},
+		outputFormatKey: {},
+		logLevelKey:     {},
+		fieldsKey:       {},
 	}
 )
 

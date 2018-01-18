@@ -25,11 +25,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strings"
 	"unicode"
-
-	"reflect"
 
 	"github.com/codegangsta/cli"
 	"github.com/flosch/pongo2"

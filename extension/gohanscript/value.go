@@ -16,9 +16,10 @@
 package gohanscript
 
 import (
-	"github.com/flosch/pongo2"
 	"strconv"
 	"strings"
+
+	"github.com/flosch/pongo2"
 )
 
 //Value represents gohan script value interface

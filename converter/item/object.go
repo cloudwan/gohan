@@ -384,34 +384,22 @@ func (object *Object) GenerateImplementation(interfaceSuffix, typeSuffix string)
 }
 
 //GenerateFetch generates a fetch function for an object
-func (object *Object) GenerateFetch(
-	packageName,
-	suffix string,
-	lock,
-	raw bool,
-) string {
+func (object *Object) GenerateFetch(packageName, suffix string, params crud.Params) string {
 	return crud.GenerateFetch(
 		packageName,
 		object.getType(suffix),
-		object.getTypeName(raw, suffix),
-		lock,
-		raw,
+		object.getTypeName(params.Raw, suffix),
+		params,
 	)
 }
 
 //GenerateList generates a list function for an object
-func (object *Object) GenerateList(
-	packageName,
-	suffix string,
-	lock,
-	raw bool,
-) string {
+func (object *Object) GenerateList(packageName, suffix string, params crud.Params) string {
 	return crud.GenerateList(
 		packageName,
 		object.getType(suffix),
-		object.getTypeName(raw, suffix),
-		lock,
-		raw,
+		object.getTypeName(params.Raw, suffix),
+		params,
 	)
 }
 

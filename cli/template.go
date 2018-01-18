@@ -3,20 +3,17 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
 	"regexp"
-
-	"github.com/vattle/sqlboiler/strmangle"
-
-	"io/ioutil"
 	"strings"
 
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
 	"github.com/codegangsta/cli"
-
 	"github.com/flosch/pongo2"
+	"github.com/vattle/sqlboiler/strmangle"
 )
 
 func deleteGohanExtendedProperties(node map[string]interface{}) {

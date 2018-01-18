@@ -16,11 +16,10 @@
 package transaction_test
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
 	tx "github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Transaction", func() {
