@@ -422,16 +422,30 @@ func (schema *Schema) DbStateUpdateRaw(rawResource interface{}, requestContext g
 }
 
 // DeleteRaw deletes resource by ID
-func (schema *Schema) DeleteRaw(filter goext.Filter, context goext.Context) error {
+func (schema *Schema) DeleteRaw(id string, context goext.Context) error {
+	return schema.delete(goext.Filter{"id": id}, context, true)
+}
+
+// DeleteFilterRaw deletes resource by filter
+func (schema *Schema) DeleteFilterRaw(filter goext.Filter, context goext.Context) error {
 	return schema.delete(filter, context, true)
 }
 
 // DbDeleteRaw deletes resource by ID without triggering events
-func (schema *Schema) DbDeleteRaw(filter goext.Filter, context goext.Context) error {
+func (schema *Schema) DbDeleteRaw(id string, context goext.Context) error {
+	return schema.delete(goext.Filter{"id": id}, context, false)
+}
+
+// DbDeleteFilterRaw deletes resource by filter without triggering events
+func (schema *Schema) DbDeleteFilterRaw(filter goext.Filter, context goext.Context) error {
 	return schema.delete(filter, context, false)
 }
 
 func (schema *Schema) delete(filter goext.Filter, requestContext goext.Context, triggerEvents bool) error {
+	if len(filter) == 0 {
+		return errors.New("Cannot delete with empty filter")
+	}
+
 	tx := mustGetOpenTransactionFromContext(requestContext)
 	contextCopy := requestContext.Clone()
 

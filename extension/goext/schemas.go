@@ -162,11 +162,17 @@ type ISchema interface {
 	// DbStateUpdateRaw updates state of a raw resource
 	DbStateUpdateRaw(rawResource interface{}, context Context, state *ResourceState) error
 
-	// DeleteRaw deletes a raw resource, given by a pointer
-	DeleteRaw(filter Filter, context Context) error
+	// DeleteRaw deletes a raw resource, given by id
+	DeleteRaw(id string, context Context) error
 
-	// DbDeleteRaw deletes a raw resource, given by a pointer, no events are emitted
-	DbDeleteRaw(filter Filter, context Context) error
+	// DbDeleteRaw deletes a raw resource, given by id, no events are emitted
+	DbDeleteRaw(id string, context Context) error
+
+	// DeleteFilterRaw deletes a raw resource, given by a filter
+	DeleteFilterRaw(filter Filter, context Context) error
+
+	// DbDeleteFilterRaw deletes a raw resource, given by a filter, no events are emitted
+	DbDeleteFilterRaw(filter Filter, context Context) error
 
 	// RegisterResourceEventHandler registers an event handler with resource for a named event with given priority
 	RegisterResourceEventHandler(event ResourceEvent, schemaHandler SchemaHandler, priority int)
