@@ -491,6 +491,19 @@ func (mr *MockITransactionMockRecorder) Commit() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Commit", reflect.TypeOf((*MockITransaction)(nil).Commit))
 }
 
+// Count mocks base method
+func (m *MockITransaction) Count(arg0 context.Context, arg1 ISchema, arg2 Filter) (uint64, error) {
+	ret := m.ctrl.Call(m, "Count", arg0, arg1, arg2)
+	ret0, _ := ret[0].(uint64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Count indicates an expected call of Count
+func (mr *MockITransactionMockRecorder) Count(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Count", reflect.TypeOf((*MockITransaction)(nil).Count), arg0, arg1, arg2)
+}
+
 // Create mocks base method
 func (m *MockITransaction) Create(arg0 context.Context, arg1 ISchema, arg2 map[string]interface{}) error {
 	ret := m.ctrl.Call(m, "Create", arg0, arg1, arg2)

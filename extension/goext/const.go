@@ -15,32 +15,35 @@
 
 package goext
 
+type ResourceEvent string
+type CustomEvent string
+
 // Built-in handler types
 const (
-	PreCreate    = "pre_create"
-	PreCreateTx  = "pre_create_in_transaction"
-	PostCreateTx = "post_create_in_transaction"
-	PostCreate   = "post_create"
+	PreCreate    ResourceEvent = "pre_create"
+	PreCreateTx  ResourceEvent = "pre_create_in_transaction"
+	PostCreateTx ResourceEvent = "post_create_in_transaction"
+	PostCreate   ResourceEvent = "post_create"
 
-	PreUpdate    = "pre_update"
-	PreUpdateTx  = "pre_update_in_transaction"
-	PostUpdateTx = "post_update_in_transaction"
-	PostUpdate   = "post_update"
+	PreUpdate    ResourceEvent = "pre_update"
+	PreUpdateTx  ResourceEvent = "pre_update_in_transaction"
+	PostUpdateTx ResourceEvent = "post_update_in_transaction"
+	PostUpdate   ResourceEvent = "post_update"
 
-	PreShow    = "pre_show"
-	PreShowTx  = "pre_show_in_transaction"
-	PostShowTx = "post_show_in_transaction"
-	PostShow   = "post_show"
+	PreShow    ResourceEvent = "pre_show"
+	PreShowTx  ResourceEvent = "pre_show_in_transaction"
+	PostShowTx ResourceEvent = "post_show_in_transaction"
+	PostShow   ResourceEvent = "post_show"
 
-	PreList    = "pre_list"
-	PreListTx  = "pre_list_in_transaction"
-	PostListTx = "post_list_in_transaction"
-	PostList   = "post_list"
+	PreList    ResourceEvent = "pre_list"
+	PreListTx  ResourceEvent = "pre_list_in_transaction"
+	PostListTx ResourceEvent = "post_list_in_transaction"
+	PostList   ResourceEvent = "post_list"
 
-	PreDelete    = "pre_delete"
-	PreDeleteTx  = "pre_delete_in_transaction"
-	PostDeleteTx = "post_delete_in_transaction"
-	PostDelete   = "post_delete"
+	PreDelete    ResourceEvent = "pre_delete"
+	PreDeleteTx  ResourceEvent = "pre_delete_in_transaction"
+	PostDeleteTx ResourceEvent = "post_delete_in_transaction"
+	PostDelete   ResourceEvent = "post_delete"
 )
 
 const (

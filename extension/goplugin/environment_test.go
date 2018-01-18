@@ -132,7 +132,7 @@ var _ = Describe("Environment", func() {
 				return nil
 			}
 
-			testSchema.RegisterEventHandler("some_event", handler, goext.PriorityDefault)
+			testSchema.RegisterResourceEventHandler("some_event", handler, goext.PriorityDefault)
 			Expect(len(env.SchemaHandlers()["some_event"]["test"][goext.PriorityDefault])).To(Equal(1))
 
 			p1 := reflect.ValueOf(handler).Pointer()
@@ -201,8 +201,8 @@ var _ = Describe("Environment", func() {
 				return nil
 			}
 
-			testSchema.RegisterEventHandler("some_event", someEventHandler, goext.PriorityDefault)
-			testSchema.RegisterEventHandler("some_other_event", someOtherEventHandler, goext.PriorityDefault)
+			testSchema.RegisterResourceEventHandler("some_event", someEventHandler, goext.PriorityDefault)
+			testSchema.RegisterResourceEventHandler("some_other_event", someOtherEventHandler, goext.PriorityDefault)
 
 			Expect(env.HandleEvent("some_event", goext.MakeContext())).To(Succeed())
 
@@ -223,7 +223,7 @@ var _ = Describe("Environment", func() {
 				return nil
 			}
 
-			testSchema.RegisterEventHandler("some_event", eventHandler, goext.PriorityDefault)
+			testSchema.RegisterResourceEventHandler("some_event", eventHandler, goext.PriorityDefault)
 
 			context := goext.MakeContext()
 			resource := make(map[string]interface{})
@@ -254,8 +254,8 @@ var _ = Describe("Environment", func() {
 				return nil
 			}
 
-			testSchema.RegisterEventHandler("some_event", eventHandler, goext.PriorityDefault)
-			testSchema.RegisterEventHandler("some_event", modifingHandler, goext.PriorityDefault+1)
+			testSchema.RegisterResourceEventHandler("some_event", eventHandler, goext.PriorityDefault)
+			testSchema.RegisterResourceEventHandler("some_event", modifingHandler, goext.PriorityDefault+1)
 
 			context := goext.MakeContext()
 			resource := make(map[string]interface{})
@@ -289,8 +289,8 @@ var _ = Describe("Environment", func() {
 				return nil
 			}
 
-			testSchema.RegisterEventHandler("some_event", prioritizedEventHandler, goext.PriorityDefault-100)
-			testSchema.RegisterEventHandler("some_event", defaultPriorityEventHandler, goext.PriorityDefault)
+			testSchema.RegisterResourceEventHandler("some_event", prioritizedEventHandler, goext.PriorityDefault-100)
+			testSchema.RegisterResourceEventHandler("some_event", defaultPriorityEventHandler, goext.PriorityDefault)
 
 			context := goext.MakeContext()
 			Expect(env.HandleEvent("some_event", context)).To(Succeed())
