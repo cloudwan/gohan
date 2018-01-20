@@ -513,6 +513,12 @@ func (schema *Schema) RegisterType(resourceType goext.IResourceBase) {
 	schema.env.RegisterType(schema.raw.ID, resourceType)
 }
 
+// RegisterTypes registers both resource types derived from IResourceBase and raw containing db annotations
+func (schema *Schema) RegisterTypes(rawResourceType interface{}, resourceType goext.IResourceBase) {
+	schema.RegisterRawType(rawResourceType)
+	schema.RegisterType(resourceType)
+}
+
 func (schema *Schema) RawSchema() interface{} {
 	return schema.raw
 }

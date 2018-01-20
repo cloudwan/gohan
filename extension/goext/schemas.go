@@ -175,10 +175,17 @@ type ISchema interface {
 	RegisterCustomEventHandler(event CustomEvent, handler Handler, priority int)
 
 	// RegisterType registers a resource type, derived from IResourceBase
+	//
+	// Deprecated: use RegisterTypes instead
 	RegisterType(resourceType IResourceBase)
 
 	// RegisterRawType registers a raw resource type, containing db annotations
+	//
+	// Deprecated: use RegisterTypes instead
 	RegisterRawType(rawResourceType interface{})
+
+	// RegisterTypes registers both resource types derived from IResourceBase and raw containing db annotations
+	RegisterTypes(rawResourceType interface{}, resourceType IResourceBase)
 
 	// ResourceFromMap converts mapped representation to structure representation of the raw resource registered for schema
 	ResourceFromMap(context map[string]interface{}) (Resource, error)
