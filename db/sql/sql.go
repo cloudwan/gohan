@@ -1089,7 +1089,7 @@ func (tx *Transaction) Fetch(s *schema.Schema, filter transaction.Filter, option
 func (tx *Transaction) FetchContext(ctx context.Context, s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions) (*schema.Resource, error) {
 	defer tx.measureTime(time.Now(), s.ID, "fetch")
 
-	list, _, err := tx.ListContext(ctx, s, filter, options, nil)
+	list, _, err := tx.ListContext(ctx, s, filter, options, &pagination.Paginator{Limit: 1})
 	if err != nil {
 		return nil, fmt.Errorf("Failed to fetch %s: %s", filter, err)
 	}
@@ -1107,7 +1107,7 @@ func (tx *Transaction) LockFetch(s *schema.Schema, filter transaction.Filter, lo
 func (tx *Transaction) LockFetchContext(ctx context.Context, s *schema.Schema, filter transaction.Filter, lockPolicy schema.LockPolicy, options *transaction.ViewOptions) (*schema.Resource, error) {
 	defer tx.measureTime(time.Now(), s.ID, "lock_fetch")
 
-	list, _, err := tx.LockListContext(ctx, s, filter, nil, nil, lockPolicy)
+	list, _, err := tx.LockListContext(ctx, s, filter, nil, &pagination.Paginator{Limit: 1}, lockPolicy)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to fetch and lock %s: %s", filter, err)
 	}

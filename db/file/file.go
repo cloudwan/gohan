@@ -207,6 +207,13 @@ func (tx *Transaction) Delete(s *schema.Schema, resourceID interface{}) error {
 	return nil
 }
 
+func min(a, b uint64) uint64 {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 type byPaginator struct {
 	data []*schema.Resource
 	pg   *pagination.Paginator
@@ -303,7 +310,7 @@ func (tx *Transaction) List(s *schema.Schema, filter transaction.Filter, options
 		if pg != nil {
 			sort.Sort(byPaginator{list, pg})
 			if pg.Limit > 0 {
-				list = list[:pg.Limit]
+				list = list[:min(pg.Limit, uint64(len(list)))]
 			}
 		}
 	}
@@ -331,7 +338,7 @@ func (tx *Transaction) FetchContext(_ context.Context, s *schema.Schema, filter 
 
 //Fetch resources by ID in the db
 func (tx *Transaction) Fetch(s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions) (*schema.Resource, error) {
-	list, _, err := tx.List(s, filter, options, nil)
+	list, _, err := tx.List(s, filter, options, &pagination.Paginator{Limit: 1})
 	if err != nil {
 		return nil, fmt.Errorf("Failed to fetch %s: %s", filter, err)
 	}
