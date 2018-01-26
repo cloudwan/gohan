@@ -1043,6 +1043,12 @@ func (generalTreeRight *GeneralTreeRight) SetLeafThird(leafThird []bool) {
 				onlyDeriveRawLockList,
 			}
 
+			expectedNames := []string{
+				`Empty goext.SchemaID = "empty"`,
+				`General goext.SchemaID = "general"`,
+				`OnlyDerive goext.SchemaID = "only_derive"`,
+			}
+
 			Expect(generated.RawInterfaces).To(Equal(expectedGenerated))
 			Expect(generated.Interfaces).To(Equal(expectedInterfaces))
 			Expect(generated.Structs).To(Equal(expectedStructs))
@@ -1050,6 +1056,7 @@ func (generalTreeRight *GeneralTreeRight) SetLeafThird(leafThird []bool) {
 			Expect(generated.Constructors).To(Equal(expectedConstructors))
 			Expect(generated.Crud).To(Equal(expectedCrud))
 			Expect(generated.RawCrud).To(Equal(expectedRawCrud))
+			Expect(generated.Names).To(Equal(expectedNames))
 		})
 	})
 })

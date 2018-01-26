@@ -17,19 +17,32 @@ package util
 
 import (
 	"fmt"
+	"bytes"
 )
 
 // CollectData creates string representing go file
 func CollectData(name string, data []string) string {
+	var buffer bytes.Buffer
 	prefix := "package " + name + "\n"
-	result := prefix
+	buffer.WriteString(prefix)
 	for _, element := range data {
 		if element != "" {
-			result = fmt.Sprintf("%s\n%s", result, element)
+			buffer.WriteString(fmt.Sprintf("\n%s", element))
 		}
 	}
+	result := buffer.String()
 	if result == prefix {
 		return ""
 	}
 	return result
+}
+
+func Const(data []string) string {
+	var buffer bytes.Buffer
+	buffer.WriteString("const (\n")
+	for _, value := range data {
+		buffer.WriteString(fmt.Sprintf("\t%s\n", value))
+	}
+	buffer.WriteString(")\n")
+	return buffer.String()
 }

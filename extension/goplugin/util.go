@@ -406,3 +406,10 @@ func isPrimitiveKind(kind reflect.Kind) bool {
 	}
 	return false
 }
+
+func GetSchemaID(schemaID interface{}) goext.SchemaID {
+	if id, ok := schemaID.(goext.SchemaID); ok {
+		return id
+	}
+	return goext.SchemaID(schemaID.(string))
+}

@@ -85,17 +85,19 @@ var _ = Describe("Schemas", func() {
 		Expect(derivedSchema).ToNot(BeNil())
 		parents := derivedSchema.Extends()
 		Expect(parents).To(HaveLen(1))
-		Expect(parents[0]).To(Equal("base"))
+		Expect(parents[0]).To(Equal(goext.SchemaID("base")))
 	})
 
 	Context("DerivedSchemas", func() {
 		It("Should get all derived schemas", func() {
-			base := env.Schemas().Find("base")
+			base := env.Schemas().Find(goext.SchemaID("base"))
 			Expect(base).ToNot(BeNil())
 
-			derived := base.DerivedSchemas()
+			derived := env.Schemas().Find(goext.SchemaID("derived"))
+			expected := []goext.ISchema{derived}
+			actual := base.DerivedSchemas()
 
-			Expect(derived).To(Equal([]goext.ISchema{env.Schemas().Find("derived")}))
+			Expect(actual).To(Equal(expected))
 		})
 	})
 
@@ -166,7 +168,7 @@ var _ = Describe("Schemas", func() {
 					{
 						ID:       "test_suite_id",
 						Title:    "Test Suite ID",
-						Relation: "test_suite",
+						Relation: goext.SchemaID("test_suite"),
 						Type:     "string",
 					},
 					{
@@ -848,7 +850,7 @@ var _ = Describe("Schemas", func() {
 				Expect(&ctx).ToNot(Equal(&context))
 				Expect(ctx).To(HaveKeyWithValue("transaction", tx))
 				Expect(ctx).To(HaveKeyWithValue("test", 42))
-				Expect(ctx).To(HaveKeyWithValue("schema_id", "test"))
+				Expect(ctx).To(HaveKeyWithValue("schema_id", goext.SchemaID("test")))
 				Expect(ctx).To(HaveKeyWithValue("id", "13"))
 				Expect(ctx).To(HaveKeyWithValue("resource", env.Util().ResourceToMap(testResource)))
 				Expect(resource).To(Equal(testResource))

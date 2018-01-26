@@ -197,23 +197,23 @@ func (mockEnv *MockIEnvironment) dispatchSchemaEvent(prioritizedSchemaHandlers P
 	return dispatchSchemaEventForEnv(mockEnv, prioritizedSchemaHandlers, sch, event, context)
 }
 
-func (mockEnv *MockIEnvironment) RegisterRawType(name string, typeValue interface{}) {
+func (mockEnv *MockIEnvironment) RegisterRawType(name goext.SchemaID, typeValue interface{}) {
 	mockEnv.env.RegisterRawType(name, typeValue)
 }
 
-func (mockEnv *MockIEnvironment) RegisterType(name string, typeValue interface{}) {
+func (mockEnv *MockIEnvironment) RegisterType(name goext.SchemaID, typeValue interface{}) {
 	mockEnv.env.RegisterType(name, typeValue)
 }
 
-func (mockEnv *MockIEnvironment) RegisterSchemaEventHandler(schemaID string, event string, schemaHandler goext.SchemaHandler, priority int) {
+func (mockEnv *MockIEnvironment) RegisterSchemaEventHandler(schemaID goext.SchemaID, event string, schemaHandler goext.SchemaHandler, priority int) {
 	mockEnv.env.RegisterSchemaEventHandler(schemaID, event, schemaHandler, priority)
 }
 
-func (mockEnv *MockIEnvironment) getRawType(schemaID string) (reflect.Type, bool) {
+func (mockEnv *MockIEnvironment) getRawType(schemaID goext.SchemaID) (reflect.Type, bool) {
 	return mockEnv.env.getRawType(schemaID)
 }
 
-func (mockEnv *MockIEnvironment) getType(schemaID string) (reflect.Type, bool) {
+func (mockEnv *MockIEnvironment) getType(schemaID goext.SchemaID) (reflect.Type, bool) {
 	return mockEnv.env.getType(schemaID)
 }
 

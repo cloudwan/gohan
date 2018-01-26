@@ -57,7 +57,7 @@ func (mr *MockICoreMockRecorder) RegisterEventHandler(arg0, arg1, arg2 interface
 }
 
 // RegisterSchemaEventHandler mocks base method
-func (m *MockICore) RegisterSchemaEventHandler(arg0, arg1 string, arg2 SchemaHandler, arg3 int) {
+func (m *MockICore) RegisterSchemaEventHandler(arg0 SchemaID, arg1 string, arg2 SchemaHandler, arg3 int) {
 	m.ctrl.Call(m, "RegisterSchemaEventHandler", arg0, arg1, arg2, arg3)
 }
 
@@ -275,7 +275,7 @@ func (m *MockISchemas) EXPECT() *MockISchemasMockRecorder {
 }
 
 // Find mocks base method
-func (m *MockISchemas) Find(arg0 string) ISchema {
+func (m *MockISchemas) Find(arg0 SchemaID) ISchema {
 	ret := m.ctrl.Call(m, "Find", arg0)
 	ret0, _ := ret[0].(ISchema)
 	return ret0
@@ -299,7 +299,7 @@ func (mr *MockISchemasMockRecorder) List() *gomock.Call {
 }
 
 // Relations mocks base method
-func (m *MockISchemas) Relations(arg0 string) []SchemaRelationInfo {
+func (m *MockISchemas) Relations(arg0 SchemaID) []SchemaRelationInfo {
 	ret := m.ctrl.Call(m, "Relations", arg0)
 	ret0, _ := ret[0].([]SchemaRelationInfo)
 	return ret0

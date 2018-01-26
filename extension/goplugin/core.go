@@ -29,7 +29,7 @@ type Core struct {
 }
 
 // RegisterSchemaEventHandler registers a schema handler
-func (core *Core) RegisterSchemaEventHandler(schemaID string, eventName string, schemaHandler goext.SchemaHandler, priority int) {
+func (core *Core) RegisterSchemaEventHandler(schemaID goext.SchemaID, eventName string, schemaHandler goext.SchemaHandler, priority int) {
 	core.env.RegisterSchemaEventHandler(schemaID, eventName, schemaHandler, priority)
 }
 
@@ -56,7 +56,7 @@ func (core *Core) TriggerEvent(event string, context goext.Context) error {
 	ensureRawTxInContext(context)
 
 	envManager := extension.GetManager()
-	if env, found := envManager.GetEnvironment(schemaID); found {
+	if env, found := envManager.GetEnvironment(string(schemaID)); found {
 		err := env.HandleEvent(event, context)
 		return parseHandleEventResult(err, context)
 	}
@@ -100,13 +100,13 @@ func getJSError(context goext.Context) error {
 	return errors.New(context["exception_message"].(string))
 }
 
-func getSchemaId(context goext.Context) (string, error) {
+func getSchemaId(context goext.Context) (goext.SchemaID, error) {
 	rawSchemaID, ok := context["schema_id"]
 	if !ok {
 		return "", errors.New("TriggerEvent: schema_id missing in context")
 	}
 
-	return rawSchemaID.(string), nil
+	return GetSchemaID(rawSchemaID), nil
 }
 
 func restoreOriginalSchema(context goext.Context) func() {

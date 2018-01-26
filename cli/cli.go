@@ -482,6 +482,7 @@ Generated code:
 	* Interfaces that can be extended
 	* Constructors for objects with default values
 	* Database functions for generated structs (fetch, list)
+    * Schema ids
 ARGUMENTS:
 	There is one argument - path to file with yaml schemas
 `,
@@ -490,22 +491,24 @@ ARGUMENTS:
 			cli.StringFlag{Name: "crud-package", Value: "goodies", Usage: "Package name for crud functions"},
 			cli.StringFlag{Name: "raw-package", Value: "resources", Usage: "Package name for raw structs"},
 			cli.StringFlag{Name: "interface-package", Value: "interfaces", Usage: "Package name for interfaces"},
+			cli.StringFlag{Name: "schema-package", Value: "schemas", Usage: "Package name for schema ids"},
 			cli.StringFlag{Name: "output, o", Value: "", Usage: "Prefix add to output files"},
 			cli.StringFlag{Name: "raw-suffix", Value: "", Usage: "Suffix added to raw struct names"},
 			cli.StringFlag{Name: "interface-suffix", Value: "gen", Usage: "Suffix added to generated interface names"},
 		},
 		Action: func(c *cli.Context) {
-			if err := app.Run(
-				c.Args().First(),
-				c.String("output"),
-				c.String("goext-package"),
-				c.String("crud-package"),
-				c.String("raw-package"),
-				c.String("interface-package"),
-				c.String("raw-suffix"),
-				c.String("interface-suffix"),
-			); err != nil {
-				fmt.Println(err)
+			if err := app.Run(app.ConverterParams{
+				Config:           c.Args().First(),
+				Output:           c.String("output"),
+				GoextPackage:     c.String("goext-package"),
+				GoodiesPackage:   c.String("crud-package"),
+				ResourcePackage:  c.String("raw-package"),
+				InterfacePackage: c.String("interface-package"),
+				SchemasPackage:   c.String("schema-package"),
+				RawSuffix:        c.String("raw-suffix"),
+				InterfaceSuffix:  c.String("interface-suffix"),
+			}); err != nil {
+				println(err)
 				os.Exit(1)
 			}
 		},

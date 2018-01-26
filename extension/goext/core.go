@@ -27,5 +27,5 @@ type ICore interface {
 	HandleEvent(event string, context Context) error
 
 	RegisterEventHandler(event string, handler Handler, priority int)
-	RegisterSchemaEventHandler(schemaID string, event string, schemaHandler SchemaHandler, priority int)
+	RegisterSchemaEventHandler(schemaID SchemaID, event string, schemaHandler SchemaHandler, priority int)
 }

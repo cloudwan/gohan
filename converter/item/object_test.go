@@ -1277,4 +1277,13 @@ var _ = Describe("object tests", func() {
 			Expect(result).To(Equal(expected))
 		})
 	})
+
+	Describe("generate schema name tests", func() {
+		It("Should generate schema name", func() {
+			object := &Object{objectType: "snake_name"}
+			actual := object.GenerateSchemaName("goext", "SchemaID")
+			expected := `SnakeName goext.SchemaID = "snake_name"`
+			Expect(actual).To(Equal(expected))
+		})
+	})
 })

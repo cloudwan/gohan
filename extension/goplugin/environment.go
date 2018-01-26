@@ -56,7 +56,7 @@ type SchemaHandlers []goext.SchemaHandler
 type PrioritizedSchemaHandlers map[int]SchemaHandlers
 
 // SchemaPrioritizedSchemaHandlers is a per-schema prioritized list of schema handlers
-type SchemaPrioritizedSchemaHandlers map[string]PrioritizedSchemaHandlers
+type SchemaPrioritizedSchemaHandlers map[goext.SchemaID]PrioritizedSchemaHandlers
 
 // EventSchemaPrioritizedSchemaHandlers is a per-event per-schema prioritized list of schema handlers
 type EventSchemaPrioritizedSchemaHandlers map[string]SchemaPrioritizedSchemaHandlers
@@ -81,8 +81,8 @@ type Environment struct {
 	handlers       EventPrioritizedHandlers
 	schemaHandlers EventSchemaPrioritizedSchemaHandlers
 
-	rawTypes map[string]reflect.Type
-	types    map[string]reflect.Type
+	rawTypes map[goext.SchemaID]reflect.Type
+	types    map[goext.SchemaID]reflect.Type
 }
 
 // Internal interface for goplugin environment
@@ -90,15 +90,15 @@ type IEnvironment interface {
 	goext.IEnvironment
 	extension.Environment
 
-	RegisterSchemaEventHandler(schemaID string, event string, schemaHandler goext.SchemaHandler, priority int)
-	RegisterRawType(name string, typeValue interface{})
-	RegisterType(name string, typeValue interface{})
+	RegisterSchemaEventHandler(schemaID goext.SchemaID, event string, schemaHandler goext.SchemaHandler, priority int)
+	RegisterRawType(name goext.SchemaID, typeValue interface{})
+	RegisterType(name goext.SchemaID, typeValue interface{})
 
 	dispatchSchemaEvent(prioritizedSchemaHandlers PrioritizedSchemaHandlers, sch Schema, event string, context map[string]interface{}) error
 	getSchemaHandlers(event string) (SchemaPrioritizedSchemaHandlers, bool)
 	getHandlers(event string) (PrioritizedHandlers, bool)
-	getRawType(schemaID string) (reflect.Type, bool)
-	getType(schemaID string) (reflect.Type, bool)
+	getRawType(schemaID goext.SchemaID) (reflect.Type, bool)
+	getType(schemaID goext.SchemaID) (reflect.Type, bool)
 	getTraceID() string
 	getTimeLimit() time.Duration
 	getTimeLimits() []*schema.EventTimeLimit
@@ -113,8 +113,8 @@ func NewEnvironment(name string, beforeStartHook func(env *Environment) error, a
 
 		name: name,
 
-		rawTypes: make(map[string]reflect.Type),
-		types:    make(map[string]reflect.Type),
+		rawTypes: make(map[goext.SchemaID]reflect.Type),
+		types:    make(map[goext.SchemaID]reflect.Type),
 	}
 	return env
 }
@@ -130,12 +130,12 @@ func (env *Environment) SchemaHandlers() EventSchemaPrioritizedSchemaHandlers {
 }
 
 // RawTypes returns raw types
-func (env *Environment) RawTypes() map[string]reflect.Type {
+func (env *Environment) RawTypes() map[goext.SchemaID]reflect.Type {
 	return env.rawTypes
 }
 
 // Types returns types
-func (env *Environment) Types() map[string]reflect.Type {
+func (env *Environment) Types() map[goext.SchemaID]reflect.Type {
 	return env.types
 }
 
@@ -389,12 +389,12 @@ func (env *Environment) getHandlers(event string) (PrioritizedHandlers, bool) {
 	return handler, ok
 }
 
-func (env *Environment) getRawType(schemaID string) (reflect.Type, bool) {
+func (env *Environment) getRawType(schemaID goext.SchemaID) (reflect.Type, bool) {
 	rawType, ok := env.rawTypes[schemaID]
 	return rawType, ok
 }
 
-func (env *Environment) getType(schemaID string) (reflect.Type, bool) {
+func (env *Environment) getType(schemaID goext.SchemaID) (reflect.Type, bool) {
 	resourceType, ok := env.types[schemaID]
 	return resourceType, ok
 }
@@ -447,7 +447,8 @@ func handleEventForEnv(env IEnvironment, event string, requestContext map[string
 	// dispatch to schema handlers
 	if schemaPrioritizedSchemaHandlers, ok := env.getSchemaHandlers(event); ok {
 		if iSchemaID, ok := requestContext["schema_id"]; ok {
-			schemaID := iSchemaID.(string)
+			schemaID := GetSchemaID(iSchemaID)
+			requestContext["schema_id"] = schemaID
 			if prioritizedSchemaHandlers, ok := schemaPrioritizedSchemaHandlers[schemaID]; ok {
 				if iSchema := env.Schemas().Find(schemaID); iSchema != nil {
 					sch := iSchema.(*Schema)
@@ -607,7 +608,7 @@ func (env *Environment) RegisterEventHandler(event string, handler goext.Handler
 }
 
 // RegisterSchemaEventHandler register an event handler for a schema
-func (env *Environment) RegisterSchemaEventHandler(schemaID string, event string, schemaHandler goext.SchemaHandler, priority int) {
+func (env *Environment) RegisterSchemaEventHandler(schemaID goext.SchemaID, event string, schemaHandler goext.SchemaHandler, priority int) {
 	if env.schemaHandlers == nil {
 		env.schemaHandlers = EventSchemaPrioritizedSchemaHandlers{}
 	}
@@ -628,13 +629,13 @@ func (env *Environment) RegisterSchemaEventHandler(schemaID string, event string
 }
 
 // RegisterRawType registers a runtime type of raw resource for a given name
-func (env *Environment) RegisterRawType(name string, typeValue interface{}) {
+func (env *Environment) RegisterRawType(name goext.SchemaID, typeValue interface{}) {
 	targetType := reflect.TypeOf(typeValue)
 	env.rawTypes[name] = targetType
 }
 
 // RegisterType registers a runtime type of resource for a given name
-func (env *Environment) RegisterType(name string, typeValue interface{}) {
+func (env *Environment) RegisterType(name goext.SchemaID, typeValue interface{}) {
 	targetType := reflect.TypeOf(typeValue)
 	env.types[name] = targetType
 }
@@ -655,8 +656,8 @@ func (env *Environment) Stop() {
 
 	env.traceID = ""
 
-	env.rawTypes = make(map[string]reflect.Type)
-	env.types = make(map[string]reflect.Type)
+	env.rawTypes = make(map[goext.SchemaID]reflect.Type)
+	env.types = make(map[goext.SchemaID]reflect.Type)
 
 	// after stop
 	if env.afterStopHook != nil {
@@ -695,8 +696,8 @@ func (env *Environment) Clone() extension.Environment {
 		handlers:       deepcopy.Copy(env.handlers).(EventPrioritizedHandlers),
 		schemaHandlers: deepcopy.Copy(env.schemaHandlers).(EventSchemaPrioritizedSchemaHandlers),
 
-		rawTypes: make(map[string]reflect.Type),
-		types:    make(map[string]reflect.Type),
+		rawTypes: make(map[goext.SchemaID]reflect.Type),
+		types:    make(map[goext.SchemaID]reflect.Type),
 	}
 
 	clone.loggerImpl = env.loggerImpl.Clone(clone)

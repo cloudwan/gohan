@@ -433,3 +433,13 @@ func parseRequired(data map[interface{}]interface{}) (map[string]bool, error) {
 func (object *Object) getType(suffix string) string {
 	return util.ToGoName(object.Name(), suffix)
 }
+
+func (object *Object) GenerateSchemaName(goextPackage, typename string) string {
+	return fmt.Sprintf(
+		`%s %s.%s = "%s"`,
+		util.ToGoName(object.Name(), ""),
+		goextPackage,
+		typename,
+		object.Name(),
+	)
+}
