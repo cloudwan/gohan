@@ -204,12 +204,13 @@ var _ = Describe("Environment", func() {
 			testSchema.RegisterResourceEventHandler("some_event", someEventHandler, goext.PriorityDefault)
 			testSchema.RegisterResourceEventHandler("some_other_event", someOtherEventHandler, goext.PriorityDefault)
 
-			Expect(env.HandleEvent("some_event", goext.MakeContext())).To(Succeed())
+			ctx := goext.MakeContext().(goext.GohanContext)
+			Expect(env.HandleEvent("some_event", ctx)).To(Succeed())
 
 			Expect(someEventRunCount).To(Equal(1))
 			Expect(someOtherEventRunCount).To(Equal(0))
 
-			Expect(env.HandleEvent("some_other_event", goext.MakeContext())).To(Succeed())
+			Expect(env.HandleEvent("some_other_event", ctx)).To(Succeed())
 
 			Expect(someEventRunCount).To(Equal(1))
 			Expect(someOtherEventRunCount).To(Equal(1))
@@ -225,12 +226,12 @@ var _ = Describe("Environment", func() {
 
 			testSchema.RegisterResourceEventHandler("some_event", eventHandler, goext.PriorityDefault)
 
-			context := goext.MakeContext()
+			context := goext.MakeContext().(goext.GohanContext)
 			resource := make(map[string]interface{})
 			resource["id"] = "some-id"
 			resource["description"] = "some description"
 			resource["subobject"] = map[string]interface{}{"subproperty": "subvalue"}
-			context = context.WithResource(resource)
+			context.SetResource(resource)
 
 			Expect(env.HandleEvent("some_event", context)).To(Succeed())
 
@@ -257,11 +258,11 @@ var _ = Describe("Environment", func() {
 			testSchema.RegisterResourceEventHandler("some_event", eventHandler, goext.PriorityDefault)
 			testSchema.RegisterResourceEventHandler("some_event", modifingHandler, goext.PriorityDefault+1)
 
-			context := goext.MakeContext()
+			context := goext.MakeContext().(goext.GohanContext)
 			resource := make(map[string]interface{})
 			resource["id"] = "some-id"
 			resource["description"] = "some description"
-			context = context.WithResource(resource)
+			context.SetResource(resource)
 
 			Expect(env.HandleEvent("some_event", context)).To(Succeed())
 
@@ -292,7 +293,7 @@ var _ = Describe("Environment", func() {
 			testSchema.RegisterResourceEventHandler("some_event", prioritizedEventHandler, goext.PriorityDefault-100)
 			testSchema.RegisterResourceEventHandler("some_event", defaultPriorityEventHandler, goext.PriorityDefault)
 
-			context := goext.MakeContext()
+			context := goext.MakeContext().(goext.GohanContext)
 			Expect(env.HandleEvent("some_event", context)).To(Succeed())
 			Expect(prioritizedCalled).To(BeTrue())
 			Expect(defaultCalled).To(BeTrue())
@@ -336,7 +337,7 @@ var _ = Describe("Environment", func() {
 			It("should exit gracefully when HTTP peer disconnects", func() {
 				closeNotifier := SimpleCloseNotifier{make(chan bool, 1)}
 
-				context := goext.MakeContext()
+				context := goext.MakeContext().(goext.GohanContext)
 				context["http_response"] = closeNotifier
 
 				done := make(chan bool, 1)
@@ -358,7 +359,8 @@ var _ = Describe("Environment", func() {
 				done := make(chan bool, 1)
 				go func() {
 					defer GinkgoRecover()
-					Expect(env.HandleEvent("wait_for_context_cancel", goext.MakeContext())).To(Succeed())
+					ctx := goext.MakeContext().(goext.GohanContext)
+					Expect(env.HandleEvent("wait_for_context_cancel", ctx)).To(Succeed())
 					done <- true
 				}()
 
@@ -376,7 +378,8 @@ var _ = Describe("Environment", func() {
 				done := make(chan bool, 1)
 				go func() {
 					defer GinkgoRecover()
-					Expect(env.HandleEvent("wait_for_context_cancel", goext.MakeContext())).To(Succeed())
+					ctx := goext.MakeContext().(goext.GohanContext)
+					Expect(env.HandleEvent("wait_for_context_cancel", ctx)).To(Succeed())
 					done <- true
 				}()
 
@@ -387,9 +390,9 @@ var _ = Describe("Environment", func() {
 				err := env.LoadExtensionsForPath(manager.Extensions, time.Hour, nil, "wait_for_context_cancel")
 				Expect(err).To(Succeed())
 
-				requestContext := goext.MakeContext()
+				requestContext := goext.MakeContext().(goext.GohanContext)
 				ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
-				requestContext["context"] = ctx
+				requestContext.SetContext(ctx)
 
 				done := make(chan bool, 1)
 				go func() {

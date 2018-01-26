@@ -16,7 +16,6 @@
 package main
 
 import (
-	"context"
 	"time"
 
 	"github.com/cloudwan/gohan/extension/goext"
@@ -52,7 +51,7 @@ func Init(env goext.IEnvironment) error {
 }
 
 func handleWaitForContextCancel(requestContext goext.Context, _ goext.IEnvironment) *goext.Error {
-	ctx := requestContext["context"].(context.Context)
+	ctx, _ := requestContext.GetContext()
 
 	select {
 	case <-ctx.Done():
@@ -66,18 +65,19 @@ func handleWaitForContextCancel(requestContext goext.Context, _ goext.IEnvironme
 
 func handleEcho(requestContext goext.Context, env goext.IEnvironment) *goext.Error {
 	env.Logger().Debug("Handling echo")
-	requestContext["response"] = requestContext["input"]
+	typedContext := requestContext.(goext.GohanContext)
+	typedContext["response"] = typedContext["input"]
 	return nil
 }
 
 func handleInvokeJs(requestContext goext.Context, env goext.IEnvironment) *goext.Error {
 	env.Logger().Debug("Handling invoke JS")
 
-	ctx := requestContext.Clone()
-	ctx["schema_id"] = "test"
+	ctx := requestContext.Clone().(goext.GohanContext)
+	ctx.SetSchemaID("test")
 	env.Core().TriggerEvent("js_listener", ctx)
 
-	requestContext["response"] = ctx["js_result"]
+	requestContext.SetResponse(ctx["js_result"])
 	return nil
 }
 

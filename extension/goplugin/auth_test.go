@@ -61,7 +61,7 @@ var _ = Describe("Auth", func() {
 		policy, role := manager.PolicyValidate("create", "/v2.0/networks", auth)
 		Expect(policy).NotTo(BeNil())
 
-		context := goext.MakeContext()
+		context := goext.MakeContext().(goext.GohanContext)
 		context["policy"] = policy
 		context["role"] = role
 		context["tenant_id"] = auth.TenantID()

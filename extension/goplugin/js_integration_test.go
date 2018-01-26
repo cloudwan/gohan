@@ -106,7 +106,7 @@ var _ = Describe("JS integration", func() {
 		)
 
 		BeforeEach(func() {
-			ctx = map[string]interface{}{
+			ctx = goext.GohanContext{
 				"schema_id": "test",
 			}
 

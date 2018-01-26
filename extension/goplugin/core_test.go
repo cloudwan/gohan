@@ -16,6 +16,7 @@
 package goplugin_test
 
 import (
+	"github.com/cloudwan/gohan/extension/goext"
 	"github.com/cloudwan/gohan/extension/goplugin"
 	"github.com/cloudwan/gohan/schema"
 	. "github.com/onsi/ginkgo"
@@ -51,12 +52,12 @@ var _ = Describe("Core", func() {
 
 	Context("Triggering an event", func() {
 		It("should panic when schema_id not specified", func() {
-			ctx := map[string]interface{}{}
+			ctx := goext.GohanContext{}
 			Expect(func() { env.Core().TriggerEvent("dummyEventName", ctx) }).To(Panic())
 		})
 
 		It("should restore original schema when already specified", func() {
-			ctx := map[string]interface{}{
+			ctx := goext.GohanContext{
 				"schema":    "testSchema",
 				"schema_id": "test",
 			}
@@ -66,7 +67,7 @@ var _ = Describe("Core", func() {
 		})
 
 		It("should clean schema field when none specified", func() {
-			ctx := map[string]interface{}{
+			ctx := goext.GohanContext{
 				"schema_id": "test",
 			}
 

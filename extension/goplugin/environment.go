@@ -27,6 +27,7 @@ import (
 	"time"
 
 	gohan_db "github.com/cloudwan/gohan/db"
+	"github.com/cloudwan/gohan/db/sql"
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/extension/goext"
 	gohan_logger "github.com/cloudwan/gohan/log"
@@ -92,7 +93,9 @@ type IEnvironment interface {
 
 	RegisterSchemaEventHandler(schemaID string, event string, schemaHandler goext.SchemaHandler, priority int)
 	RegisterRawType(name string, typeValue interface{})
+	GetRawType(name string) reflect.Type
 	RegisterType(name string, typeValue interface{})
+	GetType(name string) reflect.Type
 
 	dispatchSchemaEvent(prioritizedSchemaHandlers PrioritizedSchemaHandlers, sch Schema, event string, context map[string]interface{}) error
 	getSchemaHandlers(event string) (SchemaPrioritizedSchemaHandlers, bool)
@@ -335,7 +338,7 @@ func (env *Environment) dispatchSchemaEvent(prioritizedSchemaHandlers Prioritize
 	return dispatchSchemaEventForEnv(env, prioritizedSchemaHandlers, sch, event, context)
 }
 
-func dispatchSchemaEventForEnv(env IEnvironment, prioritizedSchemaHandlers PrioritizedSchemaHandlers, sch Schema, event string, context map[string]interface{}) error {
+func dispatchSchemaEventForEnv(env IEnvironment, prioritizedSchemaHandlers PrioritizedSchemaHandlers, sch Schema, event string, context goext.GohanContext) error {
 	env.Logger().Debugf("Starting event: %s, schema: %s", event, sch.raw.ID)
 	defer env.Logger().Debugf("Finished event: %s, schema: %s", event, sch.raw.ID)
 	var resource goext.Resource
@@ -434,12 +437,21 @@ func dumpStackTrace(logger goext.ILogger, err error) {
 	}
 }
 
-func handleEventForEnv(env IEnvironment, event string, requestContext map[string]interface{}) error {
+func handleEventForEnv(env IEnvironment, event string, requestContext goext.GohanContext) error {
 	if !hasInterrupt(requestContext) {
 		interrupt := newInterrupt(env, event, requestContext)
 		defer func() {
 			interrupt.Cleanup()
 		}()
+	}
+
+	// Events sent via TriggerEvent has raw transaction in context. It's only needed in JS extensions,
+	// Go plugins does not has this requirement, so wrap it with better interface.
+	if tx, hasTx := requestContext["transaction"]; hasTx {
+		if rawTx, isRawTx := tx.(*sql.Transaction); isRawTx {
+			var itx goext.ITransaction = &Transaction{tx: rawTx}
+			requestContext["transaction"] = itx
+		}
 	}
 
 	requestContext["event_type"] = event
@@ -633,10 +645,20 @@ func (env *Environment) RegisterRawType(name string, typeValue interface{}) {
 	env.rawTypes[name] = targetType
 }
 
+// GetRawType returns type registered by RegisterRawType
+func (env *Environment) GetRawType(name string) reflect.Type {
+	return env.rawTypes[name]
+}
+
 // RegisterType registers a runtime type of resource for a given name
 func (env *Environment) RegisterType(name string, typeValue interface{}) {
 	targetType := reflect.TypeOf(typeValue)
 	env.types[name] = targetType
+}
+
+// GetType returns type registered by RegisterRawType
+func (env *Environment) GetType(name string) reflect.Type {
+	return env.types[name]
 }
 
 // Stop stops the environment to its initial state

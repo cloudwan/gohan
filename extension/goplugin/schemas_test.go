@@ -208,7 +208,7 @@ var _ = Describe("Schemas", func() {
 			tx, err = env.Database().Begin()
 			Expect(err).To(BeNil())
 
-			context = goext.MakeContext().WithTransaction(tx)
+			context = goext.MakeContext().SetTransaction(tx)
 
 			createdResource = test.Test{
 				ID:          "some-id",
@@ -510,7 +510,7 @@ var _ = Describe("Schemas", func() {
 			Expect(err).To(BeNil())
 			defer firstTx.Close()
 
-			context := goext.MakeContext().WithTransaction(firstTx)
+			context := goext.MakeContext().SetTransaction(firstTx)
 			_, err = testSchema.LockFetchRaw(createdResource.ID, context, goext.SkipRelatedResources)
 			Expect(err).To(Succeed())
 
@@ -526,7 +526,7 @@ var _ = Describe("Schemas", func() {
 				Expect(err).To(Succeed())
 				defer secondTx.Close()
 
-				context := goext.MakeContext().WithTransaction(secondTx)
+				context := goext.MakeContext().SetTransaction(secondTx)
 				wg.Done()
 				_, err = testSchema.LockFetchRaw(createdResource.ID, context, goext.SkipRelatedResources)
 				Expect(err).To(Succeed())
@@ -550,7 +550,7 @@ var _ = Describe("Schemas", func() {
 			Expect(err).To(BeNil())
 			defer firstTx.Close()
 
-			context := goext.MakeContext().WithTransaction(firstTx)
+			context := goext.MakeContext().SetTransaction(firstTx)
 			_, err = testSchema.LockListRaw(map[string]interface{}{"id": createdResource.ID}, nil, context, goext.SkipRelatedResources)
 			Expect(err).To(Succeed())
 
@@ -566,7 +566,7 @@ var _ = Describe("Schemas", func() {
 				Expect(err).To(Succeed())
 				defer secondTx.Close()
 
-				context := goext.MakeContext().WithTransaction(secondTx)
+				context := goext.MakeContext().SetTransaction(secondTx)
 				wg.Done()
 				_, err = testSchema.LockListRaw(map[string]interface{}{"id": createdResource.ID}, nil, context, goext.SkipRelatedResources)
 				Expect(err).To(Succeed())
@@ -764,7 +764,7 @@ var _ = Describe("Schemas", func() {
 
 	Context("Context passed to handlers should be copied from original", func() {
 		var (
-			context      goext.Context
+			context      goext.GohanContext
 			tx           goext.ITransaction
 			testResource *test.Test
 		)
@@ -773,7 +773,7 @@ var _ = Describe("Schemas", func() {
 			var err error
 			tx, err = env.Database().Begin()
 			Expect(err).ToNot(HaveOccurred())
-			context = goext.MakeContext().WithTransaction(tx)
+			context = goext.MakeContext().SetTransaction(tx).(goext.GohanContext)
 			context["test"] = 42
 			testResource = &test.Test{ID: "13", Name: goext.MakeString("123"), TestSuiteID: goext.MakeNullString()}
 

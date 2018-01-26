@@ -82,7 +82,7 @@ func withinDetached(db IDatabase, context Context, txBegin func() (ITransaction,
 			return err
 		}
 
-		context["transaction"] = tx
+		context.SetTransaction(tx)
 
 		err = fn(tx)
 
@@ -90,7 +90,7 @@ func withinDetached(db IDatabase, context Context, txBegin func() (ITransaction,
 			err = tx.Commit()
 
 			if err == nil {
-				delete(context, "transaction")
+				context.DeleteTransaction()
 				return nil
 			}
 		} else if !tx.Closed() {
@@ -100,12 +100,12 @@ func withinDetached(db IDatabase, context Context, txBegin func() (ITransaction,
 			}
 		}
 
-		delete(context, "transaction")
+		context.DeleteTransaction()
 
 		log.Debug("scoped database transaction failed with error: %s", err)
 
 		if !IsDeadlock(err) {
-			delete(context, "transaction")
+			context.DeleteTransaction()
 			return err
 		}
 

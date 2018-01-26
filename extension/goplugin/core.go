@@ -40,30 +40,32 @@ func (core *Core) RegisterEventHandler(eventName string, handler goext.Handler, 
 
 // TriggerEvent causes the given event to be handled in all environments (across different-language extensions)
 func (core *Core) TriggerEvent(event string, context goext.Context) error {
-	schemaID, err := getSchemaId(context)
-	if err != nil {
-		log.Panic(err)
+	schemaID, ok := context.GetSchemaID()
+	if !ok {
+		log.Panic("schema_id not found in context")
 	}
+
+	contextMap := context.(goext.GohanContext)
 
 	// JS extensions expect context["schema"] to be a *schema.Schema.
 	// If a schema is already set, we should overwrite it with proper type and
 	// restore it once we're done with handling the event
-	defer restoreOriginalSchema(context)()
-	context["schema"] = core.env.Schemas().Find(schemaID).RawSchema()
+	defer restoreOriginalSchema(contextMap)()
+	contextMap["schema"] = core.env.Schemas().Find(schemaID).RawSchema()
 
 	// as above, if present, context["transaction"] should be a transaction.Transaction
-	defer restoreOriginalTransaction(context)()
+	defer restoreOriginalTransaction(contextMap)()
 	ensureRawTxInContext(context)
 
 	envManager := extension.GetManager()
 	if env, found := envManager.GetEnvironment(schemaID); found {
-		err := env.HandleEvent(event, context)
-		return parseHandleEventResult(err, context)
+		err := env.HandleEvent(event, contextMap)
+		return parseHandleEventResult(err, contextMap)
 	}
 	return nil
 }
 
-func parseHandleEventResult(err error, context goext.Context) error {
+func parseHandleEventResult(err error, context goext.GohanContext) error {
 	defer cleanUpJSException(context)()
 
 	if err != nil {
@@ -73,14 +75,14 @@ func parseHandleEventResult(err error, context goext.Context) error {
 	return parseJSException(context)
 }
 
-func cleanUpJSException(context goext.Context) func() {
+func cleanUpJSException(context goext.GohanContext) func() {
 	return func() {
 		delete(context, "exception")
 		delete(context, "exception_message")
 	}
 }
 
-func parseJSException(context goext.Context) error {
+func parseJSException(context goext.GohanContext) error {
 	if exception, thrown := context["exception"]; thrown {
 		return goext.NewError(getJSExceptionCode(exception), getJSError(context))
 	}
@@ -96,28 +98,19 @@ func getJSExceptionCode(exception interface{}) int {
 	}
 }
 
-func getJSError(context goext.Context) error {
+func getJSError(context goext.GohanContext) error {
 	return errors.New(context["exception_message"].(string))
 }
 
-func getSchemaId(context goext.Context) (string, error) {
-	rawSchemaID, ok := context["schema_id"]
-	if !ok {
-		return "", errors.New("TriggerEvent: schema_id missing in context")
-	}
-
-	return rawSchemaID.(string), nil
-}
-
-func restoreOriginalSchema(context goext.Context) func() {
+func restoreOriginalSchema(context goext.GohanContext) func() {
 	return restoreContextByKey(context, "schema")
 }
 
-func restoreOriginalTransaction(context goext.Context) func() {
+func restoreOriginalTransaction(context goext.GohanContext) func() {
 	return restoreContextByKey(context, "transaction")
 }
 
-func restoreContextByKey(context goext.Context, key string) func() {
+func restoreContextByKey(context goext.GohanContext, key string) func() {
 	if originalValue, hasValue := context[key]; hasValue {
 		return func() {
 			context[key] = originalValue
@@ -138,7 +131,7 @@ func ensureRawTxInContext(context goext.Context) {
 
 // HandleEvent Causes the given event to be handled within the same environment
 func (core *Core) HandleEvent(event string, context goext.Context) error {
-	return core.env.HandleEvent(event, context)
+	return core.env.HandleEvent(event, context.(goext.GohanContext))
 }
 
 // NewCore allocates Core

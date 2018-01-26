@@ -37,6 +37,22 @@ var _ = Describe("Util tests", func() {
 
 	Describe("Marshalling", func() {
 
+		Context("Nil pointer", func() {
+
+			type TestStruct struct {
+			}
+
+			It("To structure results in nil map", func() {
+				var s *TestStruct
+				Expect(env.Util().ResourceToMap(s)).To(BeNil())
+			})
+
+			It("To map results in nil pointer to structure", func() {
+				var m map[string]interface{}
+				Expect(env.Util().ResourceFromMapForType(m, TestStruct{})).To(BeNil())
+			})
+		})
+
 		Context("Custom Maybe structure", func() {
 			type TestResource struct {
 				goext.Maybe

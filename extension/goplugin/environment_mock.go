@@ -233,6 +233,14 @@ func (mockEnv *MockIEnvironment) LoadExtensionsForPath(extensions []*schema.Exte
 	return mockEnv.env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, path)
 }
 
+func (mockEnv *MockIEnvironment) GetRawType(name string) reflect.Type {
+	return mockEnv.env.GetRawType(name)
+}
+
+func (mockEnv *MockIEnvironment) GetType(name string) reflect.Type {
+	return mockEnv.env.GetType(name)
+}
+
 func NewMockIEnvironment(env *Environment, testReporter gomock.TestReporter) *MockIEnvironment {
 	mockIEnvironment := &MockIEnvironment{env: env, testReporter: testReporter}
 	return mockIEnvironment

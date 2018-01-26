@@ -331,9 +331,9 @@ func (schema *Schema) create(rawResource interface{}, requestContext goext.Conte
 	tx := mustGetOpenTransactionFromContext(requestContext)
 	mapFromResource := schema.env.Util().ResourceToMap(rawResource)
 	contextCopy := requestContext.Clone().
-		WithResource(mapFromResource).
-		WithResourceID(mapFromResource["id"].(string)).
-		WithSchemaID(schema.ID())
+		SetResource(mapFromResource).
+		SetID(mapFromResource["id"].(string)).
+		SetSchemaID(schema.ID()).(goext.GohanContext)
 
 	if triggerEvents {
 		if err := schema.env.HandleEvent(string(goext.PreCreateTx), contextCopy); err != nil {
@@ -385,9 +385,9 @@ func (schema *Schema) update(rawResource interface{}, requestContext goext.Conte
 
 	mapFromResource := schema.env.Util().ResourceToMap(rawResource)
 	contextCopy := requestContext.Clone().
-		WithResource(mapFromResource).
-		WithResourceID(resourceData.ID()).
-		WithSchemaID(schema.ID())
+		SetResource(mapFromResource).
+		SetID(resourceData.ID()).
+		SetSchemaID(schema.ID()).(goext.GohanContext)
 
 	if triggerEvents {
 		if err = schema.env.HandleEvent(string(goext.PreUpdateTx), contextCopy); err != nil {
@@ -446,12 +446,13 @@ func (schema *Schema) delete(filter goext.Filter, requestContext goext.Context, 
 		resourceID := mapper.FieldByName(resource, "id").Interface().(string)
 
 		mapFromResource := schema.env.Util().ResourceToMap(resource.Interface())
-		contextCopy = contextCopy.WithResource(mapFromResource).
-			WithSchemaID(schema.ID()).
-			WithResourceID(resourceID)
+		contextCopy = contextCopy.SetResource(mapFromResource).
+			SetSchemaID(schema.ID()).
+			SetID(resourceID)
 
 		if triggerEvents {
-			if err = schema.env.HandleEvent(string(goext.PreDeleteTx), contextCopy); err != nil {
+			if err = schema.env.HandleEvent(string(goext.PreDeleteTx), contextCopy.(goext.GohanContext)); err != nil {
+
 				return err
 			}
 		}
@@ -461,7 +462,7 @@ func (schema *Schema) delete(filter goext.Filter, requestContext goext.Context, 
 		}
 
 		if triggerEvents {
-			if err = schema.env.HandleEvent(string(goext.PostDeleteTx), contextCopy); err != nil {
+			if err = schema.env.HandleEvent(string(goext.PostDeleteTx), contextCopy.(goext.GohanContext)); err != nil {
 				return err
 			}
 		}
@@ -517,6 +518,16 @@ func (schema *Schema) RegisterType(resourceType goext.IResourceBase) {
 func (schema *Schema) RegisterTypes(rawResourceType interface{}, resourceType goext.IResourceBase) {
 	schema.RegisterRawType(rawResourceType)
 	schema.RegisterType(resourceType)
+}
+
+// GetRawType retuns type registered by RegisterRawType
+func (schema *Schema) GetRawType() reflect.Type {
+	return schema.env.GetRawType(schema.raw.ID)
+}
+
+// GetType retuns type registered by RegisterType
+func (schema *Schema) GetType() reflect.Type {
+	return schema.env.GetType(schema.raw.ID)
 }
 
 func (schema *Schema) RawSchema() interface{} {
@@ -575,12 +586,12 @@ func NewSchema(env IEnvironment, raw *gohan_schema.Schema) goext.ISchema {
 }
 
 func contextSetTransaction(ctx goext.Context, tx goext.ITransaction) goext.Context {
-	ctx["transaction"] = tx.RawTransaction()
+	ctx.(goext.GohanContext)["transaction"] = tx.RawTransaction()
 	return ctx
 }
 
 func contextGetMapResource(ctx goext.Context) map[string]interface{} {
-	return ctx["resource"].(map[string]interface{})
+	return ctx.(goext.GohanContext)["resource"].(map[string]interface{})
 }
 
 func mustGetOpenTransactionFromContext(context goext.Context) goext.ITransaction {

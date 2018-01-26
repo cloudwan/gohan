@@ -32,8 +32,8 @@ type Util struct {
 }
 
 func contextGetTransaction(ctx goext.Context) (goext.ITransaction, bool) {
-	ctxTx := ctx["transaction"]
-	if ctxTx == nil {
+	ctxTx, ok := ctx.GetTransaction()
+	if !ok && ctxTx == nil {
 		return nil, false
 	}
 
@@ -74,6 +74,9 @@ func Finish(testReporter gomock.TestReporter) {
 
 // ResourceFromMapForType converts mapped representation to structure representation of the resource for given type
 func (util *Util) ResourceFromMapForType(context map[string]interface{}, rawResource interface{}) (goext.Resource, error) {
+	if context == nil {
+		return nil, nil
+	}
 	resource := reflect.New(reflect.TypeOf(rawResource))
 	if err := resourceFromMap(context, resource); err != nil {
 		return nil, err
@@ -261,6 +264,10 @@ func sliceToMap(context map[string]interface{}, fieldName string, field reflect.
 // ResourceToMap converts structure representation of the resource to mapped representation
 func (util *Util) ResourceToMap(resource interface{}) map[string]interface{} {
 	fieldsMap := map[string]interface{}{}
+
+	if reflect.ValueOf(resource).IsNil() {
+		return nil
+	}
 
 	mapper := reflectx.NewMapper("json")
 	structMap := mapper.TypeMap(reflect.TypeOf(resource))

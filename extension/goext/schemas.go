@@ -16,8 +16,8 @@
 package goext
 
 import (
-	"context"
 	"errors"
+	"reflect"
 )
 
 // LockPolicy indicates lock policy
@@ -40,9 +40,6 @@ type Resource interface{}
 // Resources is a list of resources
 type Resources []Resource
 
-// Context represents a context of a handler
-type Context map[string]interface{}
-
 // Filter represents filtering options for fetching functions
 type Filter map[string]interface{}
 
@@ -52,58 +49,6 @@ type Paginator struct {
 	Order  string
 	Limit  uint64
 	Offset uint64
-}
-
-// MakeContext creates an empty context
-func MakeContext() Context {
-	return make(map[string]interface{})
-}
-
-// WithSchemaID appends schema ID to given context
-func (ctx Context) WithSchemaID(schemaID string) Context {
-	ctx["schema_id"] = schemaID
-	return ctx
-}
-
-// WithISchema appends ISchema to given context
-func (ctx Context) WithISchema(schema ISchema) Context {
-	ctx["schema"] = schema
-	return ctx
-}
-
-// WithResource appends resource to given context
-func (ctx Context) WithResource(resource Resource) Context {
-	ctx["resource"] = resource
-	return ctx
-}
-
-// WithResourceID appends resource ID to given context
-func (ctx Context) WithResourceID(resourceID string) Context {
-	ctx["id"] = resourceID
-	return ctx
-}
-
-// WithTransaction appends transaction to given context
-func (ctx Context) WithTransaction(tx ITransaction) Context {
-	ctx["transaction"] = tx
-	return ctx
-}
-
-// Clone returns copy of context
-func (ctx Context) Clone() Context {
-	contextCopy := MakeContext()
-	for k, v := range ctx {
-		contextCopy[k] = v
-	}
-	return contextCopy
-}
-
-func GetContext(requestContext Context) context.Context {
-	if rawCtx, hasCtx := requestContext["context"]; hasCtx {
-		return rawCtx.(context.Context)
-	} else {
-		return context.Background()
-	}
 }
 
 // PriorityDefault is a default handler priority
@@ -179,6 +124,9 @@ type ISchema interface {
 	// Deprecated: use RegisterTypes instead
 	RegisterType(resourceType IResourceBase)
 
+	// GetType returns type registered by RegisterType
+	GetType() reflect.Type
+
 	// RegisterRawType registers a raw resource type, containing db annotations
 	//
 	// Deprecated: use RegisterTypes instead
@@ -186,6 +134,9 @@ type ISchema interface {
 
 	// RegisterTypes registers both resource types derived from IResourceBase and raw containing db annotations
 	RegisterTypes(rawResourceType interface{}, resourceType IResourceBase)
+
+	// GetRawType returns type registered by RegisterRawType
+	GetRawType() reflect.Type
 
 	// ResourceFromMap converts mapped representation to structure representation of the raw resource registered for schema
 	ResourceFromMap(context map[string]interface{}) (Resource, error)
