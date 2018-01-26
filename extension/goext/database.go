@@ -67,12 +67,24 @@ func withinJoinable(tx ITransaction, fn func(tx ITransaction) error) error {
 	return fn(tx)
 }
 
+func closeTx(tx ITransaction) {
+	err := tx.Close()
+	if err != nil {
+		log.Warning(fmt.Sprintf("close scoped database transaction failed with error: %s", err))
+	}
+}
+
 func withinDetached(db IDatabase, context Context, txBegin func() (ITransaction, error), fn func(tx ITransaction) error) error {
 	opts := db.Options()
 	retryTxCount := opts.RetryTxCount
 	retryTxInterval := opts.RetryTxInterval
 	var tx ITransaction
 	var err error
+
+	defer func() {
+		closeTx(tx)
+		delete(context, "transaction")
+	}()
 
 	for attempt := 0; attempt <= retryTxCount; attempt++ {
 		tx, err = txBegin()
@@ -94,10 +106,7 @@ func withinDetached(db IDatabase, context Context, txBegin func() (ITransaction,
 				return nil
 			}
 		} else if !tx.Closed() {
-			errClose := tx.Close()
-			if errClose != nil {
-				log.Warning(fmt.Sprintf("close scoped database transaction failed with error: %s", errClose))
-			}
+			closeTx(tx)
 		}
 
 		delete(context, "transaction")
