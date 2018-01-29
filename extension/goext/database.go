@@ -68,6 +68,9 @@ func withinJoinable(tx ITransaction, fn func(tx ITransaction) error) error {
 }
 
 func closeTx(tx ITransaction) {
+	if tx.Closed() {
+		return
+	}
 	err := tx.Close()
 	if err != nil {
 		log.Warning(fmt.Sprintf("close scoped database transaction failed with error: %s", err))
@@ -105,7 +108,7 @@ func withinDetached(db IDatabase, context Context, txBegin func() (ITransaction,
 				delete(context, "transaction")
 				return nil
 			}
-		} else if !tx.Closed() {
+		} else {
 			closeTx(tx)
 		}
 

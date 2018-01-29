@@ -96,6 +96,7 @@ var _ = Describe("Database", func() {
 					MockITransaction: goext.NewMockITransaction(mockCtrl),
 					closed:           false,
 				}
+				tx.EXPECT().Closed().Return(tx.closed)
 				tx.EXPECT().Close().DoAndReturn(func() error {
 					tx.closed = true
 					return nil
