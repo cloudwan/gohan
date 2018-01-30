@@ -864,7 +864,7 @@ func buildSelect(sc *selectContext) (string, []interface{}, error) {
 
 	cols := MakeColumns(sc.schema, t, sc.fields, sc.join)
 	q := sq.Select(cols...).From(quote(t))
-	q, err := addFilterToQuery(sc.schema, q, sc.filter, sc.join)
+	q, err := AddFilterToQuery(sc.schema, q, sc.filter, sc.join)
 	if err != nil {
 		return "", nil, err
 	}
@@ -1058,7 +1058,7 @@ func (tx *Transaction) CountContext(ctx context.Context, s *schema.Schema, filte
 
 	q := sq.Select("Count(id) as count").From(quote(s.GetDbTableName()))
 	//Filter get already tested
-	q, _ = addFilterToQuery(s, q, filter, false)
+	q, _ = AddFilterToQuery(s, q, filter, false)
 	sql, args, err := q.ToSql()
 	if err != nil {
 		return
@@ -1129,7 +1129,7 @@ func (tx *Transaction) StateFetchContext(ctx context.Context, s *schema.Schema, 
 	}
 	cols := makeStateColumns(s)
 	q := sq.Select(cols...).From(quote(s.GetDbTableName()))
-	q, _ = addFilterToQuery(s, q, filter, true)
+	q, _ = AddFilterToQuery(s, q, filter, true)
 	sql, args, err := q.ToSql()
 	if err != nil {
 		return
@@ -1202,11 +1202,31 @@ func (tx *Transaction) GetIsolationLevel() transaction.Type {
 	return tx.isolationLevel
 }
 
-func addFilterToQuery(s *schema.Schema, q sq.SelectBuilder, filter map[string]interface{}, join bool) (sq.SelectBuilder, error) {
+const (
+	OrCondition  = "__or__"
+	AndCondition = "__and__"
+)
+
+func AddFilterToQuery(s *schema.Schema, q sq.SelectBuilder, filter map[string]interface{}, join bool) (sq.SelectBuilder, error) {
 	if filter == nil {
 		return q, nil
 	}
 	for key, value := range filter {
+		if key == OrCondition {
+			orFilter, err := addOrToQuery(s, q, value, join)
+			if err != nil {
+				return q, err
+			}
+			q = q.Where(orFilter)
+			continue
+		} else if key == AndCondition {
+			andFilter, err := addAndToQuery(s, q, value, join)
+			if err != nil {
+				return q, err
+			}
+			q = q.Where(andFilter)
+			continue
+		}
 		property, err := s.GetPropertyByID(key)
 
 		if err != nil {
@@ -1232,6 +1252,58 @@ func addFilterToQuery(s *schema.Schema, q sq.SelectBuilder, filter map[string]in
 		}
 	}
 	return q, nil
+}
+
+func addOrToQuery(s *schema.Schema, q sq.SelectBuilder, filter interface{}, join bool) (sq.Or, error) {
+	return addToFilter(s, q, filter, join, sq.Or{})
+}
+
+func addAndToQuery(s *schema.Schema, q sq.SelectBuilder, filter interface{}, join bool) (sq.And, error) {
+	return addToFilter(s, q, filter, join, sq.And{})
+}
+
+func addToFilter(s *schema.Schema, q sq.SelectBuilder, filter interface{}, join bool, sqlizer []sq.Sqlizer) ([]sq.Sqlizer, error) {
+	filters := filter.([]map[string]interface{})
+	for _, filter := range filters {
+		if match, ok := filter[OrCondition]; ok {
+			res, err := addOrToQuery(s, q, match, join)
+			if err != nil {
+				return nil, err
+			}
+			sqlizer = append(sqlizer, res)
+		} else if match, ok := filter[AndCondition]; ok {
+			res, err := addAndToQuery(s, q, match, join)
+			if err != nil {
+				return nil, err
+			}
+			sqlizer = append(sqlizer, res)
+		} else {
+			key := filter["property"].(string)
+			property, err := s.GetPropertyByID(key)
+			if err != nil {
+				return nil, err
+			}
+
+			var column string
+			if join {
+				column = makeColumn(s.GetDbTableName(), *property)
+			} else {
+				column = quote(key)
+			}
+
+			// TODO: add other operators
+			value := filter["value"]
+			switch filter["type"] {
+			case "eq":
+				sqlizer = append(sqlizer, sq.Eq{column: value})
+			case "neq":
+				sqlizer = append(sqlizer, sq.NotEq{column: value})
+			default:
+				panic("type has to be one of [eq, neq]")
+			}
+		}
+	}
+	return sqlizer, nil
 }
 
 //SetMaxOpenConns limit maximum connections

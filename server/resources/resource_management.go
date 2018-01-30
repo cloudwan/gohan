@@ -279,6 +279,7 @@ func GetMultipleResources(context middleware.Context, dataStore db.DB, resourceS
 		filter["tenant_id"] = policy.GetTenantIDFilter(schema.ActionRead, auth.TenantID())
 	}
 	filter = policy.RemoveHiddenProperty(filter)
+	policy.AddCustomFilters(filter, auth.TenantID())
 	paginator, err := pagination.FromURLQuery(resourceSchema, queryParameters)
 	if err != nil {
 		return ResourceError{err, err.Error(), WrongQuery}
@@ -432,15 +433,22 @@ func CreateOrUpdateResource(
 	var exists bool
 
 	if preTxErr := db.Within(dataStore, func(preTransaction transaction.Transaction) error {
-		tenantIDs := policy.GetTenantIDFilter(schema.ActionUpdate, auth.TenantID())
-		filter := transaction.IDFilter(resourceID)
-
-		if tenantIDs != nil {
-			filter["tenant_id"] = tenantIDs
+		exists, err = checkIfResourceExistsForTenant(auth.TenantID(), resourceID, resourceSchema, policy, preTransaction)
+		if err != nil {
+			return err
+		}
+		if exists {
+			return nil
 		}
 
-		_, fetchErr := preTransaction.Fetch(resourceSchema, filter, nil)
-		exists = fetchErr == nil
+		filter := transaction.IDFilter(resourceID)
+		exists, err = checkIfResourceExists(filter, resourceSchema, preTransaction)
+		if err != nil {
+			return err
+		}
+		if exists {
+			return ResourceError{transaction.ErrResourceNotFound, "", Unauthorized}
+		}
 		return nil
 	}); preTxErr != nil {
 		return false, preTxErr
@@ -455,6 +463,35 @@ func CreateOrUpdateResource(
 	}
 
 	return false, UpdateResource(context, dataStore, identityService, resourceSchema, resourceID, dataMap)
+}
+
+func checkIfResourceExistsForTenant(
+	tenantID,
+	resourceID string,
+	resourceSchema *schema.Schema,
+	policy *schema.Policy,
+	preTransaction transaction.Transaction,
+) (bool, error) {
+	filter := transaction.IDFilter(resourceID)
+
+	tenantIDs := policy.GetTenantIDFilter(schema.ActionUpdate, tenantID)
+	if tenantIDs != nil {
+		filter["tenant_id"] = tenantIDs
+	}
+	policy.AddCustomFilters(filter, tenantID)
+
+	return checkIfResourceExists(filter, resourceSchema, preTransaction)
+}
+
+func checkIfResourceExists(filter transaction.Filter, resourceSchema *schema.Schema, preTransaction transaction.Transaction) (bool, error) {
+	_, err := preTransaction.Fetch(resourceSchema, filter, nil)
+	if err != nil {
+		if err != transaction.ErrResourceNotFound {
+			return false, err
+		}
+		return false, nil
+	}
+	return true, nil
 }
 
 // CreateResource creates the resource specified by the schema and dataMap
@@ -807,6 +844,7 @@ func DeleteResource(context middleware.Context,
 		if tenantIDs != nil {
 			filter["tenant_id"] = tenantIDs
 		}
+		policy.AddCustomFilters(filter, auth.TenantID())
 		resource, fetchErr = preTransaction.Fetch(resourceSchema, filter, nil)
 		return nil
 	}); errPreTx != nil {

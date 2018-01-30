@@ -89,32 +89,29 @@ var _ = Describe("Policies", func() {
 			}
 		})
 
-		It("should show error - invalid condition", func() {
+		It("should show panic on invalid condition", func() {
 			testPolicy["condition"] = []interface{}{
 				"is_owner",
 				"invalid_condition",
 			}
-			_, err := NewPolicy(testPolicy)
-			Expect(err).To(MatchError(ContainSubstring("Unknown condition 'invalid_condition'")))
+			Expect(func() {NewPolicy(testPolicy)}).To(Panic())
 		})
 
-		It("should show error - unknown condition type", func() {
+		It("should show panic on unknown condition type", func() {
 			testPolicy["condition"] = []interface{}{
 				map[string]interface{}{
 					"type": "unknown",
 				},
 			}
-			_, err := NewPolicy(testPolicy)
-			Expect(err).To(MatchError(ContainSubstring("Unknown condition type")))
+			Expect(func() {NewPolicy(testPolicy)}).To(Panic())
 		})
 
-		It("should show error - invalid condition format", func() {
+		It("should panic on invalid condition format", func() {
 			testPolicy["condition"] = []interface{}{
 				"is_owner",
 				5,
 			}
-			_, err := NewPolicy(testPolicy)
-			Expect(err).To(MatchError(ContainSubstring("Invalid condition format")))
+			Expect(func() {NewPolicy(testPolicy)}).To(Panic())
 		})
 
 		It("tests multiple conditions", func() {
@@ -351,7 +348,7 @@ var _ = Describe("Policies", func() {
 				Expect(policy.ApplyPropertyConditionFilter("read", map[string]interface{}{}, nil)).NotTo(Succeed())
 			})
 
-			It("should work with string array condition based on propery", func() {
+			It("should work with string array condition based on property", func() {
 				testPolicy["condition"] = []interface{}{
 					map[string]interface{}{
 						"type":   "property",
@@ -412,6 +409,164 @@ var _ = Describe("Policies", func() {
 					"status": "ERROR",
 				}, nil)).NotTo(Succeed())
 				Expect(policy.ApplyPropertyConditionFilter("read", map[string]interface{}{}, nil)).NotTo(Succeed())
+			})
+		})
+		Describe("Custom filter", func() {
+			It("should work with string condition based on conjunction property", func() {
+				testPolicy["condition"] = []interface{}{
+					map[string]interface{}{
+						"and": []interface{}{
+							map[string]interface{}{
+								"match": map[string]interface{}{
+									"property": "status",
+									"type":     "eq",
+									"value":    "ACTIVE",
+								},
+							},
+							map[string]interface{}{
+								"match": map[string]interface{}{
+									"property": "state",
+									"type":     "eq",
+									"value":    "UP",
+								},
+							},
+						},
+					},
+				}
+
+				var err error
+				policy, err = NewPolicy(testPolicy)
+				Expect(err).ToNot(HaveOccurred())
+				filter := map[string]interface{}{}
+				policy.AddCustomFilters(filter, "test")
+				expected := map[string]interface{}{
+					"__and__": []map[string]interface{}{
+						{
+							"property": "status",
+							"type":     "eq",
+							"value":    "ACTIVE",
+						},
+						{
+							"property": "state",
+							"type":     "eq",
+							"value":    "UP",
+						},
+					},
+				}
+				Expect(filter).To(Equal(expected))
+			})
+			It("should work with string condition based on disjunction property", func() {
+				testPolicy["condition"] = []interface{}{
+					map[string]interface{}{
+						"or": []interface{}{
+							map[string]interface{}{
+								"match": map[string]interface{}{
+									"property": "status",
+									"type":     "eq",
+									"value":    "ACTIVE",
+								},
+							},
+							map[string]interface{}{
+								"match": map[string]interface{}{
+									"property": "state",
+									"type":     "eq",
+									"value":    "UP",
+								},
+							},
+						},
+					},
+				}
+
+				var err error
+				policy, err = NewPolicy(testPolicy)
+				Expect(err).ToNot(HaveOccurred())
+				filter := map[string]interface{}{}
+				policy.AddCustomFilters(filter, "test")
+				expected := map[string]interface{}{
+					"__or__": []map[string]interface{}{
+						{
+							"property": "status",
+							"type":     "eq",
+							"value":    "ACTIVE",
+						},
+						{
+							"property": "state",
+							"type":     "eq",
+							"value":    "UP",
+						},
+					},
+				}
+				Expect(filter).To(Equal(expected))
+			})
+			It("should work with string condition based on is_owner, con/disjunction property", func() {
+				testPolicy["condition"] = []interface{}{
+					map[string]interface{}{
+						"or": []interface{}{
+							map[string]interface{}{
+								"match": map[string]interface{}{
+									"property": "status",
+									"type":     "eq",
+									"value":    "ACTIVE",
+								},
+							},
+							map[string]interface{}{
+								"match": map[string]interface{}{
+									"property": "state",
+									"type":     "eq",
+									"value":    "UP",
+								},
+							},
+							map[string]interface{}{
+								"and": []interface{}{
+									"is_owner",
+									map[string]interface{}{
+										"match": map[string]interface{}{
+											"property": "state",
+											"type":     "eq",
+											"value":    "DOWN",
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+
+				var err error
+				policy, err = NewPolicy(testPolicy)
+				Expect(err).ToNot(HaveOccurred())
+				filter := map[string]interface{}{}
+				tenantID := "test"
+				policy.AddCustomFilters(filter, tenantID)
+				expected := map[string]interface{}{
+					"__or__": []map[string]interface{}{
+						{
+							"property": "status",
+							"type":     "eq",
+							"value":    "ACTIVE",
+						},
+						{
+							"property": "state",
+							"type":     "eq",
+							"value":    "UP",
+						},
+						{
+							"__and__": []map[string]interface{}{
+								{
+									"property": "tenant_id",
+									"type":     "eq",
+									"value":    tenantID,
+								},
+								{
+									"property": "state",
+									"type":     "eq",
+									"value":    "DOWN",
+								},
+							},
+						},
+					},
+				}
+				Expect(filter).To(Equal(expected))
 			})
 		})
 	})
