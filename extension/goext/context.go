@@ -48,10 +48,36 @@ type Context interface {
 	SetInput(input map[string]interface{}) Context
 	GetInput() (map[string]interface{}, bool)
 
+	GetAuth() (interface{}, bool)
+	SetAuth(auth interface{}) Context
+
+	GetRole() (interface{}, bool)
+	SetRole(role interface{}) Context
+
 	Clone() Context
 }
 
 type GohanContext map[string]interface{}
+
+func (c GohanContext) GetAuth() (interface{}, bool) {
+	auth, ok := c["auth"]
+	return auth, ok
+}
+
+func (c GohanContext) SetAuth(auth interface{}) Context {
+	c["auth"] = auth
+	return c
+}
+
+func (c GohanContext) GetRole() (interface{}, bool) {
+	role, ok := c["role"]
+	return role, ok
+}
+
+func (c GohanContext) SetRole(role interface{}) Context {
+	c["role"] = role
+	return c
+}
 
 func (c GohanContext) SetInput(input map[string]interface{}) Context {
 	c["input"] = input

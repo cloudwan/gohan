@@ -45,7 +45,10 @@ func (core *Core) TriggerEvent(event string, context goext.Context) error {
 		log.Panic("schema_id not found in context")
 	}
 
-	contextMap := context.(goext.GohanContext)
+	contextMap, ok := context.(goext.GohanContext)
+	if !ok {
+		log.Panic("context passed to TriggerEvent should be of goext.GohanContext type")
+	}
 
 	// JS extensions expect context["schema"] to be a *schema.Schema.
 	// If a schema is already set, we should overwrite it with proper type and

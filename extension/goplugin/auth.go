@@ -24,7 +24,7 @@ import (
 type Auth struct{}
 
 func (a *Auth) HasRole(context goext.Context, principal string) bool {
-	roleRaw, ok := context.(goext.GohanContext)["role"]
+	roleRaw, ok := context.GetRole()
 	if !ok {
 		log.Warning("HasRole: missing 'role' field in context")
 		return false
@@ -40,7 +40,7 @@ func (a *Auth) HasRole(context goext.Context, principal string) bool {
 }
 
 func (a *Auth) GetTenantName(context goext.Context) string {
-	authRaw, ok := context.(goext.GohanContext)["auth"]
+	authRaw, ok := context.GetAuth()
 	if !ok {
 		log.Warning("GetTenantName: missing 'auth' field in context")
 		return ""
