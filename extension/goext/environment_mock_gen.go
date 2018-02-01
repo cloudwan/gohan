@@ -864,6 +864,19 @@ func (mr *MockIUtilMockRecorder) NewUUID() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewUUID", reflect.TypeOf((*MockIUtil)(nil).NewUUID))
 }
 
+// ReadFile mocks base method
+func (m *MockIUtil) ReadFile(arg0 string) (string, error) {
+	ret := m.ctrl.Call(m, "ReadFile", arg0)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReadFile indicates an expected call of ReadFile
+func (mr *MockIUtilMockRecorder) ReadFile(arg0 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadFile", reflect.TypeOf((*MockIUtil)(nil).ReadFile), arg0)
+}
+
 // ResourceFromMapForType mocks base method
 func (m *MockIUtil) ResourceFromMapForType(arg0 map[string]interface{}, arg1 interface{}) (Resource, error) {
 	ret := m.ctrl.Call(m, "ResourceFromMapForType", arg0, arg1)
