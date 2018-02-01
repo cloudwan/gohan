@@ -52,7 +52,7 @@ var _ = Describe("Sync watcher test", func() {
 				}
 				Expect(clearTable(tx, schema)).ToNot(HaveOccurred(), "Failed to clear table.")
 			}
-			return tx.Commit()
+			return nil
 		})).ToNot(HaveOccurred(), "Failed to create or commit transaction.")
 	})
 

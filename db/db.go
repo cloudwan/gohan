@@ -48,6 +48,13 @@ type DB interface {
 	Options() options.Options
 }
 
+// ITransaction is a common interface for transaction
+type ITransaction interface {
+	Commit() error
+	Close() error
+	Closed() bool
+}
+
 // IsDeadlock checks if error is deadlock
 func IsDeadlock(err error) bool {
 	knownDatabaseErrorMessages := []string{
@@ -64,48 +71,69 @@ func IsDeadlock(err error) bool {
 	return false
 }
 
-func withinTxImpl(db DB, beginStrategy func(db DB) (transaction.Transaction, error), fn func(transaction.Transaction) error) error {
-	var tx transaction.Transaction
-	var err error
+func tryToCommit(fn func(ITransaction) error) func(ITransaction) error {
+	return func(tx ITransaction) error {
+		if err := fn(tx); err != nil {
+			return err
+		}
+		return tx.Commit()
+	}
+}
+
+func tryWithinTx(
+	beginStrategy func() (ITransaction, error),
+	fn func(ITransaction) error,
+) error {
+	tx, err := beginStrategy()
+	if err != nil {
+		log.Warning("failed to begin scoped transaction: %s", err)
+		return err
+	}
 
 	defer func() {
 		if tx != nil && !tx.Closed() {
-			tx.Close()
+			if err := tx.Close(); err != nil {
+				log.Warning(
+					"close scoped database transaction failed with error: %s",
+					err,
+				)
+			}
 		}
 	}()
 
-	for attempt := 0; attempt <= db.Options().RetryTxCount; attempt++ {
-		tx, err = beginStrategy(db)
-
-		if err != nil {
-			log.Warning("failed to begin scoped transaction: %s", err)
-			return err
-		}
-
-		err = fn(tx)
-
-		if !tx.Closed() {
-			tx.Close()
-		}
-
-		if err == nil {
-			return nil
-		}
-
+	if err = tryToCommit(fn)(tx); err != nil {
 		log.Debug("scoped database transaction failed with error: %s", err)
-
-		if !IsDeadlock(err) {
-			return err
-		}
-
-		retryInterval := getRetryInterval(db)
-		log.Warning("scoped transaction deadlocked, retrying %d / %d, after %dms", attempt, db.Options().RetryTxCount, retryInterval.Nanoseconds()/int64(time.Millisecond))
-		time.Sleep(retryInterval)
 	}
-
-	log.Warning("scoped transaction still deadlocked after %d retries; gave up", db.Options().RetryTxCount)
 	return err
 }
+
+func WithinTemplate(
+	retries int,
+	retryStrategy func() time.Duration,
+	beginStrategy func() (ITransaction, error),
+	fn func(ITransaction) error,
+) error {
+	var err error
+	for attempt := 0; attempt <= retries; attempt++ {
+		if err = tryWithinTx(beginStrategy, fn); err == nil || !IsDeadlock(err) {
+			return err
+		}
+		retryInterval := retryStrategy()
+		log.Warning(
+			"scoped transaction deadlocked, retrying %d / %d, after %dms",
+			attempt,
+			retries,
+			retryInterval.Nanoseconds()/int64(time.Millisecond),
+		)
+		time.Sleep(retryInterval)
+	}
+	log.Warning(
+		"scoped transaction still deadlocked after %d retries; gave up",
+		retries,
+	)
+	return err
+}
+
 func getRetryInterval(db DB) time.Duration {
 	retryInterval := db.Options().RetryTxInterval
 	// Add random duration between [0, interval] to decrease collision chance
@@ -113,20 +141,35 @@ func getRetryInterval(db DB) time.Duration {
 	return retryInterval
 }
 
+func withinDatabase(
+	db DB,
+	fn func(transaction.Transaction) error,
+	beginStrategy func() (ITransaction, error),
+) error {
+	return WithinTemplate(
+		db.Options().RetryTxCount,
+		func() time.Duration {
+			return getRetryInterval(db)
+		},
+		beginStrategy,
+		func(tx ITransaction) error {
+			return fn(tx.(transaction.Transaction))
+		},
+	)
+}
+
 // Within executes a scoped transaction on a database
 func Within(db DB, fn func(transaction.Transaction) error) error {
-	return withinTxImpl(db,
-		func(db DB) (transaction.Transaction, error) {
-			return db.Begin()
-		}, fn)
+	return withinDatabase(db, fn, func() (ITransaction, error) {
+		return db.Begin()
+	})
 }
 
 // WithinTx executes a scoped transaction with options on a database
 func WithinTx(ctx context.Context, db DB, options *transaction.TxOptions, fn func(transaction.Transaction) error) error {
-	return withinTxImpl(db,
-		func(db DB) (transaction.Transaction, error) {
-			return db.BeginTx(ctx, options)
-		}, fn)
+	return withinDatabase(db, fn, func() (ITransaction, error) {
+		return db.BeginTx(ctx, options)
+	})
 }
 
 //ConnectDB is builder function of DB
@@ -184,11 +227,11 @@ func CopyDBResources(input, output DB, overrideExisting bool) error {
 					}
 				}
 			}
-			return outputTx.Commit()
+			return nil
 		}); errorOutputTx != nil {
 			return errorOutputTx
 		}
-		return inputTx.Commit()
+		return nil
 	}); errInputTx != nil {
 		return errInputTx
 	}

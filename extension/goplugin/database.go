@@ -18,6 +18,7 @@ package goplugin
 import (
 	"context"
 	"reflect"
+	"time"
 
 	gohan_db "github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/transaction"
@@ -81,4 +82,71 @@ func handleBeginError(t transaction.Transaction, err error) (goext.ITransaction,
 // Options return database options rom configuration file
 func (db *Database) Options() goext.DbOptions {
 	return db.opts
+}
+
+func withinJoinable(
+	tx goext.ITransaction,
+	fn func(goext.ITransaction) error,
+) error {
+	return fn(tx)
+}
+
+func withTransactionInContext(
+	context goext.Context,
+	fn func(goext.ITransaction) error,
+) func(gohan_db.ITransaction) error {
+	return func(tx gohan_db.ITransaction) error {
+		context["transaction"] = tx
+		defer delete(context, "transaction")
+		return fn(tx.(goext.ITransaction))
+	}
+}
+
+func withinDetached(
+	options goext.DbOptions,
+	context goext.Context,
+	fn func(goext.ITransaction) error,
+	txBegin func() (gohan_db.ITransaction, error),
+) error {
+	return gohan_db.WithinTemplate(
+		options.RetryTxCount,
+		func() time.Duration {
+			return options.RetryTxInterval
+		},
+		txBegin,
+		withTransactionInContext(context, fn),
+	)
+}
+
+func within(
+	options goext.DbOptions,
+	context goext.Context,
+	fn func(goext.ITransaction) error,
+	txBegin func() (gohan_db.ITransaction, error),
+) error {
+	if rawTx, joinable := contextGetTransaction(context); joinable {
+		return withinJoinable(rawTx.(goext.ITransaction), fn)
+	}
+	return withinDetached(options, context, fn, txBegin)
+}
+
+// Within calls a function in scoped transaction
+func (db *Database) Within(
+	context goext.Context,
+	fn func(tx goext.ITransaction) error,
+) error {
+	return within(db.Options(), context, fn, func() (gohan_db.ITransaction, error) {
+		return db.Begin()
+	})
+}
+
+// WithinTx calls a function in scoped transaction with options
+func (db *Database) WithinTx(
+	context goext.Context,
+	options *goext.TxOptions,
+	fn func(tx goext.ITransaction) error,
+) error {
+	return within(db.Options(), context, fn, func() (gohan_db.ITransaction, error) {
+		return db.BeginTx(context, options)
+	})
 }

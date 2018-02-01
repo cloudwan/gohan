@@ -23,6 +23,7 @@ import (
 	"github.com/cloudwan/gohan/extension/goext"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/golang/mock/gomock"
+	"github.com/cloudwan/gohan/db"
 )
 
 type MockIEnvironment struct {
@@ -76,6 +77,9 @@ func (mockEnv *MockIEnvironment) SetMockModules(modules goext.MockModules) {
 
 	if mockEnv.mockModules.Database {
 		mockEnv.database = goext.NewMockIDatabase(ctrl)
+		if mockEnv.mockModules.DefaultDatabase {
+			setupDefaultMockDatabase(mockEnv.database.(*goext.MockIDatabase))
+		}
 	}
 
 	if mockEnv.mockModules.Http {
@@ -236,4 +240,27 @@ func (mockEnv *MockIEnvironment) LoadExtensionsForPath(extensions []*schema.Exte
 func NewMockIEnvironment(env *Environment, testReporter gomock.TestReporter) *MockIEnvironment {
 	mockIEnvironment := &MockIEnvironment{env: env, testReporter: testReporter}
 	return mockIEnvironment
+}
+
+func setupDefaultMockDatabase(m *goext.MockIDatabase) {
+	m.EXPECT().Within(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(
+			context goext.Context,
+			fn func(tx goext.ITransaction) error,
+		) error {
+			return within(m.Options(), context, fn, func() (db.ITransaction, error) {
+				return m.Begin()
+			})
+		}).AnyTimes()
+
+	m.EXPECT().WithinTx(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		func(
+			context goext.Context,
+			options *goext.TxOptions,
+			fn func(tx goext.ITransaction) error,
+		) error {
+			return within(m.Options(), context, fn, func() (db.ITransaction, error) {
+				return m.BeginTx(context, options)
+			})
+		}).AnyTimes()
 }

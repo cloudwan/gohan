@@ -108,6 +108,7 @@ var _ = Describe("Database", func() {
 				env.SetMockModules(goext.MockModules{
 					Util:     true,
 					Database: true,
+					DefaultDatabase: true,
 				})
 				env.MockUtil().EXPECT().GetTransaction(gomock.Any()).Return(
 					nil, false,
@@ -118,7 +119,7 @@ var _ = Describe("Database", func() {
 				env.MockDatabase().EXPECT().Begin().Return(tx, nil)
 
 				Expect(func() {
-					goext.Within(env, context, func(tx goext.ITransaction) error {
+					env.Database().Within(context, func(tx goext.ITransaction) error {
 						Expect(context["transaction"]).To(Equal(tx))
 						panic("test")
 					})

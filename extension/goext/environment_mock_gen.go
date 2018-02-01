@@ -432,6 +432,30 @@ func (mr *MockIDatabaseMockRecorder) Options() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Options", reflect.TypeOf((*MockIDatabase)(nil).Options))
 }
 
+// Within mocks base method
+func (m *MockIDatabase) Within(arg0 Context, arg1 func(ITransaction) error) error {
+	ret := m.ctrl.Call(m, "Within", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Within indicates an expected call of Within
+func (mr *MockIDatabaseMockRecorder) Within(arg0, arg1 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Within", reflect.TypeOf((*MockIDatabase)(nil).Within), arg0, arg1)
+}
+
+// WithinTx mocks base method
+func (m *MockIDatabase) WithinTx(arg0 Context, arg1 *TxOptions, arg2 func(ITransaction) error) error {
+	ret := m.ctrl.Call(m, "WithinTx", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WithinTx indicates an expected call of WithinTx
+func (mr *MockIDatabaseMockRecorder) WithinTx(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WithinTx", reflect.TypeOf((*MockIDatabase)(nil).WithinTx), arg0, arg1, arg2)
+}
+
 // MockITransaction is a mock of ITransaction interface
 type MockITransaction struct {
 	ctrl     *gomock.Controller

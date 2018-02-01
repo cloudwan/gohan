@@ -242,11 +242,6 @@ func (writer *SyncWriter) syncEvent(resource *schema.Resource) error {
 			return fmt.Errorf("delete failed: %s", err)
 		}
 
-		err = tx.Commit()
-		if err != nil {
-			log.Error(fmt.Sprintf("commit failed: %s", err))
-			return err
-		}
 		return nil
 	})
 }
