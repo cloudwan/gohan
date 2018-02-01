@@ -27,7 +27,7 @@ import (
 	"time"
 
 	gohan_db "github.com/cloudwan/gohan/db"
-	"github.com/cloudwan/gohan/db/sql"
+	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/extension/goext"
 	gohan_logger "github.com/cloudwan/gohan/log"
@@ -448,7 +448,7 @@ func handleEventForEnv(env IEnvironment, event string, requestContext goext.Goha
 	// Events sent via TriggerEvent has raw transaction in context. It's only needed in JS extensions,
 	// Go plugins does not has this requirement, so wrap it with better interface.
 	if tx, hasTx := requestContext["transaction"]; hasTx {
-		if rawTx, isRawTx := tx.(*sql.Transaction); isRawTx {
+		if rawTx, isRawTx := tx.(transaction.Transaction); isRawTx {
 			var itx goext.ITransaction = &Transaction{tx: rawTx}
 			requestContext["transaction"] = itx
 		}
