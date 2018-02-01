@@ -10,9 +10,6 @@ type Context interface {
 	GetID() (string, bool)
 	SetID(id string) Context
 
-	GetSchema() (ISchema, bool)
-	SetSchema(schema ISchema) Context
-
 	GetSchemaID() (string, bool)
 	SetSchemaID(schemaID string) Context
 
@@ -89,7 +86,11 @@ func (c GohanContext) GetInput() (map[string]interface{}, bool) {
 	if !ok {
 		return nil, ok
 	}
-	return input.(map[string]interface{}), ok
+	if input != nil {
+		return input.(map[string]interface{}), ok
+	}
+
+	return nil, ok
 }
 
 func (c GohanContext) GetID() (string, bool) {
@@ -141,7 +142,11 @@ func (c GohanContext) GetISchema() (ISchema, bool) {
 	if !ok {
 		return nil, ok
 	}
-	return schema.(ISchema), ok
+	if schema != nil {
+		return schema.(ISchema), ok
+	}
+
+	return nil, ok
 }
 
 func (c GohanContext) DeleteISchema() {
@@ -219,19 +224,6 @@ func (c GohanContext) SetSchemaID(schemaID string) Context {
 	return c
 }
 
-func (c GohanContext) GetSchema() (ISchema, bool) {
-	schema, ok := c["schema"]
-	if !ok {
-		return nil, ok
-	}
-	return schema.(ISchema), ok
-}
-
-func (c GohanContext) SetSchema(schema ISchema) Context {
-	c["schema"] = schema
-	return c
-}
-
 func (c GohanContext) GetResource() (Resource, bool) {
 	resource, ok := c["resource"]
 	if !ok {
@@ -255,7 +247,11 @@ func (c GohanContext) GetTransaction() (ITransaction, bool) {
 	if !ok {
 		return nil, ok
 	}
-	return tx.(ITransaction), ok
+	if tx != nil {
+		return tx.(ITransaction), ok
+	}
+
+	return nil, ok
 }
 
 func (c GohanContext) SetContext(context context.Context) Context {
@@ -268,7 +264,10 @@ func (c GohanContext) GetContext() (context.Context, bool) {
 	if !ok {
 		return nil, ok
 	}
-	return ctx.(context.Context), ok
+	if ctx != nil {
+		return ctx.(context.Context), ok
+	}
+	return nil, ok
 }
 
 func MakeContext() Context {
