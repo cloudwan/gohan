@@ -118,14 +118,16 @@ func WithinTemplate(
 		if err = tryWithinTx(beginStrategy, fn); err == nil || !IsDeadlock(err) {
 			return err
 		}
-		retryInterval := retryStrategy()
+		retryInterval := GetRetryInterval(retryStrategy())
 		log.Warning(
 			"scoped transaction deadlocked, retrying %d / %d, after %dms",
 			attempt,
 			retries,
 			retryInterval.Nanoseconds()/int64(time.Millisecond),
 		)
-		time.Sleep(retryInterval)
+		if retryInterval > 0 {
+			time.Sleep(retryInterval)
+		}
 	}
 	log.Warning(
 		"scoped transaction still deadlocked after %d retries; gave up",
@@ -134,11 +136,12 @@ func WithinTemplate(
 	return err
 }
 
-func getRetryInterval(db DB) time.Duration {
-	retryInterval := db.Options().RetryTxInterval
-	// Add random duration between [0, interval] to decrease collision chance
-	retryInterval += time.Duration(rand.Intn(int(db.Options().RetryTxInterval.Nanoseconds())))
-	return retryInterval
+func GetRetryInterval(retryInterval time.Duration) time.Duration {
+	if retryInterval > 0 {
+		// Add random duration between [0, interval] to decrease collision chance
+		return retryInterval + time.Duration(rand.Intn(int(retryInterval.Nanoseconds())))
+	}
+	return 0
 }
 
 func withinDatabase(
@@ -149,7 +152,7 @@ func withinDatabase(
 	return WithinTemplate(
 		db.Options().RetryTxCount,
 		func() time.Duration {
-			return getRetryInterval(db)
+			return db.Options().RetryTxInterval
 		},
 		beginStrategy,
 		func(tx ITransaction) error {
