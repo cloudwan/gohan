@@ -451,6 +451,9 @@ func handleEventForEnv(env IEnvironment, event string, requestContext goext.Goha
 		if rawTx, isRawTx := tx.(transaction.Transaction); isRawTx {
 			var itx goext.ITransaction = &Transaction{tx: rawTx}
 			requestContext["transaction"] = itx
+			defer func() {
+				requestContext["transaction"] = rawTx
+			}()
 		}
 	}
 
