@@ -18,7 +18,6 @@ package gohanscript
 import (
 	"fmt"
 	"path/filepath"
-
 	//TODO(nati) upstream local change
 	"github.com/cloudwan/gohan/util"
 	"github.com/nati/yaml"

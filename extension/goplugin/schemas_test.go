@@ -17,7 +17,6 @@ package goplugin_test
 
 import (
 	"os"
-
 	"sync"
 	"time"
 
@@ -268,6 +267,13 @@ var _ = Describe("Schemas", func() {
 			Expect(&createdResource).To(Equal(returnedResource))
 		})
 
+		It("FetchFilter previously created resource", func() {
+			Expect(testSchema.CreateRaw(&createdResource, context)).To(Succeed())
+			returnedResource, err := testSchema.FetchFilterRaw(goext.Filter{"description": "description"}, context)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(&createdResource).To(Equal(returnedResource))
+		})
+
 		It("DeleteRaw previously created resource", func() {
 			Expect(testSchema.CreateRaw(&createdResource, context)).To(Succeed())
 			Expect(testSchema.DeleteRaw(createdResource.ID, context)).To(Succeed())
@@ -375,10 +381,24 @@ var _ = Describe("Schemas", func() {
 
 			})
 
+			It("should fail gracefully in FetchFilter", func() {
+				_, err := testSchemaNoExtensions.FetchFilter(goext.Filter{"name": resourceName}, context)
+				Expect(err.Error()).To(ContainSubstring("test_schema_no_ext"))
+				Expect(err.Error()).To(ContainSubstring("not registered"))
+
+			})
+
 			It("should fail gracefully in FetchRaw", func() {
 				_, err := testSchemaNoExtensions.FetchRaw(resourceID, context)
 				Expect(err.Error()).To(ContainSubstring("test_schema_no_ext"))
 				Expect(err.Error()).To(ContainSubstring("not registered"))
+			})
+
+			It("should fail gracefully in FetchFilterRaw", func() {
+				_, err := testSchemaNoExtensions.FetchFilterRaw(goext.Filter{"name": resourceName}, context)
+				Expect(err.Error()).To(ContainSubstring("test_schema_no_ext"))
+				Expect(err.Error()).To(ContainSubstring("not registered"))
+
 			})
 
 			It("should fail gracefully in LockFetch", func() {
@@ -387,10 +407,24 @@ var _ = Describe("Schemas", func() {
 				Expect(err.Error()).To(ContainSubstring("not registered"))
 			})
 
+			It("should fail gracefully in LockFetchFilter", func() {
+				_, err := testSchemaNoExtensions.LockFetchFilter(goext.Filter{"name": resourceName}, context, goext.SkipRelatedResources)
+				Expect(err.Error()).To(ContainSubstring("test_schema_no_ext"))
+				Expect(err.Error()).To(ContainSubstring("not registered"))
+
+			})
+
 			It("should fail gracefully in LockFetchRaw", func() {
 				_, err := testSchemaNoExtensions.LockFetchRaw(resourceID, context, goext.SkipRelatedResources)
 				Expect(err.Error()).To(ContainSubstring("test_schema_no_ext"))
 				Expect(err.Error()).To(ContainSubstring("not registered"))
+			})
+
+			It("should fail gracefully in LockFetchFilterRaw", func() {
+				_, err := testSchemaNoExtensions.LockFetchFilterRaw(goext.Filter{"name": resourceName}, context, goext.SkipRelatedResources)
+				Expect(err.Error()).To(ContainSubstring("test_schema_no_ext"))
+				Expect(err.Error()).To(ContainSubstring("not registered"))
+
 			})
 		})
 
@@ -405,8 +439,18 @@ var _ = Describe("Schemas", func() {
 				Expect(err).To(Equal(goext.ErrResourceNotFound))
 			})
 
+			It("Should return error in FetchFilter", func() {
+				_, err := testSchema.FetchFilter(goext.Filter{"name": unknownName}, context)
+				Expect(err).To(Equal(goext.ErrResourceNotFound))
+			})
+
 			It("Should return error in FetchRaw", func() {
 				_, err := testSchema.FetchRaw(unknownID, context)
+				Expect(err).To(Equal(goext.ErrResourceNotFound))
+			})
+
+			It("Should return error in FetchFilterRaw", func() {
+				_, err := testSchema.FetchFilterRaw(goext.Filter{"name": unknownName}, context)
 				Expect(err).To(Equal(goext.ErrResourceNotFound))
 			})
 
@@ -415,8 +459,18 @@ var _ = Describe("Schemas", func() {
 				Expect(err).To(Equal(goext.ErrResourceNotFound))
 			})
 
+			It("Should return error in LockFetchFilter", func() {
+				_, err := testSchema.LockFetchFilter(goext.Filter{"name": unknownName}, context, goext.SkipRelatedResources)
+				Expect(err).To(Equal(goext.ErrResourceNotFound))
+			})
+
 			It("Should return error in LockFetchRaw", func() {
 				_, err := testSchema.LockFetchRaw(unknownID, context, goext.SkipRelatedResources)
+				Expect(err).To(Equal(goext.ErrResourceNotFound))
+			})
+
+			It("Should return error in LockFetchFilterRaw", func() {
+				_, err := testSchema.LockFetchFilterRaw(goext.Filter{"name": unknownName}, context, goext.SkipRelatedResources)
 				Expect(err).To(Equal(goext.ErrResourceNotFound))
 			})
 

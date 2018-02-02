@@ -29,11 +29,9 @@ import (
 	"text/template"
 	"time"
 
-	"golang.org/x/crypto/ssh"
-
-	"gopkg.in/yaml.v2"
-
 	"github.com/xeipuuv/gojsonpointer"
+	"golang.org/x/crypto/ssh"
+	"gopkg.in/yaml.v2"
 )
 
 //Counter represents atomic counter

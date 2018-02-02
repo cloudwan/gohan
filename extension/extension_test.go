@@ -16,12 +16,11 @@
 package extension_test
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/extension/otto"
 	"github.com/cloudwan/gohan/server/middleware"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Environment manager", func() {

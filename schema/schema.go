@@ -17,10 +17,8 @@ package schema
 
 import (
 	"fmt"
-
-	"strings"
-
 	"sort"
+	"strings"
 
 	"github.com/cloudwan/gohan/util"
 	"github.com/flosch/pongo2"

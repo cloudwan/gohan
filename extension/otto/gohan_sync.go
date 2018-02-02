@@ -17,10 +17,11 @@ package otto
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/cloudwan/gohan/sync"
 	"github.com/xyproto/otto"
 	"golang.org/x/net/context"
-	"time"
 )
 
 func convertSyncEvent(event *sync.Event) map[string]interface{} {

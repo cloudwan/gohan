@@ -16,15 +16,13 @@
 package golang_test
 
 import (
-	"github.com/cloudwan/gohan/extension/golang"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
 	"time"
 
 	"github.com/cloudwan/gohan/extension"
+	"github.com/cloudwan/gohan/extension/golang"
 	"github.com/cloudwan/gohan/schema"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Gohanscript extension manager", func() {

@@ -24,12 +24,11 @@ import (
 	"strings"
 	"text/template"
 
+	l "github.com/cloudwan/gohan/log"
+	"github.com/cloudwan/gohan/schema"
 	"github.com/rackspace/gophercloud"
 	"github.com/rackspace/gophercloud/openstack"
 	"github.com/rackspace/gophercloud/openstack/common/extensions"
-
-	l "github.com/cloudwan/gohan/log"
-	"github.com/cloudwan/gohan/schema"
 )
 
 var (

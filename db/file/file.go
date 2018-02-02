@@ -16,19 +16,17 @@
 package file
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strconv"
-
-	"github.com/jmoiron/sqlx"
-
-	"context"
 
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/pagination"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
+	"github.com/jmoiron/sqlx"
 )
 
 //DB is yaml implementation of DB

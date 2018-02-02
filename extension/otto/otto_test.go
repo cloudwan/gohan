@@ -19,16 +19,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 	"time"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/ghttp"
-	ottopkg "github.com/xyproto/otto"
-
-	"os"
 
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/extension"
@@ -37,6 +31,10 @@ import (
 	"github.com/cloudwan/gohan/server/middleware"
 	"github.com/cloudwan/gohan/server/resources"
 	"github.com/cloudwan/gohan/util"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/ghttp"
+	ottopkg "github.com/xyproto/otto"
 )
 
 func newEnvironment() *otto.Environment {

@@ -18,13 +18,13 @@ package gohanscript
 import (
 	"fmt"
 	"path/filepath"
+	"reflect"
+	"strings"
 	"time"
 
 	"github.com/cloudwan/gohan/util"
 	"github.com/kr/pretty"
 	"github.com/nati/yaml"
-	"reflect"
-	"strings"
 )
 
 //StmtParser converts gohan script statement for golang function.

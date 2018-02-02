@@ -24,10 +24,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cloudwan/gohan/singleton"
 	"github.com/cloudwan/gohan/util"
 	"github.com/xeipuuv/gojsonschema"
-
-	"github.com/cloudwan/gohan/singleton"
 )
 
 const nobodyPrincipal = "Nobody"

@@ -16,11 +16,10 @@
 package otto
 
 import (
+	l "github.com/cloudwan/gohan/log"
 	"github.com/xyproto/otto"
 	//Import otto underscore lib
 	_ "github.com/xyproto/otto/underscore"
-
-	l "github.com/cloudwan/gohan/log"
 )
 
 const (

@@ -6,7 +6,6 @@ import (
 	"github.com/cloudwan/gohan/extension/gohanscript"
 	//Import gohan script lib
 	_ "github.com/cloudwan/gohan/extension/gohanscript/autogen"
-
 	. "github.com/onsi/ginkgo"
 )
 

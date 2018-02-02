@@ -18,6 +18,7 @@ package item
 import (
 	"fmt"
 
+	"github.com/cloudwan/gohan/converter/crud"
 	"github.com/cloudwan/gohan/converter/set"
 	"github.com/cloudwan/gohan/converter/util"
 	. "github.com/onsi/ginkgo"
@@ -1160,7 +1161,11 @@ var _ = Describe("object tests", func() {
 			properties.Insert(&Property{})
 			object := &Object{objectType: name, properties: properties}
 
-			result := object.GenerateFetch("goext", "", false, false)
+			result := object.GenerateFetch(
+				"goext",
+				"",
+				crud.Params{Raw: false, Lock: false, Filter: false},
+			)
 
 			expected := `func FetchType(` +
 				`schema goext.ISchema, ` +
@@ -1183,7 +1188,11 @@ var _ = Describe("object tests", func() {
 			properties.Insert(&Property{})
 			object := &Object{objectType: name, properties: properties}
 
-			result := object.GenerateFetch("goext", "", true, true)
+			result := object.GenerateFetch(
+				"goext",
+				"",
+				crud.Params{Raw: true, Lock: true, Filter: false},
+			)
 
 			expected := `func LockFetchRawType(` +
 				`schema goext.ISchema, ` +
@@ -1209,7 +1218,11 @@ var _ = Describe("object tests", func() {
 			properties.Insert(&Property{})
 			object := &Object{objectType: name, properties: properties}
 
-			result := object.GenerateList("goext", "", false, false)
+			result := object.GenerateList(
+				"goext",
+				"",
+				crud.Params{Raw: false, Lock: false},
+			)
 
 			expected := `func ListType(` +
 				`schema goext.ISchema, ` +
@@ -1237,7 +1250,11 @@ var _ = Describe("object tests", func() {
 			properties.Insert(&Property{})
 			object := &Object{objectType: name, properties: properties}
 
-			result := object.GenerateList("goext", "", true, true)
+			result := object.GenerateList(
+				"goext",
+				"",
+				crud.Params{Raw: true, Lock: true},
+			)
 
 			expected := `func LockListRawType(` +
 				`schema goext.ISchema, ` +
