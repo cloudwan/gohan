@@ -16,10 +16,10 @@
 package sql_test
 
 import (
+	"testing"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"testing"
 )
 
 func TestSql(t *testing.T) {

@@ -22,6 +22,7 @@ import (
 	"net/http"
 	//"github.com/k0kubun/pp"
 	"net/http/httptest"
+	"sync"
 
 	"github.com/cloudwan/gohan/extension/gohanscript"
 	"github.com/cloudwan/gohan/server"
@@ -29,7 +30,6 @@ import (
 	"github.com/cloudwan/gohan/util"
 	"github.com/drone/routes"
 	"github.com/go-martini/martini"
-	"sync"
 )
 
 func init() {

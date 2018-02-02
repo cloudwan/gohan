@@ -8,11 +8,10 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	yaml "gopkg.in/yaml.v2"
-
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
 	"github.com/codegangsta/cli"
+	yaml "gopkg.in/yaml.v2"
 )
 
 //TemplateDef template def defines file

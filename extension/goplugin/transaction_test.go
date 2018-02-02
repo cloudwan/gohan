@@ -16,9 +16,8 @@
 package goplugin_test
 
 import (
-	"os"
-
 	"context"
+	"os"
 
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/options"

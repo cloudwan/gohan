@@ -16,9 +16,10 @@
 package job
 
 import (
-	"github.com/cloudwan/gohan/util"
 	"runtime"
 	"testing"
+
+	"github.com/cloudwan/gohan/util"
 )
 
 func TestQueue(t *testing.T) {

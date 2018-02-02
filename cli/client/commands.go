@@ -22,9 +22,8 @@ import (
 	"net/http"
 	"regexp"
 
-	"github.com/rackspace/gophercloud"
-
 	"github.com/cloudwan/gohan/schema"
+	"github.com/rackspace/gophercloud"
 )
 
 var (

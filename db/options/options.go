@@ -16,8 +16,9 @@
 package options
 
 import (
-	"github.com/cloudwan/gohan/util"
 	"time"
+
+	"github.com/cloudwan/gohan/util"
 )
 
 // default transaction retry options

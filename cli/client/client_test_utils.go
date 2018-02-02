@@ -19,9 +19,8 @@ import (
 	"encoding/json"
 	"sort"
 
-	g "github.com/onsi/gomega"
-
 	"github.com/cloudwan/gohan/schema"
+	g "github.com/onsi/gomega"
 )
 
 func getAuthRequest() interface{} {
@@ -51,9 +50,9 @@ func getAuthResponse(gohanEndpointURL string) interface{} {
 				},
 			},
 			"serviceCatalog": []map[string]interface{}{
-				map[string]interface{}{
+				{
 					"endpoints": []map[string]interface{}{
-						map[string]interface{}{
+						{
 							"adminURL":    gohanEndpointURL,
 							"internalURL": gohanEndpointURL,
 							"publicURL":   gohanEndpointURL,

@@ -21,17 +21,16 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"sync"
 	"sync/atomic"
-
-	"github.com/codegangsta/cli"
 
 	gorunner "github.com/cloudwan/gohan/extension/framework/goplugin/runner"
 	"github.com/cloudwan/gohan/extension/framework/runner"
 	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/singleton"
 	"github.com/cloudwan/gohan/util"
-	"strings"
+	"github.com/codegangsta/cli"
 )
 
 var (

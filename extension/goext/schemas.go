@@ -138,6 +138,12 @@ type ISchema interface {
 	// FetchRaw returns a pointer to raw resource, containing db annotations
 	FetchRaw(id string, context Context) (interface{}, error)
 
+	// FetchFilter returns a pointer to resource derived from BaseResource
+	FetchFilter(filter Filter, context Context) (interface{}, error)
+
+	// FetchFilterRaw returns a pointer to raw resource, containing db annotations
+	FetchFilterRaw(filter Filter, context Context) (interface{}, error)
+
 	// StateFetchRaw returns a resource state
 	StateFetchRaw(id string, requestContext Context) (ResourceState, error)
 
@@ -146,6 +152,12 @@ type ISchema interface {
 
 	// LockFetchRaw returns a pointer to locked raw resource, containing db annotations
 	LockFetchRaw(id string, context Context, lockPolicy LockPolicy) (interface{}, error)
+
+	// LockFetchFilter returns a pointer to locked resource derived from BaseResource, containing db annotations
+	LockFetchFilter(filter Filter, context Context, lockPolicy LockPolicy) (interface{}, error)
+
+	// LockFetchFilterRaw returns a pointer to locked raw resource, containing db annotations
+	LockFetchFilterRaw(filter Filter, context Context, lockPolicy LockPolicy) (interface{}, error)
 
 	// CreateRaw creates a raw resource, given by a pointer
 	CreateRaw(rawResource interface{}, context Context) error
@@ -162,11 +174,17 @@ type ISchema interface {
 	// DbStateUpdateRaw updates state of a raw resource
 	DbStateUpdateRaw(rawResource interface{}, context Context, state *ResourceState) error
 
-	// DeleteRaw deletes a raw resource, given by a pointer
-	DeleteRaw(filter Filter, context Context) error
+	// DeleteRaw deletes a raw resource, given by id
+	DeleteRaw(id string, context Context) error
 
-	// DbDeleteRaw deletes a raw resource, given by a pointer, no events are emitted
-	DbDeleteRaw(filter Filter, context Context) error
+	// DbDeleteRaw deletes a raw resource, given by id, no events are emitted
+	DbDeleteRaw(id string, context Context) error
+
+	// DeleteFilterRaw deletes a raw resource, given by a filter
+	DeleteFilterRaw(filter Filter, context Context) error
+
+	// DbDeleteFilterRaw deletes a raw resource, given by a filter, no events are emitted
+	DbDeleteFilterRaw(filter Filter, context Context) error
 
 	// RegisterResourceEventHandler registers an event handler with resource for a named event with given priority
 	RegisterResourceEventHandler(event ResourceEvent, schemaHandler SchemaHandler, priority int)

@@ -16,24 +16,14 @@
 package sql
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
-
-	// Import mysql lib
-	_ "github.com/go-sql-driver/mysql"
-	"github.com/jmoiron/sqlx"
-	sq "github.com/lann/squirrel"
-	// Import go-sqlite3 lib
-	_ "github.com/mattn/go-sqlite3"
-	// Import go-fakedb lib
-	_ "github.com/nati/go-fakedb"
-
-	"context"
-	"os"
 
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/pagination"
@@ -42,6 +32,14 @@ import (
 	"github.com/cloudwan/gohan/metrics"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
+	"github.com/jmoiron/sqlx"
+	sq "github.com/lann/squirrel"
+	// Import mysql lib
+	_ "github.com/go-sql-driver/mysql"
+	// Import go-sqlite3 lib
+	_ "github.com/mattn/go-sqlite3"
+	// Import go-fakedb lib
+	_ "github.com/nati/go-fakedb"
 )
 
 const retryDB = 50

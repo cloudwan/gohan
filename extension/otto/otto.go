@@ -19,6 +19,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"reflect"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/cloudwan/gohan/db"
@@ -28,15 +31,8 @@ import (
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/server/middleware"
 	"github.com/cloudwan/gohan/sync"
-
 	"github.com/ddliu/motto"
 	"github.com/xyproto/otto"
-
-	"reflect"
-	"regexp"
-
-	"strings"
-
 	//Import otto underscore lib
 	_ "github.com/xyproto/otto/underscore"
 )

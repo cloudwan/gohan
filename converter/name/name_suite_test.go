@@ -16,10 +16,10 @@
 package name_test
 
 import (
+	"testing"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"testing"
 )
 
 func TestName(t *testing.T) {

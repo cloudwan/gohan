@@ -19,13 +19,12 @@ import (
 	"encoding/json"
 	"time"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
 	"github.com/cloudwan/gohan/schema"
 	srv "github.com/cloudwan/gohan/server"
 	gohan_etcd "github.com/cloudwan/gohan/sync/etcdv3"
 	"github.com/cloudwan/gohan/util"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Server package test", func() {

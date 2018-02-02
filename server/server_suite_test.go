@@ -19,12 +19,11 @@ import (
 	"os"
 	"testing"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/schema"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 const (

@@ -18,13 +18,12 @@ package middleware
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"regexp"
 	"strings"
 	"time"
-
-	"fmt"
 
 	"github.com/cloudwan/gohan/cloud"
 	"github.com/cloudwan/gohan/metrics"

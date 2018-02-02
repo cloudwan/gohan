@@ -16,19 +16,16 @@
 package sql_test
 
 import (
-	"os"
-
-	"github.com/cloudwan/gohan/db"
-	. "github.com/cloudwan/gohan/db/sql"
-	"github.com/cloudwan/gohan/schema"
-
 	"context"
-
 	"fmt"
+	"os"
 	"strings"
 
+	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/options"
+	. "github.com/cloudwan/gohan/db/sql"
 	"github.com/cloudwan/gohan/db/transaction"
+	"github.com/cloudwan/gohan/schema"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

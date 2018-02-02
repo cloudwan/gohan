@@ -20,7 +20,6 @@ import (
 	"net"
 
 	"github.com/cdevr/WapSNMP"
-
 	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/util"
 )

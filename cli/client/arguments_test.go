@@ -17,12 +17,12 @@ package client
 
 import (
 	"fmt"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"strings"
 
 	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/schema"
-	"strings"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 const (

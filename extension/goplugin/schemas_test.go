@@ -17,7 +17,6 @@ package goplugin_test
 
 import (
 	"os"
-
 	"sync"
 	"time"
 
@@ -268,9 +267,16 @@ var _ = Describe("Schemas", func() {
 			Expect(&createdResource).To(Equal(returnedResource))
 		})
 
+		It("FetchFilter previously created resource", func() {
+			Expect(testSchema.CreateRaw(&createdResource, context)).To(Succeed())
+			returnedResource, err := testSchema.FetchFilterRaw(goext.Filter{"description": "description"}, context)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(&createdResource).To(Equal(returnedResource))
+		})
+
 		It("DeleteRaw previously created resource", func() {
 			Expect(testSchema.CreateRaw(&createdResource, context)).To(Succeed())
-			Expect(testSchema.DeleteRaw(goext.Filter{"id": createdResource.ID}, context)).To(Succeed())
+			Expect(testSchema.DeleteRaw(createdResource.ID, context)).To(Succeed())
 			_, err := testSchema.FetchRaw(createdResource.ID, context)
 			Expect(err).To(HaveOccurred())
 		})
@@ -319,8 +325,14 @@ var _ = Describe("Schemas", func() {
 			Expect(state).To(Equal(expected))
 		})
 
+		It("should return error when trying to delete with empty filter", func() {
+			err := testSchema.DeleteFilterRaw(goext.Filter{}, context)
+			Expect(err).To(MatchError("Cannot delete with empty filter"))
+		})
+
 		Context("Resource type not registered", func() {
 			resourceID := "testId"
+			resourceName := "testName"
 			filter := map[string]interface{}{
 				"id": resourceID,
 			}
@@ -330,7 +342,7 @@ var _ = Describe("Schemas", func() {
 				Expect(err).ShouldNot(HaveOccurred())
 				resource, err := schemaManager.LoadResource("test_schema_no_ext", map[string]interface{}{
 					"id":   resourceID,
-					"name": "testName",
+					"name": resourceName,
 				})
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(tx.Create(resource)).To(Succeed())
@@ -369,10 +381,24 @@ var _ = Describe("Schemas", func() {
 
 			})
 
+			It("should fail gracefully in FetchFilter", func() {
+				_, err := testSchemaNoExtensions.FetchFilter(goext.Filter{"name": resourceName}, context)
+				Expect(err.Error()).To(ContainSubstring("test_schema_no_ext"))
+				Expect(err.Error()).To(ContainSubstring("not registered"))
+
+			})
+
 			It("should fail gracefully in FetchRaw", func() {
 				_, err := testSchemaNoExtensions.FetchRaw(resourceID, context)
 				Expect(err.Error()).To(ContainSubstring("test_schema_no_ext"))
 				Expect(err.Error()).To(ContainSubstring("not registered"))
+			})
+
+			It("should fail gracefully in FetchFilterRaw", func() {
+				_, err := testSchemaNoExtensions.FetchFilterRaw(goext.Filter{"name": resourceName}, context)
+				Expect(err.Error()).To(ContainSubstring("test_schema_no_ext"))
+				Expect(err.Error()).To(ContainSubstring("not registered"))
+
 			})
 
 			It("should fail gracefully in LockFetch", func() {
@@ -381,18 +407,40 @@ var _ = Describe("Schemas", func() {
 				Expect(err.Error()).To(ContainSubstring("not registered"))
 			})
 
+			It("should fail gracefully in LockFetchFilter", func() {
+				_, err := testSchemaNoExtensions.LockFetchFilter(goext.Filter{"name": resourceName}, context, goext.SkipRelatedResources)
+				Expect(err.Error()).To(ContainSubstring("test_schema_no_ext"))
+				Expect(err.Error()).To(ContainSubstring("not registered"))
+
+			})
+
 			It("should fail gracefully in LockFetchRaw", func() {
 				_, err := testSchemaNoExtensions.LockFetchRaw(resourceID, context, goext.SkipRelatedResources)
 				Expect(err.Error()).To(ContainSubstring("test_schema_no_ext"))
 				Expect(err.Error()).To(ContainSubstring("not registered"))
 			})
+
+			It("should fail gracefully in LockFetchFilterRaw", func() {
+				_, err := testSchemaNoExtensions.LockFetchFilterRaw(goext.Filter{"name": resourceName}, context, goext.SkipRelatedResources)
+				Expect(err.Error()).To(ContainSubstring("test_schema_no_ext"))
+				Expect(err.Error()).To(ContainSubstring("not registered"))
+
+			})
 		})
 
 		Context("Resource not found", func() {
-			const unknownID = "unknown-id"
+			const (
+				unknownID   = "unknown-id"
+				unknownName = "unknown-name"
+			)
 
 			It("Should return error in Fetch", func() {
 				_, err := testSchema.Fetch(unknownID, context)
+				Expect(err).To(Equal(goext.ErrResourceNotFound))
+			})
+
+			It("Should return error in FetchFilter", func() {
+				_, err := testSchema.FetchFilter(goext.Filter{"name": unknownName}, context)
 				Expect(err).To(Equal(goext.ErrResourceNotFound))
 			})
 
@@ -401,13 +449,28 @@ var _ = Describe("Schemas", func() {
 				Expect(err).To(Equal(goext.ErrResourceNotFound))
 			})
 
+			It("Should return error in FetchFilterRaw", func() {
+				_, err := testSchema.FetchFilterRaw(goext.Filter{"name": unknownName}, context)
+				Expect(err).To(Equal(goext.ErrResourceNotFound))
+			})
+
 			It("Should return error in LockFetch", func() {
 				_, err := testSchema.LockFetch(unknownID, context, goext.SkipRelatedResources)
 				Expect(err).To(Equal(goext.ErrResourceNotFound))
 			})
 
+			It("Should return error in LockFetchFilter", func() {
+				_, err := testSchema.LockFetchFilter(goext.Filter{"name": unknownName}, context, goext.SkipRelatedResources)
+				Expect(err).To(Equal(goext.ErrResourceNotFound))
+			})
+
 			It("Should return error in LockFetchRaw", func() {
 				_, err := testSchema.LockFetchRaw(unknownID, context, goext.SkipRelatedResources)
+				Expect(err).To(Equal(goext.ErrResourceNotFound))
+			})
+
+			It("Should return error in LockFetchFilterRaw", func() {
+				_, err := testSchema.LockFetchFilterRaw(goext.Filter{"name": unknownName}, context, goext.SkipRelatedResources)
 				Expect(err).To(Equal(goext.ErrResourceNotFound))
 			})
 
@@ -432,7 +495,11 @@ var _ = Describe("Schemas", func() {
 			})
 
 			It("Should not return error in DeleteRaw", func() {
-				Expect(testSchema.DeleteRaw(goext.Filter{"id": unknownID}, context)).To(Succeed())
+				Expect(testSchema.DeleteRaw(unknownID, context)).To(Succeed())
+			})
+
+			It("Should not return error in DeleteFilterRaw", func() {
+				Expect(testSchema.DeleteFilterRaw(goext.Filter{"name": unknownName}, context)).To(Succeed())
 			})
 		})
 
@@ -458,12 +525,12 @@ var _ = Describe("Schemas", func() {
 			})
 
 			It("should panic when deleting resource without transaction", func() {
-				Expect(func() { testSchema.DeleteRaw(goext.Filter{"id": unknownID}, goext.MakeContext()) }).To(Panic())
+				Expect(func() { testSchema.DeleteRaw(unknownID, goext.MakeContext()) }).To(Panic())
 			})
 
 			It("should panic when deleting resource with closed transaction", func() {
 				Expect(tx.Close()).To(Succeed())
-				Expect(func() { testSchema.DeleteRaw(goext.Filter{"id": unknownID}, context) }).To(Panic())
+				Expect(func() { testSchema.DeleteRaw(unknownID, context) }).To(Panic())
 			})
 
 			It("should panic when fetching resource without transaction", func() {
@@ -811,7 +878,7 @@ var _ = Describe("Schemas", func() {
 
 		It("should copy context for delete", func() {
 			Expect(testSchema.CreateRaw(testResource, context)).To(Succeed())
-			Expect(testSchema.DeleteRaw(goext.Filter{"id": testResource.ID}, context)).To(Succeed())
+			Expect(testSchema.DeleteRaw(testResource.ID, context)).To(Succeed())
 		})
 	})
 })

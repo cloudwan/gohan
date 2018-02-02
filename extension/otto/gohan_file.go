@@ -17,13 +17,14 @@ package otto
 
 import (
 	"fmt"
-	"github.com/xyproto/otto"
 	"io/ioutil"
 	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/xyproto/otto"
 )
 
 func init() {

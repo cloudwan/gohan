@@ -23,12 +23,10 @@ import (
 	"time"
 
 	"github.com/cloudwan/gohan/extension"
-
-	"github.com/streadway/amqp"
-	"github.com/twinj/uuid"
-
 	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/util"
+	"github.com/streadway/amqp"
+	"github.com/twinj/uuid"
 )
 
 const connectionWait = 10 * time.Second

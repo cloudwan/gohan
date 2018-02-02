@@ -20,14 +20,12 @@ import (
 
 	"github.com/cloudwan/gohan/extension/gohanscript"
 	//Import gohan script lib
+	"github.com/cloudwan/gohan/extension"
 	_ "github.com/cloudwan/gohan/extension/gohanscript/autogen"
-
+	"github.com/cloudwan/gohan/schema"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/ghttp"
-
-	"github.com/cloudwan/gohan/extension"
-	"github.com/cloudwan/gohan/schema"
 )
 
 var _ = Describe("Gohanscript extension manager", func() {

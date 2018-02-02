@@ -489,7 +489,7 @@ func RunServer(configFile string) {
 	log.Info("    API Server %s://%s/", protocol, address)
 	log.Info("    Web UI %s://%s/webui/", protocol, address)
 	go func() {
-		for _ = range c {
+		for range c {
 			log.Info("Stopping the server...")
 			log.Info("Tearing down...")
 			log.Info("Stopping server...")

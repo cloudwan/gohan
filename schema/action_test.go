@@ -17,9 +17,10 @@ package schema
 
 import (
 	"fmt"
+	"sort"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"sort"
 )
 
 func getData(data map[string]interface{}) ([]string, []interface{}) {

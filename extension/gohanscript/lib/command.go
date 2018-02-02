@@ -16,12 +16,12 @@
 package lib
 
 import (
-	"github.com/cloudwan/gohan/extension/gohanscript"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 
+	"github.com/cloudwan/gohan/extension/gohanscript"
 	"github.com/cloudwan/gohan/util"
 )
 

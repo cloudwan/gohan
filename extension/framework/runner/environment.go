@@ -16,6 +16,7 @@
 package runner
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -23,20 +24,16 @@ import (
 	"strings"
 
 	"github.com/cloudwan/gohan/db"
+	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/extension"
+	gohan_otto "github.com/cloudwan/gohan/extension/otto"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/server/middleware"
 	"github.com/cloudwan/gohan/sync/noop"
 	"github.com/xyproto/otto"
-
 	// Import otto underscore lib
 	_ "github.com/xyproto/otto/underscore"
-
-	"context"
-
-	"github.com/cloudwan/gohan/db/options"
-	gohan_otto "github.com/cloudwan/gohan/extension/otto"
 )
 
 const (
