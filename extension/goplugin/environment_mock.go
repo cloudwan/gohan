@@ -39,6 +39,7 @@ type MockIEnvironment struct {
 	auth     goext.IAuth
 	config   goext.IConfig
 	util     goext.IUtil
+	file     goext.IFile
 }
 
 func (mockEnv *MockIEnvironment) setModules() {
@@ -52,6 +53,7 @@ func (mockEnv *MockIEnvironment) setModules() {
 	mockEnv.auth = mockEnv.env.Auth()
 	mockEnv.config = mockEnv.env.Config()
 	mockEnv.util = mockEnv.env.Util()
+	mockEnv.file = mockEnv.env.File()
 }
 
 func (mockEnv *MockIEnvironment) SetMockModules(modules goext.MockModules) {
@@ -93,6 +95,10 @@ func (mockEnv *MockIEnvironment) SetMockModules(modules goext.MockModules) {
 	if mockEnv.mockModules.Util {
 		mockEnv.util = goext.NewMockIUtil(ctrl)
 	}
+
+	if mockEnv.mockModules.File {
+		mockEnv.file = goext.NewMockIFile(ctrl)
+	}
 }
 
 func (mockEnv *MockIEnvironment) Core() goext.ICore {
@@ -131,6 +137,10 @@ func (mockEnv *MockIEnvironment) Util() goext.IUtil {
 	return mockEnv.util
 }
 
+func (mockEnv *MockIEnvironment) File() goext.IFile {
+	return mockEnv.file
+}
+
 func (mockEnv *MockIEnvironment) MockCore() *goext.MockICore {
 	return mockEnv.core.(*goext.MockICore)
 }
@@ -165,6 +175,10 @@ func (mockEnv *MockIEnvironment) MockConfig() *goext.MockIConfig {
 
 func (mockEnv *MockIEnvironment) MockUtil() *goext.MockIUtil {
 	return mockEnv.util.(*goext.MockIUtil)
+}
+
+func (mockEnv *MockIEnvironment) MockFile() *goext.MockIFile {
+	return mockEnv.file.(*goext.MockIFile)
 }
 
 func (mockEnv *MockIEnvironment) Reset() {

@@ -1,4 +1,4 @@
-// Copyright (C) 2017 NTT Innovation Institute, Inc.
+// Copyright (C) 2018 NTT Innovation Institute, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,13 +15,6 @@
 
 package goext
 
-type IUtil interface {
-	NewUUID() string
-	GetTransaction(context Context) (ITransaction, bool)
-
-	// ResourceFromMapForType converts mapped representation to structure representation of the resource for given type
-	ResourceFromMapForType(context map[string]interface{}, rawResource interface{}) (Resource, error)
-
-	// ResourceToMap converts structure representation of the resource to mapped representation
-	ResourceToMap(resource interface{}) map[string]interface{}
+type IFile interface {
+	ReadFile(filename string) (string, error)
 }

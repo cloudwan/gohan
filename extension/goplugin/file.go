@@ -1,4 +1,4 @@
-// Copyright (C) 2017 NTT Innovation Institute, Inc.
+// Copyright (C) 2018 NTT Innovation Institute, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,15 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package goext
+package goplugin
 
-type IUtil interface {
-	NewUUID() string
-	GetTransaction(context Context) (ITransaction, bool)
+import "io/ioutil"
 
-	// ResourceFromMapForType converts mapped representation to structure representation of the resource for given type
-	ResourceFromMapForType(context map[string]interface{}, rawResource interface{}) (Resource, error)
+type File struct {
+}
 
-	// ResourceToMap converts structure representation of the resource to mapped representation
-	ResourceToMap(resource interface{}) map[string]interface{}
+func (f *File) ReadFile(filename string) (string, error) {
+	bytes, err := ioutil.ReadFile(filename)
+	return string(bytes), err
 }

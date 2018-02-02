@@ -17,7 +17,6 @@ package goplugin
 
 import (
 	"fmt"
-	"io/ioutil"
 	"reflect"
 	"strings"
 
@@ -55,11 +54,6 @@ func (util *Util) NewUUID() string {
 
 func (u *Util) GetTransaction(context goext.Context) (goext.ITransaction, bool) {
 	return contextGetTransaction(context)
-}
-
-func (u *Util) ReadFile(filename string) (string, error) {
-	bytes, err := ioutil.ReadFile(filename)
-	return string(bytes), err
 }
 
 func (u *Util) Clone() *Util {
