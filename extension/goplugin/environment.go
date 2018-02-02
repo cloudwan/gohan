@@ -183,6 +183,10 @@ func (env *Environment) Util() goext.IUtil {
 	return &Util{}
 }
 
+func (env *Environment) File() goext.IFile {
+	return &File{}
+}
+
 // SetDatabase sets and binds database implementation
 func (env *Environment) SetDatabase(db gohan_db.DB) {
 	env.bindDatabase(db)

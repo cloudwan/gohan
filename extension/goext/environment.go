@@ -28,6 +28,7 @@ type IEnvironment interface {
 	HTTP() IHTTP
 	Auth() IAuth
 	Util() IUtil
+	File() IFile
 
 	// state
 	Reset()
