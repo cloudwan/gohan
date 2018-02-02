@@ -91,14 +91,14 @@ var _ = Describe("Mocks", func() {
 				TestSuiteID: goext.MakeNullString(),
 				Name:        goext.MakeNullString(),
 			}
-			goext.Within(env, context, func(tx goext.ITransaction) error {
+			env.Database().Within(context, func(tx goext.ITransaction) error {
 				Expect(testSchema.CreateRaw(&createdResource, context)).To(Succeed())
 				return nil
 			})
 
 			env.SetMockModules(goext.MockModules{Sync: true})
 
-			goext.Within(env, context, func(tx goext.ITransaction) error {
+			env.Database().Within(context, func(tx goext.ITransaction) error {
 				returnedResources, err := testSchema.ListRaw(goext.Filter{}, nil, context)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(returnedResources).To(HaveLen(1))

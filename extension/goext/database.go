@@ -16,11 +16,8 @@
 package goext
 
 import (
-	"fmt"
 	"strings"
 	"time"
-
-	gohan_logger "github.com/cloudwan/gohan/log"
 )
 
 // DbOptions represent database options
@@ -35,9 +32,10 @@ type IDatabase interface {
 	BeginTx(context Context, options *TxOptions) (ITransaction, error)
 
 	Options() DbOptions
-}
 
-var log = gohan_logger.NewLogger()
+	Within(context Context, fn func(tx ITransaction) error) error
+	WithinTx(context Context, options *TxOptions, fn func(tx ITransaction) error) error
+}
 
 // DefaultDbOptions returns default database options: no retries at all
 func DefaultDbOptions() DbOptions {
@@ -61,82 +59,4 @@ func IsDeadlock(err error) bool {
 	}
 
 	return false
-}
-
-func withinJoinable(tx ITransaction, fn func(tx ITransaction) error) error {
-	return fn(tx)
-}
-
-func withinDetached(db IDatabase, context Context, txBegin func() (ITransaction, error), fn func(tx ITransaction) error) error {
-	opts := db.Options()
-	retryTxCount := opts.RetryTxCount
-	retryTxInterval := opts.RetryTxInterval
-	var tx ITransaction
-	var err error
-
-	for attempt := 0; attempt <= retryTxCount; attempt++ {
-		tx, err = txBegin()
-
-		if err != nil {
-			log.Warning(fmt.Sprintf("failed to begin scoped transaction: %s", err))
-			return err
-		}
-
-		context["transaction"] = tx
-
-		err = fn(tx)
-
-		if err == nil {
-			err = tx.Commit()
-
-			if err == nil {
-				delete(context, "transaction")
-				return nil
-			}
-		} else if !tx.Closed() {
-			errClose := tx.Close()
-			if errClose != nil {
-				log.Warning(fmt.Sprintf("close scoped database transaction failed with error: %s", errClose))
-			}
-		}
-
-		delete(context, "transaction")
-
-		log.Debug("scoped database transaction failed with error: %s", err)
-
-		if !IsDeadlock(err) {
-			delete(context, "transaction")
-			return err
-		}
-
-		log.Warning(fmt.Sprintf("scoped transaction deadlocked, retrying %d / %d", attempt, retryTxCount))
-		time.Sleep(retryTxInterval)
-	}
-
-	log.Warning(fmt.Sprintf("scoped transaction still deadlocked after %d retries; gave up", retryTxCount))
-	return err
-}
-
-func within(env IEnvironment, context Context, txBegin func() (ITransaction, error), fn func(tx ITransaction) error) error {
-	rawTx, joinable := env.Util().GetTransaction(context)
-
-	if joinable {
-		return withinJoinable(rawTx.(ITransaction), fn)
-	}
-
-	return withinDetached(env.Database(), context, txBegin, fn)
-}
-
-// Within calls a function in scoped transaction
-func Within(env IEnvironment, context Context, fn func(tx ITransaction) error) error {
-	return within(env, context, func() (ITransaction, error) {
-		return env.Database().Begin()
-	}, fn)
-}
-
-// WithinTx calls a function in scoped transaction with options
-func WithinTx(env IEnvironment, context Context, options *TxOptions, fn func(tx ITransaction) error) error {
-	return within(env, context, func() (ITransaction, error) {
-		return env.Database().BeginTx(context, options)
-	}, fn)
 }

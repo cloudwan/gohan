@@ -83,38 +83,32 @@ func (server *Server) mapRoutes() {
 	if txErr := db.Within(server.db, func(tx transaction.Transaction) error {
 		coreSchema, _ := schemaManager.Schema("schema")
 		if coreSchema == nil {
-			log.Fatal("Gohan core schema not found")
-			return nil
+			return fmt.Errorf("Gohan core schema not found")
 		}
 
 		policySchema, _ := schemaManager.Schema("policy")
 		policyList, _, err := tx.List(policySchema, nil, nil, nil)
 		if err != nil {
-			log.Info(err.Error())
+			return err
 		}
 		schemaManager.LoadPolicies(policyList)
 
 		extensionSchema, _ := schemaManager.Schema("extension")
 		extensionList, _, err := tx.List(extensionSchema, nil, nil, nil)
 		if err != nil {
-			log.Info(err.Error())
+			return err
 		}
 		if err := schemaManager.LoadExtensions(extensionList); err != nil {
-			log.Warning("failed to load extensions: %s", err)
+			return fmt.Errorf("failed to load extensions: %s", err)
 		}
 
 		namespaceSchema, _ := schemaManager.Schema("namespace")
 		if namespaceSchema == nil {
-			log.Error("No gohan schema. Disabling schema editing mode")
-			return nil
+			return fmt.Errorf("No gohan schema. Disabling schema editing mode")
 		}
 		namespaceList, _, err := tx.List(namespaceSchema, nil, nil, nil)
 		if err != nil {
-			log.Info(err.Error())
-		}
-		err = tx.Commit()
-		if err != nil {
-			log.Info(err.Error())
+			return err
 		}
 		schemaManager.LoadNamespaces(namespaceList)
 

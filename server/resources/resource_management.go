@@ -115,17 +115,9 @@ func resourceTransactionWithContext(ctx middleware.Context, dataStore db.DB, lev
 		}
 
 		ctx["transaction"] = tx
+		defer delete(ctx, "transaction")
 
-		if err := fn(); err != nil {
-			return err
-		}
-
-		if err := tx.Commit(); err != nil {
-			return err
-		}
-
-		delete(ctx, "transaction")
-		return nil
+		return fn()
 	})
 }
 

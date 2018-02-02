@@ -65,7 +65,7 @@ var _ = Describe("Server package test", func() {
 				}
 				Expect(clearTable(tx, schema)).ToNot(HaveOccurred(), "Failed to clear table.")
 			}
-			return tx.Commit()
+			return nil
 		})).ToNot(HaveOccurred(), "Failed to create or commit transaction.")
 	})
 
@@ -1088,6 +1088,7 @@ func httpRequest(method, url, token string, postData interface{}) (interface{}, 
 }
 
 func clearTable(tx transaction.Transaction, s *schema.Schema) error {
+	fmt.Printf("clearing table %s\n", s.ID)
 	if s.IsAbstract() {
 		return nil
 	}

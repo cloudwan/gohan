@@ -106,14 +106,13 @@ var _ = Describe("Resource manager", func() {
 		Expect(db.Within(testDB, func(tx transaction.Transaction) error {
 
 			environmentManager.UnRegisterEnvironment(schemaID)
-			defer tx.Close()
 			for _, schema := range schema.GetManager().Schemas() {
 				if whitelist[schema.ID] {
 					continue
 				}
 				Expect(clearTable(tx, schema)).ToNot(HaveOccurred(), "Failed to clear table.")
 			}
-			return tx.Commit()
+			return nil
 		})).ToNot(HaveOccurred(), "Failed to create or commit transaction.")
 	})
 

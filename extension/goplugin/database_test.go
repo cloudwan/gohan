@@ -84,6 +84,50 @@ var _ = Describe("Database", func() {
 				Expect(tx).To(BeNil())
 			})
 		})
+
+		Context("Panic in transaction", func() {
+			It("Should defer rollback", func() {
+				type MockTX struct {
+					*goext.MockITransaction
+					closed bool
+				}
+
+				tx := &MockTX{
+					MockITransaction: goext.NewMockITransaction(mockCtrl),
+					closed:           false,
+				}
+				tx.EXPECT().Closed().Return(tx.closed)
+				tx.EXPECT().Close().DoAndReturn(func() error {
+					tx.closed = true
+					return nil
+				})
+
+				context := goext.Context{}
+
+				env := &goplugin.MockIEnvironment{}
+				env.SetMockModules(goext.MockModules{
+					Util:     true,
+					Database: true,
+					DefaultDatabase: true,
+				})
+				env.MockUtil().EXPECT().GetTransaction(gomock.Any()).Return(
+					nil, false,
+				)
+				env.MockDatabase().EXPECT().Options().Return(
+					goext.DbOptions{RetryTxCount: 1},
+				)
+				env.MockDatabase().EXPECT().Begin().Return(tx, nil)
+
+				Expect(func() {
+					env.Database().Within(context, func(tx goext.ITransaction) error {
+						Expect(context["transaction"]).To(Equal(tx))
+						panic("test")
+					})
+				}).To(Panic())
+				Expect(context).ToNot(HaveKey("transaction"))
+				Expect(tx.closed).To(BeTrue())
+			})
+		})
 	})
 
 })

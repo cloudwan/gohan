@@ -551,4 +551,12 @@ var _ = Describe("Database operation test", func() {
 			Expect(err).To(HaveOccurred())
 		})
 	})
+
+	Context("GetRetryInterval", func() {
+		It("Should not panic when retryInterval is 0", func() {
+			Expect(func() {
+				db.GetRetryInterval(0)
+			}).ToNot(Panic())
+		})
+	})
 })

@@ -219,7 +219,7 @@ func (watcher *StateWatcher) StateUpdate(event *gohan_sync.Event) error {
 				}
 			}
 
-			return tx.Commit()
+			return nil
 		})
 }
 
@@ -293,7 +293,7 @@ func (watcher *StateWatcher) MonitoringUpdate(event *gohan_sync.Event) error {
 				}
 			}
 
-			return tx.Commit()
+			return nil
 		})
 }
 
