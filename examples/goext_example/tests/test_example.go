@@ -64,7 +64,7 @@ func Test(env goext.IEnvironment) {
 		It("Smoke test CRUD", func() {
 			Expect(schema.CreateRaw(entry, nil)).To(Succeed())
 			Expect(schema.UpdateRaw(entry, nil)).To(Succeed())
-			Expect(schema.DeleteRaw(goext.Filter{"id": entry.ID}, nil)).To(Succeed())
+			Expect(schema.DeleteRaw(entry.ID, nil)).To(Succeed())
 		})
 
 		It("Should change name in pre_update event", func() {

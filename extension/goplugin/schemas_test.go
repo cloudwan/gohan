@@ -276,7 +276,7 @@ var _ = Describe("Schemas", func() {
 
 		It("DeleteRaw previously created resource", func() {
 			Expect(testSchema.CreateRaw(&createdResource, context)).To(Succeed())
-			Expect(testSchema.DeleteRaw(goext.Filter{"id": createdResource.ID}, context)).To(Succeed())
+			Expect(testSchema.DeleteRaw(createdResource.ID, context)).To(Succeed())
 			_, err := testSchema.FetchRaw(createdResource.ID, context)
 			Expect(err).To(HaveOccurred())
 		})
@@ -323,6 +323,11 @@ var _ = Describe("Schemas", func() {
 			state, err := testSchema.StateFetchRaw(createdResource.ID, context)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(state).To(Equal(expected))
+		})
+
+		It("should return error when trying to delete with empty filter", func() {
+			err := testSchema.DeleteFilterRaw(goext.Filter{}, context)
+			Expect(err).To(MatchError("Cannot delete with empty filter"))
 		})
 
 		Context("Resource type not registered", func() {
@@ -490,7 +495,11 @@ var _ = Describe("Schemas", func() {
 			})
 
 			It("Should not return error in DeleteRaw", func() {
-				Expect(testSchema.DeleteRaw(goext.Filter{"id": unknownID}, context)).To(Succeed())
+				Expect(testSchema.DeleteRaw(unknownID, context)).To(Succeed())
+			})
+
+			It("Should not return error in DeleteFilterRaw", func() {
+				Expect(testSchema.DeleteFilterRaw(goext.Filter{"name": unknownName}, context)).To(Succeed())
 			})
 		})
 
@@ -516,12 +525,12 @@ var _ = Describe("Schemas", func() {
 			})
 
 			It("should panic when deleting resource without transaction", func() {
-				Expect(func() { testSchema.DeleteRaw(goext.Filter{"id": unknownID}, goext.MakeContext()) }).To(Panic())
+				Expect(func() { testSchema.DeleteRaw(unknownID, goext.MakeContext()) }).To(Panic())
 			})
 
 			It("should panic when deleting resource with closed transaction", func() {
 				Expect(tx.Close()).To(Succeed())
-				Expect(func() { testSchema.DeleteRaw(goext.Filter{"id": unknownID}, context) }).To(Panic())
+				Expect(func() { testSchema.DeleteRaw(unknownID, context) }).To(Panic())
 			})
 
 			It("should panic when fetching resource without transaction", func() {
@@ -869,7 +878,7 @@ var _ = Describe("Schemas", func() {
 
 		It("should copy context for delete", func() {
 			Expect(testSchema.CreateRaw(testResource, context)).To(Succeed())
-			Expect(testSchema.DeleteRaw(goext.Filter{"id": testResource.ID}, context)).To(Succeed())
+			Expect(testSchema.DeleteRaw(testResource.ID, context)).To(Succeed())
 		})
 	})
 })
