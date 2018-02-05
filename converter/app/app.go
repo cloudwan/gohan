@@ -22,6 +22,18 @@ import (
 	"github.com/cloudwan/gohan/converter/writer"
 )
 
+type ConverterParams struct {
+	Config           string
+	Output           string
+	GoextPackage     string
+	GoodiesPackage   string
+	ResourcePackage  string
+	InterfacePackage string
+	SchemasPackage   string
+	RawSuffix        string
+	InterfaceSuffix  string
+}
+
 func readConfig(config, input string) ([]map[interface{}]interface{}, error) {
 	if len(config) == 0 {
 		return nil, nil
@@ -39,18 +51,9 @@ func writeResult(data []string, packageName, outputPrefix, outputSuffix string) 
 }
 
 // Run application
-func Run(
-	config,
-	output,
-	goextPackage,
-	goodiesPackage,
-	resourcePackage,
-	interfacePackage,
-	rawSuffix,
-	interfaceSuffix string,
-) error {
-	interfaceSuffix = util.AddName(rawSuffix, interfaceSuffix)
-	all, err := readConfig(config, "")
+func Run(params ConverterParams) error {
+	params.InterfaceSuffix = util.AddName(params.RawSuffix, params.InterfaceSuffix)
+	all, err := readConfig(params.Config, "")
 	if err != nil {
 		return err
 	}
@@ -58,9 +61,9 @@ func Run(
 	generated, err := schema.Convert(
 		nil,
 		all,
-		rawSuffix,
-		interfaceSuffix,
-		goextPackage,
+		params.RawSuffix,
+		params.InterfaceSuffix,
+		params.GoextPackage,
 	)
 	if err != nil {
 		return err
@@ -68,8 +71,8 @@ func Run(
 
 	if err = writeResult(
 		generated.RawInterfaces,
-		interfacePackage,
-		output,
+		params.InterfacePackage,
+		params.Output,
 		"generated_interface.go",
 	); err != nil {
 		return err
@@ -77,8 +80,8 @@ func Run(
 
 	if err = writeResult(
 		generated.Interfaces,
-		interfacePackage,
-		output,
+		params.InterfacePackage,
+		params.Output,
 		"interface.go",
 	); err != nil {
 		return err
@@ -86,8 +89,8 @@ func Run(
 
 	if err = writeResult(
 		generated.Structs,
-		resourcePackage,
-		output,
+		params.ResourcePackage,
+		params.Output,
 		"raw.go",
 	); err != nil {
 		return err
@@ -95,8 +98,8 @@ func Run(
 
 	if err = writeResult(
 		generated.Implementations,
-		resourcePackage,
-		output,
+		params.ResourcePackage,
+		params.Output,
 		"implementation.go",
 	); err != nil {
 		return err
@@ -104,8 +107,8 @@ func Run(
 
 	if err = writeResult(
 		generated.Constructors,
-		resourcePackage,
-		output,
+		params.ResourcePackage,
+		params.Output,
 		"constructors.go",
 	); err != nil {
 		return err
@@ -113,17 +116,26 @@ func Run(
 
 	if err = writeResult(
 		generated.Crud,
-		goodiesPackage,
-		output,
+		params.GoodiesPackage,
+		params.Output,
 		"crud.go",
 	); err != nil {
 		return err
 	}
 
-	return writeResult(
+	if err = writeResult(
 		generated.RawCrud,
-		goodiesPackage,
-		output,
+		params.GoodiesPackage,
+		params.Output,
 		"raw_crud.go",
+	); err != nil {
+		return err
+	}
+
+	return writeResult(
+		[]string{util.Const(generated.Names)},
+		params.SchemasPackage,
+		params.Output,
+		"names.go",
 	)
 }

@@ -32,7 +32,7 @@ var (
 	ErrNotPointer = errors.New("raw resource must be passed by a pointer")
 )
 
-func makeErrMissingType(missingType string) error {
+func makeErrMissingType(missingType goext.SchemaID) error {
 	return errors.Errorf("resource type '%s' not registered", missingType)
 }
 
@@ -56,7 +56,7 @@ func (schemas *Schemas) List() []goext.ISchema {
 	return result
 }
 
-func (schemas *Schemas) Relations(id string) []goext.SchemaRelationInfo {
+func (schemas *Schemas) Relations(id goext.SchemaID) []goext.SchemaRelationInfo {
 	manager := gohan_schema.GetManager()
 	relations := map[string][]goext.SchemaRelationInfo{}
 
@@ -73,7 +73,7 @@ func (schemas *Schemas) Relations(id string) []goext.SchemaRelationInfo {
 				}
 
 				relations[property.Relation] = append(relations[property.Relation], goext.SchemaRelationInfo{
-					SchemaID:        schema.ID,
+					SchemaID:        goext.SchemaID(schema.ID),
 					PropertyID:      property.ID,
 					OnDeleteCascade: onDeleteCascade,
 				})
@@ -81,13 +81,13 @@ func (schemas *Schemas) Relations(id string) []goext.SchemaRelationInfo {
 		}
 	}
 
-	return relations[id]
+	return relations[string(id)]
 }
 
 // Find returns a schema by id or nil if not found
-func (schemas *Schemas) Find(id string) goext.ISchema {
+func (schemas *Schemas) Find(id goext.SchemaID) goext.ISchema {
 	manager := gohan_schema.GetManager()
-	sch, ok := manager.Schema(id)
+	sch, ok := manager.Schema(string(id))
 
 	if !ok {
 		schemas.env.Logger().Warningf("Cannot find schema: %s", id)
@@ -119,8 +119,8 @@ type Schema struct {
 }
 
 // ID returns ID of schema
-func (schema *Schema) ID() string {
-	return schema.raw.ID
+func (schema *Schema) ID() goext.SchemaID {
+	return goext.SchemaID(schema.raw.ID)
 }
 
 // ResourceFromMap converts mapped representation to structure representation of the resource registered for schema
@@ -534,12 +534,12 @@ func (schema *Schema) RegisterResourceEventHandler(event goext.ResourceEvent, sc
 			schema.ID(),
 		))
 	}
-	schema.env.RegisterSchemaEventHandler(schema.raw.ID, strEvent, schemaHandler, priority)
+	schema.env.RegisterSchemaEventHandler(schema.ID(), strEvent, schemaHandler, priority)
 }
 
 // RegisterCustomEventHandler registers an event handler without resource for a custom event with given priority
 func (schema *Schema) RegisterCustomEventHandler(event goext.CustomEvent, handler goext.Handler, priority int) {
-	schema.env.RegisterSchemaEventHandler(schema.raw.ID, string(event), customActionWrapper(handler), priority)
+	schema.env.RegisterSchemaEventHandler(schema.ID(), string(event), customActionWrapper(handler), priority)
 }
 
 func (schema *Schema) isCustomAction(event string) bool {
@@ -559,12 +559,12 @@ func customActionWrapper(customActionHandler goext.Handler) goext.SchemaHandler 
 
 // RegisterRawType registers a runtime type for a raw resource
 func (schema *Schema) RegisterRawType(typeValue interface{}) {
-	schema.env.RegisterRawType(schema.raw.ID, typeValue)
+	schema.env.RegisterRawType(schema.ID(), typeValue)
 }
 
 // RegisterType registers a runtime type for a resource
 func (schema *Schema) RegisterType(resourceType goext.IResourceBase) {
-	schema.env.RegisterType(schema.raw.ID, resourceType)
+	schema.env.RegisterType(schema.ID(), resourceType)
 }
 
 // RegisterTypes registers both resource types derived from IResourceBase and raw containing db annotations
@@ -579,11 +579,12 @@ func (schema *Schema) RawSchema() interface{} {
 
 // DerivedSchemas returns list of schemas that extend schema with given id
 func (schema *Schema) DerivedSchemas() []goext.ISchema {
+	stringID := string(schema.ID())
 	manager := gohan_schema.GetManager()
 	derived := []goext.ISchema{}
 	for _, raw := range manager.OrderedSchemas() {
 		for _, parent := range raw.Extends {
-			if parent == schema.ID() {
+			if parent == stringID {
 				derived = append(derived, NewSchema(schema.env, raw))
 				break
 			}
@@ -605,7 +606,7 @@ func (schema *Schema) Properties() []goext.Property {
 		properties[i] = goext.Property{
 			ID:       property.ID,
 			Title:    property.Title,
-			Relation: property.Relation,
+			Relation: goext.SchemaID(property.Relation),
 			Type:     property.Type,
 		}
 	}
@@ -613,8 +614,12 @@ func (schema *Schema) Properties() []goext.Property {
 }
 
 // Extends returns schema_ids which given schema extends
-func (schema *Schema) Extends() []string {
-	return schema.raw.Extends
+func (schema *Schema) Extends() []goext.SchemaID {
+	extends := make([]goext.SchemaID, len(schema.raw.Extends))
+	for i, schemaID := range schema.raw.Extends {
+		extends[i] = goext.SchemaID(schemaID)
+	}
+	return extends
 }
 
 // Count returns number of resources matching the filter

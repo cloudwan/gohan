@@ -20,6 +20,9 @@ import (
 	"errors"
 )
 
+// SchemaID is a type for schema ID
+type SchemaID string
+
 // LockPolicy indicates lock policy
 type LockPolicy int
 
@@ -60,7 +63,7 @@ func MakeContext() Context {
 }
 
 // WithSchemaID appends schema ID to given context
-func (ctx Context) WithSchemaID(schemaID string) Context {
+func (ctx Context) WithSchemaID(schemaID SchemaID) Context {
 	ctx["schema_id"] = schemaID
 	return ctx
 }
@@ -115,7 +118,7 @@ var ErrResourceNotFound = errors.New("resource not found")
 // ISchema is an interface representing a single schema in Gohan
 type ISchema interface {
 	// ID returns the identifier of this resource
-	ID() string
+	ID() SchemaID
 
 	// List returns a list of pointers to resources derived from BaseResource
 	List(filter Filter, paginator *Paginator, context Context) ([]interface{}, error)
@@ -220,21 +223,21 @@ type ISchema interface {
 	Properties() []Property
 
 	// Extends return list of schema_ids which given schema extends
-	Extends() []string
+	Extends() []SchemaID
 }
 
 // Property represents schema property
 type Property struct {
 	ID       string
 	Title    string
-	Relation string
+	Relation SchemaID
 	Type     string
 }
 
 // SchemaRelationInfo describes schema relation
 type SchemaRelationInfo struct {
 	// SchemaID relation to which schema
-	SchemaID string
+	SchemaID SchemaID
 	// PropertyID ID of property which relation is referenced
 	PropertyID string
 	// OnDeleteCascade whether cascading delete on related resource delete is enabled
@@ -244,8 +247,8 @@ type SchemaRelationInfo struct {
 // ISchemas is an interface to schemas manager in Gohan
 type ISchemas interface {
 	List() []ISchema
-	Find(id string) ISchema
+	Find(id SchemaID) ISchema
 
 	// Relations returns list of information about schema relations
-	Relations(id string) []SchemaRelationInfo
+	Relations(id SchemaID) []SchemaRelationInfo
 }

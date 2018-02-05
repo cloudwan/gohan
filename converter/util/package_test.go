@@ -44,4 +44,19 @@ b`
 			Expect(result).To(Equal(expected))
 		})
 	})
+
+	Describe("const tests", func() {
+		It("Should generate const", func() {
+			data := []string{"a", "b"}
+
+			result := Const(data)
+
+			expected := `const (
+	a
+	b
+)
+`
+			Expect(result).To(Equal(expected))
+		})
+	})
 })

@@ -23,5 +23,6 @@ type Generated struct {
 	Constructors,
 	Implementations,
 	RawCrud,
-	Crud []string
+	Crud,
+	Names []string
 }

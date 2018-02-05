@@ -50,9 +50,9 @@ type Transaction struct {
 	tx cancelableTransaction
 }
 
-func (t *Transaction) findRawSchema(id string) *schema.Schema {
+func (t *Transaction) findRawSchema(id goext.SchemaID) *schema.Schema {
 	manager := schema.GetManager()
-	schema, ok := manager.Schema(id)
+	schema, ok := manager.Schema(string(id))
 
 	if !ok {
 		log.Warning(fmt.Sprintf("cannot find schema '%s'", id))

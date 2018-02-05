@@ -74,6 +74,9 @@ func Convert(
 	for _, rawObject := range dbObjects.ToArray() {
 		boolean := []bool{false, true}
 		object := rawObject.(*item.Object)
+
+		result.Names = append(result.Names, object.GenerateSchemaName(packageName, "SchemaID"))
+
 		if !object.Empty() {
 			for _, raw := range boolean {
 				for _, lock := range boolean {
