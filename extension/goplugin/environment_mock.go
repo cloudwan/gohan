@@ -42,6 +42,8 @@ type MockIEnvironment struct {
 	util     goext.IUtil
 }
 
+var _ goext.IEnvironment = &MockIEnvironment{}
+
 func (mockEnv *MockIEnvironment) setModules() {
 	mockEnv.mockModules = goext.MockModules{}
 	mockEnv.core = mockEnv.env.Core()
@@ -104,6 +106,11 @@ func (mockEnv *MockIEnvironment) Core() goext.ICore {
 }
 
 func (mockEnv *MockIEnvironment) Logger() goext.ILogger {
+	return mockEnv.logger
+}
+
+func (mockEnv *MockIEnvironment) LoggerForSchema(schema goext.ISchema) goext.ILogger {
+	// test should use just one logger - this way mocking is much easier
 	return mockEnv.logger
 }
 
@@ -219,6 +226,10 @@ func (mockEnv *MockIEnvironment) getType(schemaID goext.SchemaID) (reflect.Type,
 
 func (mockEnv *MockIEnvironment) getTraceID() string {
 	return mockEnv.env.getTraceID()
+}
+
+func (mockEnv *MockIEnvironment) getName() string {
+	return mockEnv.env.getName()
 }
 
 func (mockEnv *MockIEnvironment) getTimeLimit() time.Duration {

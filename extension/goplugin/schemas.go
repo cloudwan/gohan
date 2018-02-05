@@ -237,7 +237,7 @@ func (schema *Schema) rawToResource(xRaw reflect.Value) (interface{}, error) {
 	}
 	resource := reflect.New(resourceType).Elem()
 	setValue(resource.FieldByName(xRaw.Type().Name()), xRaw.Addr())
-	resourceBase := goext.NewResourceBase(schema.env, schema, NewLogger(schema.env))
+	resourceBase := goext.NewResourceBase(schema.env, schema)
 	setValue(resource.FieldByName("ResourceBase"), reflect.ValueOf(resourceBase))
 	return resource.Addr().Interface(), nil
 }

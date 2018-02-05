@@ -22,6 +22,7 @@ type IEnvironment interface {
 	Config() IConfig
 	Core() ICore
 	Logger() ILogger
+	LoggerForSchema(schema ISchema) ILogger
 	Schemas() ISchemas
 	Sync() ISync
 	Database() IDatabase
@@ -52,11 +53,11 @@ func (resourceBase *ResourceBase) Schema() ISchema {
 	return resourceBase.schema
 }
 
-func NewResourceBase(env IEnvironment, schema ISchema, logger ILogger) *ResourceBase {
+func NewResourceBase(env IEnvironment, schema ISchema) *ResourceBase {
 	return &ResourceBase{
 		environment: env,
 		schema:      schema,
-		logger:      logger,
+		logger:      env.LoggerForSchema(schema),
 	}
 }
 
