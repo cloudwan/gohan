@@ -127,6 +127,59 @@ Example policy
         principal: Member
 ```
 
+- `and` and `or` - allows creating more complicated policy filters.
+
+`and` checks that all conditions have been met.
+
+`or` checks that at least one of the conditions has been met.
+
+Both of this conditions might be nested and might be used separately.
+Please note that unlike `type: property`, described above, these conditions affect the SQL query.
+
+`and` and `or` contain a list of conditions that have to be met.
+Those conditions may include:
+
+- `is_owner` - restricts access only to the owner of the resource
+- `and` - list of conditions that all have to be met
+- `or` - list of conditions from which at least one have to be met
+- `match` - dictionary to match
+
+`match` has to contain the following properties:
+
+- `property` - name of the resource property which has to be checked
+- `type` - condition that has to be met for the match - currently only `eq` (equal) and `neq` (not equal) operators are available
+- `value` - allowed values
+
+`value` may consist of one or multiple values.
+For one element exact match is required.
+For a list, all the values from the list are checked and only one is required.
+
+Example below presents policy for which member is able to read all own resources.
+For the resources of other members he will only see resources for which `state` property is equal to `UP`
+and `level` is equal to 2 or 3.
+
+```yaml
+policy:
+  - action: read
+    effect: allow
+    id: member
+    principal: Member
+    condition:
+      - or:
+        - is_owner
+        - and:
+          - match:
+              property: state
+              type: eq
+              value: UP
+          - match:
+              property: level
+              type: eq
+              value:
+                - 2
+                - 3
+```
+
 ## Resource paths with no authorization (nobody resource paths)
 
 With a special type of policy one can define a resource path that do not require authorization.

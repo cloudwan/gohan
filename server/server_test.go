@@ -41,18 +41,19 @@ import (
 )
 
 var (
-	server            *srv.Server
-	baseURL           = "http://localhost:19090"
-	schemaURL         = baseURL + "/gohan/v0.1/schemas"
-	networkPluralURL  = baseURL + "/v2.0/networks"
-	subnetPluralURL   = baseURL + "/v2.0/subnets"
-	serverPluralURL   = baseURL + "/v2.0/servers"
-	testPluralURL     = baseURL + "/v2.0/tests"
-	parentsPluralURL  = baseURL + "/v1.0/parents"
-	childrenPluralURL = baseURL + "/v1.0/children"
-	schoolsPluralURL  = baseURL + "/v1.0/schools"
-	citiesPluralURL   = baseURL + "/v1.0/cities"
-	profilingURL      = baseURL + "/debug/pprof/"
+	server              *srv.Server
+	baseURL             = "http://localhost:19090"
+	schemaURL           = baseURL + "/gohan/v0.1/schemas"
+	networkPluralURL    = baseURL + "/v2.0/networks"
+	subnetPluralURL     = baseURL + "/v2.0/subnets"
+	serverPluralURL     = baseURL + "/v2.0/servers"
+	testPluralURL       = baseURL + "/v2.0/tests"
+	parentsPluralURL    = baseURL + "/v1.0/parents"
+	childrenPluralURL   = baseURL + "/v1.0/children"
+	schoolsPluralURL    = baseURL + "/v1.0/schools"
+	citiesPluralURL     = baseURL + "/v1.0/cities"
+	profilingURL        = baseURL + "/debug/pprof/"
+	filterTestPluralURL = baseURL + "/v2.0/filter_tests"
 )
 
 var _ = Describe("Server package test", func() {
@@ -428,7 +429,7 @@ var _ = Describe("Server package test", func() {
 			Expect(result).To(HaveKeyWithValue("network", networkExpected))
 
 			result = testURL("GET", baseURL+"/_all", memberTokenID, nil, http.StatusOK)
-			Expect(result).To(HaveLen(5))
+			Expect(result).To(HaveLen(6))
 			Expect(result).To(HaveKeyWithValue("networks", []interface{}{networkExpected}))
 			Expect(result).To(HaveKey("schemas"))
 			Expect(result).To(HaveKey("tests"))
@@ -477,6 +478,84 @@ var _ = Describe("Server package test", func() {
 			testURL("PUT", serverPluralURL+"/"+serverID, memberTokenID, serverUpdate, http.StatusUnauthorized)
 			testURL("DELETE", serverPluralURL+"/"+serverID, memberTokenID, nil, http.StatusUnauthorized)
 			testURL("DELETE", serverPluralURL+"/"+serverID, adminTokenID, nil, http.StatusNoContent)
+		})
+		Context("Filter based policy condition", func() {
+			It("should work for get", func() {
+				// Tests query: `SELECT ... WHERE tenant_id.. OR (state = UP AND level IN (2,3)
+				expectedToContainTest := func(expectedCount int, res interface{}) {
+					Expect(res.(map[string]interface{})["filter_tests"]).To(HaveLen(expectedCount))
+				}
+				testUp := map[string]interface{}{
+					"state": "UP",
+					"level": 2,
+				}
+				testUpLevel3 := map[string]interface{}{
+					"state": "UP",
+					"level": 3,
+				}
+				testUpLevel0ID := "testUP"
+				testUpLevel0 := map[string]interface{}{
+					"id":    testUpLevel0ID,
+					"state": "UP",
+					"level": 0,
+				}
+				testDownID := "testDOWN"
+				testDown := map[string]interface{}{
+					"id":    testDownID,
+					"state": "DOWN",
+					"level": 2,
+				}
+				testUpdate := map[string]interface{}{
+					"state": "UP",
+					"level": 2,
+				}
+
+				var res interface{}
+				testURL("POST", filterTestPluralURL, memberTokenID, testUp, http.StatusCreated)
+				testURL("POST", filterTestPluralURL, memberTokenID, testUpLevel3, http.StatusCreated)
+				testURL("POST", filterTestPluralURL, memberTokenID, testUpLevel0, http.StatusCreated)
+				testURL("POST", filterTestPluralURL, memberTokenID, testDown, http.StatusCreated)
+				res = testURL("GET", filterTestPluralURL, memberTokenID, nil, http.StatusOK)
+				expectedToContainTest(4, res)
+				res = testURL("GET", filterTestPluralURL, powerUserTokenID, nil, http.StatusOK)
+				expectedToContainTest(2, res)
+
+				testURL("PUT", filterTestPluralURL+"/"+testDownID, memberTokenID, testUpdate, http.StatusOK)
+				res = testURL("GET", filterTestPluralURL, memberTokenID, nil, http.StatusOK)
+				expectedToContainTest(4, res)
+				res = testURL("GET", filterTestPluralURL, powerUserTokenID, nil, http.StatusOK)
+				expectedToContainTest(3, res)
+
+				testURL("PUT", filterTestPluralURL+"/"+testUpLevel0ID, memberTokenID, testUpdate, http.StatusOK)
+				res = testURL("GET", filterTestPluralURL, memberTokenID, nil, http.StatusOK)
+				expectedToContainTest(4, res)
+				res = testURL("GET", filterTestPluralURL, powerUserTokenID, nil, http.StatusOK)
+				expectedToContainTest(4, res)
+			})
+			It("should work for update and delete", func() {
+				// Update and delete allowed only for owner and status != INVALID
+				testID := "test"
+				testUp := map[string]interface{}{
+					"id":    testID,
+					"state": "UP",
+					"level": 2,
+				}
+				testInvalid := map[string]interface{}{
+					"state": "INVALID",
+				}
+				testDown := map[string]interface{}{
+					"state": "DOWN",
+				}
+
+				testURL("POST", filterTestPluralURL, memberTokenID, testUp, http.StatusCreated)
+				testURL("PUT", filterTestPluralURL+"/"+testID, powerUserTokenID, testInvalid, http.StatusUnauthorized)
+				testURL("DELETE", filterTestPluralURL+"/"+testID, powerUserTokenID, nil, http.StatusNotFound)
+				testURL("PUT", filterTestPluralURL+"/"+testID, memberTokenID, testInvalid, http.StatusOK)
+				testURL("PUT", filterTestPluralURL+"/"+testID, memberTokenID, testDown, http.StatusUnauthorized)
+				testURL("DELETE", filterTestPluralURL+"/"+testID, memberTokenID, nil, http.StatusNotFound)
+				testURL("PUT", filterTestPluralURL+"/"+testID, adminTokenID, testDown, http.StatusOK)
+				testURL("DELETE", filterTestPluralURL+"/"+testID, memberTokenID, nil, http.StatusNoContent)
+			})
 		})
 	})
 

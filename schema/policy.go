@@ -37,6 +37,9 @@ const (
 	conditionIsOwner       = "is_owner"
 	conditionTypeBelongsTo = "belongs_to"
 	conditionProperty      = "property"
+	conditionOr            = "or"
+	conditionAnd           = "and"
+	conditionMatch         = "match"
 
 	globalRegexp = ".*"
 
@@ -72,6 +75,31 @@ func (t Tenant) String() string {
 	return fmt.Sprintf("%s (%s)", t.Name.String(), t.ID.String())
 }
 
+type conditionFilterType int
+
+const (
+	orFilter  conditionFilterType = iota
+	andFilter conditionFilterType = iota
+)
+
+type conditionFilter struct {
+	isOwner    bool
+	matches    []map[string]interface{}
+	orFilters  *conditionFilter
+	andFilters *conditionFilter
+	filterType conditionFilterType
+}
+
+func makeConditionFilter(filterType conditionFilterType) *conditionFilter {
+	return &conditionFilter{
+		filterType: filterType,
+		matches:    make([]map[string]interface{}, 0),
+		orFilters:  nil,
+		andFilters: nil,
+		isOwner:    false,
+	}
+}
+
 //Policy describes policy configuration for APIs
 type Policy struct {
 	ID, Description, Principal, Action, Effect string
@@ -83,6 +111,7 @@ type Policy struct {
 	requireOwner                               bool
 	actionTenantFilter                         map[string][]Tenant
 	actionPropertyConditionFilter              map[string][]map[string]interface{}
+	actionFilter                               *conditionFilter
 }
 
 //ResourcePolicy describes target resources
@@ -243,52 +272,64 @@ func (p *Policy) precomputeConditions() error {
 			case conditionIsOwner:
 				p.requireOwner = true
 			default:
-				return fmt.Errorf("Unknown condition '%s' for policy '%s'", condition, p.ID)
+				panic(fmt.Sprintf("Unknown condition '%s' for policy '%s'", condition, p.ID))
 			}
 		case map[string]interface{}:
 			conditionObject := condition.(map[string]interface{})
-			switch conditionObject["type"] {
-			case conditionTypeBelongsTo:
-				actions := AllActions
-				if action, ok := conditionObject["action"]; ok && action != ActionGlob {
-					actions = []string{action.(string)}
+			if conditionType, ok := conditionObject["type"]; ok {
+				switch conditionType {
+				case conditionTypeBelongsTo:
+					actions := AllActions
+					if action, ok := conditionObject["action"]; ok && action != ActionGlob {
+						actions = []string{action.(string)}
+					}
+					rawTenantID, _ := conditionObject["tenant_id"].(string)
+					tenantID, err := getRegexp(rawTenantID)
+					if err != nil {
+						return err
+					}
+
+					rawTenantName, _ := conditionObject["tenant_name"].(string)
+					tenantName, err := getRegexp(rawTenantName)
+					if err != nil {
+						return err
+					}
+
+					if tenantName.String() != globalRegexp && tenantID.String() != globalRegexp {
+						panic(onlyOneOfTenantIDTenantNameError)
+					}
+
+					for _, action := range actions {
+						p.AddTenantToFilter(action, Tenant{ID: tenantID, Name: tenantName})
+					}
+				case conditionProperty:
+					actions := AllActions
+					if action, ok := conditionObject["action"]; ok && action != ActionGlob {
+						actions = []string{action.(string)}
+					}
+					match, ok := conditionObject[conditionMatch].(map[string]interface{})
+					if !ok {
+						panic("match should be dict")
+					}
+					for _, action := range actions {
+						p.AddPropertyConditionFilter(action, match)
+					}
+				default:
+					panic(fmt.Sprintf("Unknown condition type '%s' for policy '%s'", conditionObject["type"], p.ID))
 				}
-				rawTenantID, _ := conditionObject["tenant_id"].(string)
-				tenantID, err := getRegexp(rawTenantID)
-				if err != nil {
+			} else if andType, ok := conditionObject[conditionAnd]; ok {
+				var err error
+				if p.actionFilter, err = p.precomputeAndCondition(andType); err != nil {
 					return err
 				}
-
-				rawTenantName, _ := conditionObject["tenant_name"].(string)
-				tenantName, err := getRegexp(rawTenantName)
-				if err != nil {
+			} else if orType, ok := conditionObject[conditionOr]; ok {
+				var err error
+				if p.actionFilter, err = p.precomputeOrCondition(orType); err != nil {
 					return err
 				}
-
-				if tenantName.String() != globalRegexp && tenantID.String() != globalRegexp {
-					return fmt.Errorf(onlyOneOfTenantIDTenantNameError)
-				}
-
-				for _, action := range actions {
-					p.AddTenantToFilter(action, Tenant{ID: tenantID, Name: tenantName})
-				}
-			case conditionProperty:
-				actions := AllActions
-				if action, ok := conditionObject["action"]; ok && action != ActionGlob {
-					actions = []string{action.(string)}
-				}
-				match, ok := conditionObject["match"].(map[string]interface{})
-				if !ok {
-					return fmt.Errorf("match should be dict")
-				}
-				for _, action := range actions {
-					p.AddPropertyConditionFilter(action, match)
-				}
-			default:
-				return fmt.Errorf("Unknown condition type '%s' for policy '%s'", conditionObject["type"], p.ID)
 			}
 		default:
-			return fmt.Errorf("Invalid condition format for policy '%s'", p.ID)
+			panic(fmt.Sprintf("Invalid condition format for policy '%s'", p.ID))
 		}
 	}
 
@@ -521,6 +562,83 @@ func (p *Policy) isTenantAllowed(action string, owner, tenant Tenant) bool {
 		}
 	}
 	return false
+}
+
+func (policy *Policy) precomputeAndCondition(andCondition interface{})(*conditionFilter, error) {
+	return policy.precomputeCondition(andCondition, andFilter)
+}
+
+func (policy *Policy) precomputeOrCondition(orCondition interface{})(*conditionFilter, error) {
+	return policy.precomputeCondition(orCondition, orFilter)
+}
+
+func (policy *Policy) precomputeCondition(conds interface{}, filterType conditionFilterType) (*conditionFilter, error) {
+	conditions := conds.([]interface{})
+	actionFilter := makeConditionFilter(filterType)
+	for _, condition := range conditions {
+		switch condition.(type) {
+		case string:
+			stringValue := condition.(string)
+			if stringValue != conditionIsOwner {
+				return nil, fmt.Errorf("Unknown condition '%s' for policy '%s'", condition, policy.ID)
+			}
+			actionFilter.isOwner = true
+		case map[string]interface{}:
+			conditionObject := condition.(map[string]interface{})
+			if _, ok := conditionObject[conditionOr]; ok {
+				if orFilter, err := policy.precomputeOrCondition(conditionObject[conditionOr]); err != nil {
+					return nil, err
+				} else {
+					actionFilter.orFilters = orFilter
+				}
+			} else if _, ok := conditionObject[conditionAnd]; ok {
+				if andFilter, err := policy.precomputeAndCondition(conditionObject[conditionAnd]); err != nil {
+					return nil, err
+				} else {
+					actionFilter.andFilters =  andFilter
+				}
+			} else if _, ok := conditionObject[conditionMatch]; ok {
+				actionFilter.matches = append(actionFilter.matches, conditionObject[conditionMatch].(map[string]interface{}))
+			} else {
+				return nil, fmt.Errorf("Unknown condition '%s' for policy '%s'", condition, policy.ID)
+			}
+		default:
+			return nil, fmt.Errorf("Unknown condition '%s' for policy '%s'", condition, policy.ID)
+		}
+	}
+	return actionFilter, nil
+}
+
+func (policy *Policy) AddCustomFilters(filters map[string]interface{}, tenantId string) {
+	addCustomFilters(filters, tenantId, policy.actionFilter)
+}
+
+func addCustomFilters(f map[string]interface{}, tenantId string, conditionFilters *conditionFilter) {
+	if conditionFilters == nil {
+		return
+	}
+	filters := make([]map[string]interface{}, 0)
+	if conditionFilters.isOwner {
+		filters = append(filters, map[string]interface{}{"property": "tenant_id", "type": "eq", "value": tenantId})
+	}
+	for _, match := range conditionFilters.matches {
+		filters = append(filters, match)
+	}
+	if conditionFilters.andFilters != nil {
+		andFilter := map[string]interface{}{}
+		addCustomFilters(andFilter, tenantId, conditionFilters.andFilters)
+		filters = append(filters, andFilter)
+	}
+	if conditionFilters.orFilters != nil {
+		orFilter := map[string]interface{}{}
+		addCustomFilters(orFilter, tenantId, conditionFilters.orFilters)
+		filters = append(filters, orFilter)
+	}
+	if conditionFilters.filterType == orFilter {
+		f["__or__"] = filters
+	} else {
+		f["__and__"] = filters
+	}
 }
 
 //PolicyValidate validates api request using policy validation

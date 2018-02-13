@@ -172,6 +172,62 @@ policies:
       status: ACTIVE
   resource:
     path: /v2.0/server.*
+- action: create
+  effect: allow
+  id: member_filter_test_create
+  principal: Member
+  resource:
+    path: /v2.0/filter_test.*
+- action: update
+  effect: allow
+  id: member_filter_test_update
+  principal: Member
+  condition:
+    - and:
+      - is_owner
+      - match:
+          property: state
+          type: neq
+          value: INVALID
+  resource:
+    path: /v2.0/filter_test.*
+- action: delete
+  effect: allow
+  id: member_filter_test_delete
+  principal: Member
+  condition:
+    - and:
+      - is_owner
+      - match:
+          property: state
+          type: neq
+          value: INVALID
+  resource:
+    path: /v2.0/filter_test.*
+- action: read
+  effect: allow
+  id: member_filter_test_read
+  principal: Member
+  condition:
+    - or:
+      - and:
+        - match:
+            property: state
+            type: eq
+            value: UP
+        - match:
+            property: level
+            type: eq
+            value:
+              - 2
+              - 3
+      - is_owner
+  resource:
+    path: /v2.0/filter_test.*
+    properties:
+      - id
+      - state
+      - level
 - action: '*'
   condition:
   - is_owner
@@ -563,5 +619,45 @@ schemas:
     - id
     type: object
   title: Responder Parent
+- description: Test Filter
+  id: filter_test
+  singular: filter_test
+  plural: filter_tests
+  prefix: /v2.0
+  schema:
+    properties:
+      id:
+        description: ID
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: true
+      tenant_id:
+        description: Tenant ID
+        permission:
+        - create
+        title: TenantID
+        type: string
+        unique: false
+      state:
+        permission: ["create", "update"]
+        title: State
+        type: string
+        unique: false
+        description: state
+      level:
+        permission: ["create", "update"]
+        title: Level
+        type: integer
+        unique: false
+        description: level
+    propertiesOrder:
+    - id
+    - tenant_id
+    - state
+    - level
+    type: object
+  title: Test Filter
 
 subnets: []
