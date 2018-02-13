@@ -40,6 +40,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	// Import go-fakedb lib
 	_ "github.com/nati/go-fakedb"
+	"github.com/pkg/errors"
 )
 
 const retryDB = 50
@@ -466,7 +467,8 @@ func (db *DB) genTableCols(s *schema.Schema, cascade bool, exclude []string) ([]
 
 		if property.Indexed {
 			prefix := ""
-			if sqlDataType == "text" {
+			// mysql cannot index TEXT without prefix spec, while SQLite3 doesn't allow specifying key size
+			if sqlDataType == "text" && db.sqlType == "mysql" {
 				prefix = "(255)"
 			}
 			indices = append(indices, fmt.Sprintf("CREATE INDEX %s_%s_idx ON `%s`(`%s`%s);", s.Plural, property.ID,
@@ -551,16 +553,14 @@ func (db *DB) RegisterTable(s *schema.Schema, cascade, migrate bool) error {
 	if err != nil {
 		tableDef, indices = db.GenTableDef(s, cascade)
 	}
-	if tableDef == "" {
-		return nil
+	if tableDef != "" {
+		if _, err = db.DB.Exec(tableDef); err != nil {
+			return errors.Errorf("error when exec table stmt: '%s': %s", tableDef, err)
+		}
 	}
-	_, err = db.DB.Exec(tableDef)
-	if err != nil && indices != nil {
-		for _, indexSQL := range indices {
-			_, err = db.DB.Exec(indexSQL)
-			if err != nil {
-				return err
-			}
+	for _, indexSQL := range indices {
+		if _, err = db.DB.Exec(indexSQL); err != nil {
+			return errors.Errorf("error when exec index stmt: '%s': %s", indexSQL, err)
 		}
 	}
 	return err
