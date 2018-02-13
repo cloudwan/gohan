@@ -252,7 +252,7 @@ var _ = Describe("Sql", func() {
 			It("Should create index, if schema property should be indexed", func() {
 				_, indices := sqlConn.GenTableDef(test, false)
 				Expect(indices).To(HaveLen(2))
-				Expect(indices[0]).To(ContainSubstring("CREATE INDEX tests_tenant_id_idx ON `tests`(`tenant_id`(255));"))
+				Expect(indices[0]).To(ContainSubstring("CREATE INDEX tests_tenant_id_idx ON `tests`(`tenant_id`);"))
 			})
 		})
 
