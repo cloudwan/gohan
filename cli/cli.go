@@ -508,7 +508,7 @@ ARGUMENTS:
 				RawSuffix:        c.String("raw-suffix"),
 				InterfaceSuffix:  c.String("interface-suffix"),
 			}); err != nil {
-				println(err)
+				fmt.Printf("%+v\n", err)
 				os.Exit(1)
 			}
 		},
