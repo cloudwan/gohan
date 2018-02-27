@@ -391,6 +391,11 @@ func GetSingleResourceInTransaction(context middleware.Context, resourceSchema *
 	if tenantIDs != nil {
 		filter["tenant_id"] = tenantIDs
 	}
+
+	auth := context["auth"].(schema.Authorization)
+	policy := context["policy"].(*schema.Policy)
+	policy.AddCustomFilters(filter, auth.TenantID())
+
 	object, err := mainTransaction.Fetch(resourceSchema, filter, options)
 	if object == nil {
 		switch err {

@@ -480,6 +480,45 @@ var _ = Describe("Server package test", func() {
 			testURL("DELETE", serverPluralURL+"/"+serverID, adminTokenID, nil, http.StatusNoContent)
 		})
 		Context("Filter based policy condition", func() {
+			Context("Policy for get single resource", func() {
+				const (
+					private = "private"
+					public  = "public"
+				)
+
+				BeforeEach(func() {
+					testPrivate := map[string]interface{}{
+						"id":    private,
+						"state": "UP",
+						"level": 0,
+					}
+					testPublic := map[string]interface{}{
+						"id":    public,
+						"state": "UP",
+						"level": 3,
+					}
+
+					testURL("POST", filterTestPluralURL, powerUserTokenID, testPrivate, http.StatusCreated)
+					testURL("POST", filterTestPluralURL, powerUserTokenID, testPublic, http.StatusCreated)
+				})
+
+				It("should not get private resource as member", func() {
+					testURL("GET", filterTestPluralURL+"/"+private, memberTokenID, nil, http.StatusNotFound)
+				})
+
+				It("should get public resource as member", func() {
+					testURL("GET", filterTestPluralURL+"/"+public, memberTokenID, nil, http.StatusOK)
+				})
+
+				It("should get own private resource", func() {
+					testURL("GET", filterTestPluralURL+"/"+private, powerUserTokenID, nil, http.StatusOK)
+				})
+
+				It("should get own public resource", func() {
+					testURL("GET", filterTestPluralURL+"/"+public, powerUserTokenID, nil, http.StatusOK)
+				})
+			})
+
 			It("should work for get", func() {
 				// Tests query: `SELECT ... WHERE tenant_id.. OR (state = UP AND level IN (2,3)
 				expectedToContainTest := func(expectedCount int, res interface{}) {
@@ -1167,7 +1206,6 @@ func httpRequest(method, url, token string, postData interface{}) (interface{}, 
 }
 
 func clearTable(tx transaction.Transaction, s *schema.Schema) error {
-	fmt.Printf("clearing table %s\n", s.ID)
 	if s.IsAbstract() {
 		return nil
 	}
