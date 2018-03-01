@@ -593,6 +593,44 @@ var _ = Describe("Util tests", func() {
 					Expect(mapRepresentation).To(Equal(input))
 				})
 			})
+
+			Context("with interface Elem type", func() {
+				type TestResource struct {
+					ObjectHoldingMixedArray *struct {
+						MixedArray []interface{} `json:"mixed_array"`
+					} `json:"object_holding_mixed_array"`
+				}
+
+				It("should map interface type with mixed types", func() {
+					input := map[string]interface{}{
+						"object_holding_mixed_array": map[string]interface{}{
+							"mixed_array": []interface{}{
+								"one",
+								2,
+								[]interface{}{"three", 4},
+								map[string]interface{}{
+									"five": 5,
+								},
+								[]string{"six", "seven"},
+							},
+						},
+					}
+
+					rawResource, err := env.Util().ResourceFromMapForType(input, TestResource{})
+					Expect(err).To(BeNil())
+					resource := rawResource.(*TestResource)
+					Expect(resource.ObjectHoldingMixedArray.MixedArray).To(HaveLen(5))
+					Expect(resource.ObjectHoldingMixedArray.MixedArray[0]).To(Equal("one"))
+					Expect(resource.ObjectHoldingMixedArray.MixedArray[1]).To(Equal(2))
+					Expect(resource.ObjectHoldingMixedArray.MixedArray[2]).To(Equal([]interface{}{"three", 4}))
+					Expect(resource.ObjectHoldingMixedArray.MixedArray[3]).To(Equal(map[string]interface{}{"five": 5}))
+					Expect(resource.ObjectHoldingMixedArray.MixedArray[4]).To(Equal([]string{"six", "seven"}))
+
+					mapRepresentation := env.Util().ResourceToMap(resource)
+					input["object_holding_mixed_array"].(map[string]interface{})["mixed_array"].([]interface{})[4] = []interface{}{"six", "seven"}
+					Expect(mapRepresentation).To(Equal(input))
+				})
+			})
 		})
 
 	})

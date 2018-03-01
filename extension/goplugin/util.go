@@ -52,11 +52,11 @@ func (util *Util) NewUUID() string {
 	return uuid.NewV4().String()
 }
 
-func (u *Util) GetTransaction(context goext.Context) (goext.ITransaction, bool) {
+func (util *Util) GetTransaction(context goext.Context) (goext.ITransaction, bool) {
 	return contextGetTransaction(context)
 }
 
-func (u *Util) Clone() *Util {
+func (util *Util) Clone() *Util {
 	return &Util{}
 }
 
@@ -86,6 +86,9 @@ func resourceFromMap(context map[string]interface{}, resource reflect.Value) err
 	if isPrimitiveKind(resource.Kind()) {
 		resource.Set(reflect.ValueOf(context))
 		return nil
+	}
+	if resource.Kind() == reflect.Interface {
+		resource = resource.Elem()
 	}
 	if resource.Kind() == reflect.Ptr {
 		if context == nil && resource.IsNil() {
@@ -211,13 +214,16 @@ func sliceToMap(context map[string]interface{}, fieldName string, field reflect.
 		return nil
 	}
 
+	elemType := field.Type().Elem()
 	sliceElems := 0
 	interfaces := false
 	structures := false
 	switch v.(type) {
 	case []map[string]interface{}:
 		sliceElems = len(v.([]map[string]interface{}))
-		structures = true
+		if elemType.Kind() == reflect.Ptr || elemType.Kind() == reflect.Struct {
+			structures = true
+		}
 	case []interface{}:
 		sliceElems = len(v.([]interface{}))
 		interfaces = true
@@ -232,7 +238,6 @@ func sliceToMap(context map[string]interface{}, fieldName string, field reflect.
 	field.Set(reflect.MakeSlice(field.Type(), sliceElems, sliceElems))
 	field.SetLen(sliceElems)
 	for i := 0; i < sliceElems; i++ {
-		elemType := field.Type().Elem()
 		elem := field.Index(i)
 		nestedField := reflect.New(elemType).Elem()
 		if structures {
@@ -241,7 +246,7 @@ func sliceToMap(context map[string]interface{}, fieldName string, field reflect.
 			}
 		} else if interfaces {
 			nestedValue := v.([]interface{})[i]
-			if nestedMap, ok := nestedValue.(map[string]interface{}); ok {
+			if nestedMap, ok := nestedValue.(map[string]interface{}); ok && elemType.Kind() == reflect.Ptr && elemType.Elem().Kind() == reflect.Struct {
 				if err := resourceFromMap(nestedMap, nestedField); err != nil {
 					return err
 				}
@@ -298,7 +303,9 @@ func (util *Util) ResourceToMap(resource interface{}) map[string]interface{} {
 				fieldsMap[fieldName] = rv
 			}
 		} else if v.Kind() == reflect.Slice {
-			util.sliceToMap(fieldsMap, fieldName, v)
+			if !v.IsNil() {
+				fieldsMap[fieldName] = util.sliceToMap(v)
+			}
 		} else if v.Kind() == reflect.Struct {
 			fieldsMap[fieldName] = util.ResourceToMap(v.Addr().Interface())
 		} else {
@@ -309,27 +316,56 @@ func (util *Util) ResourceToMap(resource interface{}) map[string]interface{} {
 	return fieldsMap
 }
 
-func (util *Util) sliceToMap(fieldsMap map[string]interface{}, fieldName string, v reflect.Value) {
-	if v.IsNil() {
-		return
-	}
-
-	sliceElem := v.Type().Elem()
-	if isPrimitiveKind(sliceElem.Kind()) {
-		slice := make([]interface{}, v.Len())
-		for i := 0; i < v.Len(); i++ {
-			slice[i] = v.Index(i).Interface()
+func (util *Util) allSliceElemsAreMappable(v reflect.Value) bool {
+	for i := 0; i < v.Len(); i++ {
+		if !isMappableType(v.Index(i)) {
+			return false
 		}
-		fieldsMap[fieldName] = slice
-		return
 	}
+	return true
+}
 
+func (util *Util) mappableValueToMap(v reflect.Value) map[string]interface{} {
+	if v.Kind() == reflect.Interface {
+		v = v.Elem()
+	}
+	if v.Kind() == reflect.Map {
+		return v.Interface().(map[string]interface{})
+	} else {
+		return util.ResourceToMap(v.Interface())
+	}
+}
+
+func (util *Util) sliceToMapWithPrimitiveElems(v reflect.Value) interface{} {
+	slice := make([]interface{}, v.Len())
+	for i := 0; i < v.Len(); i++ {
+		slice[i] = v.Index(i).Interface()
+	}
+	return slice
+}
+
+func (util *Util) sliceToMapWithAnyElems(v reflect.Value) interface{} {
+	slice := make([]interface{}, v.Len())
+	for i := 0; i < v.Len(); i++ {
+		elem := v.Index(i).Elem()
+		if isMappableType(elem) {
+			slice[i] = util.mappableValueToMap(elem)
+		} else if elem.Kind() == reflect.Slice && !elem.IsNil() {
+			slice[i] = util.sliceToMap(elem)
+		} else {
+			slice[i] = elem.Interface()
+		}
+	}
+	return slice
+}
+
+func (util *Util) sliceToMapWithMappableElems(v reflect.Value) interface{} {
 	slice := make([]map[string]interface{}, v.Len())
 	for i := 0; i < v.Len(); i++ {
 		elem := v.Index(i)
 		if isNullableKind(elem.Kind()) {
 			if !elem.IsNil() {
-				slice[i] = util.ResourceToMap(elem.Interface())
+				slice[i] = util.mappableValueToMap(elem)
 			} else {
 				slice[i] = nil
 			}
@@ -337,7 +373,19 @@ func (util *Util) sliceToMap(fieldsMap map[string]interface{}, fieldName string,
 			slice[i] = util.ResourceToMap(elem.Addr().Interface())
 		}
 	}
-	fieldsMap[fieldName] = slice
+	return slice
+}
+
+func (util *Util) sliceToMap(v reflect.Value) interface{} {
+	elemKind := v.Type().Elem().Kind()
+	if isPrimitiveKind(elemKind) {
+		return util.sliceToMapWithPrimitiveElems(v)
+	}
+	if elemKind == reflect.Interface && !util.allSliceElemsAreMappable(v) {
+		return util.sliceToMapWithAnyElems(v)
+	} else {
+		return util.sliceToMapWithMappableElems(v)
+	}
 }
 
 func isStructureMaybeType(v reflect.Value) bool {
@@ -349,6 +397,21 @@ func isStructureMaybeType(v reflect.Value) bool {
 		return true
 	}
 	return false
+}
+
+func isMappableType(v reflect.Value) bool {
+	switch v.Kind() {
+	case reflect.Map:
+		return true
+	case reflect.Struct:
+		return true
+	case reflect.Interface:
+		return isMappableType(v.Elem())
+	case reflect.Ptr:
+		return isMappableType(v.Elem())
+	default:
+		return false
+	}
 }
 
 func isPrimitiveMaybeType(v reflect.Value) bool {
