@@ -137,6 +137,40 @@ var fakeTokens = map[string]interface{}{
 			},
 		},
 	},
+	"visible_token": map[string]interface{}{
+		"access": map[string]interface{}{
+			"token":          getToken("visible_token", allTenants[0]),
+			"serviceCatalog": serviceCatalog,
+			"user": map[string]interface{}{
+				"id":   "visible",
+				"name": "visible",
+				"roles": []role{
+					{
+						Name: "Visible",
+					},
+				},
+				"roles_links": map[string]interface{}{},
+				"username":    "visible",
+			},
+		},
+	},
+	"hidden_token": map[string]interface{}{
+		"access": map[string]interface{}{
+			"token":          getToken("hidden_token", allTenants[0]),
+			"serviceCatalog": serviceCatalog,
+			"user": map[string]interface{}{
+				"id":   "hidden",
+				"name": "hidden",
+				"roles": []role{
+					{
+						Name: "Hidden",
+					},
+				},
+				"roles_links": map[string]interface{}{},
+				"username":    "hidden",
+			},
+		},
+	},
 }
 
 //ReadJSON reads JSON from http request

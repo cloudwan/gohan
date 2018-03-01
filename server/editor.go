@@ -48,14 +48,13 @@ func GetSchema(s *schema.Schema, authorization schema.Authorization) (result *sc
 	filteredSchema["required"] = schemaRequired
 
 	permission := []string{}
+	defaultFilter := schema.CreateExcludeAllFilter()
 	for _, action := range schema.AllActions {
 		if p, _ := manager.PolicyValidate(action, s.GetPluralURL(), authorization); p != nil {
 			permission = append(permission, action)
-			if p.Resource.Properties != nil {
-				filterPermission(action, schemaProperties, p.Resource.Properties)
-			}
+			filterPermission(action, schemaProperties, p.Resource.PropertiesFilter)
 		} else {
-			filterPermission(action, schemaProperties, nil)
+			filterPermission(action, schemaProperties, defaultFilter)
 		}
 	}
 	filteredSchema["permission"] = permission
@@ -68,20 +67,10 @@ func GetSchema(s *schema.Schema, authorization schema.Authorization) (result *sc
 	return
 }
 
-func filterPermission(action string, schemaProperties map[string]interface{}, propertiesToSkip []interface{}) {
-	checkAllProperties := propertiesToSkip == nil // special case
-
-	propertySkipMap := map[string]bool{}
-
-	if !checkAllProperties {
-		for _, property := range propertiesToSkip {
-			propertySkipMap[property.(string)] = true
-		}
-	}
-
+func filterPermission(action string, schemaProperties map[string]interface{}, filter *schema.Filter) {
 	for property, rawPermissions := range schemaProperties {
 		permissions := rawPermissions.(map[string]interface{})
-		if checkAllProperties || !propertySkipMap[property] {
+		if filter.IsForbidden(property) {
 			if _, ok := permissions["permission"]; !ok {
 				continue
 			}

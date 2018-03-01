@@ -1,0 +1,36 @@
+policies:
+- action: create
+  effect: allow
+  id: incorrect_properties_create
+  principal: admin
+  condition:
+  - type: property
+    match:
+      id:
+      - admin
+  resource:
+    path: /v2.0/incorrect_properties_test.*
+    properties:
+    - id
+    blacklistProperties:
+    - id
+
+schemas:
+- description: Test Incorrect Properties
+  id: incorrect_properties_test
+  singular: incorrect_properties_test
+  plural: incorrect_properties_tests
+  prefix: /v2.0
+  schema:
+    properties:
+      id:
+        description: ID
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: true
+    propertiesOrder:
+    - id
+    type: object
+  title: Test Incorrect Properties
