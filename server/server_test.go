@@ -37,23 +37,25 @@ import (
 	sync_util "github.com/cloudwan/gohan/sync/util"
 	"github.com/cloudwan/gohan/util"
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 )
 
 var (
-	server              *srv.Server
-	baseURL             = "http://localhost:19090"
-	schemaURL           = baseURL + "/gohan/v0.1/schemas"
-	networkPluralURL    = baseURL + "/v2.0/networks"
-	subnetPluralURL     = baseURL + "/v2.0/subnets"
-	serverPluralURL     = baseURL + "/v2.0/servers"
-	testPluralURL       = baseURL + "/v2.0/tests"
-	parentsPluralURL    = baseURL + "/v1.0/parents"
-	childrenPluralURL   = baseURL + "/v1.0/children"
-	schoolsPluralURL    = baseURL + "/v1.0/schools"
-	citiesPluralURL     = baseURL + "/v1.0/cities"
-	profilingURL        = baseURL + "/debug/pprof/"
-	filterTestPluralURL = baseURL + "/v2.0/filter_tests"
+	server                  *srv.Server
+	baseURL                 = "http://localhost:19090"
+	schemaURL               = baseURL + "/gohan/v0.1/schemas"
+	networkPluralURL        = baseURL + "/v2.0/networks"
+	subnetPluralURL         = baseURL + "/v2.0/subnets"
+	serverPluralURL         = baseURL + "/v2.0/servers"
+	testPluralURL           = baseURL + "/v2.0/tests"
+	parentsPluralURL        = baseURL + "/v1.0/parents"
+	childrenPluralURL       = baseURL + "/v1.0/children"
+	schoolsPluralURL        = baseURL + "/v1.0/schools"
+	citiesPluralURL         = baseURL + "/v1.0/cities"
+	profilingURL            = baseURL + "/debug/pprof/"
+	filterTestPluralURL     = baseURL + "/v2.0/filter_tests"
+	visibilityTestPluralURL = baseURL + "/v2.0/visible_properties_tests"
 )
 
 var _ = Describe("Server package test", func() {
@@ -479,6 +481,79 @@ var _ = Describe("Server package test", func() {
 			testURL("DELETE", serverPluralURL+"/"+serverID, memberTokenID, nil, http.StatusUnauthorized)
 			testURL("DELETE", serverPluralURL+"/"+serverID, adminTokenID, nil, http.StatusNoContent)
 		})
+
+		Context("Visiblity of properties", func() {
+			const (
+				resourceType   = "visible_properties_test"
+				resourceID     = "resource_id"
+				visibleTokenID = "visible_token"
+				hiddenTokenID  = "hidden_token"
+			)
+
+			var url = visibilityTestPluralURL + "/" + resourceID
+
+			Context("Read", func() {
+				BeforeEach(func() {
+					testResource := map[string]interface{}{
+						"id": resourceID,
+						"a":  "a",
+						"b":  "b",
+					}
+					testURL("POST", visibilityTestPluralURL, adminTokenID, testResource, http.StatusCreated)
+				})
+
+				It("Should see visible fields", func() {
+					res := testURL("GET", url, visibleTokenID, nil, http.StatusOK)
+
+					actual := res.(map[string]interface{})[resourceType]
+					expected := map[string]interface{}{"a": "a"}
+
+					Expect(expected).To(Equal(actual))
+				})
+
+				It("Should not see hidden fields", func() {
+					res := testURL("GET", url, hiddenTokenID, nil, http.StatusOK)
+
+					actual := res.(map[string]interface{})[resourceType]
+					expected := map[string]interface{}{"b": "b"}
+
+					Expect(expected).To(Equal(actual))
+				})
+			})
+
+			DescribeTable("Create",
+				func(property string, token string, status int) {
+					testResource := map[string]interface{}{
+						"id":     resourceID,
+						property: property,
+					}
+					testURL("POST", visibilityTestPluralURL, token, testResource, status)
+				},
+				Entry("Should create exposed with correct fields", "a", visibleTokenID, http.StatusCreated),
+				Entry("Should not create exposed with incorrect fields", "b", visibleTokenID, http.StatusUnauthorized),
+				Entry("Should create forbidden with correct fields", "b", hiddenTokenID, http.StatusCreated),
+				Entry("Should not create forbidden with incorrect fields", "a", hiddenTokenID, http.StatusUnauthorized),
+			)
+
+			DescribeTable("Update",
+				func(property string, token string, status int) {
+					testResource := map[string]interface{}{
+						"id": resourceID,
+					}
+					testURL("POST", visibilityTestPluralURL, token, testResource, http.StatusCreated)
+
+					testResource = map[string]interface{}{
+						property: property,
+					}
+					testURL("PUT", visibilityTestPluralURL+"/"+resourceID, token, testResource, status)
+				},
+				Entry("Should update exposed with correct fields", "a", visibleTokenID, http.StatusOK),
+				Entry("Should not update exposed with incorrect fields", "b", visibleTokenID, http.StatusUnauthorized),
+				Entry("Should update forbidden with correct fields", "b", hiddenTokenID, http.StatusOK),
+				Entry("Should not update forbidden with incorrect fields", "a", hiddenTokenID, http.StatusUnauthorized),
+			)
+		})
+
 		Context("Filter based policy condition", func() {
 			Context("Policy for get single resource", func() {
 				const (

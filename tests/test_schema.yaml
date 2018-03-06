@@ -228,6 +228,75 @@ policies:
       - id
       - state
       - level
+- action: create
+  id: visible_properties_test_create
+  principal: admin
+  resource:
+    path: /v2.0/visible_properties_test.*
+- action: create
+  effect: allow
+  id: visible_properties_create
+  principal: Visible
+  resource:
+    path: /v2.0/visible_properties_test.*
+    properties:
+    - id
+    - a
+- action: update
+  effect: allow
+  id: visible_properties_update
+  principal: Visible
+  resource:
+    path: /v2.0/visible_properties_test.*
+    properties:
+    - id
+    - a
+- action: read
+  effect: allow
+  id: visible_properties_read
+  principal: Visible
+  condition:
+  - type: property
+    match:
+      is_public:
+      - true
+  resource:
+    path: /v2.0/visible_properties_test.*
+    properties:
+    - a
+- action: create
+  effect: allow
+  id: hidden_properties_create
+  principal: Hidden
+  resource:
+    path: /v2.0/visible_properties_test.*
+    blacklistProperties:
+    - a
+    - is_public
+- action: update
+  effect: allow
+  id: hidden_properties_update
+  principal: Hidden
+  resource:
+    path: /v2.0/visible_properties_test.*
+    blacklistProperties:
+    - a
+    - is_public
+- action: read
+  effect: allow
+  id: hidden_properties_read
+  principal: Hidden
+  condition:
+  - type: property
+    match:
+      is_public:
+      - true
+  resource:
+    path: /v2.0/visible_properties_test.*
+    blacklistProperties:
+    - id
+    - a
+    - is_public
 - action: '*'
   condition:
   - is_owner
@@ -659,5 +728,46 @@ schemas:
     - level
     type: object
   title: Test Filter
+- description: Test Visible Properties
+  id: visible_properties_test
+  singular: visible_properties_test
+  plural: visible_properties_tests
+  prefix: /v2.0
+  schema:
+    properties:
+      id:
+        description: ID
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: true
+      a:
+        description: A
+        permission:
+        - create
+        - update
+        title: A
+        type: string
+      b:
+        description: B
+        permission:
+        - create
+        - update
+        title: A
+        type: string
+      is_public:
+        description: Is Public
+        permission:
+        - create
+        title: Is Public
+        type: boolean
+        default: true
+    propertiesOrder:
+    - id
+    - a
+    - b
+    type: object
+  title: Test Visible Properties
 
 subnets: []

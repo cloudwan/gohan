@@ -116,8 +116,8 @@ type Policy struct {
 
 //ResourcePolicy describes target resources
 type ResourcePolicy struct {
-	Properties []interface{}
-	Path       *regexp.Regexp
+	PropertiesFilter *Filter
+	Path             *regexp.Regexp
 }
 
 //Authorization interface
@@ -251,15 +251,39 @@ func NewPolicy(raw interface{}) (*Policy, error) {
 		return nil, fmt.Errorf(onlyOneOfTenantIDTenantNameError)
 	}
 
-	properties, ok := resourceData["properties"]
-	resource.Properties = nil
-	if ok {
-		resource.Properties = properties.([]interface{})
+	filterFactory := FilterFactory{}
+	if resource.PropertiesFilter, err = filterFactory.CreateFilterFromProperties(
+		getStringSliceFromMap(resourceData, "properties"),
+		getStringSliceFromMap(resourceData, "blacklistProperties"),
+	); err != nil {
+		return nil, err
 	}
+
 	if err := policy.precomputeConditions(); err != nil {
 		return nil, err
 	}
 	return policy, nil
+}
+
+func getStringSliceFromMap(data map[string]interface{}, key string) []string {
+	switch slice := data[key].(type) {
+	case []string:
+		return slice
+	case []interface{}:
+		return getStringSliceFromRawSlice(slice)
+	default:
+		return nil
+	}
+}
+
+func getStringSliceFromRawSlice(data []interface{}) []string {
+	var result []string
+	for _, rawItem := range data {
+		if item, ok := rawItem.(string); ok {
+			result = append(result, item)
+		}
+	}
+	return result
 }
 
 func (p *Policy) precomputeConditions() error {
@@ -378,64 +402,16 @@ func (p *Policy) RequireOwner() bool {
 //RemoveHiddenProperty removes hidden data from data by Policy
 // This method returns nil if all data get filtered out
 func (p *Policy) RemoveHiddenProperty(data map[string]interface{}) map[string]interface{} {
-	properties := p.Resource.Properties
-	if properties == nil {
-		return data
-	}
-	result := map[string]interface{}{}
-	for _, property := range properties {
-		propertyString := property.(string)
-		value, ok := data[propertyString]
-		if ok {
-			result[propertyString] = value
-		}
-	}
-	return result
+	return p.Resource.PropertiesFilter.RemoveHiddenKeysFromMap(data)
 }
 
 //FilterSchema filters properties in the schema itself
 func (p *Policy) FilterSchema(properties map[string]interface{},
 	propertiesOrder, required []string) (map[string]interface{}, []string, []string) {
-	allowedProperties := p.Resource.Properties
-	if allowedProperties == nil {
-		return properties, propertiesOrder, required
-	}
-	filteredProperties := map[string]interface{}{}
-	filteredPropertiesOrder := []string{}
-	filteredRequired := []string{}
-	if propertiesOrder == nil {
-		filteredPropertiesOrder = nil
-	}
-	if required == nil {
-		filteredRequired = nil
-	}
-	for _, propertyRaw := range allowedProperties {
-		property := propertyRaw.(string)
-		if _, ok := properties[property]; !ok {
-			continue
-		}
-		filteredProperties[property] = properties[property]
-	}
-	for _, property := range propertiesOrder {
-		if _, ok := filteredProperties[property]; ok {
-			filteredPropertiesOrder = append(filteredPropertiesOrder, property)
-		}
-	}
-	for _, property := range required {
-		if _, ok := filteredProperties[property]; ok {
-			filteredRequired = append(filteredRequired, property)
-		}
-	}
-	return filteredProperties, filteredPropertiesOrder, filteredRequired
-}
-
-func contains(list []interface{}, key string) bool {
-	for _, value := range list {
-		if key == value.(string) {
-			return true
-		}
-	}
-	return false
+	filter := p.Resource.PropertiesFilter
+	return filter.RemoveHiddenKeysFromMap(properties),
+		filter.RemoveHiddenKeysFromSlice(propertiesOrder),
+		filter.RemoveHiddenKeysFromSlice(required)
 }
 
 //Check ...
@@ -451,16 +427,11 @@ func (p *Policy) Check(action string, authorization Authorization, data map[stri
 		}
 	}
 
-	properties := p.Resource.Properties
-	if properties == nil {
-		log.Debug("No properties in resource policy. Allowing all property access")
-		return nil
-	}
 	for key := range data {
 		if key == "tenant_name" {
 			continue
 		}
-		if !contains(properties, key) {
+		if p.Resource.PropertiesFilter.IsForbidden(key) {
 			return fmt.Errorf("%s is prohibited for this user", key)
 		}
 	}
@@ -564,11 +535,11 @@ func (p *Policy) isTenantAllowed(action string, owner, tenant Tenant) bool {
 	return false
 }
 
-func (policy *Policy) precomputeAndCondition(andCondition interface{})(*conditionFilter, error) {
+func (policy *Policy) precomputeAndCondition(andCondition interface{}) (*conditionFilter, error) {
 	return policy.precomputeCondition(andCondition, andFilter)
 }
 
-func (policy *Policy) precomputeOrCondition(orCondition interface{})(*conditionFilter, error) {
+func (policy *Policy) precomputeOrCondition(orCondition interface{}) (*conditionFilter, error) {
 	return policy.precomputeCondition(orCondition, orFilter)
 }
 
@@ -595,7 +566,7 @@ func (policy *Policy) precomputeCondition(conds interface{}, filterType conditio
 				if andFilter, err := policy.precomputeAndCondition(conditionObject[conditionAnd]); err != nil {
 					return nil, err
 				} else {
-					actionFilter.andFilters =  andFilter
+					actionFilter.andFilters = andFilter
 				}
 			} else if _, ok := conditionObject[conditionMatch]; ok {
 				actionFilter.matches = append(actionFilter.matches, conditionObject[conditionMatch].(map[string]interface{}))

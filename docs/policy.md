@@ -202,3 +202,42 @@ policies:
 In the above example, the access to favicon is always granted and never requires an authorization.
 This feature is useful for web browsers and it is a good practice to set this policy.
 In the second policy, no-authorization access is granted to all member resources defined by a path wildcard.
+
+## Resource properties
+
+It is possible to filter allowed fields using `properties` or `blacklistProperties` properties.
+It is not possible to use both `properties` and `blacklistProperties` at the same time.
+In case of having both types of properties error is returned on the server start.
+- `properties` defines properties exposed to the user, the other properties are forbidden.
+- `blacklistProperties` defines forbidden properties, the other properties are exposed.
+
+```yaml
+- action: read
+  effect: allow
+  id: visible_properties_read
+  principal: Visible
+  condition:
+  - type: property
+    match:
+      is_public:
+      - true
+  resource:
+    path: /v2.0/visible_properties_test.*
+    properties:
+    - a
+- action: read
+  effect: allow
+  id: visible_properties_read
+  principal: Hidden
+  condition:
+  - type: property
+    match:
+      is_public:
+      - true
+  resource:
+    path: /v2.0/visible_properties_test.*
+    blacklistProperties:
+    - id
+    - a
+    - is_public
+```
