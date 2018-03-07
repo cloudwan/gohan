@@ -127,6 +127,28 @@ var _ = Describe("Util tests", func() {
 			})
 		})
 
+		Context("Map as struct field", func() {
+			type TestResource struct {
+				SomeMap map[string]interface{} `json:"some_map"`
+			}
+
+			It("is rewritten", func() {
+				input := map[string]interface{}{
+					"some_map": map[string]interface{}{
+						"hello": "world",
+					},
+				}
+
+				rawResource, err := env.Util().ResourceFromMapForType(input, TestResource{})
+				Expect(err).To(BeNil())
+				resource := rawResource.(*TestResource)
+				Expect(resource.SomeMap).To(HaveKey("hello"))
+
+				mapRepresentation := env.Util().ResourceToMap(resource)
+				Expect(mapRepresentation).To(Equal(input))
+			})
+		})
+
 		Context("Undefined null values", func() {
 			type TestResource struct {
 				MaybeInt goext.MaybeInt `json:"maybe_int"`
