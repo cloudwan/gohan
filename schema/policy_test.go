@@ -89,12 +89,20 @@ var _ = Describe("Policies", func() {
 			}
 		})
 
+		It("should return error on both types of properties", func() {
+			testPolicy["resource"].(map[string]interface{})["properties"] = []string{"a"}
+			testPolicy["resource"].(map[string]interface{})["blacklistProperties"] = []string{"b"}
+
+			_, err := NewPolicy(testPolicy)
+			Expect(err).To(HaveOccurred())
+		})
+
 		It("should show panic on invalid condition", func() {
 			testPolicy["condition"] = []interface{}{
 				"is_owner",
 				"invalid_condition",
 			}
-			Expect(func() {NewPolicy(testPolicy)}).To(Panic())
+			Expect(func() { NewPolicy(testPolicy) }).To(Panic())
 		})
 
 		It("should show panic on unknown condition type", func() {
@@ -103,7 +111,7 @@ var _ = Describe("Policies", func() {
 					"type": "unknown",
 				},
 			}
-			Expect(func() {NewPolicy(testPolicy)}).To(Panic())
+			Expect(func() { NewPolicy(testPolicy) }).To(Panic())
 		})
 
 		It("should panic on invalid condition format", func() {
@@ -111,7 +119,7 @@ var _ = Describe("Policies", func() {
 				"is_owner",
 				5,
 			}
-			Expect(func() {NewPolicy(testPolicy)}).To(Panic())
+			Expect(func() { NewPolicy(testPolicy) }).To(Panic())
 		})
 
 		It("tests multiple conditions", func() {

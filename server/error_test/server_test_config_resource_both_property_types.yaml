@@ -1,0 +1,2 @@
+schemas:
+    - "../../tests/test_action_resource_both_property_types.yaml"

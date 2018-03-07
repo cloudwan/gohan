@@ -91,7 +91,10 @@ func (server *Server) mapRoutes() {
 		if err != nil {
 			return err
 		}
-		schemaManager.LoadPolicies(policyList)
+
+		if err = schemaManager.LoadPolicies(policyList); err != nil {
+			return err
+		}
 
 		extensionSchema, _ := schemaManager.Schema("extension")
 		extensionList, _, err := tx.List(extensionSchema, nil, nil, nil)
