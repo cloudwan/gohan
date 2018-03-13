@@ -6,9 +6,10 @@ package goext
 
 import (
 	context "context"
-	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 	time "time"
+
+	gomock "github.com/golang/mock/gomock"
 )
 
 // MockICore is a mock of ICore interface
@@ -874,6 +875,19 @@ func (m *MockIUtil) GetTransaction(arg0 Context) (ITransaction, bool) {
 // GetTransaction indicates an expected call of GetTransaction
 func (mr *MockIUtilMockRecorder) GetTransaction(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTransaction", reflect.TypeOf((*MockIUtil)(nil).GetTransaction), arg0)
+}
+
+// GetHttpRequestBody mocks base method
+func (m *MockIUtil) GetHttpRequestBody(arg0 Context) (map[string]interface{}, error) {
+	ret := m.ctrl.Call(m, "GetHttpRequestBody", arg0)
+	ret0, _ := ret[0].(map[string]interface{})
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetHttpRequestBody indicates an expected call of GetHttpRequestBody
+func (mr *MockIUtilMockRecorder) GetHttpRequestBody(arg0 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHttpRequestBody", reflect.TypeOf((*MockIUtil)(nil).GetHttpRequestBody), arg0)
 }
 
 // NewUUID mocks base method

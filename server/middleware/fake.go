@@ -173,20 +173,6 @@ var fakeTokens = map[string]interface{}{
 	},
 }
 
-//ReadJSON reads JSON from http request
-func ReadJSON(r *http.Request) (map[string]interface{}, error) {
-	var data interface{}
-	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&data)
-	if err != nil {
-		return nil, err
-	}
-	if _, ok := data.(map[string]interface{}); !ok {
-		return nil, fmt.Errorf("request body is not a data dictionary")
-	}
-	return data.(map[string]interface{}), nil
-}
-
 //FakeIdentity middleware
 type FakeIdentity struct{}
 
@@ -236,7 +222,7 @@ func (identity *FakeIdentity) GetServiceAuthorization() (schema.Authorization, e
 func FakeKeystone(martini *martini.ClassicMartini) {
 	//mocking keystone v2.0 API
 	martini.Post("/v2.0/tokens", func(w http.ResponseWriter, r *http.Request) {
-		authRequest, err := ReadJSON(r)
+		authRequest, err := util.ReadJSON(r)
 		if err != nil {
 			http.Error(w, "", http.StatusBadRequest)
 		}
