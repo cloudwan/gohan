@@ -18,6 +18,7 @@ package goext
 type IUtil interface {
 	NewUUID() string
 	GetTransaction(context Context) (ITransaction, bool)
+	GetHttpRequestBody(context Context) (map[string]interface{}, error)
 
 	// ResourceFromMapForType converts mapped representation to structure representation of the resource for given type
 	ResourceFromMapForType(context map[string]interface{}, rawResource interface{}) (Resource, error)

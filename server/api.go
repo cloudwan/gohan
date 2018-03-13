@@ -29,6 +29,7 @@ import (
 	"github.com/cloudwan/gohan/server/middleware"
 	"github.com/cloudwan/gohan/server/resources"
 	"github.com/cloudwan/gohan/sync"
+	"github.com/cloudwan/gohan/util"
 	"github.com/drone/routes"
 	"github.com/go-martini/martini"
 )
@@ -285,7 +286,7 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 	postPluralFunc := func(w http.ResponseWriter, r *http.Request, p martini.Params, identityService middleware.IdentityService, context middleware.Context) {
 		addJSONContentTypeHeader(w)
 		fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, server.queue)
-		dataMap, err := middleware.ReadJSON(r)
+		dataMap, err := util.ReadJSON(r)
 		if err != nil {
 			handleError(w, resources.NewResourceError(err, fmt.Sprintf("Failed to parse data: %s", err), resources.WrongData))
 			return
@@ -319,7 +320,7 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 		addJSONContentTypeHeader(w)
 		fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, server.queue)
 		id := p["id"]
-		dataMap, err := middleware.ReadJSON(r)
+		dataMap, err := util.ReadJSON(r)
 		if err != nil {
 			handleError(w, resources.NewResourceError(err, fmt.Sprintf("Failed to parse data: %s", err), resources.WrongData))
 			return
@@ -346,7 +347,7 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 		addJSONContentTypeHeader(w)
 		fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, server.queue)
 		id := p["id"]
-		dataMap, err := middleware.ReadJSON(r)
+		dataMap, err := util.ReadJSON(r)
 		if err != nil {
 			handleError(w, resources.NewResourceError(err, fmt.Sprintf("Failed to parse data: %s", err), resources.WrongData))
 			return
@@ -377,7 +378,7 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 			input := make(map[string]interface{})
 			if action.InputSchema != nil {
 				var err error
-				input, err = middleware.ReadJSON(r)
+				input, err = util.ReadJSON(r)
 				if err != nil {
 					handleError(w, resources.NewResourceError(err, fmt.Sprintf("Failed to parse data: %s", err), resources.WrongData))
 					return

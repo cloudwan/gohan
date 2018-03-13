@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -354,4 +355,21 @@ func Index(slice []string, elem string) int {
 		}
 	}
 	return -1
+}
+
+//ReadJSON reads JSON from http request
+func ReadJSON(r *http.Request) (map[string]interface{}, error) {
+	var data interface{}
+	var reqData bytes.Buffer
+	tee := io.TeeReader(r.Body, &reqData)
+	decoder := json.NewDecoder(tee)
+	r.Body = ioutil.NopCloser(&reqData)
+	err := decoder.Decode(&data)
+	if err != nil {
+		return nil, err
+	}
+	if _, ok := data.(map[string]interface{}); !ok {
+		return nil, fmt.Errorf("request body is not a data dictionary")
+	}
+	return data.(map[string]interface{}), nil
 }

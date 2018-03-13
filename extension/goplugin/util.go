@@ -20,8 +20,11 @@ import (
 	"reflect"
 	"strings"
 
+	"net/http"
+
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/extension/goext"
+	gohan_util "github.com/cloudwan/gohan/util"
 	"github.com/golang/mock/gomock"
 	"github.com/jmoiron/sqlx/reflectx"
 	"github.com/pkg/errors"
@@ -54,6 +57,11 @@ func (util *Util) NewUUID() string {
 
 func (util *Util) GetTransaction(context goext.Context) (goext.ITransaction, bool) {
 	return contextGetTransaction(context)
+}
+
+func (util *Util) GetHttpRequestBody(context goext.Context) (map[string]interface{}, error) {
+	httpRequest := context["http_request"].(*http.Request)
+	return gohan_util.ReadJSON(httpRequest)
 }
 
 func (util *Util) Clone() *Util {

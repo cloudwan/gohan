@@ -143,7 +143,7 @@ func httpServer(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}
 					m.Post(path, func(w http.ResponseWriter, r *http.Request, p martini.Params) {
 						context := globalContext.Extend(nil)
 						fillInContext(context.Data(), r, w, p)
-						requestData, _ := middleware.ReadJSON(r)
+						requestData, _ := util.ReadJSON(r)
 						context.Set("request", requestData)
 						vm.Run(context.Data())
 						serveResponse(w, context.Data())
@@ -152,7 +152,7 @@ func httpServer(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}
 					m.Put(path, func(w http.ResponseWriter, r *http.Request, p martini.Params) {
 						context := globalContext.Extend(nil)
 						fillInContext(context.Data(), r, w, p)
-						requestData, _ := middleware.ReadJSON(r)
+						requestData, _ := util.ReadJSON(r)
 						context.Set("request", requestData)
 						vm.Run(context.Data())
 						serveResponse(w, context.Data())
