@@ -431,6 +431,9 @@ func setMaybeState(v reflect.Value, state goext.MaybeState) {
 }
 
 func primitiveMaybeToMap(fieldsMap map[string]interface{}, fieldName string, value reflect.Value) {
+	if value.Kind() == reflect.Interface {
+		value = reflect.ValueOf(value.Interface())
+	}
 	if value.Kind() == reflect.Ptr {
 		if value.IsNil() {
 			panic("Nil pointers to Maybe types are not supported")
