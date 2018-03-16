@@ -657,20 +657,20 @@ var _ = Describe("Util tests", func() {
 
 		Context("Maybe type as interface{}", func() {
 			type TestResource struct {
-				IntType    interface{}
-				StringType interface{}
+				IntType       interface{}
+				StringType    interface{}
 				StringTypeNil interface{}
 			}
 
 			It("should translate Maybe types assigned to interface{}", func() {
 				input := &TestResource{
-					IntType:    goext.MakeInt(42),
-					StringType: goext.MakeString("test"),
+					IntType:       goext.MakeInt(42),
+					StringType:    goext.MakeString("test"),
 					StringTypeNil: goext.MakeNullString(),
 				}
 				expected := map[string]interface{}{
-					"IntType": 42,
-					"StringType": "test",
+					"IntType":       42,
+					"StringType":    "test",
 					"StringTypeNil": nil,
 				}
 
