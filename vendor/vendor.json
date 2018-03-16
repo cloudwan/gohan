@@ -712,9 +712,12 @@
 			"revision": "c603884a2c1fcf331c71940f3227a8111d29f3ba"
 		},
 		{
-			"checksumSHA1": "WDfSGZWgVPthyp+tVen+tai+xz8=",
+			"checksumSHA1": "2oJE1OZthSWBwt8RZO8a3KEup98=",
 			"path": "github.com/lann/squirrel",
-			"revision": "e13dbacee404686afd0acf2d44b8d34869605e03"
+			"revision": "a6b93000bd219143c56c16e6cb1c4b91da3f224b",
+			"revisionTime": "2017-08-25T19:47:51Z",
+			"version": "v1",
+			"versionExact": "v1.0"
 		},
 		{
 			"checksumSHA1": "jSUqIqpwa0Mi8QNbfoXTEkgClks=",

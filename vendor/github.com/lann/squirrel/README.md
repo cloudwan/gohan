@@ -1,18 +1,30 @@
 # Squirrel - fluent SQL generator for Go
 
 ```go
-import "github.com/lann/squirrel"
+import "gopkg.in/Masterminds/squirrel.v1"
+```
+or if you prefer using `master` (which may be arbitrarily ahead of or behind `v1`):
+
+**NOTE:** as of Go 1.6, `go get` correctly clones the Github default branch (which is `v1` in this repo).
+```go
+import "github.com/Masterminds/squirrel"
 ```
 
-[![GoDoc](https://godoc.org/github.com/lann/squirrel?status.png)](https://godoc.org/github.com/lann/squirrel)
-[![Build Status](https://travis-ci.org/lann/squirrel.png?branch=master)](https://travis-ci.org/lann/squirrel)
+[![GoDoc](https://godoc.org/github.com/Masterminds/squirrel?status.png)](https://godoc.org/github.com/Masterminds/squirrel)
+[![Build Status](https://travis-ci.org/Masterminds/squirrel.svg?branch=v1)](https://travis-ci.org/Masterminds/squirrel)
 
-**Squirrel is not an ORM.**
+_**Note:** This project has moved from `github.com/lann/squirrel` to
+`github.com/Masterminds/squirrel`. Lann remains the architect of the
+project, but we're helping him curate.
+
+**Squirrel is not an ORM.** For an application of Squirrel, check out
+[structable, a table-struct mapper](https://github.com/technosophos/structable)
+
 
 Squirrel helps you build SQL queries from composable parts:
 
 ```go
-import sq "github.com/lann/squirrel"
+import sq "github.com/Masterminds/squirrel"
 
 users := sq.Select("*").From("users").Join("emails USING (email_id)")
 
@@ -66,7 +78,7 @@ select_users := mydb.Select("*").From("users")
 Squirrel loves PostgreSQL:
 
 ```go
-psql := sq.StatementBuilder.PlaceholderFormat(Dollar)
+psql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
 
 // You use question marks for placeholders...
 sql, _, _ := psql.Select("*").From("elephants").Where("name IN (?,?)", "Dumbo", "Verna")
@@ -95,7 +107,7 @@ SELECT * FROM nodes WHERE meta->'format' ??| array[?,?]
 will generate with the Dollar Placeholder:
 
 ```sql
-SELECT * FROM nodes WHERE meta->'format' ?| array[$1,$2] 
+SELECT * FROM nodes WHERE meta->'format' ?| array[$1,$2]
 ```
 
 
