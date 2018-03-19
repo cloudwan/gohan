@@ -29,6 +29,7 @@ import (
 	"github.com/cloudwan/gohan/schema"
 	"github.com/lann/squirrel"
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 )
 
@@ -578,7 +579,7 @@ var _ = Describe("Sql", func() {
 						{
 							"property": "test_number",
 							"type":     "eq",
-							"value":    []int{0,1,2},
+							"value":    []int{0, 1, 2},
 						},
 						{
 							"property": "test_bool",
@@ -588,7 +589,7 @@ var _ = Describe("Sql", func() {
 						{
 							"property": "test_integer",
 							"type":     "neq",
-							"value":    []int{0,1,2},
+							"value":    []int{0, 1, 2},
 						},
 					},
 				}
@@ -602,9 +603,9 @@ var _ = Describe("Sql", func() {
 				expectedQuery = expectedQuery.Where(
 					squirrel.Or{
 						squirrel.Eq{"`test_string`": "123"},
-						squirrel.Eq{"`test_number`": []int{0,1,2}},
+						squirrel.Eq{"`test_number`": []int{0, 1, 2}},
 						squirrel.NotEq{"`test_bool`": true},
-						squirrel.NotEq{"`test_integer`": []int{0,1,2}},
+						squirrel.NotEq{"`test_integer`": []int{0, 1, 2}},
 					})
 				expectedSql, expectedParam, _ := expectedQuery.ToSql()
 				Expect(resSql).To(Equal(expectedSql))
@@ -632,6 +633,47 @@ var _ = Describe("Sql", func() {
 				Expect(resSql).To(Equal(expectedSql))
 				Expect(param).To(Equal(expectedParam))
 			})
+
+			DescribeTable("should handle empty list in WHERE ... IN ()",
+				func(filter map[string]interface{}, expected string) {
+					res, err := AddFilterToQuery(testSchema, query, filter, false)
+
+					Expect(err).ToNot(HaveOccurred())
+					resSql, param, err := res.ToSql()
+					Expect(err).ToNot(HaveOccurred())
+
+					expectedQuery = expectedQuery.Where(expected)
+					expectedSql, expectedParam, _ := expectedQuery.ToSql()
+					Expect(resSql).To(Equal(expectedSql))
+					Expect(param).To(Equal(expectedParam))
+				},
+				Entry("simple query translates to False",
+					map[string]interface{}{"test_string": []string{}},
+					"(1=0)"),
+				Entry("eq translates to False",
+					map[string]interface{}{
+						"__or__": []map[string]interface{}{
+							{
+								"property": "test_number",
+								"type":     "eq",
+								"value":    []int{},
+							},
+						},
+					},
+					"((1=0))"),
+				Entry("neq translates to True",
+					map[string]interface{}{
+						"__or__": []map[string]interface{}{
+							{
+								"property": "test_string",
+								"type":     "neq",
+								"value":    []string{},
+							},
+						},
+					},
+					"((1=1))",
+				),
+			)
 		})
 	})
 })
