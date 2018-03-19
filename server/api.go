@@ -31,6 +31,7 @@ import (
 	"github.com/cloudwan/gohan/sync"
 	"github.com/drone/routes"
 	"github.com/go-martini/martini"
+	"github.com/mohae/deepcopy"
 )
 
 var (
@@ -188,7 +189,7 @@ func fillInContext(context middleware.Context, db db.DB,
 	context["path"] = r.URL.Path
 	context["http_request"] = r
 	context["http_response"] = w
-	context["request_data"] = requestData
+	context["request_data"] = deepcopy.Copy(requestData).(map[string]interface{})
 	context["schema"] = s
 	context["schema_id"] = s.ID
 	params := map[string]interface{}{}
