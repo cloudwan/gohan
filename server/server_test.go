@@ -896,6 +896,24 @@ var _ = Describe("Server package test", func() {
 			testURL("POST", responderPluralURL, adminTokenID, responder, http.StatusCreated)
 		})
 
+		It("Request data not available in context on GET action", func() {
+			testURL("GET", responderPluralURL+"/r1", adminTokenID, nil, http.StatusOK)
+		})
+
+		It("Request data not available in context on DELETE action", func() {
+			testURL("DELETE", responderPluralURL+"/r1", adminTokenID, nil, http.StatusNoContent)
+		})
+
+		It("Request data available in context on custom action", func() {
+			requestInput := map[string]interface{}{
+				"hello": "world",
+			}
+			result := testURL("POST", responderPluralURL+"/r1/verify_request_data_in_context", memberTokenID, requestInput, http.StatusOK)
+			Expect(result).To(Equal(map[string]interface{}{
+				"ok": true,
+			}))
+		})
+
 		It("should work", func() {
 			testHelloAction := map[string]interface{}{
 				"name": "Heisenberg",
