@@ -197,6 +197,25 @@ Comparison of different types of extensions:
 
   executed when you receive amqp/snmp/cron notification
 
+# Context
+
+Each handler receives 'context' object which is associated with http request.
+Context type is a map with string keys.  
+Each context contains following items:
+- path - string - URL Path
+- http_request - *http.Request - object representing API call
+- http_response - map[string]interface{} - object representing API response
+- request_data - map[string]interface{} - API request body
+- schema - schema.Schema - schema defining given path
+- schema_id - string - schema ID
+- params - map[string]interface{} - HTTP request parameters
+- sync - sync.Sync - Sync client
+- DB - db.DB - DB client
+- queue - *job.Queue - jobs queue
+- identity_service - middleware.IdentityService - identity service
+- service_auth - schema.Authorization - Autorization object
+- openstack_client - *gophercloud.ServiceClient - OpenStack client
+
 # Go extension (callback)
 
 You can implement Gohan extension by native go.

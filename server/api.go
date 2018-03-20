@@ -31,6 +31,7 @@ import (
 	"github.com/cloudwan/gohan/sync"
 	"github.com/drone/routes"
 	"github.com/go-martini/martini"
+	"github.com/mohae/deepcopy"
 )
 
 var (
@@ -184,10 +185,11 @@ func fillInContext(context middleware.Context, db db.DB,
 	r *http.Request, w http.ResponseWriter,
 	s *schema.Schema, p martini.Params, sync sync.Sync,
 	identityService middleware.IdentityService,
-	queue *job.Queue) {
+	queue *job.Queue, requestData map[string]interface{}) {
 	context["path"] = r.URL.Path
 	context["http_request"] = r
 	context["http_response"] = w
+	context["request_data"] = deepcopy.Copy(requestData).(map[string]interface{})
 	context["schema"] = s
 	context["schema_id"] = s.ID
 	params := map[string]interface{}{}
@@ -233,7 +235,7 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 	//setup list route
 	getPluralFunc := func(w http.ResponseWriter, r *http.Request, p martini.Params, identityService middleware.IdentityService, context middleware.Context) {
 		addJSONContentTypeHeader(w)
-		fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, server.queue)
+		fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, server.queue, nil)
 		if err := resources.GetMultipleResources(context, dataStore, s, r.URL.Query()); err != nil {
 			handleError(w, err)
 			return
@@ -250,7 +252,7 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 	//setup show route
 	getSingleFunc := func(w http.ResponseWriter, r *http.Request, p martini.Params, identityService middleware.IdentityService, context middleware.Context) {
 		addJSONContentTypeHeader(w)
-		fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, server.queue)
+		fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, server.queue, nil)
 		id := p["id"]
 		if err := resources.GetSingleResource(context, dataStore, s, id); err != nil {
 			handleError(w, err)
@@ -267,7 +269,7 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 	//setup delete route
 	deleteSingleFunc := func(w http.ResponseWriter, r *http.Request, p martini.Params, identityService middleware.IdentityService, context middleware.Context) {
 		addJSONContentTypeHeader(w)
-		fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, server.queue)
+		fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, server.queue, nil)
 		id := p["id"]
 		if err := resources.DeleteResource(context, dataStore, s, id); err != nil {
 			handleError(w, err)
@@ -284,13 +286,13 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 	//setup create route
 	postPluralFunc := func(w http.ResponseWriter, r *http.Request, p martini.Params, identityService middleware.IdentityService, context middleware.Context) {
 		addJSONContentTypeHeader(w)
-		fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, server.queue)
 		dataMap, err := middleware.ReadJSON(r)
 		if err != nil {
 			handleError(w, resources.NewResourceError(err, fmt.Sprintf("Failed to parse data: %s", err), resources.WrongData))
 			return
 		}
 		dataMap = removeResourceWrapper(s, dataMap)
+		fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, server.queue, dataMap)
 		if s.Parent != "" {
 			if _, ok := dataMap[s.ParentID()]; !ok {
 				queryParams := r.URL.Query()
@@ -317,7 +319,6 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 	//setup create or update route
 	putSingleFunc := func(w http.ResponseWriter, r *http.Request, p martini.Params, identityService middleware.IdentityService, context middleware.Context) {
 		addJSONContentTypeHeader(w)
-		fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, server.queue)
 		id := p["id"]
 		dataMap, err := middleware.ReadJSON(r)
 		if err != nil {
@@ -325,6 +326,7 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 			return
 		}
 		dataMap = removeResourceWrapper(s, dataMap)
+		fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, server.queue, dataMap)
 		if isCreated, err := resources.CreateOrUpdateResource(
 			context, dataStore, identityService, s, id, dataMap); err != nil {
 			handleError(w, err)
@@ -344,7 +346,6 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 	//setup update route
 	patchSingleFunc := func(w http.ResponseWriter, r *http.Request, p martini.Params, identityService middleware.IdentityService, context middleware.Context) {
 		addJSONContentTypeHeader(w)
-		fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, server.queue)
 		id := p["id"]
 		dataMap, err := middleware.ReadJSON(r)
 		if err != nil {
@@ -352,6 +353,7 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 			return
 		}
 		dataMap = removeResourceWrapper(s, dataMap)
+		fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, server.queue, dataMap)
 		if err := resources.UpdateResource(
 			context, dataStore, identityService, s, id, dataMap); err != nil {
 			handleError(w, err)
@@ -372,7 +374,6 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 		ActionFunc := func(w http.ResponseWriter, r *http.Request, p martini.Params,
 			identityService middleware.IdentityService, auth schema.Authorization, context middleware.Context) {
 			addJSONContentTypeHeader(w)
-			fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, server.queue)
 			id := p["id"]
 			input := make(map[string]interface{})
 			if action.InputSchema != nil {
@@ -383,6 +384,7 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 					return
 				}
 			}
+			fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, server.queue, input)
 
 			// TODO use authorization middleware
 			manager := schema.GetManager()

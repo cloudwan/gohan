@@ -1,5 +1,38 @@
 extensions:
 - code: |
+    gohan_register_handler("verify_request_data_in_context", function(context){
+      if (context.request_data === undefined) {
+        throw new ValidationException("no request_data in context");
+      }
+      if (context.request_data.hello === undefined) {
+        throw new ValidationException("no 'hello' in request_data");
+      }
+      context.response = {"ok": true};
+    });
+- code: |
+    gohan_register_handler("pre_update_in_transaction", function(context){
+      if (context.request_data === undefined) {
+        throw new ValidationException("no request_data in context");
+      }
+    });
+    gohan_register_handler("pre_create_in_transaction", function(context){
+      if (context.request_data === undefined) {
+        throw new ValidationException("no request_data in context");
+      }
+    });
+    gohan_register_handler("pre_delete_in_transaction", function(context) {
+      if (context.request_data === null) {
+        throw new ValidationException("expected to not have request_data in context");
+      }
+    });
+    gohan_register_handler("pre_show_in_transaction", function(context) {
+      if (context.request_data === null) {
+        throw new ValidationException("expected to not have request_data in context");
+      }
+    });
+  id: test_request_data_crud
+  path: /v2.0/*
+- code: |
     gohan_register_handler("pre_create_in_transaction", function (context){
         context.response_code = 390
         context.response = "Dummy error."
@@ -60,6 +93,12 @@ policies:
   principal: admin
   resource:
     path: .*
+- action: verify_request_data_in_context
+  effect: allow
+  id: member_verify_request_data_in_context
+  principal: Member
+  resource:
+    path: /v2.0/responder.*
 - action: hello
   effect: allow
   id: member_hello
@@ -633,6 +672,13 @@ schemas:
   singular: reponder
   title: Responder
   actions:
+    verify_request_data_in_context:
+      method: POST
+      path: /:id/verify_request_data_in_context
+      input:
+        type: object
+      output:
+        type: object
     hello:
       method: POST
       path: /:id/hello
