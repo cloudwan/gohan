@@ -49,6 +49,7 @@ const (
 	CreateFailed
 	UpdateFailed
 	Unauthorized
+	Forbidden
 	ForeignKeyFailed
 )
 
@@ -284,7 +285,6 @@ func GetMultipleResources(context middleware.Context, dataStore db.DB, resourceS
 	if err != nil {
 		return ResourceError{err, err.Error(), WrongQuery}
 	}
-	context["policy"] = policy
 
 	environmentManager := extension.GetManager()
 	environment, ok := environmentManager.GetEnvironment(resourceSchema.ID)
@@ -326,7 +326,6 @@ func GetSingleResource(context middleware.Context, dataStore db.DB, resourceSche
 	if err != nil {
 		return err
 	}
-	context["policy"] = policy
 
 	environmentManager := extension.GetManager()
 	environment, ok := environmentManager.GetEnvironment(resourceSchema.ID)
@@ -452,7 +451,7 @@ func CreateOrUpdateResource(
 			return err
 		}
 		if exists {
-			return ResourceError{transaction.ErrResourceNotFound, "", Unauthorized}
+			return ResourceError{transaction.ErrResourceNotFound, "", Forbidden}
 		}
 		return nil
 	}); preTxErr != nil {
@@ -680,14 +679,13 @@ func UpdateResource(
 	if err != nil {
 		return err
 	}
-	context["policy"] = policy
 
 	//fillup default values
 	if tenantID, ok := dataMap["tenant_id"]; ok && tenantID != nil {
 		dataMap["tenant_name"], err = identityService.GetTenantName(tenantID.(string))
-	}
-	if err != nil {
-		return ResourceError{err, err.Error(), Unauthorized}
+		if err != nil {
+			return ResourceError{err, err.Error(), Unauthorized}
+		}
 	}
 
 	//check policy
@@ -834,44 +832,40 @@ func DeleteResource(context middleware.Context,
 		return fmt.Errorf("No environment for schema")
 	}
 	auth := context["auth"].(schema.Authorization)
-	policy, err := loadPolicy(context, "delete", strings.Replace(resourceSchema.GetSingleURL(), ":id", resourceID, 1), auth)
-	if err != nil {
-		return err
-	}
-	context["policy"] = policy
 
 	var resource *schema.Resource
 	var fetchErr error
 
+	if err := extension.HandleEvent(context, environment, "pre_delete", resourceSchema.ID); err != nil {
+		return err
+	}
+
 	if errPreTx := db.Within(dataStore, func(preTransaction transaction.Transaction) error {
-		tenantIDs := policy.GetTenantIDFilter(schema.ActionDelete, auth.TenantID())
-		filter := transaction.IDFilter(resourceID)
-		if tenantIDs != nil {
-			filter["tenant_id"] = tenantIDs
+		resource, fetchErr = fetchResourceForAction(schema.ActionDelete, auth, resourceID, resourceSchema, preTransaction, context)
+		if fetchErr != nil {
+			switch fetchErr {
+			case transaction.ErrResourceNotFound:
+				_, err := fetchResourceForAction(schema.ActionRead, auth, resourceID, resourceSchema, preTransaction, context)
+				if err != nil {
+					if err != transaction.ErrResourceNotFound {
+						return err
+					}
+					return ResourceError{err, "Resource not found", NotFound}
+				}
+				// tenant cannot delete resource but can read it
+				return ResourceError{fetchErr, "", Forbidden}
+			default:
+				log.Error("Fetch failed: %v", fetchErr)
+				return ResourceError{fetchErr, "Error when fetching resource", InternalServerError}
+			}
 		}
-		policy.AddCustomFilters(filter, auth.TenantID())
-		resource, fetchErr = preTransaction.Fetch(resourceSchema, filter, nil)
 		return nil
 	}); errPreTx != nil {
-		return err
+		return errPreTx
 	}
 
 	if resource != nil {
 		context["resource"] = resource.Data()
-	}
-
-	if err := extension.HandleEvent(context, environment, "pre_delete", resourceSchema.ID); err != nil {
-		return err
-	}
-	if resource == nil {
-		switch fetchErr {
-		case transaction.ErrResourceNotFound:
-			log.Info("Fetch failed: %v", fetchErr)
-			return ResourceError{fetchErr, "Resource not found", NotFound}
-		default:
-			log.Error("Fetch failed: %v", fetchErr)
-			return ResourceError{fetchErr, "Error when fetching resource", InternalServerError}
-		}
 	}
 	if err := resourceTransactionWithContext(
 		context, dataStore,
@@ -886,6 +880,27 @@ func DeleteResource(context middleware.Context,
 		return err
 	}
 	return nil
+}
+
+func fetchResourceForAction(action string, auth schema.Authorization, resourceID string, resourceSchema *schema.Schema,
+	tx transaction.Transaction, context middleware.Context) (*schema.Resource, error) {
+	policy, err := loadPolicy(context, action, strings.Replace(resourceSchema.GetSingleURL(), ":id", resourceID, 1), auth)
+	if err != nil {
+		return nil, err
+	}
+	tenantIDs := policy.GetTenantIDFilter(action, auth.TenantID())
+	filter := transaction.IDFilter(resourceID)
+	if tenantIDs != nil {
+		filter["tenant_id"] = tenantIDs
+	}
+	policy.AddCustomFilters(filter, auth.TenantID())
+	resource, err := tx.Fetch(resourceSchema, filter, nil)
+	if err != nil {
+		return nil, err
+	}
+	// tenant cannot delete resource but can read it
+	return resource, nil
+
 }
 
 //DeleteResourceInTransaction deletes resources in a transaction
