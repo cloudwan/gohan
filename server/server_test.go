@@ -662,13 +662,18 @@ var _ = Describe("Server package test", func() {
 				}
 
 				testURL("POST", filterTestPluralURL, memberTokenID, testUp, http.StatusCreated)
-				testURL("PUT", filterTestPluralURL+"/"+testID, powerUserTokenID, testInvalid, http.StatusUnauthorized)
-				testURL("DELETE", filterTestPluralURL+"/"+testID, powerUserTokenID, nil, http.StatusNotFound)
+				testURL("GET", filterTestPluralURL+"/"+testID, powerUserTokenID, nil, http.StatusOK)
+				testURL("PUT", filterTestPluralURL+"/"+testID, powerUserTokenID, testInvalid, http.StatusForbidden)
+				testURL("DELETE", filterTestPluralURL+"/"+testID, powerUserTokenID, nil, http.StatusForbidden)
 				testURL("PUT", filterTestPluralURL+"/"+testID, memberTokenID, testInvalid, http.StatusOK)
-				testURL("PUT", filterTestPluralURL+"/"+testID, memberTokenID, testDown, http.StatusUnauthorized)
-				testURL("DELETE", filterTestPluralURL+"/"+testID, memberTokenID, nil, http.StatusNotFound)
+				testURL("GET", filterTestPluralURL+"/"+testID, memberTokenID, nil, http.StatusOK)
+				testURL("PUT", filterTestPluralURL+"/"+testID, memberTokenID, testDown, http.StatusForbidden)
+				testURL("DELETE", filterTestPluralURL+"/"+testID, memberTokenID, nil, http.StatusForbidden)
+				testURL("GET", filterTestPluralURL+"/"+testID, powerUserTokenID, nil, http.StatusNotFound)
+				testURL("DELETE", filterTestPluralURL+"/"+testID, powerUserTokenID, nil, http.StatusNotFound)
 				testURL("PUT", filterTestPluralURL+"/"+testID, adminTokenID, testDown, http.StatusOK)
 				testURL("DELETE", filterTestPluralURL+"/"+testID, memberTokenID, nil, http.StatusNoContent)
+				testURL("DELETE", filterTestPluralURL+"/"+testID, memberTokenID, nil, http.StatusNotFound)
 			})
 		})
 	})
@@ -873,7 +878,8 @@ var _ = Describe("Server package test", func() {
 			}
 			testURL("PUT", getNetworkSingularURL("beige"), powerUserTokenID, beigeUpdate, http.StatusOK)
 
-			testURL("DELETE", getNetworkSingularURL("pink"), memberTokenID, nil, http.StatusNotFound)
+			testURL("GET", getNetworkSingularURL("pink"), memberTokenID, nil, http.StatusOK)
+			testURL("DELETE", getNetworkSingularURL("pink"), memberTokenID, nil, http.StatusForbidden)
 		})
 	})
 

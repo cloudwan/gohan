@@ -83,6 +83,8 @@ func problemToResponseCode(problem resources.ResourceProblem) int {
 		return http.StatusConflict
 	case resources.Unauthorized:
 		return http.StatusUnauthorized
+	case resources.Forbidden:
+		return http.StatusForbidden
 	case resources.ForeignKeyFailed:
 		return http.StatusBadRequest
 	}
