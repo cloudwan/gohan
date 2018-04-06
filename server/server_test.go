@@ -675,6 +675,13 @@ var _ = Describe("Server package test", func() {
 				testURL("DELETE", filterTestPluralURL+"/"+testID, memberTokenID, nil, http.StatusNoContent)
 				testURL("DELETE", filterTestPluralURL+"/"+testID, memberTokenID, nil, http.StatusNotFound)
 			})
+			It("should return 401 unauthorized when deleting resource without delete policy", func() {
+				resource := map[string]interface{}{
+					"id": "test",
+				}
+				testURL("POST", visibilityTestPluralURL, adminTokenID, resource, http.StatusCreated)
+				testURL("DELETE", visibilityTestPluralURL+"/test", memberTokenID, nil, http.StatusUnauthorized)
+			})
 		})
 	})
 
