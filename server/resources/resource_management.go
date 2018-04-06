@@ -831,7 +831,6 @@ func DeleteResource(context middleware.Context,
 	if !ok {
 		return fmt.Errorf("No environment for schema")
 	}
-	auth := context["auth"].(schema.Authorization)
 
 	var resource *schema.Resource
 	var fetchErr error
@@ -841,25 +840,8 @@ func DeleteResource(context middleware.Context,
 	}
 
 	if errPreTx := db.Within(dataStore, func(preTransaction transaction.Transaction) error {
-		resource, fetchErr = fetchResourceForAction(schema.ActionDelete, auth, resourceID, resourceSchema, preTransaction, context)
-		if fetchErr != nil {
-			switch fetchErr {
-			case transaction.ErrResourceNotFound:
-				_, err := fetchResourceForAction(schema.ActionRead, auth, resourceID, resourceSchema, preTransaction, context)
-				if err != nil {
-					if err != transaction.ErrResourceNotFound {
-						return err
-					}
-					return ResourceError{err, "Resource not found", NotFound}
-				}
-				// tenant cannot delete resource but can read it
-				return ResourceError{fetchErr, "", Forbidden}
-			default:
-				log.Error("Fetch failed: %v", fetchErr)
-				return ResourceError{fetchErr, "Error when fetching resource", InternalServerError}
-			}
-		}
-		return nil
+		resource, fetchErr = fetchResource(resourceID, resourceSchema, preTransaction, context)
+		return fetchErr
 	}); errPreTx != nil {
 		return errPreTx
 	}
@@ -880,6 +862,32 @@ func DeleteResource(context middleware.Context,
 		return err
 	}
 	return nil
+}
+
+func fetchResource(resourceID string, resourceSchema *schema.Schema, tx transaction.Transaction, context middleware.Context) (*schema.Resource, error) {
+	auth := context["auth"].(schema.Authorization)
+	resource, fetchErr := fetchResourceForAction(schema.ActionDelete, auth, resourceID, resourceSchema, tx, context)
+	if fetchErr != nil {
+		switch fetchErr {
+		case transaction.ErrResourceNotFound:
+			_, err := fetchResourceForAction(schema.ActionRead, auth, resourceID, resourceSchema, tx, context)
+			if err != nil {
+				if err != transaction.ErrResourceNotFound {
+					return nil, err
+				}
+				return nil, ResourceError{err, "Resource not found", NotFound}
+			}
+			// tenant cannot delete resource but can read it
+			return nil, ResourceError{fetchErr, "", Forbidden}
+		default:
+			if _, ok := fetchErr.(ResourceError); ok {
+				return nil, fetchErr
+			}
+			log.Error("Fetch failed: %v", fetchErr)
+			return nil, ResourceError{fetchErr, "Error when fetching resource", InternalServerError}
+		}
+	}
+	return resource, nil
 }
 
 func fetchResourceForAction(action string, auth schema.Authorization, resourceID string, resourceSchema *schema.Schema,
