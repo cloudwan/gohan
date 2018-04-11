@@ -21,6 +21,10 @@
 gohan_register_handler("notification", function(context){
   var currentDate = Date.now();
   var writePath = "/test/" + currentDate;
+
+  if ("pref" in context.data) {
+    writePath = "/test/" + context.data["pref"] + "/" + currentDate;
+  }
   gohan_sync_update(writePath, context.key);
 
   // wait 5 sec

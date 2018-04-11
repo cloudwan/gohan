@@ -137,6 +137,12 @@ var _ = Describe("Sync watcher test", func() {
 
 	Describe("Sync watch job handling", func() {
 
+		AfterEach(func() {
+			sync := server.GetSync()
+			sync.Delete("/test/watcher", true)
+			sync.Delete("/watch/key", true)
+		})
+
 		It("should process sequentially for each watch key", func() {
 			sync := server.GetSync()
 
@@ -144,33 +150,34 @@ var _ = Describe("Sync watcher test", func() {
 			// to a path '/test/<milisec_timestamp>' then sleep 5 seconds.
 			// Therefore, sorting fetched results by key means the order of called sync update extensions
 			watchKey1a := "/watch/key/1/apple"
-			err := sync.Update(watchKey1a, "{}")
+			err := sync.Update(watchKey1a, `{"pref" : "watcher"}`)
 			Expect(err).ToNot(HaveOccurred())
 			watchKey2a := "/watch/key/2/apple"
-			err = sync.Update(watchKey2a, "{}")
+			err = sync.Update(watchKey2a, `{"pref" : "watcher"}`)
 			Expect(err).ToNot(HaveOccurred())
 			watchKey1b := "/watch/key/1/banana"
-			err = sync.Update(watchKey1b, "{}")
+			err = sync.Update(watchKey1b, `{"pref" : "watcher"}`)
 			Expect(err).ToNot(HaveOccurred())
 			watchKey1c := "/watch/key/1/cherry"
-			err = sync.Update(watchKey1c, "{}")
+			err = sync.Update(watchKey1c, `{"pref" : "watcher"}`)
 			Expect(err).ToNot(HaveOccurred())
 
 			time.Sleep(1 * time.Second)
 
-			wrn, err := sync.Fetch("/test")
+			wrn, err := sync.Fetch("/test/watcher")
 			Expect(err).ToNot(HaveOccurred())
 			// 2 sync updates for path /watch/key/1/apple and /watch/key/2/apple are ongoing
 			Expect(len(wrn.Children)).To(Equal(2))
 
 			sort.Sort(ByValue(wrn.Children))
+
 			childrenValues := []string{wrn.Children[0].Value, wrn.Children[1].Value}
 			Expect(childrenValues).To(Equal([]string{watchKey1a, watchKey2a}))
 
 			time.Sleep(5 * time.Second)
 			// after 5 sec, another job for /watch/key/1/banana should start
 
-			wrn, err = sync.Fetch("/test")
+			wrn, err = sync.Fetch("/test/watcher")
 			Expect(err).ToNot(HaveOccurred())
 
 			sort.Sort(ByKey(wrn.Children))
@@ -180,7 +187,7 @@ var _ = Describe("Sync watcher test", func() {
 			time.Sleep(5 * time.Second)
 			// after 5 sec, another job for /watch/key/1/cherry should start
 
-			wrn, err = sync.Fetch("/test")
+			wrn, err = sync.Fetch("/test/watcher")
 			Expect(err).ToNot(HaveOccurred())
 
 			sort.Sort(ByKey(wrn.Children))
