@@ -76,7 +76,11 @@ var _ = Describe("Environment", func() {
 
 			It("should not load plugin from non-existing file", func() {
 				err := env.Load("/non/existing-plugin.so")
-				Expect(err.Error()).To(Equal("failed to load go extension: plugin.Open(/non/existing-plugin.so): realpath failed"))
+
+				// Path can be surrounded by "" or not, depending on the GO version
+				Expect(err.Error()).To(ContainSubstring("failed to load go extension: plugin.Open("))
+				Expect(err.Error()).To(ContainSubstring("/non/existing-plugin.so"))
+				Expect(err.Error()).To(ContainSubstring("): realpath failed"))
 			})
 		})
 
