@@ -1,0 +1,139 @@
+version: 2
+jobs:
+  prepare_build:
+    working_directory: ~/cloudwan/gohan
+    parallelism: 1
+    shell: /bin/bash --login
+    environment:
+      CIRCLE_ARTIFACTS: /tmp/circleci-artifacts
+      CIRCLE_TEST_REPORTS: /tmp/circleci-test-results
+    docker:
+    - image: circleci/build-image:ubuntu-14.04-XXL-upstart-1189-5614f37
+      command: /sbin/init
+
+    steps:
+    - checkout
+    - run: mkdir -p $CIRCLE_ARTIFACTS $CIRCLE_TEST_REPORTS
+    - run:
+        working_directory: ~/cloudwan/gohan
+        command: curl -o go.tar.gz -sL https://storage.googleapis.com/golang/go1.9.linux-amd64.tar.gz
+    - run:
+        working_directory: ~/cloudwan/gohan
+        command: sudo rm -rf /usr/local/go
+    - run:
+        working_directory: ~/cloudwan/gohan
+        command: sudo tar -C /usr/local -xzf go.tar.gz
+    - run:
+        working_directory: ~/cloudwan/gohan
+        command: sudo chmod a+w /usr/local/go/src/
+    - run:
+        working_directory: ~/cloudwan/gohan
+        command: 'sudo docker info >/dev/null 2>&1 || sudo service docker start; '
+
+    - restore_cache:
+       keys:
+       # This branch if available
+       - v1-dep-{{ .Branch }}-
+       # Default branch if not
+       - v1-dep-master-
+       # Any branch if there are none on the default branch - this should be unnecessary if you have your default branch configured correctly
+       - v1-dep-
+
+
+  install_dependencies:
+    working_directory: ~/cloudwan/gohan
+    docker:
+    - image: circleci/build-image:ubuntu-14.04-XXL-upstart-1189-5614f37
+      command: /sbin/init
+
+    steps:
+    - run: curl -L https://github.com/coreos/etcd/releases/download/v3.1.7/etcd-v3.1.7-linux-amd64.tar.gz -o etcd-v3.1.7-linux-amd64.tar.gz
+    - run: tar xzvf etcd-v3.1.7-linux-amd64.tar.gz
+    - run: sudo install etcd-v3.1.7-linux-amd64/etcd /usr/bin
+    - run: go get github.com/mattn/goveralls
+    - run: make deps
+    - save_cache:
+        key: v1-dep-{{ .Branch }}-{{ epoch }}
+        paths:
+        - vendor/bundle
+        - ~/virtualenvs
+        - ~/.m2
+        - ~/.ivy2
+        - ~/.bundle
+        - ~/.go_workspace
+        - ~/.gradle
+        - ~/.cache/bower
+
+  run_tests:
+    working_directory: ~/cloudwan/gohan
+    docker:
+    - image: circleci/build-image:ubuntu-14.04-XXL-upstart-1189-5614f37
+      command: /sbin/init
+
+    steps:
+    - run: go version
+    - run: mkdir -p /home/ubuntu/.go_workspace/src/github.com/cloudwan/
+    - run: ln -s /home/ubuntu/gohan /home/ubuntu/.go_workspace/src/github.com/cloudwan/gohan
+    - run:
+        command: make gen
+        working_directory: ../.go_workspace/src/github.com/cloudwan/gohan
+    - run:
+        command: make lint
+        working_directory: ../.go_workspace/src/github.com/cloudwan/gohan
+    - run:
+        command: make test
+        working_directory: ../.go_workspace/src/github.com/cloudwan/gohan
+
+  deploy:
+    working_directory: ~/cloudwan/gohan
+    docker:
+    - image: circleci/build-image:ubuntu-14.04-XXL-upstart-1189-5614f37
+      command: /sbin/init
+
+    steps:
+    - run: go get github.com/karalabe/xgo
+    - run:
+        command: ./tools/crosscompile.sh
+        no_output_timeout: 1800
+    - run: sudo apt-get install -y zip
+    - run: curl -L https://github.com/tcnksm/ghr/releases/download/v0.5.0/ghr_v0.5.0_linux_amd64.zip -o ghr_v0.5.0_linux_amd64.zip
+    - run: unzip ghr_v0.5.0_linux_amd64.zip
+    - run: chmod 0755 ghr
+    - run: ./ghr -t $GITHUB_TOKEN -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME -replace pre-release dist/
+
+  collect:
+    working_directory: ~/cloudwan/gohan
+    docker:
+    - image: circleci/build-image:ubuntu-14.04-XXL-upstart-1189-5614f37
+      command: /sbin/init
+
+    steps:
+    - store_test_results:
+        path: /tmp/circleci-test-results
+    # Save artifacts
+    - store_artifacts:
+        path: /tmp/circleci-artifacts
+    - store_artifacts:
+        path: /tmp/circleci-test-results
+
+workflows:
+  version: 2
+  build_test_deploy:
+    jobs:
+    - prepare_build
+    - install_dependencies:
+        requires:
+        - prepare_build
+    - run_tests:
+        requires:
+        - install_dependencies
+    - deploy:
+        requires:
+        - run_tests
+        filters:
+          branches:
+            only:
+              - master
+    - collect:
+        requires:
+        - run_tests
