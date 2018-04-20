@@ -286,6 +286,11 @@ func GetMultipleResources(context middleware.Context, dataStore db.DB, resourceS
 		return ResourceError{err, err.Error(), WrongQuery}
 	}
 
+	err = verifyQueryParams(resourceSchema, queryParameters)
+	if err != nil {
+		return ResourceError{err, err.Error(), WrongQuery}
+	}
+
 	environmentManager := extension.GetManager()
 	environment, ok := environmentManager.GetEnvironment(resourceSchema.ID)
 	if !ok {
@@ -313,6 +318,23 @@ func GetMultipleResources(context middleware.Context, dataStore db.DB, resourceS
 		return err
 	}
 
+	return nil
+}
+
+func verifyQueryParams(resourceSchema *schema.Schema, queryParameters map[string][]string) error {
+	for _, key := range resourceSchema.Properties {
+		delete(queryParameters, key.ID)
+	}
+	delete(queryParameters, "sort_key")
+	delete(queryParameters, "sort_order")
+	delete(queryParameters, "limit")
+	delete(queryParameters, "offset")
+
+	delete(queryParameters, "_details")
+	delete(queryParameters, "_fields")
+	if len(queryParameters) > 0 {
+		return fmt.Errorf("Unrecognized query parameters: %v", queryParameters)
+	}
 	return nil
 }
 
