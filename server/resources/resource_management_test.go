@@ -222,6 +222,12 @@ var _ = Describe("Resource manager", func() {
 				Expect(result).To(HaveKeyWithValue("tests", BeEmpty()))
 			})
 
+			It("Should fail if invalid filter is specified", func() {
+				err := resources.GetMultipleResources(
+					context, testDB, currentSchema, map[string][]string{"asd": []string{"asd"}})
+				Expect(err).To(HaveOccurred())
+			})
+
 			Describe("With extensions", func() {
 				Context("Only pre_list", func() {
 					BeforeEach(func() {
