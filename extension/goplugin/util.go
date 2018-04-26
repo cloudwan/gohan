@@ -308,6 +308,10 @@ func (util *Util) ResourceToMap(resource interface{}) map[string]interface{} {
 			}
 		} else if v.Kind() == reflect.Struct {
 			fieldsMap[fieldName] = util.ResourceToMap(v.Addr().Interface())
+		} else if v.Kind() == reflect.String {
+			if v.String() != "" {
+				fieldsMap[fieldName] = val
+			}
 		} else {
 			fieldsMap[fieldName] = val
 		}
