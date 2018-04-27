@@ -73,6 +73,8 @@ type Transaction struct {
 	isolationLevel transaction.Type
 }
 
+type TxInterface transaction.Transaction
+
 func mapTxOptions(options *transaction.TxOptions) (*sql.TxOptions, error) {
 	sqlOptions := &sql.TxOptions{}
 	switch options.IsolationLevel {
@@ -356,6 +358,7 @@ func (db *DB) Begin() (tx transaction.Transaction, err error) {
 	db.updateCounter(1, "begin.waiting")
 	defer db.updateCounter(-1, "begin.waiting")
 
+	var transx Transaction
 	rawTx, err := db.DB.Beginx()
 	if err != nil {
 		db.updateCounter(1, "begin.failed")
@@ -366,17 +369,20 @@ func (db *DB) Begin() (tx transaction.Transaction, err error) {
 	if db.sqlType == "sqlite3" {
 		rawTx.Exec("PRAGMA foreign_keys = ON;")
 	}
-	tx = &Transaction{
+	transx = Transaction{
 		db:             db,
 		transaction:    rawTx,
 		closed:         false,
 		isolationLevel: transaction.RepeatableRead,
 	}
+
 	if os.Getenv("FUZZY_DB_TX") == "true" {
 		log.Notice("FUZZY_DB_TX is enabled")
-		tx = &transaction.FuzzyTransaction{Tx: tx}
+		tx = &transaction.FuzzyTransaction{Tx: transaction.Transaction(&transx)}
+	} else {
+		tx = MakeCachedTransaction(&transx)
 	}
-	log.Debug("[%p] Created transaction %#v, isolation level: %s", rawTx, rawTx, tx.GetIsolationLevel())
+	log.Debug("[%p] Created transaction %#v, isolation level: %s", rawTx, rawTx, transx.GetIsolationLevel())
 	return
 }
 
@@ -386,6 +392,7 @@ func (db *DB) BeginTx(ctx context.Context, options *transaction.TxOptions) (tx t
 	db.updateCounter(1, "begin.waiting")
 	defer db.updateCounter(-1, "begin.waiting")
 
+	var transx Transaction
 	sqlOptions, err := mapTxOptions(options)
 	if err != nil {
 		return nil, err
@@ -400,13 +407,19 @@ func (db *DB) BeginTx(ctx context.Context, options *transaction.TxOptions) (tx t
 	if db.sqlType == "sqlite3" {
 		rawTx.Exec("PRAGMA foreign_keys = ON;")
 	}
-	tx = &Transaction{
+	transx = Transaction{
 		db:             db,
 		transaction:    rawTx,
 		closed:         false,
 		isolationLevel: options.IsolationLevel,
 	}
-	log.Debug("[%p] Created transaction %#v, isolation level %s", rawTx, rawTx, tx.GetIsolationLevel())
+	if transx.isolationLevel == transaction.RepeatableRead || transx.isolationLevel == transaction.Serializable {
+		tx = MakeCachedTransaction(&transx)
+	} else {
+		tx = &transx
+	}
+
+	log.Debug("[%p] Created transaction %#v, isolation level: %s", rawTx, rawTx, transx.GetIsolationLevel())
 	return
 }
 
@@ -914,6 +927,17 @@ func (tx *Transaction) List(s *schema.Schema, filter transaction.Filter, options
 func (tx *Transaction) ListContext(ctx context.Context, s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions, pg *pagination.Paginator) (list []*schema.Resource, total uint64, err error) {
 	defer tx.measureTime(time.Now(), s.ID, "list")
 
+	sc := listContextHelper(s, filter, options, pg)
+
+	sql, args, err := buildSelect(sc)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return tx.executeSelect(ctx, sc, sql, args)
+}
+
+func listContextHelper(s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions, pg *pagination.Paginator) *selectContext {
 	sc := &selectContext{
 		schema:    s,
 		filter:    filter,
@@ -924,13 +948,7 @@ func (tx *Transaction) ListContext(ctx context.Context, s *schema.Schema, filter
 		sc.fields = normFields(options.Fields, s)
 		sc.join = options.Details
 	}
-
-	sql, args, err := buildSelect(sc)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	return tx.executeSelect(ctx, sc, sql, args)
+	return sc
 }
 
 func shouldJoin(policy schema.LockPolicy) bool {
@@ -953,18 +971,7 @@ func (tx *Transaction) LockList(s *schema.Schema, filter transaction.Filter, opt
 func (tx *Transaction) LockListContext(ctx context.Context, s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions, pg *pagination.Paginator, lockPolicy schema.LockPolicy) (list []*schema.Resource, total uint64, err error) {
 	defer tx.measureTime(time.Now(), s.ID, "lock_list")
 
-	policyJoin := shouldJoin(lockPolicy)
-
-	sc := &selectContext{
-		schema:    s,
-		filter:    filter,
-		join:      policyJoin,
-		paginator: pg,
-	}
-	if options != nil {
-		sc.fields = normFields(options.Fields, s)
-		sc.join = policyJoin && options.Details
-	}
+	sc := lockListContextHelper(s, filter, options, pg, lockPolicy)
 
 	sql, args, err := buildSelect(sc)
 	if err != nil {
@@ -983,6 +990,21 @@ func (tx *Transaction) LockListContext(ctx context.Context, s *schema.Schema, fi
 	}
 
 	return tx.executeSelect(ctx, sc, sql, args)
+}
+
+func lockListContextHelper(s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions, pg *pagination.Paginator, lockPolicy schema.LockPolicy) *selectContext {
+	policyJoin := shouldJoin(lockPolicy)
+	sc := &selectContext{
+		schema:    s,
+		filter:    filter,
+		join:      policyJoin,
+		paginator: pg,
+	}
+	if options != nil {
+		sc.fields = normFields(options.Fields, s)
+		sc.join = policyJoin && options.Details
+	}
+	return sc
 }
 
 func (tx *Transaction) Query(s *schema.Schema, query string, arguments []interface{}) (list []*schema.Resource, err error) {
@@ -1089,6 +1111,10 @@ func (tx *Transaction) FetchContext(ctx context.Context, s *schema.Schema, filte
 	defer tx.measureTime(time.Now(), s.ID, "fetch")
 
 	list, _, err := tx.ListContext(ctx, s, filter, options, nil)
+	return fetchContextHelper(list, err, filter)
+}
+
+func fetchContextHelper(list []*schema.Resource, err error, filter transaction.Filter) (*schema.Resource, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Failed to fetch %s: %s", filter, err)
 	}
@@ -1107,6 +1133,10 @@ func (tx *Transaction) LockFetchContext(ctx context.Context, s *schema.Schema, f
 	defer tx.measureTime(time.Now(), s.ID, "lock_fetch")
 
 	list, _, err := tx.LockListContext(ctx, s, filter, nil, nil, lockPolicy)
+	return lockFetchContextHelper(err, list, filter)
+}
+
+func lockFetchContextHelper(err error, list []*schema.Resource, filter transaction.Filter) (*schema.Resource, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Failed to fetch and lock %s: %s", filter, err)
 	}
