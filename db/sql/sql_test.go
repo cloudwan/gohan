@@ -100,7 +100,7 @@ var _ = Describe("Sql", func() {
 			Expect(tx.Exec("INSERT INTO `tests` (`id`, `tenant_id`) values ('id1', 'tenant1')")).To(Succeed())
 			Expect(tx.Exec("INSERT INTO `tests` (`id`, `tenant_id`) values ('id2', 'tenant2')")).To(Succeed())
 
-			pg, err := pagination.NewPaginator(pagination.OptionLimit(1))
+			pg, err := pagination.NewPaginator(s, "", "", 1, 0)
 			Expect(err).To(Succeed())
 			results, _, err := tx.List(s, map[string]interface{}{}, nil, pg)
 			Expect(err).To(Succeed())

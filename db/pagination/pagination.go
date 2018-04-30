@@ -17,7 +17,6 @@ package pagination
 
 import (
 	"fmt"
-	"math"
 	"net/url"
 	"strconv"
 
@@ -42,71 +41,29 @@ type Paginator struct {
 	Offset uint64
 }
 
-type OptionPaginator func(*Paginator) error
-
 //NewPaginator create Paginator
-func NewPaginator(options ...OptionPaginator) (*Paginator, error) {
-	pg := &Paginator{
-		Key:    "",
-		Order:  "",
-		Limit:  math.MaxUint64,
-		Offset: 0,
+func NewPaginator(s *schema.Schema, key, order string, limit, offset uint64) (*Paginator, error) {
+	if order != "" && order != ASC && order != DESC {
+		return nil, fmt.Errorf("Unknown sort order %s", order)
 	}
-
-	for _, op := range options {
-		err := op(pg)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return pg, nil
-}
-
-func OptionKey(s *schema.Schema, key string) OptionPaginator {
-	return func(pg *Paginator) error {
-		pg.Key = key
-
-		if s != nil && pg.Key != "" {
-			found := false
-			for _, p := range s.Properties {
-				if p.ID == pg.Key {
-					found = true
-					break
-				}
-			}
-			if !found {
-				return fmt.Errorf("Schema %s has no property %s which can used as sorting key", s.ID, pg.Key)
+	if s != nil && key != "" {
+		found := false
+		for _, p := range s.Properties {
+			if p.ID == key {
+				found = true
+				break
 			}
 		}
-
-		return nil
-	}
-}
-
-func OptionOrder(order string) OptionPaginator {
-	return func(pg *Paginator) error {
-		pg.Order = order
-
-		if pg.Order != "" && pg.Order != ASC && pg.Order != DESC {
-			return fmt.Errorf("Unknown sort order %s", pg.Order)
+		if !found {
+			return nil, fmt.Errorf("Schema %s has no property %s which can used as sorting key", s.ID, key)
 		}
-
-		return nil
 	}
-}
-
-func OptionLimit(limit uint64) OptionPaginator {
-	return func(pg *Paginator) error {
-		pg.Limit = limit
-		return nil
-	}
-}
-
-func OptionOffset(offset uint64) OptionPaginator {
-	return func(pg *Paginator) error {
-		pg.Offset = offset
-		return nil
-	}
+	return &Paginator{
+		Key:    key,
+		Order:  order,
+		Limit:  limit,
+		Offset: offset,
+	}, nil
 }
 
 //FromURLQuery create Paginator from Query params
@@ -128,11 +85,6 @@ func FromURLQuery(s *schema.Schema, values url.Values) (pg *Paginator, err error
 		if err != nil {
 			return
 		}
-		if limit < 0 {
-			return nil, fmt.Errorf("Request contains invalid limit value %d", limit)
-		}
-	} else {
-		limit = math.MaxUint64
 	}
 
 	if o := values.Get("offset"); o != "" {
@@ -142,5 +94,5 @@ func FromURLQuery(s *schema.Schema, values url.Values) (pg *Paginator, err error
 		}
 	}
 
-	return NewPaginator(OptionKey(s, sortKey), OptionOrder(sortOrder), OptionLimit(limit), OptionOffset(offset))
+	return NewPaginator(s, sortKey, sortOrder, limit, offset)
 }

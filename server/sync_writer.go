@@ -133,10 +133,7 @@ func (writer *SyncWriter) listEvents() ([]*schema.Resource, error) {
 	if dbErr := db.Within(writer.db, func(tx transaction.Transaction) error {
 		schemaManager := schema.GetManager()
 		eventSchema, _ := schemaManager.Schema("event")
-		paginator, _ := pagination.NewPaginator(
-			pagination.OptionKey(eventSchema, "id"),
-			pagination.OptionOrder(pagination.ASC),
-			pagination.OptionLimit(eventPollingLimit))
+		paginator, _ := pagination.NewPaginator(eventSchema, "id", pagination.ASC, eventPollingLimit, 0)
 		res, _, err := tx.List(eventSchema, nil, nil, paginator)
 		resourceList = res
 		return err
