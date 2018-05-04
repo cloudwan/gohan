@@ -680,5 +680,17 @@ var _ = Describe("Util tests", func() {
 			})
 		})
 
+		It("Empty string value in primitive string is treated as undefined", func() {
+			type TestResource struct {
+				String string `json:"string"`
+			}
+
+			input := &TestResource{
+				String: "",
+			}
+			expected := map[string]interface{}{}
+
+			Expect(env.Util().ResourceToMap(input)).To(Equal(expected))
+		})
 	})
 })
