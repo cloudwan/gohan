@@ -125,11 +125,32 @@ func (resource *Resource) Update(updateData map[string]interface{}) error {
 	}
 	for _, property := range resource.schema.Properties {
 		id := property.ID
+
 		if val, ok := updateData[id]; ok {
-			data[id] = val
+			data[id] = updateResourceRecursion(val, data[id])
 		}
 	}
 	return nil
+}
+
+//Data already validated
+func updateResourceRecursion(updateData interface{}, sourceData interface{}) interface{} {
+	if sourceData == nil {
+		return updateData
+	}
+
+	switch newUpdate := updateData.(type) {
+	case map[string]interface{}:
+		newSource := sourceData.(map[string]interface{})
+
+		for key, val := range newUpdate {
+			newSource[key] = updateResourceRecursion(val, newSource[key])
+		}
+		return newSource
+
+	default:
+		return updateData
+	}
 }
 
 func fillObjectDefaults(objectProperty Property, resourceMap, objectMask map[string]interface{}) {

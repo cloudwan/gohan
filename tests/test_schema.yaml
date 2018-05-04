@@ -618,6 +618,47 @@ schemas:
     type: object
   singular: test
   title: Test
+- description: Nil Test
+  id: nil_test
+  plural: Nil Tests
+  extends:
+  - base
+  schema:
+    properties:
+      test_string:
+        description: Test string
+        permission:
+        - create
+        - update
+        title: Test string
+        default: "TestString"
+        type:
+        - string
+        - "null"
+        unique: false
+      nested_obj:
+        description: Nested obj
+        permission:
+        - create
+        - update
+        title: Nested obj
+        type:
+        - object
+        - "null"
+        properties:
+           nested_string:
+              description: Nested string
+              permission:
+              - create
+              - update
+              title: Nested string
+              type:
+              - string
+              - "null"
+              unique: false
+    type: object
+  singular: nil_test
+  title: Nil Test
 - description: Admin only
   id: admin_only
   plural: admin_onlys
