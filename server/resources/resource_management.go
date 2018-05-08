@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -51,6 +52,8 @@ const (
 	Unauthorized
 	Forbidden
 	ForeignKeyFailed
+
+	goValidationContextKey = "go_validation"
 )
 
 // ResourceError is created when an anticipated problem has occurred during resource manipulations.
@@ -586,7 +589,7 @@ func CreateResource(
 
 	//Validation
 
-	if _, ok := context["go_validation"]; ok {
+	if _, ok := context[goValidationContextKey]; ok {
 		err = resourceSchema.ValidateGoOnCreate(dataMap)
 		if err != nil {
 			return ResourceError{err, fmt.Sprintf("Validation error: %s", err), WrongData}
@@ -722,7 +725,6 @@ func UpdateResource(
 		needsDelete = true
 	}
 	context["resource"] = dataMap
-
 	if err := extension.HandleEvent(context, environment, "pre_update", resourceSchema.ID); err != nil {
 		return err
 	}
@@ -793,6 +795,25 @@ func UpdateResourceInTransaction(
 	err = policy.ApplyPropertyConditionFilter(schema.ActionUpdate, resource.Data(), dataMap)
 	if err != nil {
 		return ResourceError{err, "", Unauthorized}
+	}
+
+	if _, ok := context[goValidationContextKey]; ok {
+		// Go compiler fills fields which are of primitive type with 'zero value' if any golang extension
+		// have registered for PreUpdate event.
+		// This means that some fields will appear in dataMap, even they were not present
+		// in API request nor added by PreUpdate handler.
+		// This loop will remove all 'zero values' from dataMap which doesn't appear in original request data.
+		isZeroOfUnderlyingType := func(x interface{}) bool {
+			return reflect.DeepEqual(x, reflect.Zero(reflect.TypeOf(x)).Interface())
+		}
+
+		requestData := context["request_data"].(map[string]interface{})
+		for k, v := range dataMap {
+			_, isInRequest := requestData[k]
+			if !isInRequest && isZeroOfUnderlyingType(v) {
+				delete(dataMap, k)
+			}
+		}
 	}
 
 	err = resource.Update(dataMap)
