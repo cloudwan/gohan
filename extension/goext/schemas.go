@@ -53,7 +53,7 @@ type Filter map[string]interface{}
 type Paginator struct {
 	Key    string
 	Order  string
-	Limit  uint64
+	Limit  MaybeInt
 	Offset uint64
 }
 

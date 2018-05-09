@@ -18,6 +18,7 @@ package goplugin
 import (
 	"context"
 	"fmt"
+	"math"
 
 	"github.com/cloudwan/gohan/db/pagination"
 	"github.com/cloudwan/gohan/db/transaction"
@@ -187,7 +188,7 @@ func (t *Transaction) List(ctx context.Context, schema goext.ISchema, filter goe
 	if err := ctx.Err(); err != nil {
 		return nil, 0, ctx.Err()
 	}
-	data, _, err := t.tx.ListContext(context.Background(), t.findRawSchema(schemaID), transaction.Filter(filter), nil, (*pagination.Paginator)(paginator))
+	data, _, err := t.tx.ListContext(context.Background(), t.findRawSchema(schemaID), transaction.Filter(filter), nil, convertPaginator(paginator))
 	if err != nil {
 		return nil, 0, err
 	}
@@ -211,7 +212,7 @@ func (t *Transaction) LockList(ctx context.Context, schema goext.ISchema, filter
 	if err := ctx.Err(); err != nil {
 		return nil, 0, ctx.Err()
 	}
-	data, _, err := t.tx.LockListContext(context.Background(), t.findRawSchema(schemaID), transaction.Filter(filter), nil, (*pagination.Paginator)(paginator), convertLockPolicy(lockingPolicy))
+	data, _, err := t.tx.LockListContext(context.Background(), t.findRawSchema(schemaID), transaction.Filter(filter), nil, convertPaginator(paginator), convertLockPolicy(lockingPolicy))
 	if err != nil {
 		return nil, 0, err
 	}
@@ -279,4 +280,20 @@ func (t *Transaction) Count(ctx context.Context, schema goext.ISchema, filter go
 		return 0, ctx.Err()
 	}
 	return t.tx.CountContext(context.Background(), t.findRawSchema(schemaID), transaction.Filter(filter))
+}
+
+func convertPaginator(p *goext.Paginator) *pagination.Paginator {
+	if p == nil {
+		return nil
+	}
+	ret := pagination.Paginator{
+		Key:    p.Key,
+		Order:  p.Order,
+		Limit:  math.MaxUint64,
+		Offset: p.Offset,
+	}
+	if p.Limit.HasValue() {
+		ret.Limit = uint64(p.Limit.Value())
+	}
+	return &ret
 }
