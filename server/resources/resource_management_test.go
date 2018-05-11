@@ -28,6 +28,7 @@ import (
 	"github.com/cloudwan/gohan/server/middleware"
 	"github.com/cloudwan/gohan/server/resources"
 	"github.com/cloudwan/gohan/util"
+	"github.com/mohae/deepcopy"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/twinj/uuid"
@@ -1428,6 +1429,57 @@ var _ = Describe("Resource manager", func() {
 			})
 
 			Describe("With extensions", func() {
+				Context("pre_update inserts zero-value", func() {
+					var (
+						requestMap map[string]interface{}
+					)
+					BeforeEach(func() {
+						requestMap = map[string]interface{}{
+							"test_string": "Steloj ne estas en ordo.",
+							"test_bool":   true,
+						}
+						events["pre_update"] = `if (context.resource.test_bool === undefined) { context.resource.test_bool = false; }`
+						context["go_validation"] = true // simulate Goext
+						context["request_data"] = requestMap
+					})
+
+					It("resource field zero-value which doesn't appear in request data is removed before validation", func() {
+						err := resources.UpdateResource(
+							context, testDB, fakeIdentity, currentSchema, resourceID1,
+							requestMap)
+						result := context["response"].(map[string]interface{})
+						Expect(err).NotTo(HaveOccurred())
+						theResource, ok := result[schemaID]
+						Expect(ok).To(BeTrue())
+						Expect(theResource).To(HaveKeyWithValue("test_string", "Steloj ne estas en ordo."))
+						Expect(theResource).To(HaveKeyWithValue("test_bool", true))
+
+						delete(requestMap, "test_bool")
+						context["request_data"] = deepcopy.Copy(requestMap).(map[string]interface{})
+
+						err = resources.UpdateResource(
+							context, testDB, fakeIdentity, currentSchema, resourceID1,
+							requestMap)
+						result = context["response"].(map[string]interface{})
+						Expect(err).NotTo(HaveOccurred())
+						theResource, ok = result[schemaID]
+						Expect(ok).To(BeTrue())
+						Expect(theResource).To(HaveKeyWithValue("test_bool", true))
+
+						requestMap["test_bool"] = false
+						context["request_data"] = deepcopy.Copy(requestMap).(map[string]interface{})
+
+						err = resources.UpdateResource(
+							context, testDB, fakeIdentity, currentSchema, resourceID1,
+							requestMap)
+						result = context["response"].(map[string]interface{})
+						Expect(err).NotTo(HaveOccurred())
+						theResource, ok = result[schemaID]
+						Expect(ok).To(BeTrue())
+						Expect(theResource).To(HaveKeyWithValue("test_bool", false))
+					})
+				})
+
 				Context("Only pre_update", func() {
 					BeforeEach(func() {
 						events["pre_update"] = `throw new CustomException("bona", 390);`
