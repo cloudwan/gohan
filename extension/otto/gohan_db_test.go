@@ -174,7 +174,7 @@ var _ = Describe("GohanDb", func() {
 					env := newEnvironmentWithExtension(extension, testDB)
 
 					mockTx := tr_mocks.NewMockTransaction(mockCtrl)
-					pg, err := pagination.NewPaginator(pagination.OptionOrder(pagination.ASC))
+					pg, err := pagination.NewPaginator(s, "", pagination.ASC, 0, 0)
 					Expect(err).To(Succeed())
 					listCall(mockTx, methodName, s, transaction.Filter{"tenant_id": "tenant0"}, pg).Return(
 						[]*schema.Resource{r0, r1},
@@ -218,7 +218,7 @@ var _ = Describe("GohanDb", func() {
 					env := newEnvironmentWithExtension(extension, testDB)
 
 					mockTx := tr_mocks.NewMockTransaction(mockCtrl)
-					pg, err := pagination.NewPaginator(pagination.OptionOrder(pagination.ASC))
+					pg, err := pagination.NewPaginator(s, "", pagination.ASC, 0, 0)
 					Expect(err).To(Succeed())
 					listCall(mockTx, methodName, s, transaction.Filter{"test_bool": true}, pg).Return(
 						[]*schema.Resource{r1},
@@ -266,7 +266,10 @@ var _ = Describe("GohanDb", func() {
 					env := newEnvironmentWithExtension(extension, testDB)
 
 					mockTx := tr_mocks.NewMockTransaction(mockCtrl)
-					pg, _ := pagination.NewPaginator(pagination.OptionOrder(pagination.ASC), pagination.OptionLimit(1))
+					pg := &pagination.Paginator{
+						Order: pagination.ASC,
+						Limit: 1,
+					}
 					listCall(mockTx, methodName, s, transaction.Filter{"tenant_id": "tenant0"}, pg).Return(
 						[]*schema.Resource{r0},
 						uint64(2),
@@ -310,10 +313,10 @@ var _ = Describe("GohanDb", func() {
 					env := newEnvironmentWithExtension(extension, testDB)
 
 					mockTx := tr_mocks.NewMockTransaction(mockCtrl)
-					pg, _ := pagination.NewPaginator(
-						pagination.OptionKey(nil, "test_string"),
-						pagination.OptionOrder(pagination.ASC))
-
+					pg := &pagination.Paginator{
+						Key:   "test_string",
+						Order: pagination.ASC,
+					}
 					listCall(mockTx, methodName, s, transaction.Filter{"tenant_id": "tenant0"}, pg).Return(
 						[]*schema.Resource{r0, r1},
 						uint64(2),
@@ -358,11 +361,11 @@ var _ = Describe("GohanDb", func() {
 					env := newEnvironmentWithExtension(extension, testDB)
 
 					mockTx := tr_mocks.NewMockTransaction(mockCtrl)
-					pg, _ := pagination.NewPaginator(
-						pagination.OptionKey(nil, "test_string"),
-						pagination.OptionOrder(pagination.ASC),
-						pagination.OptionLimit(100))
-
+					pg := &pagination.Paginator{
+						Key:   "test_string",
+						Order: pagination.ASC,
+						Limit: 100,
+					}
 					listCall(mockTx, methodName, s, transaction.Filter{"tenant_id": "tenant0"}, pg).Return(
 						[]*schema.Resource{r0, r1},
 						uint64(2),
@@ -408,12 +411,12 @@ var _ = Describe("GohanDb", func() {
 					env := newEnvironmentWithExtension(extension, testDB)
 
 					mockTx := tr_mocks.NewMockTransaction(mockCtrl)
-					pg, _ := pagination.NewPaginator(
-						pagination.OptionKey(nil, "test_string"),
-						pagination.OptionOrder(pagination.ASC),
-						pagination.OptionLimit(100),
-						pagination.OptionOffset(10))
-
+					pg := &pagination.Paginator{
+						Key:    "test_string",
+						Order:  pagination.ASC,
+						Limit:  100,
+						Offset: 10,
+					}
 					listCall(mockTx, methodName, s, transaction.Filter{"tenant_id": "tenant0"}, pg).Return(
 						[]*schema.Resource{r0, r1},
 						uint64(2),

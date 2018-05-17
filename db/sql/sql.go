@@ -20,7 +20,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -890,8 +889,8 @@ func buildSelect(sc *selectContext) (string, []interface{}, error) {
 			}
 		}
 
-		if sc.paginator.Limit != math.MaxUint64 {
-			q = q.Limit(uint64(sc.paginator.Limit))
+		if sc.paginator.Limit > 0 {
+			q = q.Limit(sc.paginator.Limit)
 		}
 		if sc.paginator.Offset > 0 {
 			q = q.Offset(sc.paginator.Offset)
