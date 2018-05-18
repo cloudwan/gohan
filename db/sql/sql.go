@@ -484,8 +484,8 @@ func (db *DB) genTableCols(s *schema.Schema, cascade bool, exclude []string) ([]
 			if sqlDataType == "text" && db.sqlType == "mysql" {
 				prefix = "(255)"
 			}
-			indices = append(indices, fmt.Sprintf("CREATE INDEX %s_%s_idx ON `%s`(`%s`%s);", s.Plural, property.ID,
-				s.Plural, property.ID, prefix))
+			indices = append(indices, fmt.Sprintf("CREATE INDEX %s_%s_idx ON `%s`(`%s`%s);", s.GetDbTableName(), property.ID,
+				s.GetDbTableName(), property.ID, prefix))
 		}
 	}
 
