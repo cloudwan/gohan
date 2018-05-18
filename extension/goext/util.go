@@ -16,7 +16,9 @@
 package goext
 
 type IUtil interface {
+	// NewUUID create a new unique ID
 	NewUUID() string
+	// GetTransaction returns transaction from given context
 	GetTransaction(context Context) (ITransaction, bool)
 
 	// ResourceFromMapForType converts mapped representation to structure representation of the resource for given type

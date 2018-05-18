@@ -17,7 +17,10 @@ package goext
 
 // IAuth is an interface to auth in Gohan
 type IAuth interface {
+	// HasRole reports whether context has given role
 	HasRole(context Context, role string) bool
+	// GetTenantName return name from the given context
 	GetTenantName(context Context) string
+	// IsAdmin reports whether context belongs to admin
 	IsAdmin(context Context) bool
 }

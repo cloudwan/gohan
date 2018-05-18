@@ -20,7 +20,7 @@ import "github.com/cloudwan/gohan/util"
 // Config is an implementation of IConfig
 type Config struct{}
 
-// Config gets parameter from config
+// Config gets a parameter from config
 func (config *Config) Config(key string, defaultValue interface{}) interface{} {
 	return util.GetConfig().GetParam(key, defaultValue)
 }
