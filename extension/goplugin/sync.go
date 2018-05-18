@@ -93,6 +93,11 @@ func (sync *Sync) Watch(ctx context.Context, path string, timeout time.Duration,
 	}
 }
 
+// Update updates a path with given json
+func (sync *Sync) Update(path string, json string) error {
+	return sync.raw.Update(path, json)
+}
+
 // NewSync allocates Sync
 func NewSync(sync gohan_sync.Sync) *Sync {
 	return &Sync{raw: sync}

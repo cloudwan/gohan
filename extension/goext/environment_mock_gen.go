@@ -358,6 +358,18 @@ func (mr *MockISyncMockRecorder) Fetch(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Fetch", reflect.TypeOf((*MockISync)(nil).Fetch), arg0)
 }
 
+// Update mocks base method
+func (m *MockISync) Update(arg0, arg1 string) error {
+	ret := m.ctrl.Call(m, "Update", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Update indicates an expected call of Update
+func (mr *MockISyncMockRecorder) Update(arg0, arg1 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockISync)(nil).Update), arg0, arg1)
+}
+
 // Watch mocks base method
 func (m *MockISync) Watch(arg0 context.Context, arg1 string, arg2 time.Duration, arg3 int64) ([]*Event, error) {
 	ret := m.ctrl.Call(m, "Watch", arg0, arg1, arg2, arg3)
