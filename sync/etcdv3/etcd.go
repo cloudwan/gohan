@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 	syn "sync"
 	"time"
@@ -30,7 +31,7 @@ import (
 	etcd "github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/clientv3/concurrency"
 	pb "github.com/coreos/etcd/mvcc/mvccpb"
-	cmap "github.com/streamrail/concurrent-map"
+	"github.com/streamrail/concurrent-map"
 	"github.com/twinj/uuid"
 )
 
@@ -124,68 +125,68 @@ func (s *Sync) Delete(key string, prefix bool) error {
 //Fetch data from sync
 func (s *Sync) Fetch(key string) (*sync.Node, error) {
 	defer measureTime(time.Now(), "fetch")
-
-	node, err := s.etcdClient.Get(s.withTimeout(), key, etcd.WithSort(etcd.SortByKey, etcd.SortAscend))
-	if err != nil {
-		updateCounter(1, "fetch.node.error")
-		return nil, err
-	}
 	dir, err := s.etcdClient.Get(s.withTimeout(), key, etcd.WithPrefix(), etcd.WithSort(etcd.SortByKey, etcd.SortAscend))
 	if err != nil {
 		updateCounter(1, "fetch.dir.error")
 		return nil, err
 	}
 
-	return s.recursiveFetch(key, node.Kvs, dir.Kvs)
+	children := dir.Kvs
+	if len(children) == 0 {
+		return nil, fmt.Errorf("Key not found (%s)", key)
+	}
+	curr := strings.Count(key, "/")
+	if curr == 0 {
+		curr = 1
+	}
+	return recursiveFetch(curr, children), nil
 }
 
-func (s *Sync) recursiveFetch(rootKey string, node []*pb.KeyValue, children []*pb.KeyValue) (*sync.Node, error) {
-	if len(node) == 0 && len(children) == 0 {
-		return nil, errors.New("Not found")
+func recursiveFetch(curr int, children []*pb.KeyValue) *sync.Node {
+	if len(children) == 0 {
+		return nil
 	}
-
-	subMap := make(map[string]*sync.Node, len(children))
-
-	rootNode := &sync.Node{}
-	subMap[""] = rootNode
-	if len(node) != 0 {
-		rootNode.Key = string(node[0].Key)
-		rootNode.Value = string(node[0].Value)
-		rootNode.Revision = node[0].ModRevision
-	} else {
-		rootNode.Key = rootKey
-	}
-
-	for _, kv := range children {
-		key := string(kv.Key)
-		n := &sync.Node{
-			Key:      key,
-			Value:    string(kv.Value),
-			Revision: kv.ModRevision,
+	sep := "/"
+	key := substrN(string(children[0].Key), sep, curr)
+	if len(children) == 1 {
+		child := children[0]
+		if string(child.Key) == key {
+			return &sync.Node{Key: string(child.Key), Value: string(child.Value), Revision: child.ModRevision}
 		}
-		path := strings.TrimPrefix(key, rootKey)
-		steps := strings.Split(path, "/")
-
-		for i := 1; i < len(steps); i++ {
-			parent, ok := subMap[strings.Join(steps[:len(steps)-i], "/")]
-			if ok {
-				for j := 1; j < i; j++ {
-					bridge := &sync.Node{
-						Key: rootKey + strings.Join(steps[:len(steps)-i+j], "/"),
-					}
-					parent.Children = []*sync.Node{bridge}
-					parent = bridge
-				}
-				if parent.Children == nil {
-					parent.Children = make([]*sync.Node, 0, 1)
-				}
-				parent.Children = append(parent.Children, n)
-				break
-			}
-		}
+		nodes := recursiveFetch(curr+1, children)
+		return &sync.Node{Key: key, Children: []*sync.Node{nodes}}
 	}
 
-	return rootNode, nil
+	commonChild := make(map[string][]*pb.KeyValue)
+	for _, child := range children {
+		val := substrN(string(child.Key), sep, curr+1)
+		commonChild[val] = append(commonChild[val], child)
+	}
+	// children nodes has to be alphabetically sorted
+	keys := make([]string, 0, len(commonChild))
+	for k := range commonChild {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	nodes := make([]*sync.Node, len(keys))
+	for i := range keys {
+		v := commonChild[keys[i]]
+		nodes[i] = recursiveFetch(curr+1, v)
+	}
+	node := &sync.Node{Key: key, Children: nodes}
+	return node
+}
+
+func substrN(s, substr string, n int) string {
+	idx := 1
+	for i := 0; i < n; i++ {
+		tmp := strings.Index(s[idx:], substr)
+		if tmp == -1 {
+			return s
+		}
+		idx += tmp + 1
+	}
+	return s[0 : idx-1]
 }
 
 //HasLock checks current process owns lock or not
