@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 	syn "sync"
 	"time"
@@ -30,7 +31,7 @@ import (
 	etcd "github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/clientv3/concurrency"
 	pb "github.com/coreos/etcd/mvcc/mvccpb"
-	cmap "github.com/streamrail/concurrent-map"
+	"github.com/streamrail/concurrent-map"
 	"github.com/twinj/uuid"
 )
 
@@ -124,68 +125,79 @@ func (s *Sync) Delete(key string, prefix bool) error {
 //Fetch data from sync
 func (s *Sync) Fetch(key string) (*sync.Node, error) {
 	defer measureTime(time.Now(), "fetch")
-
-	node, err := s.etcdClient.Get(s.withTimeout(), key, etcd.WithSort(etcd.SortByKey, etcd.SortAscend))
-	if err != nil {
-		updateCounter(1, "fetch.node.error")
-		return nil, err
-	}
 	dir, err := s.etcdClient.Get(s.withTimeout(), key, etcd.WithPrefix(), etcd.WithSort(etcd.SortByKey, etcd.SortAscend))
 	if err != nil {
 		updateCounter(1, "fetch.dir.error")
 		return nil, err
 	}
 
-	return s.recursiveFetch(key, node.Kvs, dir.Kvs)
+	sep := "/"
+	curr := strings.Count(key, sep)
+	if curr == 0 {
+		curr = 1
+	}
+	children := recursiveFetch(curr, dir.Kvs, key, sep)
+	if children == nil {
+		return nil, fmt.Errorf("Key not found (%s)", key)
+	}
+	return children, nil
 }
 
-func (s *Sync) recursiveFetch(rootKey string, node []*pb.KeyValue, children []*pb.KeyValue) (*sync.Node, error) {
-	if len(node) == 0 && len(children) == 0 {
-		return nil, errors.New("Not found")
+func recursiveFetch(curr int, children []*pb.KeyValue, rootKey, sep string) *sync.Node {
+	if len(children) == 0 {
+		return nil
+	}
+	if len(children) == 1 {
+		return handleSingleChild(curr, children[0], rootKey, sep)
 	}
 
-	subMap := make(map[string]*sync.Node, len(children))
-
-	rootNode := &sync.Node{}
-	subMap[""] = rootNode
-	if len(node) != 0 {
-		rootNode.Key = string(node[0].Key)
-		rootNode.Value = string(node[0].Value)
-		rootNode.Revision = node[0].ModRevision
-	} else {
-		rootNode.Key = rootKey
+	key := substrN(string(children[0].Key), sep, curr)
+	commonChild := make(map[string][]*pb.KeyValue)
+	for _, child := range children {
+		val := substrN(string(child.Key), sep, curr+1)
+		commonChild[val] = append(commonChild[val], child)
 	}
-
-	for _, kv := range children {
-		key := string(kv.Key)
-		n := &sync.Node{
-			Key:      key,
-			Value:    string(kv.Value),
-			Revision: kv.ModRevision,
-		}
-		path := strings.TrimPrefix(key, rootKey)
-		steps := strings.Split(path, "/")
-
-		for i := 1; i < len(steps); i++ {
-			parent, ok := subMap[strings.Join(steps[:len(steps)-i], "/")]
-			if ok {
-				for j := 1; j < i; j++ {
-					bridge := &sync.Node{
-						Key: rootKey + strings.Join(steps[:len(steps)-i+j], "/"),
-					}
-					parent.Children = []*sync.Node{bridge}
-					parent = bridge
-				}
-				if parent.Children == nil {
-					parent.Children = make([]*sync.Node, 0, 1)
-				}
-				parent.Children = append(parent.Children, n)
-				break
-			}
+	// children nodes has to be alphabetically sorted
+	keys := make([]string, 0, len(commonChild))
+	for k, v := range commonChild {
+		if len(v) != 0 {
+			keys = append(keys, k)
 		}
 	}
+	sort.Strings(keys)
+	nodes := make([]*sync.Node, 0, len(keys))
+	for _, key := range keys {
+		v := commonChild[key]
+		if node := recursiveFetch(curr+1, v, rootKey, sep); node != nil {
+			nodes = append(nodes, node)
+		}
+	}
+	node := &sync.Node{Key: key, Children: nodes}
+	return node
+}
 
-	return rootNode, nil
+func handleSingleChild(curr int, child *pb.KeyValue, rootKey, sep string) *sync.Node {
+	key := substrN(string(child.Key), sep, curr)
+	if string(child.Key) == key {
+		if string(child.Key) != rootKey && string(child.Key[:len(rootKey)+1]) != rootKey+sep { // remove invalid keys
+			return nil
+		}
+		return &sync.Node{Key: string(child.Key), Value: string(child.Value), Revision: child.ModRevision}
+	}
+	nodes := handleSingleChild(curr+1, child, rootKey, sep)
+	return &sync.Node{Key: key, Children: []*sync.Node{nodes}}
+}
+
+func substrN(s, substr string, n int) string {
+	idx := 1
+	for i := 0; i < n; i++ {
+		tmp := strings.Index(s[idx:], substr)
+		if tmp == -1 {
+			return s
+		}
+		idx += tmp + 1
+	}
+	return s[0 : idx-1]
 }
 
 //HasLock checks current process owns lock or not
