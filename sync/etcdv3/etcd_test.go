@@ -366,7 +366,45 @@ func checkNode(node *gohan_sync.Node, key, value string, children int, t *testin
 		t.Fatalf("expected value %s has %s", value, node.Value)
 	}
 	if len(node.Children) != children {
-		t.Fatalf("expected to has %d children has %s", children, len(node.Children))
+		t.Fatalf("expected to has %d children has %d", children, len(node.Children))
+	}
+}
+
+func TestNotIncludedPaths(t *testing.T) {
+	sync := newSync(t)
+	sync.etcdClient.Delete(context.Background(), "/", etcd.WithPrefix())
+
+	err := sync.Update("/path/to/somewhere", "test")
+	if err != nil {
+		t.Fatalf("unexpected error")
+	}
+	err = sync.Update("/pathnottobeincluded", "should not appear")
+	if err != nil {
+		t.Fatalf("unexpected error")
+	}
+
+	nodes, err := sync.Fetch("/path")
+	if err != nil {
+		t.Fatalf("unexpected error %s", err.Error())
+	}
+
+	checkNode(nodes, "/path", "", 1, t)
+	pathTo := nodes.Children[0]
+	checkNode(pathTo, "/path/to", "", 1, t)
+	checkNode(pathTo.Children[0], "/path/to/somewhere", "test", 0, t)
+
+	_, err = sync.Fetch("/path/not")
+	if err == nil || !strings.Contains(err.Error(), fmt.Sprintf("Key not found (%s)", "/path/not")) {
+		t.Fatalf("unexpected error %s", err.Error())
+	}
+
+	err = sync.Update("/path/to/notbeincluded", "should not appear")
+	if err != nil {
+		t.Fatalf("unexpected error")
+	}
+	_, err = sync.Fetch("/path/to/not")
+	if err == nil || !strings.Contains(err.Error(), fmt.Sprintf("Key not found (%s)", "/path/to/not")) {
+		t.Fatalf("unexpected error %s", err.Error())
 	}
 }
 

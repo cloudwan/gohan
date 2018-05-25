@@ -131,32 +131,27 @@ func (s *Sync) Fetch(key string) (*sync.Node, error) {
 		return nil, err
 	}
 
-	children := dir.Kvs
-	if len(children) == 0 {
-		return nil, fmt.Errorf("Key not found (%s)", key)
-	}
-	curr := strings.Count(key, "/")
+	sep := "/"
+	curr := strings.Count(key, sep)
 	if curr == 0 {
 		curr = 1
 	}
-	return recursiveFetch(curr, children), nil
+	children := recursiveFetch(curr, dir.Kvs, key, sep)
+	if children == nil {
+		return nil, fmt.Errorf("Key not found (%s)", key)
+	}
+	return children, nil
 }
 
-func recursiveFetch(curr int, children []*pb.KeyValue) *sync.Node {
+func recursiveFetch(curr int, children []*pb.KeyValue, rootKey, sep string) *sync.Node {
 	if len(children) == 0 {
 		return nil
 	}
-	sep := "/"
-	key := substrN(string(children[0].Key), sep, curr)
 	if len(children) == 1 {
-		child := children[0]
-		if string(child.Key) == key {
-			return &sync.Node{Key: string(child.Key), Value: string(child.Value), Revision: child.ModRevision}
-		}
-		nodes := recursiveFetch(curr+1, children)
-		return &sync.Node{Key: key, Children: []*sync.Node{nodes}}
+		return handleSingleChild(curr, children[0], rootKey, sep)
 	}
 
+	key := substrN(string(children[0].Key), sep, curr)
 	commonChild := make(map[string][]*pb.KeyValue)
 	for _, child := range children {
 		val := substrN(string(child.Key), sep, curr+1)
@@ -164,17 +159,33 @@ func recursiveFetch(curr int, children []*pb.KeyValue) *sync.Node {
 	}
 	// children nodes has to be alphabetically sorted
 	keys := make([]string, 0, len(commonChild))
-	for k := range commonChild {
-		keys = append(keys, k)
+	for k, v := range commonChild {
+		if len(v) != 0 {
+			keys = append(keys, k)
+		}
 	}
 	sort.Strings(keys)
-	nodes := make([]*sync.Node, len(keys))
-	for i := range keys {
-		v := commonChild[keys[i]]
-		nodes[i] = recursiveFetch(curr+1, v)
+	nodes := make([]*sync.Node, 0, len(keys))
+	for _, key := range keys {
+		v := commonChild[key]
+		if node := recursiveFetch(curr+1, v, rootKey, sep); node != nil {
+			nodes = append(nodes, node)
+		}
 	}
 	node := &sync.Node{Key: key, Children: nodes}
 	return node
+}
+
+func handleSingleChild(curr int, child *pb.KeyValue, rootKey, sep string) *sync.Node {
+	key := substrN(string(child.Key), sep, curr)
+	if string(child.Key) == key {
+		if string(child.Key) != rootKey && string(child.Key[:len(rootKey)+1]) != rootKey+sep { // remove invalid keys
+			return nil
+		}
+		return &sync.Node{Key: string(child.Key), Value: string(child.Value), Revision: child.ModRevision}
+	}
+	nodes := handleSingleChild(curr+1, child, rootKey, sep)
+	return &sync.Node{Key: key, Children: []*sync.Node{nodes}}
 }
 
 func substrN(s, substr string, n int) string {
