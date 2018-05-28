@@ -23,6 +23,7 @@ import (
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/extension/goext"
+	"github.com/cloudwan/gohan/extension/goext/filter"
 	"github.com/cloudwan/gohan/extension/goplugin"
 	"github.com/cloudwan/gohan/extension/goplugin/test_data/ext_good/test"
 	"github.com/cloudwan/gohan/schema"
@@ -330,6 +331,37 @@ var _ = Describe("Schemas", func() {
 		It("should return error when trying to delete with empty filter", func() {
 			err := testSchema.DeleteFilterRaw(goext.Filter{}, context)
 			Expect(err).To(MatchError("Cannot delete with empty filter"))
+		})
+
+		Context("Query filters", func(){
+			It("Should list resources using And", func() {
+				Expect(testSchema.CreateRaw(&createdResource, context)).To(Succeed())
+
+				f := filter.And(
+					filter.Eq("id", "some-id"),
+					filter.Eq("description", "description"),
+				)
+				returnedResources, err := testSchema.ListRaw(f, nil, context)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(returnedResources).To(HaveLen(1))
+				returnedResource := returnedResources[0]
+				Expect(&createdResource).To(Equal(returnedResource))
+			})
+
+			It("Should list resources using Or", func() {
+				Expect(testSchema.CreateRaw(&createdResource, context)).To(Succeed())
+
+				f := filter.Or(
+					filter.Eq("id", "invalid-id"),
+					filter.Eq("id", "some-id"),
+				)
+				returnedResources, err := testSchema.ListRaw(f, nil, context)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(returnedResources).To(HaveLen(1))
+				returnedResource := returnedResources[0]
+				Expect(&createdResource).To(Equal(returnedResource))
+			})
+
 		})
 
 		Context("Resource type not registered", func() {
