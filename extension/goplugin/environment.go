@@ -139,42 +139,42 @@ func (env *Environment) Types() map[goext.SchemaID]reflect.Type {
 	return env.types
 }
 
-// Config returns an implementation to Config interface
+// Config returns an implementation of IConfig interface
 func (env *Environment) Config() goext.IConfig {
 	return &Config{}
 }
 
-// Core returns an implementation to Core interface
+// Core returns an implementation of ICore interface
 func (env *Environment) Core() goext.ICore {
 	return env.coreImpl
 }
 
-// Logger returns an implementation to Logger interface
+// Logger returns an implementation of ILogger interface
 func (env *Environment) Logger() goext.ILogger {
 	return env.loggerImpl
 }
 
-// Schemas returns an implementation to Schemas interface
+// Schemas returns an implementation of ISchemas interface
 func (env *Environment) Schemas() goext.ISchemas {
 	return env.schemasImpl
 }
 
-// Sync returns an implementation to Sync interface
+// Sync returns an implementation of ISync interface
 func (env *Environment) Sync() goext.ISync {
 	return env.syncImpl
 }
 
-// Database returns an implementation to IDatabase interface
+// Database returns an implementation of IDatabase interface
 func (env *Environment) Database() goext.IDatabase {
 	return env.databaseImpl
 }
 
-// HTTP returns an implementation to IHTTP interface
+// HTTP returns an implementation of IHTTP interface
 func (env *Environment) HTTP() goext.IHTTP {
 	return &HTTP{}
 }
 
-// Auth returns an implementation to IAuth interface
+// Auth returns an implementation of IAuth interface
 func (env *Environment) Auth() goext.IAuth {
 	return &Auth{}
 }
