@@ -25,13 +25,17 @@ import (
 
 func TestNewPaginator(t *testing.T) {
 	RegisterTestingT(t)
-	_, err := NewPaginator(nil, "name", "desc", 100, 200)
+	_, err := NewPaginator(
+		OptionKey(nil, "name"),
+		OptionOrder("desc"),
+		OptionLimit(100),
+		OptionOffset(200))
 	Expect(err).ToNot(HaveOccurred())
 }
 
 func TestNewPaginatorNoDefaults(t *testing.T) {
 	RegisterTestingT(t)
-	pg, err := NewPaginator(nil, "", "", 0, 0)
+	pg, err := NewPaginator()
 	Expect(err).ToNot(HaveOccurred())
 	Expect(pg.Key).To(Equal(""))
 	Expect(pg.Order).To(Equal(""))
@@ -39,7 +43,7 @@ func TestNewPaginatorNoDefaults(t *testing.T) {
 
 func TestUnknownSortOrder(t *testing.T) {
 	RegisterTestingT(t)
-	pg, err := NewPaginator(nil, "", "bad", 0, 0)
+	pg, err := NewPaginator(OptionOrder("bad"))
 	Expect(err).To(HaveOccurred())
 	Expect(pg).To(BeNil())
 }
