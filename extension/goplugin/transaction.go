@@ -168,7 +168,7 @@ func convertLockPolicy(policy goext.LockPolicy) schema.LockPolicy {
 	}
 }
 
-// StateFetch fetches a state an existing resource
+// StateFetch fetches the state of an existing resource
 func (t *Transaction) StateFetch(ctx context.Context, schema goext.ISchema, filter goext.Filter) (goext.ResourceState, error) {
 	if err := ctx.Err(); err != nil {
 		return goext.ResourceState{}, ctx.Err()

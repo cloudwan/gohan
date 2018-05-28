@@ -62,21 +62,38 @@ type ListOptions struct {
 
 // ITransaction is common interface for handling transaction
 type ITransaction interface {
+	// Create creates a new resource
 	Create(ctx context.Context, schema ISchema, resource map[string]interface{}) error
+	// Update updates an existing resource
 	Update(ctx context.Context, schema ISchema, resource map[string]interface{}) error
+	// StateUpdate updates state of an existing resource
 	StateUpdate(ctx context.Context, schema ISchema, resource map[string]interface{}, state *ResourceState) error
+	// Delete deletes an existing resource
 	Delete(ctx context.Context, schema ISchema, resourceID interface{}) error
+	// Fetch fetches an existing resource
 	Fetch(ctx context.Context, schema ISchema, filter Filter) (map[string]interface{}, error)
+	// LockFetch locks and fetches an existing resource
 	LockFetch(ctx context.Context, schema ISchema, filter Filter, lockPolicy LockPolicy) (map[string]interface{}, error)
+	// StateFetch fetches the state of an existing resource
 	StateFetch(ctx context.Context, schema ISchema, filter Filter) (ResourceState, error)
+	// List lists existing resources
 	List(ctx context.Context, schema ISchema, filter Filter, listOptions *ListOptions, paginator *Paginator) ([]map[string]interface{}, uint64, error)
+	// LockList locks and lists existing resources
 	LockList(ctx context.Context, schema ISchema, filter Filter, listOptions *ListOptions, paginator *Paginator, lockPolicy LockPolicy) ([]map[string]interface{}, uint64, error)
+	// Count returns number of resources matching the filter
 	Count(ctx context.Context, schema ISchema, filter Filter) (uint64, error)
+	// RawTransaction returns the raw transaction
 	RawTransaction() interface{} // *sqlx.Tx
+	// Query executes a query
 	Query(ctx context.Context, schema ISchema, query string, args []interface{}) (list []map[string]interface{}, err error)
+	// Commit performs a commit of the transaction
 	Commit() error
+	// Exec performs an exec in transaction
 	Exec(ctx context.Context, query string, args ...interface{}) error
+	// Close closes the transaction
 	Close() error
+	// Closed return whether the transaction is closed
 	Closed() bool
+	// GetIsolationLevel returns the isolation level of the transaction
 	GetIsolationLevel() Type
 }

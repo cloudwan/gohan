@@ -79,7 +79,7 @@ func handleBeginError(t transaction.Transaction, err error) (goext.ITransaction,
 	}
 }
 
-// Options return database options rom configuration file
+// Options return database options from the configuration file
 func (db *Database) Options() goext.DbOptions {
 	return db.opts
 }
@@ -130,7 +130,7 @@ func within(
 	return withinDetached(options, context, fn, txBegin)
 }
 
-// Within calls a function in scoped transaction
+// Within calls a function in a scoped transaction
 func (db *Database) Within(
 	context goext.Context,
 	fn func(tx goext.ITransaction) error,
@@ -140,7 +140,7 @@ func (db *Database) Within(
 	})
 }
 
-// WithinTx calls a function in scoped transaction with options
+// WithinTx calls a function in a scoped transaction with options
 func (db *Database) WithinTx(
 	context goext.Context,
 	options *goext.TxOptions,

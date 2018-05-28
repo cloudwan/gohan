@@ -30,6 +30,8 @@ type Response struct {
 
 // IHTTP is an interface to http in Gohan
 type IHTTP interface {
+	// Request performs http request
 	Request(ctx context.Context, method, rawURL string, headers map[string]interface{}, postData interface{}, opaque bool) (*Response, error)
+	// RequestRaw performs raw http request
 	RequestRaw(ctx context.Context, method, rawURL string, headers map[string]string, rawData string) (*Response, error)
 }

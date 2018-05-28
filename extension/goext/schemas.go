@@ -101,6 +101,7 @@ func (ctx Context) Clone() Context {
 	return contextCopy
 }
 
+// GetContext returns golang context from the goext requestContext
 func GetContext(requestContext Context) context.Context {
 	if rawCtx, hasCtx := requestContext["context"]; hasCtx {
 		return rawCtx.(context.Context)
@@ -246,7 +247,9 @@ type SchemaRelationInfo struct {
 
 // ISchemas is an interface to schemas manager in Gohan
 type ISchemas interface {
+	// List returns a list of loaded schemas
 	List() []ISchema
+	// Find returns a schema by id or nil if not found
 	Find(id SchemaID) ISchema
 
 	// Relations returns list of information about schema relations
