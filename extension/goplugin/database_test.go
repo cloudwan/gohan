@@ -104,7 +104,7 @@ var _ = Describe("Database", func() {
 
 				context := goext.Context{}
 
-				env := &goplugin.MockIEnvironment{}
+				env := goplugin.NewMockIEnvironment(nil, nil)
 				env.SetMockModules(goext.MockModules{
 					Util:     true,
 					Database: true,
