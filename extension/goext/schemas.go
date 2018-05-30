@@ -18,6 +18,7 @@ package goext
 import (
 	"context"
 	"errors"
+	"math"
 )
 
 // SchemaID is a type for schema ID
@@ -55,6 +56,49 @@ type Paginator struct {
 	Order  string
 	Limit  uint64
 	Offset uint64
+}
+
+// Below code is adapted from similar code in db/pagination/pagination.go, but
+// doesn't validate parameters.
+type OptionPaginator func(*Paginator)
+
+//NewPaginator create Paginator
+func NewPaginator(options ...OptionPaginator) *Paginator {
+	pg := &Paginator{
+		Key:    "",
+		Order:  "",
+		Limit:  math.MaxUint64,
+		Offset: 0,
+	}
+
+	for _, op := range options {
+		op(pg)
+	}
+	return pg
+}
+
+func OptionKey(key string) OptionPaginator {
+	return func(pg *Paginator) {
+		pg.Key = key
+	}
+}
+
+func OptionOrder(order string) OptionPaginator {
+	return func(pg *Paginator) {
+		pg.Order = order
+	}
+}
+
+func OptionLimit(limit uint64) OptionPaginator {
+	return func(pg *Paginator) {
+		pg.Limit = limit
+	}
+}
+
+func OptionOffset(offset uint64) OptionPaginator {
+	return func(pg *Paginator) {
+		pg.Offset = offset
+	}
 }
 
 // MakeContext creates an empty context

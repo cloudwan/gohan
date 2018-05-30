@@ -18,6 +18,7 @@ package file
 import (
 	"context"
 	"fmt"
+	"math"
 	"sort"
 	"strconv"
 
@@ -300,7 +301,7 @@ func (tx *Transaction) List(s *schema.Schema, filter transaction.Filter, options
 
 		if pg != nil {
 			sort.Sort(byPaginator{list, pg})
-			if pg.Limit > 0 {
+			if pg.Limit != math.MaxUint64 {
 				list = list[:pg.Limit]
 			}
 		}
