@@ -19,17 +19,18 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/extension/goext"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/golang/mock/gomock"
-	"github.com/cloudwan/gohan/db"
 )
 
 type MockIEnvironment struct {
 	env          *Environment
 	mockModules  goext.MockModules
 	testReporter gomock.TestReporter
+	ctrl         *gomock.Controller
 
 	core     goext.ICore
 	logger   goext.ILogger
@@ -55,47 +56,50 @@ func (mockEnv *MockIEnvironment) setModules() {
 	mockEnv.util = mockEnv.env.Util()
 }
 
+func (mockEnv *MockIEnvironment) GetController() *gomock.Controller {
+	return mockEnv.ctrl
+}
+
 func (mockEnv *MockIEnvironment) SetMockModules(modules goext.MockModules) {
 	mockEnv.mockModules = modules
-	ctrl := NewController(mockEnv.testReporter)
 
 	if mockEnv.mockModules.Core {
-		mockEnv.core = goext.NewMockICore(ctrl)
+		mockEnv.core = goext.NewMockICore(mockEnv.ctrl)
 	}
 
 	if mockEnv.mockModules.Logger {
-		mockEnv.logger = goext.NewMockILogger(ctrl)
+		mockEnv.logger = goext.NewMockILogger(mockEnv.ctrl)
 	}
 
 	if mockEnv.mockModules.Schemas {
-		mockEnv.schemas = goext.NewMockISchemas(ctrl)
+		mockEnv.schemas = goext.NewMockISchemas(mockEnv.ctrl)
 	}
 
 	if mockEnv.mockModules.Sync {
-		mockEnv.sync = goext.NewMockISync(ctrl)
+		mockEnv.sync = goext.NewMockISync(mockEnv.ctrl)
 	}
 
 	if mockEnv.mockModules.Database {
-		mockEnv.database = goext.NewMockIDatabase(ctrl)
+		mockEnv.database = goext.NewMockIDatabase(mockEnv.ctrl)
 		if mockEnv.mockModules.DefaultDatabase {
 			setupDefaultMockDatabase(mockEnv.database.(*goext.MockIDatabase))
 		}
 	}
 
 	if mockEnv.mockModules.Http {
-		mockEnv.http = goext.NewMockIHTTP(ctrl)
+		mockEnv.http = goext.NewMockIHTTP(mockEnv.ctrl)
 	}
 
 	if mockEnv.mockModules.Auth {
-		mockEnv.auth = goext.NewMockIAuth(ctrl)
+		mockEnv.auth = goext.NewMockIAuth(mockEnv.ctrl)
 	}
 
 	if mockEnv.mockModules.Config {
-		mockEnv.config = goext.NewMockIConfig(ctrl)
+		mockEnv.config = goext.NewMockIConfig(mockEnv.ctrl)
 	}
 
 	if mockEnv.mockModules.Util {
-		mockEnv.util = goext.NewMockIUtil(ctrl)
+		mockEnv.util = goext.NewMockIUtil(mockEnv.ctrl)
 	}
 }
 
@@ -238,7 +242,7 @@ func (mockEnv *MockIEnvironment) LoadExtensionsForPath(extensions []*schema.Exte
 }
 
 func NewMockIEnvironment(env *Environment, testReporter gomock.TestReporter) *MockIEnvironment {
-	mockIEnvironment := &MockIEnvironment{env: env, testReporter: testReporter}
+	mockIEnvironment := &MockIEnvironment{env: env, testReporter: testReporter, ctrl: NewController(testReporter)}
 	return mockIEnvironment
 }
 

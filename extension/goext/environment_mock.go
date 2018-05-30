@@ -15,6 +15,8 @@
 
 package goext
 
+import "github.com/golang/mock/gomock"
+
 // MockModules indicates modules which should be mocked.
 // By default none of the modules are mocked so that MockIEnvironment behaves exactly the same as IEnvironment.
 type MockModules struct {
@@ -26,6 +28,7 @@ type MockModules struct {
 type MockIEnvironment interface {
 	IEnvironment
 	SetMockModules(modules MockModules)
+	GetController() *gomock.Controller
 	MockCore() *MockICore
 	MockLogger() *MockILogger
 	MockSchemas() *MockISchemas
