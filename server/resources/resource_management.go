@@ -17,6 +17,7 @@ package resources
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -88,6 +89,15 @@ func isForeignKeyFailed(err error) bool {
 		}
 	}
 	return false
+}
+
+func handleForeignKeyError(err error, dataMap map[string]interface{}) error {
+	log.Info("Foreign key constrain failed: %s", err.Error())
+	jsonData, _ := json.Marshal(dataMap)
+	return ResourceError{
+		err,
+		fmt.Sprintf("Related resource does not exist. Please check your request: %s", string(jsonData)),
+		ForeignKeyFailed}
 }
 
 func measureRequestTime(timeStarted time.Time, requestType string, schemaID string) {
@@ -658,10 +668,7 @@ func CreateResourceInTransaction(context middleware.Context, resourceSchema *sch
 	if err := mainTransaction.Create(resource); err != nil {
 		log.Debug("%s transaction error", err)
 		if isForeignKeyFailed(err) {
-			return ResourceError{
-				err,
-				fmt.Sprintf("Foreign resource not found: %v", err),
-				ForeignKeyFailed}
+			return handleForeignKeyError(err, dataMap)
 		}
 		return ResourceError{
 			err,
@@ -838,10 +845,7 @@ func UpdateResourceInTransaction(
 	err = mainTransaction.Update(resource)
 	if err != nil {
 		if isForeignKeyFailed(err) {
-			return ResourceError{
-				err,
-				fmt.Sprintf("Foreign resource not found: %v", err),
-				ForeignKeyFailed}
+			return handleForeignKeyError(err, dataMap)
 		}
 		return ResourceError{
 			err,
