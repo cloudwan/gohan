@@ -24,6 +24,7 @@ import (
 	"github.com/cloudwan/gohan/extension/goplugin"
 	"github.com/cloudwan/gohan/extension/goplugin/test_data/ext_good/test"
 	"github.com/cloudwan/gohan/schema"
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -106,6 +107,15 @@ var _ = Describe("Mocks", func() {
 				Expect(&createdResource).To(Equal(returnedResource))
 				return nil
 			})
+		})
+	})
+
+	Context("Reset mock env", func() {
+		It("should create new controller", func() {
+			env.SetMockModules(goext.MockModules{Sync: true})
+			env.MockSync().EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
+			env.Reset()
+			env.GetController().Finish()
 		})
 	})
 })
