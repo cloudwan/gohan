@@ -179,6 +179,7 @@ func (mockEnv *MockIEnvironment) Reset() {
 	mockEnv.setModules()
 	mockEnv.env.Reset()
 	mockEnv.env.bindSchemasToEnv(mockEnv)
+	mockEnv.ctrl = NewController(mockEnv.testReporter)
 }
 
 func (mockEnv *MockIEnvironment) Clone() extension.Environment {
