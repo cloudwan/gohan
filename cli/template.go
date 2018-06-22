@@ -198,12 +198,26 @@ func doTemplate(c *cli.Context) {
 	description := c.String("description")
 	outputPath := c.String("output-path")
 	schemasWithPolicy := filterSchemasForPolicy(policy, policies, schemas)
+	convertCustomActionOutput(schemasWithPolicy)
 	if c.IsSet("split-by-resource-group") {
 		applyTemplateForEachResourceGroup(schemasWithPolicy, tpl, version, description, outputPath)
 	} else if c.IsSet("split-by-resource") {
 		applyTemplateForEachResource(schemasWithPolicy, tpl, outputPath)
 	} else {
 		applyTemplateForAll(schemasWithPolicy, tpl, title, version, description, outputPath)
+	}
+}
+
+func convertCustomActionOutput(schemas []*SchemaWithPolicy) {
+	for _, schema := range schemas {
+		for _, action := range schema.Schema.Actions {
+			if val := action.OutputSchema["type"]; val != nil {
+				if stringVal, ok := val.(string); ok && stringVal != "object" {
+					delete(action.OutputSchema, "type")
+					action.OutputSchema["$ref"] = "#/definitions/" + stringVal
+				}
+			}
+		}
 	}
 }
 
