@@ -1008,6 +1008,14 @@ var _ = Describe("Server package test", func() {
 			testURL("POST", responderPluralURL+"/r1/dzien_dobry", memberTokenID, unknownAction, http.StatusNotFound)
 			testURL("POST", responderPluralURL+"/r1/dzien_dobry", adminTokenID, unknownAction, http.StatusNotFound)
 		})
+
+		It("should deny action for member", func() {
+			testURL("GET", responderPluralURL+"/r1/denied_action", memberTokenID, nil, http.StatusUnauthorized)
+		})
+
+		It("should deny action for admin", func() {
+			testURL("GET", responderPluralURL+"/r1/denied_action", adminTokenID, nil, http.StatusUnauthorized)
+		})
 	})
 
 	Describe("Nobody resource paths", func() {

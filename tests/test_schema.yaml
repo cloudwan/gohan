@@ -82,6 +82,12 @@ extensions:
     });
   id: test
   path: /v2.0/responder
+- code: |
+    gohan_register_handler("denied_action", function (context) {
+        throw "Should not occured";
+    });
+  id: test
+  path: /v2.0/responder
 
 
 networks: []
@@ -352,6 +358,12 @@ policies:
   principal: Member
   resource:
     path: /_all.*
+- action: denied_action
+  effect: deny
+  id: admin_deny
+  principal: admin
+  resource:
+    path: /v2.0/responder.*
 schemas:
 - description: Network
   id: network
@@ -755,6 +767,11 @@ schemas:
     test_throw:
       method: GET
       path: /:id/test_throw
+      output:
+        type: string
+    denied_action:
+      method: GET
+      path: /:id/denied_action
       output:
         type: string
 - description: ResponderParent
