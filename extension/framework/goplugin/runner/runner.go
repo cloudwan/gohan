@@ -22,6 +22,10 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/onsi/ginkgo"
+	"github.com/onsi/gomega"
+	"github.com/twinj/uuid"
+
 	gohan_db "github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/extension"
@@ -30,9 +34,6 @@ import (
 	gohan_logger "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/sync/noop"
-	"github.com/onsi/ginkgo"
-	"github.com/onsi/gomega"
-	"github.com/twinj/uuid"
 )
 
 const (

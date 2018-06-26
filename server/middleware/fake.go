@@ -22,10 +22,11 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/go-martini/martini"
+	"github.com/gophercloud/gophercloud"
+
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
-	"github.com/go-martini/martini"
-	"github.com/rackspace/gophercloud"
 )
 
 type tenant struct {

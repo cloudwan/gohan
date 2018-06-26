@@ -5,8 +5,8 @@ import (
 )
 
 type nodeFilterCall struct {
-	name      string
-	paramExpr IEvaluator
+	name       string
+	param_expr IEvaluator
 }
 
 type tagFilterNode struct {
@@ -15,7 +15,7 @@ type tagFilterNode struct {
 	filterChain []*nodeFilterCall
 }
 
-func (node *tagFilterNode) Execute(ctx *ExecutionContext, writer TemplateWriter) *Error {
+func (node *tagFilterNode) Execute(ctx *ExecutionContext, buffer *bytes.Buffer) *Error {
 	temp := bytes.NewBuffer(make([]byte, 0, 1024)) // 1 KiB size
 
 	err := node.bodyWrapper.Execute(ctx, temp)
@@ -27,8 +27,8 @@ func (node *tagFilterNode) Execute(ctx *ExecutionContext, writer TemplateWriter)
 
 	for _, call := range node.filterChain {
 		var param *Value
-		if call.paramExpr != nil {
-			param, err = call.paramExpr.Evaluate(ctx)
+		if call.param_expr != nil {
+			param, err = call.param_expr.Evaluate(ctx)
 			if err != nil {
 				return err
 			}
@@ -41,13 +41,13 @@ func (node *tagFilterNode) Execute(ctx *ExecutionContext, writer TemplateWriter)
 		}
 	}
 
-	writer.WriteString(value.String())
+	buffer.WriteString(value.String())
 
 	return nil
 }
 
 func tagFilterParser(doc *Parser, start *Token, arguments *Parser) (INodeTag, *Error) {
-	filterNode := &tagFilterNode{
+	filter_node := &tagFilterNode{
 		position: start,
 	}
 
@@ -55,16 +55,16 @@ func tagFilterParser(doc *Parser, start *Token, arguments *Parser) (INodeTag, *E
 	if err != nil {
 		return nil, err
 	}
-	filterNode.bodyWrapper = wrapper
+	filter_node.bodyWrapper = wrapper
 
 	for arguments.Remaining() > 0 {
 		filterCall := &nodeFilterCall{}
 
-		nameToken := arguments.MatchType(TokenIdentifier)
-		if nameToken == nil {
+		name_token := arguments.MatchType(TokenIdentifier)
+		if name_token == nil {
 			return nil, arguments.Error("Expected a filter name (identifier).", nil)
 		}
-		filterCall.name = nameToken.Val
+		filterCall.name = name_token.Val
 
 		if arguments.MatchOne(TokenSymbol, ":") != nil {
 			// Filter parameter
@@ -73,10 +73,10 @@ func tagFilterParser(doc *Parser, start *Token, arguments *Parser) (INodeTag, *E
 			if err != nil {
 				return nil, err
 			}
-			filterCall.paramExpr = expr
+			filterCall.param_expr = expr
 		}
 
-		filterNode.filterChain = append(filterNode.filterChain, filterCall)
+		filter_node.filterChain = append(filter_node.filterChain, filterCall)
 
 		if arguments.MatchOne(TokenSymbol, "|") == nil {
 			break
@@ -87,7 +87,7 @@ func tagFilterParser(doc *Parser, start *Token, arguments *Parser) (INodeTag, *E
 		return nil, arguments.Error("Malformed filter-tag arguments.", nil)
 	}
 
-	return filterNode, nil
+	return filter_node, nil
 }
 
 func init() {

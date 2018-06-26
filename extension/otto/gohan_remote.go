@@ -19,11 +19,12 @@ import (
 	"bytes"
 
 	"github.com/Juniper/go-netconf/netconf"
-	"github.com/cloudwan/gohan/util"
-	"github.com/xyproto/otto"
+	"github.com/robertkrimen/otto"
 	"golang.org/x/crypto/ssh"
+
+	"github.com/cloudwan/gohan/util"
 	//Import otto underscore lib
-	_ "github.com/xyproto/otto/underscore"
+	_ "github.com/robertkrimen/otto/underscore"
 )
 
 //SetUp sets up vm to with environment

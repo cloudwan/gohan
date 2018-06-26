@@ -93,7 +93,9 @@ func (trw *txnReadWrite) DeleteRange(key, end []byte) (n, rev int64) { panic("un
 func (trw *txnReadWrite) Put(key, value []byte, lease lease.LeaseID) (rev int64) {
 	panic("unexpected Put")
 }
-func (trw *txnReadWrite) Changes() []mvccpb.KeyValue { panic("unexpected Changes") }
+func (trw *txnReadWrite) Changes() []mvccpb.KeyValue { return nil }
+
+func NewReadOnlyTxnWrite(txn TxnRead) TxnWrite { return &txnReadWrite{txn} }
 
 type KV interface {
 	ReadView
@@ -105,9 +107,11 @@ type KV interface {
 	// Write creates a write transaction.
 	Write() TxnWrite
 
-	// Hash retrieves the hash of KV state and revision.
-	// This method is designed for consistency checking purposes.
+	// Hash computes the hash of the KV's backend.
 	Hash() (hash uint32, revision int64, err error)
+
+	// HashByRev computes the hash of all MVCC revisions up to a given revision.
+	HashByRev(rev int64) (hash uint32, revision int64, compactRev int64, err error)
 
 	// Compact frees all superseded keys with revisions less than rev.
 	Compact(rev int64) (<-chan struct{}, error)

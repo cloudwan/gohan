@@ -30,10 +30,11 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/robertkrimen/otto"
+	"github.com/twinj/uuid"
+
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
-	"github.com/twinj/uuid"
-	"github.com/xyproto/otto"
 )
 
 const (

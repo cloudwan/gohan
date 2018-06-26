@@ -57,6 +57,7 @@ The library has native support for a whole lot of SNMP types :
 * Oids
 * Null
 * Counter32
+* Counter64
 * Gauge32
 * TimeTicks
 * EndOfMibView

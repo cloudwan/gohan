@@ -1,13 +1,17 @@
 package pongo2
 
+import (
+	"bytes"
+)
+
 type tagCommentNode struct{}
 
-func (node *tagCommentNode) Execute(ctx *ExecutionContext, writer TemplateWriter) *Error {
+func (node *tagCommentNode) Execute(ctx *ExecutionContext, buffer *bytes.Buffer) *Error {
 	return nil
 }
 
 func tagCommentParser(doc *Parser, start *Token, arguments *Parser) (INodeTag, *Error) {
-	commentNode := &tagCommentNode{}
+	comment_node := &tagCommentNode{}
 
 	// TODO: Process the endtag's arguments (see django 'comment'-tag documentation)
 	_, _, err := doc.WrapUntilTag("endcomment")
@@ -19,7 +23,7 @@ func tagCommentParser(doc *Parser, start *Token, arguments *Parser) (INodeTag, *
 		return nil, arguments.Error("Tag 'comment' does not take any argument.", nil)
 	}
 
-	return commentNode, nil
+	return comment_node, nil
 }
 
 func init() {

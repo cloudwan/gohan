@@ -19,11 +19,12 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/robertkrimen/otto"
+
 	"github.com/cloudwan/gohan/db/pagination"
 	"github.com/cloudwan/gohan/db/sql"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
-	"github.com/xyproto/otto"
 )
 
 func init() {

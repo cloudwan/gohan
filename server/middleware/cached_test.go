@@ -3,11 +3,12 @@ package middleware
 import (
 	"time"
 
-	"github.com/cloudwan/gohan/schema"
 	"github.com/golang/mock/gomock"
+	"github.com/gophercloud/gophercloud"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/rackspace/gophercloud"
+
+	"github.com/cloudwan/gohan/schema"
 )
 
 var _ = ginkgo.Describe("Cached identity service", func() {

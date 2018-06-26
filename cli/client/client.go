@@ -20,15 +20,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"strings"
 	"text/template"
 
+	"github.com/gophercloud/gophercloud"
+	"github.com/gophercloud/gophercloud/openstack"
+
 	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/schema"
-	"github.com/rackspace/gophercloud"
-	"github.com/rackspace/gophercloud/openstack"
-	"github.com/rackspace/gophercloud/openstack/common/extensions"
 )
 
 var (
@@ -262,21 +263,20 @@ func (gohanClientCLI *GohanClientCLI) getGohanEndpointURL(provider *gophercloud.
 }
 
 func (gohanClientCLI *GohanClientCLI) getSchemas() ([]*schema.Schema, error) {
-	response := extensions.GetResult{}
+	jsonResponse := make(map[string]interface{})
 	url := fmt.Sprintf("%s%s", gohanClientCLI.opts.gohanEndpointURL, gohanClientCLI.opts.gohanSchemaURL)
 	gohanClientCLI.logRequest("GET", url, gohanClientCLI.provider.TokenID, nil)
-	_, err := gohanClientCLI.provider.Get(url, &response.Body, nil)
+	_, err := gohanClientCLI.provider.Request(http.MethodGet, url, &gophercloud.RequestOpts{JSONResponse: &jsonResponse})
 	if err != nil {
 		return nil, err
 	}
 
-	bodyMap := response.Body.(map[string]interface{})
-	if _, ok := bodyMap["schemas"]; !ok {
+	if _, ok := jsonResponse["schemas"]; !ok {
 		return nil, fmt.Errorf("No 'schemas' key in response JSON")
 	}
 
 	result := []*schema.Schema{}
-	for _, rawSchema := range bodyMap["schemas"].([]interface{}) {
+	for _, rawSchema := range jsonResponse["schemas"].([]interface{}) {
 		schema, err := schema.NewSchemaFromObj(rawSchema)
 		if err != nil {
 			return nil, fmt.Errorf("Could not parse schemas: %v", err)

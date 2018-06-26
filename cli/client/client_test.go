@@ -22,13 +22,14 @@ import (
 	"os"
 	"sort"
 
-	l "github.com/cloudwan/gohan/log"
-	"github.com/cloudwan/gohan/schema"
+	"github.com/gophercloud/gophercloud"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/ghttp"
-	"github.com/rackspace/gophercloud"
 	"github.com/twinj/uuid"
+
+	l "github.com/cloudwan/gohan/log"
+	"github.com/cloudwan/gohan/schema"
 )
 
 var _ = Describe("CLI functions", func() {
@@ -203,21 +204,21 @@ var _ = Describe("CLI functions", func() {
 				os.Unsetenv("OS_AUTH_URL")
 				provider, err = getProviderClient()
 				Expect(provider).To(BeNil())
-				Expect(err).To(MatchError("Environment variable OS_AUTH_URL needs to be set."))
+				Expect(err).To(MatchError("Missing environment variable [OS_AUTH_URL]"))
 			})
 
 			It("Should show error - OS_USERNAME not set", func() {
 				os.Unsetenv("OS_USERNAME")
 				provider, err = getProviderClient()
 				Expect(provider).To(BeNil())
-				Expect(err).To(MatchError("Environment variable OS_USERNAME, OS_USERID, or OS_TOKEN needs to be set."))
+				Expect(err).To(MatchError("Missing one of the following environment variables [OS_USERNAME, OS_USERID]"))
 			})
 
 			It("Should show error - OS_PASSWORD not set", func() {
 				os.Unsetenv("OS_PASSWORD")
 				provider, err = getProviderClient()
 				Expect(provider).To(BeNil())
-				Expect(err).To(MatchError("Environment variable OS_PASSWORD or OS_TOKEN needs to be set."))
+				Expect(err).To(MatchError("Missing environment variable [OS_PASSWORD]"))
 			})
 
 			It("Should show error - domain not specified", func() {
@@ -409,9 +410,7 @@ var _ = Describe("CLI functions", func() {
 				)
 				schemas, err := gohanClientCLI.getSchemas()
 				Expect(schemas).To(BeNil())
-				message := fmt.Sprintf("Expected HTTP response code [200] when accessing "+
-					"[GET %v/gohan/v0.1/schemas], but got 404 instead\n", server.URL())
-				Expect(err).To(MatchError(message))
+				Expect(err).To(MatchError("Resource not found"))
 			})
 
 			It("Should show error - Could not retrieve schemas - wrong response JSON", func() {

@@ -114,7 +114,7 @@ func (reporter *Reporter) Report() {
 	fmt.Println("Failures:")
 	fmt.Println()
 
-	steno := stenographer.New(true)
+	steno := stenographer.New(true, true)
 
 	for _, spec := range reporter.specs {
 		steno.AnnounceCapturedOutput(spec.CapturedOutput)
