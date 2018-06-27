@@ -200,6 +200,19 @@ We need to define properties of a resource using following parameters.
   Additional validation hints for this property
   you can use defined attribute on http://json-schema.org/latest/json-schema-validation.html#anchor107
 
+  Currently following formats are supported:
+	- "mac"
+	- "cidr"
+	- "cidr-or-ipv4"
+	- "regex"
+	- "uuid"
+	- "hyph-uuid"
+	- "non-hyph-uuid"
+	- "port"
+	- "yaml"
+	- "text"
+	- "version"
+
 - type
 
  Gohan supports standard JSON schema types including string, number, integer, boolean, array, object and combinations such as ["string", "null"]
