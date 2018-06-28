@@ -591,6 +591,7 @@ schemas:
         - string
         - "null"
         unique: false
+        maxLength: 40
       test_number:
         default: 0.5
         description: Test number
