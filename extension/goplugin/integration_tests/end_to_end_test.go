@@ -165,7 +165,6 @@ var _ = Describe("Environment", func() {
 			"description":   "test description",
 			"test_suite_id": nil,
 			"name":          "abc",
-			"subobject":     nil,
 		}
 
 		BeforeEach(func() {
@@ -183,7 +182,7 @@ var _ = Describe("Environment", func() {
 
 		It("Update resources", func() {
 			resource := map[string]interface{}{
-				"name":          nil,
+				"name": nil,
 			}
 			result := testURL("GET", baseURL+"/v0.1/tests/testId", adminTokenID, nil, http.StatusOK)
 			Expect(result).To(HaveKeyWithValue("test", expectedResponse))
