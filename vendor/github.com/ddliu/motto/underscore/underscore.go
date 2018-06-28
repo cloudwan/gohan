@@ -1,20 +1,20 @@
 // Copyright 2014 dong<ddliuhb@gmail.com>.
 // Licensed under the MIT license.
-//
+// 
 // Underscore addon for Motto
 package underscore
 
 import (
-	"github.com/ddliu/motto"
-	"github.com/robertkrimen/otto"
+    "github.com/ddliu/motto"
+    "github.com/robertkrimen/otto"
 )
 
 func underscore(vm *motto.Motto) (otto.Value, error) {
-	return motto.CreateLoaderFromSource(source(), "")(vm)
+    return motto.CreateLoaderFromSource(source(), "")(vm)
 }
 
 func source() string {
-	return `//     Underscore.js 1.6.0
+    return `//     Underscore.js 1.6.0
 //     http://underscorejs.org
 //     (c) 2009-2014 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
 //     Underscore may be freely distributed under the MIT license.
@@ -23,5 +23,5 @@ func source() string {
 }
 
 func init() {
-	motto.AddModule("underscore", underscore)
+    motto.AddModule("underscore", underscore)
 }

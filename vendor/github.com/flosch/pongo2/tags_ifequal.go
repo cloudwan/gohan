@@ -1,12 +1,16 @@
 package pongo2
 
+import (
+	"bytes"
+)
+
 type tagIfEqualNode struct {
 	var1, var2  IEvaluator
 	thenWrapper *NodeWrapper
 	elseWrapper *NodeWrapper
 }
 
-func (node *tagIfEqualNode) Execute(ctx *ExecutionContext, writer TemplateWriter) *Error {
+func (node *tagIfEqualNode) Execute(ctx *ExecutionContext, buffer *bytes.Buffer) *Error {
 	r1, err := node.var1.Evaluate(ctx)
 	if err != nil {
 		return err
@@ -19,16 +23,17 @@ func (node *tagIfEqualNode) Execute(ctx *ExecutionContext, writer TemplateWriter
 	result := r1.EqualValueTo(r2)
 
 	if result {
-		return node.thenWrapper.Execute(ctx, writer)
-	}
-	if node.elseWrapper != nil {
-		return node.elseWrapper.Execute(ctx, writer)
+		return node.thenWrapper.Execute(ctx, buffer)
+	} else {
+		if node.elseWrapper != nil {
+			return node.elseWrapper.Execute(ctx, buffer)
+		}
 	}
 	return nil
 }
 
 func tagIfEqualParser(doc *Parser, start *Token, arguments *Parser) (INodeTag, *Error) {
-	ifequalNode := &tagIfEqualNode{}
+	ifequal_node := &tagIfEqualNode{}
 
 	// Parse two expressions
 	var1, err := arguments.ParseExpression()
@@ -39,8 +44,8 @@ func tagIfEqualParser(doc *Parser, start *Token, arguments *Parser) (INodeTag, *
 	if err != nil {
 		return nil, err
 	}
-	ifequalNode.var1 = var1
-	ifequalNode.var2 = var2
+	ifequal_node.var1 = var1
+	ifequal_node.var2 = var2
 
 	if arguments.Remaining() > 0 {
 		return nil, arguments.Error("ifequal only takes 2 arguments.", nil)
@@ -51,7 +56,7 @@ func tagIfEqualParser(doc *Parser, start *Token, arguments *Parser) (INodeTag, *
 	if err != nil {
 		return nil, err
 	}
-	ifequalNode.thenWrapper = wrapper
+	ifequal_node.thenWrapper = wrapper
 
 	if endargs.Count() > 0 {
 		return nil, endargs.Error("Arguments not allowed here.", nil)
@@ -63,14 +68,14 @@ func tagIfEqualParser(doc *Parser, start *Token, arguments *Parser) (INodeTag, *
 		if err != nil {
 			return nil, err
 		}
-		ifequalNode.elseWrapper = wrapper
+		ifequal_node.elseWrapper = wrapper
 
 		if endargs.Count() > 0 {
 			return nil, endargs.Error("Arguments not allowed here.", nil)
 		}
 	}
 
-	return ifequalNode, nil
+	return ifequal_node, nil
 }
 
 func init() {

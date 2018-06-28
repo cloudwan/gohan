@@ -23,6 +23,8 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/robertkrimen/otto"
+
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/transaction"
@@ -31,9 +33,8 @@ import (
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/server/middleware"
 	"github.com/cloudwan/gohan/sync/noop"
-	"github.com/xyproto/otto"
 	// Import otto underscore lib
-	_ "github.com/xyproto/otto/underscore"
+	_ "github.com/robertkrimen/otto/underscore"
 )
 
 const (

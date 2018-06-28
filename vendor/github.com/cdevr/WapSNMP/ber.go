@@ -213,6 +213,9 @@ func EncodeInteger(toEncode int64) []byte {
 	for i := int64(0); i < l; i++ {
 		result[i] = byte(toEncode >> uint(8*(l-i-1)))
 	}
+	if result[0] > 127 && toEncode > 0 {
+		result = append([]byte{0}, result...)
+	}
 	/*
 		// Chop off superfluous 0xff's.
 		s := 0
@@ -300,6 +303,12 @@ func DecodeSequence(toparse []byte) ([]interface{}, error) {
 				return nil, fmt.Errorf("error decoding integer %v: %v", berValue, err)
 			}
 			result = append(result, Counter(val))
+		case AsnCounter64:
+			val, err := DecodeUInt(berValue)
+			if err != nil {
+				return nil, fmt.Errorf("error decoding integer %v: %v", berValue, err)
+			}
+			result = append(result, Counter64(val))
 		case AsnGauge32:
 			val, err := DecodeUInt(berValue)
 			if err != nil {

@@ -124,14 +124,13 @@ You can use default configuration for client with: source ./etc/gohan_client.rc
 ### Keystone
 
 To configure keystone access for Gohan Client CLI, only few options should be set (they are compatible with those
-from rackspace/gophercloud:
+from gophercloud/gophercloud:
 
 * `OS_AUTH_URL` - keystone url
 * `OS_USERNAME` - keystone username
 * `OS_PASSWORD` - keystone password
 * `OS_TENANT_NAME` or `OS_TENANT_ID` - keystone tenant name or id
 * `OS_DOMAIN_NAME` or `OS_DOMAIN_ID` - keystone domain name or id (for keystone v3 only)
-* `OS_TOKEN_ID` - token ID used to authenticate requests
 
 ### Endpoint
 

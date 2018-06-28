@@ -22,12 +22,13 @@ import (
 	"os"
 	"strings"
 
+	"github.com/ddliu/motto"
+	"github.com/robertkrimen/otto"
+
 	"github.com/cloudwan/gohan/extension"
 	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
-	"github.com/ddliu/motto"
-	"github.com/xyproto/otto"
 )
 
 var log = l.NewLogger()

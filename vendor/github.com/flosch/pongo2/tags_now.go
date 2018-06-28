@@ -1,6 +1,7 @@
 package pongo2
 
 import (
+	"bytes"
 	"time"
 )
 
@@ -10,7 +11,7 @@ type tagNowNode struct {
 	fake     bool
 }
 
-func (node *tagNowNode) Execute(ctx *ExecutionContext, writer TemplateWriter) *Error {
+func (node *tagNowNode) Execute(ctx *ExecutionContext, buffer *bytes.Buffer) *Error {
 	var t time.Time
 	if node.fake {
 		t = time.Date(2014, time.February, 05, 18, 31, 45, 00, time.UTC)
@@ -18,31 +19,31 @@ func (node *tagNowNode) Execute(ctx *ExecutionContext, writer TemplateWriter) *E
 		t = time.Now()
 	}
 
-	writer.WriteString(t.Format(node.format))
+	buffer.WriteString(t.Format(node.format))
 
 	return nil
 }
 
 func tagNowParser(doc *Parser, start *Token, arguments *Parser) (INodeTag, *Error) {
-	nowNode := &tagNowNode{
+	now_node := &tagNowNode{
 		position: start,
 	}
 
-	formatToken := arguments.MatchType(TokenString)
-	if formatToken == nil {
+	format_token := arguments.MatchType(TokenString)
+	if format_token == nil {
 		return nil, arguments.Error("Expected a format string.", nil)
 	}
-	nowNode.format = formatToken.Val
+	now_node.format = format_token.Val
 
 	if arguments.MatchOne(TokenIdentifier, "fake") != nil {
-		nowNode.fake = true
+		now_node.fake = true
 	}
 
 	if arguments.Remaining() > 0 {
 		return nil, arguments.Error("Malformed now-tag arguments.", nil)
 	}
 
-	return nowNode, nil
+	return now_node, nil
 }
 
 func init() {

@@ -7,9 +7,10 @@ package middleware
 import (
 	reflect "reflect"
 
-	schema "github.com/cloudwan/gohan/schema"
 	gomock "github.com/golang/mock/gomock"
-	gophercloud "github.com/rackspace/gophercloud"
+	gophercloud "github.com/gophercloud/gophercloud"
+
+	schema "github.com/cloudwan/gohan/schema"
 )
 
 // MockIdentityService is a mock of IdentityService interface

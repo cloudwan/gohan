@@ -21,9 +21,10 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/gophercloud/gophercloud"
+	"github.com/gophercloud/gophercloud/openstack"
+
 	"github.com/cloudwan/gohan/cloud"
-	"github.com/rackspace/gophercloud"
-	"github.com/rackspace/gophercloud/openstack"
 )
 
 func newClient(endpoint string) (*gophercloud.ProviderClient, error) {
@@ -83,9 +84,9 @@ func GetOpenstackClient(authURL, userName, password, domainName, tenantName, ten
 	}
 	client.HTTPClient = cloud.NewHTTPClient()
 	if version == "v2.0" {
-		return openstack.NewIdentityV2(client), nil
+		return openstack.NewIdentityV2(client, gophercloud.EndpointOpts{})
 	} else if version == "v3" {
-		return openstack.NewIdentityV3(client), nil
+		return openstack.NewIdentityV3(client, gophercloud.EndpointOpts{})
 	} else {
 		return nil, fmt.Errorf("Unsupported keystone version: %s", version)
 	}

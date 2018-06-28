@@ -24,6 +24,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ddliu/motto"
+	"github.com/robertkrimen/otto"
+
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/transaction"
 	ext "github.com/cloudwan/gohan/extension"
@@ -31,10 +34,8 @@ import (
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/server/middleware"
 	"github.com/cloudwan/gohan/sync"
-	"github.com/ddliu/motto"
-	"github.com/xyproto/otto"
 	//Import otto underscore lib
-	_ "github.com/xyproto/otto/underscore"
+	_ "github.com/robertkrimen/otto/underscore"
 )
 
 var inits = []func(env *Environment){}

@@ -9,19 +9,24 @@ import (
 )
 
 const (
-	MSG_SEPERATOR = "]]>]]>"
+	// msgSeperator is used to separate sent messages via NETCONF
+	msgSeperator = "]]>]]>"
 )
 
-var DEFAULT_CAPABILITIES = []string{
-	"urn:ietf:params:xml:ns:netconf:base:1.0",
+// DefaultCapabilities sets the default capabilities of the client library
+var DefaultCapabilities = []string{
+	"urn:ietf:params:netconf:base:1.0",
 }
 
+// HelloMessage is used when bringing up a NETCONF session
 type HelloMessage struct {
-	XMLName      xml.Name `xml:"hello"`
+	XMLName      xml.Name `xml:"urn:ietf:params:xml:ns:netconf:base:1.0 hello"`
 	Capabilities []string `xml:"capabilities>capability"`
 	SessionID    int      `xml:"session-id,omitempty"`
 }
 
+// Transport interface defines what characterisitics make up a NETCONF transport
+// layer object.
 type Transport interface {
 	Send([]byte) error
 	Receive() ([]byte, error)
@@ -35,17 +40,21 @@ type transportBasicIO struct {
 	chunkedFraming bool
 }
 
-// Sends a well formated netconf rpc message as a slice of bytes adding on the
+// Sends a well formated NETCONF rpc message as a slice of bytes adding on the
 // nessisary framining messages.
 func (t *transportBasicIO) Send(data []byte) error {
 	t.Write(data)
-	t.Write([]byte(MSG_SEPERATOR))
+	// Pad to make sure the msgSeparator isn't sent across a 4096-byte boundary
+	if (len(data)+len(msgSeperator))%4096 < 6 {
+		t.Write([]byte("      "))
+	}
+	t.Write([]byte(msgSeperator))
 	t.Write([]byte("\n"))
 	return nil // TODO: Implement error handling!
 }
 
 func (t *transportBasicIO) Receive() ([]byte, error) {
-	return t.WaitForBytes([]byte(MSG_SEPERATOR))
+	return t.WaitForBytes([]byte(msgSeperator))
 }
 
 func (t *transportBasicIO) SendHello(hello *HelloMessage) error {
@@ -54,6 +63,8 @@ func (t *transportBasicIO) SendHello(hello *HelloMessage) error {
 		return err
 	}
 
+	header := []byte(xml.Header)
+	val = append(header, val...)
 	err = t.Send(val)
 	return err
 }
@@ -80,13 +91,9 @@ func (t *transportBasicIO) WaitForFunc(f func([]byte) (int, error)) ([]byte, err
 	var out bytes.Buffer
 	buf := make([]byte, 4096)
 
+	pos := 0
 	for {
-		n, err := t.Read(buf)
-
-		if n == 0 {
-			return nil, fmt.Errorf("WaitForFunc read no data.")
-		}
-
+		n, err := t.Read(buf[pos : pos+(len(buf)/2)])
 		if err != nil {
 			if err != io.EOF {
 				return nil, err
@@ -94,16 +101,24 @@ func (t *transportBasicIO) WaitForFunc(f func([]byte) (int, error)) ([]byte, err
 			break
 		}
 
-		end, err := f(buf)
-		if err != nil {
-			return nil, err
-		}
+		if n > 0 {
+			end, err := f(buf[0 : pos+n])
+			if err != nil {
+				return nil, err
+			}
 
-		if end > -1 {
-			out.Write(buf[0:end])
-			return out.Bytes(), nil
+			if end > -1 {
+				out.Write(buf[0:end])
+				return out.Bytes(), nil
+			}
+
+			if pos > 0 {
+				out.Write(buf[0:pos])
+				copy(buf, buf[pos:pos+n])
+			}
+
+			pos = n
 		}
-		out.Write(buf[0:n])
 	}
 
 	return nil, fmt.Errorf("WaitForFunc failed")
@@ -138,11 +153,14 @@ func (t *transportBasicIO) WaitForRegexp(re *regexp.Regexp) ([]byte, [][]byte, e
 	return out, matches, err
 }
 
+// ReadWriteCloser represents a combined IO Reader and WriteCloser
 type ReadWriteCloser struct {
 	io.Reader
 	io.WriteCloser
 }
 
+// NewReadWriteCloser creates a new combined IO Reader and Write Closer from the
+// provided objects
 func NewReadWriteCloser(r io.Reader, w io.WriteCloser) *ReadWriteCloser {
 	return &ReadWriteCloser{r, w}
 }

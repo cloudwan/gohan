@@ -18,9 +18,12 @@ package client
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	u "net/url"
 	"strconv"
 	"strings"
+
+	"github.com/gophercloud/gophercloud"
 
 	"github.com/cloudwan/gohan/schema"
 )
@@ -201,14 +204,14 @@ func (gohanClientCLI *GohanClientCLI) getResourceIDForSchemaID(schemaID, identif
 func (gohanClientCLI *GohanClientCLI) getResourceID(s *schema.Schema, identifier string) (string, error) {
 	url := fmt.Sprintf("%s%s/%s", gohanClientCLI.opts.gohanEndpointURL, s.URL, u.QueryEscape(identifier))
 	gohanClientCLI.logRequest("GET", url, gohanClientCLI.provider.TokenID, nil)
-	_, err := gohanClientCLI.handleResponse(gohanClientCLI.provider.Get(url, nil, nil))
+	_, err := gohanClientCLI.handleResponse(gohanClientCLI.provider.Request(http.MethodGet, url, &gophercloud.RequestOpts{}))
 	if err == nil {
 		return identifier, nil
 	}
 
 	url = fmt.Sprintf("%s%s?name=%s", gohanClientCLI.opts.gohanEndpointURL, s.URL, u.QueryEscape(identifier))
 	gohanClientCLI.logRequest("GET", url, gohanClientCLI.provider.TokenID, nil)
-	result, err := gohanClientCLI.handleResponse(gohanClientCLI.provider.Get(url, nil, nil))
+	result, err := gohanClientCLI.handleResponse(gohanClientCLI.provider.Request(http.MethodGet, url, &gophercloud.RequestOpts{}))
 	if err != nil {
 		return "", err
 	}
