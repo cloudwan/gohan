@@ -119,6 +119,10 @@ func (resource *Resource) String() string {
 //Update resource data
 func (resource *Resource) Update(updateData map[string]interface{}) error {
 	data := resource.properties
+	err := resource.schema.ValidateOnUpdate(updateData)
+	if err != nil {
+		return err
+	}
 	for _, property := range resource.schema.Properties {
 		id := property.ID
 

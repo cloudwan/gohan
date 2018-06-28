@@ -127,7 +127,7 @@ func TestRecursiveUpdate(t *testing.T) {
 			t.Fatalf("expected value %s has %s", value, node.Value)
 		}
 		if len(node.Children) != children {
-			t.Fatalf("expected to has %d children has %d", children, len(node.Children))
+			t.Fatalf("expected to has %d children has %s", children, len(node.Children))
 		}
 	}
 

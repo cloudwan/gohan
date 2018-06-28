@@ -1429,69 +1429,6 @@ var _ = Describe("Resource manager", func() {
 			})
 
 			Describe("With extensions", func() {
-				Context("pre_create inserts zero-value", func() {
-					var (
-						requestMap map[string]interface{}
-					)
-					BeforeEach(func() {
-						requestMap = map[string]interface{}{
-							"test_string": "Steloj ne estas en ordo.",
-							"test_bool":   true,
-						}
-						events["pre_create"] = `if (context.run_precreate) { context.resource.test_string = "test123"; }`
-						context["go_validation"] = true // simulate Goext
-						context["request_data"] = requestMap
-					})
-					It("should create non-empty resource", func() {
-						context["request_data"] = deepcopy.Copy(requestMap).(map[string]interface{})
-
-						Expect(resources.CreateResource(context, testDB, fakeIdentity, currentSchema, requestMap)).To(Succeed())
-						result := context["response"].(map[string]interface{})
-						theResource, ok := result[schemaID]
-						Expect(ok).To(BeTrue())
-						Expect(theResource).To(HaveKeyWithValue("test_bool", true))
-						Expect(theResource).To(HaveKeyWithValue("test_string", "Steloj ne estas en ordo."))
-					})
-
-					It("should create empty resource", func() {
-						delete(requestMap, "test_bool")
-						delete(requestMap, "test_string")
-						context["request_data"] = deepcopy.Copy(requestMap).(map[string]interface{})
-
-						Expect(resources.CreateResource(context, testDB, fakeIdentity, currentSchema, requestMap)).To(Succeed())
-						result := context["response"].(map[string]interface{})
-						theResource, ok := result[schemaID]
-						Expect(ok).To(BeTrue())
-						Expect(theResource).To(HaveKeyWithValue("test_bool", false))
-						Expect(theResource).To(HaveKeyWithValue("test_string", ""))
-					})
-
-					It("should set request data in precreate", func() {
-						delete(requestMap, "test_bool")
-						delete(requestMap, "test_string")
-						context["run_precreate"] = true
-						context["request_data"] = deepcopy.Copy(requestMap).(map[string]interface{})
-
-						Expect(resources.CreateResource(context, testDB, fakeIdentity, currentSchema, requestMap)).To(Succeed())
-						result := context["response"].(map[string]interface{})
-						theResource, ok := result[schemaID]
-						Expect(ok).To(BeTrue())
-						Expect(theResource).To(HaveKeyWithValue("test_bool", false))
-						Expect(theResource).To(HaveKeyWithValue("test_string", "test123"))
-					})
-
-					It("should override request data in precreate", func() {
-						context["run_precreate"] = true
-						context["request_data"] = deepcopy.Copy(requestMap).(map[string]interface{})
-
-						Expect(resources.CreateResource(context, testDB, fakeIdentity, currentSchema, requestMap)).To(Succeed())
-						result := context["response"].(map[string]interface{})
-						theResource, ok := result[schemaID]
-						Expect(ok).To(BeTrue())
-						Expect(theResource).To(HaveKeyWithValue("test_bool", true))
-						Expect(theResource).To(HaveKeyWithValue("test_string", "test123"))
-					})
-				})
 				Context("pre_update inserts zero-value", func() {
 					var (
 						requestMap map[string]interface{}
@@ -1501,11 +1438,12 @@ var _ = Describe("Resource manager", func() {
 							"test_string": "Steloj ne estas en ordo.",
 							"test_bool":   true,
 						}
-						events["pre_update"] = `if (context.run_preupdate) { context.resource.test_bool = false; context.resource.test_string = ""; }`
+						events["pre_update"] = `if (context.resource.test_bool === undefined) { context.resource.test_bool = false; }`
 						context["go_validation"] = true // simulate Goext
 						context["request_data"] = requestMap
 					})
-					JustBeforeEach(func() {
+
+					It("resource field zero-value which doesn't appear in request data is removed before validation", func() {
 						err := resources.UpdateResource(
 							context, testDB, fakeIdentity, currentSchema, resourceID1,
 							requestMap)
@@ -1515,93 +1453,30 @@ var _ = Describe("Resource manager", func() {
 						Expect(ok).To(BeTrue())
 						Expect(theResource).To(HaveKeyWithValue("test_string", "Steloj ne estas en ordo."))
 						Expect(theResource).To(HaveKeyWithValue("test_bool", true))
-					})
 
-					It("should not update data absent in request", func() {
 						delete(requestMap, "test_bool")
-						delete(requestMap, "test_string")
 						context["request_data"] = deepcopy.Copy(requestMap).(map[string]interface{})
 
-						Expect(resources.UpdateResource(
+						err = resources.UpdateResource(
 							context, testDB, fakeIdentity, currentSchema, resourceID1,
-							requestMap)).To(Succeed())
-						result := context["response"].(map[string]interface{})
-						theResource, ok := result[schemaID]
+							requestMap)
+						result = context["response"].(map[string]interface{})
+						Expect(err).NotTo(HaveOccurred())
+						theResource, ok = result[schemaID]
 						Expect(ok).To(BeTrue())
 						Expect(theResource).To(HaveKeyWithValue("test_bool", true))
-						Expect(theResource).To(HaveKeyWithValue("test_string", "Steloj ne estas en ordo."))
-					})
 
-					It("should update zero-value data", func() {
 						requestMap["test_bool"] = false
-						requestMap["test_string"] = ""
 						context["request_data"] = deepcopy.Copy(requestMap).(map[string]interface{})
 
-						Expect(resources.UpdateResource(
+						err = resources.UpdateResource(
 							context, testDB, fakeIdentity, currentSchema, resourceID1,
-							requestMap)).To(Succeed())
-						result := context["response"].(map[string]interface{})
-						theResource, ok := result[schemaID]
+							requestMap)
+						result = context["response"].(map[string]interface{})
+						Expect(err).NotTo(HaveOccurred())
+						theResource, ok = result[schemaID]
 						Expect(ok).To(BeTrue())
 						Expect(theResource).To(HaveKeyWithValue("test_bool", false))
-						Expect(theResource).To(HaveKeyWithValue("test_string", ""))
-					})
-
-					It("should update data in preupate", func() {
-						delete(requestMap, "test_bool")
-						delete(requestMap, "test_string")
-						context["run_preupdate"] = true
-						context["request_data"] = deepcopy.Copy(requestMap).(map[string]interface{})
-
-						Expect(resources.UpdateResource(
-							context, testDB, fakeIdentity, currentSchema, resourceID1,
-							requestMap)).To(Succeed())
-						result := context["response"].(map[string]interface{})
-						theResource, ok := result[schemaID]
-						Expect(ok).To(BeTrue())
-						Expect(theResource).To(HaveKeyWithValue("test_bool", false))
-						Expect(theResource).To(HaveKeyWithValue("test_string", ""))
-					})
-
-					It("should override request data in preupate", func() {
-						context["run_preupdate"] = true
-						context["request_data"] = deepcopy.Copy(requestMap).(map[string]interface{})
-
-						Expect(resources.UpdateResource(
-							context, testDB, fakeIdentity, currentSchema, resourceID1,
-							requestMap)).To(Succeed())
-						result := context["response"].(map[string]interface{})
-						theResource, ok := result[schemaID]
-						Expect(ok).To(BeTrue())
-						Expect(theResource).To(HaveKeyWithValue("test_bool", false))
-						Expect(theResource).To(HaveKeyWithValue("test_string", ""))
-					})
-				})
-				Context("Validation", func() {
-					var (
-						requestMap map[string]interface{}
-					)
-					BeforeEach(func() {
-						requestMap = map[string]interface{}{
-							"test_string": "123",
-						}
-						context["go_validation"] = true // simulate Goext
-						events["pre_update"] = `if (context.resource.test_string === undefined) { context.resource.test_string = "12345678901234567890123456789012345678901"; }`
-						events["pre_create"] = `if (context.resource.test_string === undefined) { context.resource.test_string = "12345678901234567890123456789012345678901"; }`
-					})
-					It("should run validation after pre_create", func() {
-						err := resources.CreateResource(context, testDB, fakeIdentity, currentSchema, map[string]interface{}{})
-						Expect(err).To(MatchError("Json validation error:\n\ttest_string: String length must be less than or equal to 40,"))
-
-						Expect(resources.CreateResource(context, testDB, fakeIdentity, currentSchema, requestMap)).To(Succeed())
-					})
-					It("should run validation after pre_update", func() {
-						Expect(resources.CreateResource(context, testDB, fakeIdentity, currentSchema, deepcopy.Copy(requestMap).(map[string]interface{}))).To(Succeed())
-
-						err := resources.UpdateResource(context, testDB, fakeIdentity, currentSchema, resourceID1, map[string]interface{}{})
-						Expect(err).To(MatchError("Json validation error:\n\ttest_string: String length must be less than or equal to 40,"))
-
-						Expect(resources.UpdateResource(context, testDB, fakeIdentity, currentSchema, resourceID1, requestMap)).To(Succeed())
 					})
 				})
 
