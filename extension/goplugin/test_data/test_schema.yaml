@@ -49,15 +49,12 @@ schemas:
         title: Name
         type: string
         maxLength: 255
-        minLength: 3
       subobject:
         description: Subobject description
         permission:
         - create
         title: Subobject
-        type:
-        - object
-        - "null"
+        type: object
         properties:
           subproperty:
             title: Subproperty
@@ -68,9 +65,7 @@ schemas:
         permission:
           - create
         title: Test Suite ID
-        type:
-        - string
-        - "null"
+        type: string
         relation: test_suite
         on_delete_cascade: true
     propertiesOrder:

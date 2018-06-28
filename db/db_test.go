@@ -328,6 +328,9 @@ var _ = Describe("Database operation test", func() {
 				})
 
 				It("Updates the resource properly", func() {
+					By("Not allowing to update some fields")
+					Expect(networkResource1.Update(map[string]interface{}{"id": "new_id"})).ToNot(Succeed())
+
 					By("Updating other fields")
 					Expect(networkResource1.Update(map[string]interface{}{"name": "new_name"})).To(Succeed())
 					Expect(tx.Update(networkResource1)).To(Succeed())

@@ -139,17 +139,10 @@ var _ = Describe("Environment", func() {
 				"id":            "testId",
 				"description":   "test description",
 				"test_suite_id": nil,
-				"name":          "abc",
-				"subobject":     nil,
+				"name":          nil,
 			}
 
-			result := testURL("PUT", baseURL+"/v0.1/tests/testId", adminTokenID, resource, http.StatusBadRequest)
-			Expect(result).To(HaveKeyWithValue("error", "Validation error: Json validation error:\n\tname: Invalid type. Expected: string, given: null,"))
-			resource["name"] = "a"
-			result = testURL("PUT", baseURL+"/v0.1/tests/testId", adminTokenID, resource, http.StatusBadRequest)
-			Expect(result).To(HaveKeyWithValue("error", "Validation error: Json validation error:\n\tname: String length must be greater than or equal to 3,"))
-			resource["name"] = "abc"
-			result = testURL("PUT", baseURL+"/v0.1/tests/testId", adminTokenID, resource, http.StatusCreated)
+			result := testURL("PUT", baseURL+"/v0.1/tests/testId", adminTokenID, resource, http.StatusCreated)
 			Expect(result).To(HaveKeyWithValue("test", expectedResponse))
 		})
 
@@ -214,7 +207,7 @@ var _ = Describe("Environment", func() {
 				"description":   "test description",
 				"test_suite_id": nil,
 				"subobject":     nil,
-				"name":          "abc",
+				"name":          nil,
 			}
 
 			testURL("PUT", baseURL+"/v0.1/tests/testId", adminTokenID, resource, http.StatusCreated)
