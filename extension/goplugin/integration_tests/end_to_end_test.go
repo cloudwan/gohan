@@ -159,6 +159,47 @@ var _ = Describe("Environment", func() {
 		})
 	})
 
+	Context("Resource update", func() {
+		var expectedResponse = map[string]interface{}{
+			"id":            "testId",
+			"description":   "test description",
+			"test_suite_id": nil,
+			"name":          "abc",
+			"subobject":     nil,
+		}
+
+		BeforeEach(func() {
+			resource := map[string]interface{}{
+				"id":            "testId",
+				"description":   "test description",
+				"test_suite_id": nil,
+				"subobject":     nil,
+				"name":          "abc",
+			}
+
+			result := testURL("PUT", baseURL+"/v0.1/tests/testId", adminTokenID, resource, http.StatusCreated)
+			Expect(result).To(HaveKeyWithValue("test", expectedResponse))
+		})
+
+		It("Update resources", func() {
+			resource := map[string]interface{}{
+				"name":          nil,
+			}
+			result := testURL("GET", baseURL+"/v0.1/tests/testId", adminTokenID, nil, http.StatusOK)
+			Expect(result).To(HaveKeyWithValue("test", expectedResponse))
+
+			result = testURL("PUT", baseURL+"/v0.1/tests/testId", adminTokenID, resource, http.StatusBadRequest)
+			Expect(result).To(HaveKeyWithValue("error", "Validation error: Json validation error:\n\tname: Invalid type. Expected: string, given: null,"))
+			resource["name"] = "a"
+			result = testURL("PUT", baseURL+"/v0.1/tests/testId", adminTokenID, resource, http.StatusBadRequest)
+			Expect(result).To(HaveKeyWithValue("error", "Validation error: Json validation error:\n\tname: String length must be greater than or equal to 3,"))
+			resource["name"] = "abcd"
+			expectedResponse["name"] = "abcd"
+			result = testURL("PUT", baseURL+"/v0.1/tests/testId", adminTokenID, resource, http.StatusOK)
+			Expect(result).To(HaveKeyWithValue("test", expectedResponse))
+		})
+	})
+
 	Context("Fetching resources", func() {
 		It("fetches existing resources", func() {
 			resource := map[string]interface{}{
