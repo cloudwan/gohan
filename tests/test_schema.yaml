@@ -10,6 +10,12 @@ extensions:
       context.response = {"ok": true};
     });
 - code: |
+    gohan_register_handler("pre_create", function(context){
+      if (context.resource.name === "run-pre-create") {
+        context.resource = JSON.parse(JSON.stringify(context.resource)); // imitiate copying context in go-ext
+        context.resource.name = "set-in-pre-create";
+      }
+    });
     gohan_register_handler("pre_update_in_transaction", function(context){
       if (context.request_data === undefined) {
         throw new ValidationException("no request_data in context");

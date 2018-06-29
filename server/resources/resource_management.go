@@ -592,7 +592,7 @@ func CreateResource(
 		return err
 	}
 
-	if err := validate(context, dataMap, resourceSchema.ValidateOnCreate); err != nil {
+	if err := validate(context, &dataMap, resourceSchema.ValidateOnCreate); err != nil {
 		return err
 	}
 
@@ -778,7 +778,7 @@ func UpdateResourceInTransaction(
 		return ResourceError{err, err.Error(), WrongQuery}
 	}
 
-	if err := validate(context, dataMap, resourceSchema.ValidateOnUpdate); err != nil {
+	if err := validate(context, &dataMap, resourceSchema.ValidateOnUpdate); err != nil {
 		return err
 	}
 	policy := context["policy"].(*schema.Policy)
@@ -1027,7 +1027,7 @@ func loadPolicy(context middleware.Context, action, path string, auth schema.Aut
 
 type validateFunction func(interface{})(error)
 
-func validate(context middleware.Context, dataMap map[string]interface{}, validate validateFunction) error {
+func validate(context middleware.Context, dataMap *map[string]interface{}, validate validateFunction) error {
 	if _, ok := context[goValidationContextKey]; ok {
 		if err := validate(dataMap); err != nil {
 			return validationError(err)
@@ -1046,8 +1046,8 @@ func validationError(err error) error {
 	return ResourceError{err, fmt.Sprintf("Validation error: %s", err), WrongData}
 }
 
-func copyResourceData(context middleware.Context, dataMap map[string]interface{}) {
+func copyResourceData(context middleware.Context, dataMap *map[string]interface{}) {
 	if resourceData, ok := context["resource"].(map[string]interface{}); ok {
-		dataMap = resourceData
+		*dataMap = resourceData
 	}
 }

@@ -140,7 +140,6 @@ var _ = Describe("Environment", func() {
 				"description":   "test description",
 				"test_suite_id": nil,
 				"name":          "abc",
-				"subobject":     nil,
 			}
 
 			result := testURL("PUT", baseURL+"/v0.1/tests/testId", adminTokenID, resource, http.StatusBadRequest)
@@ -184,7 +183,8 @@ var _ = Describe("Environment", func() {
 				"name":          "abc",
 			}
 
-			result := testURL("PUT", baseURL+"/v0.1/tests/testId", adminTokenID, resource, http.StatusCreated)
+			testURL("PUT", baseURL+"/v0.1/tests/testId", adminTokenID, resource, http.StatusCreated)
+			result := testURL("GET", baseURL+"/v0.1/tests/testId", adminTokenID, nil, http.StatusOK)
 			Expect(result).To(HaveKeyWithValue("test", expectedResponse))
 		})
 
@@ -192,10 +192,8 @@ var _ = Describe("Environment", func() {
 			resource := map[string]interface{}{
 				"name":          nil,
 			}
-			result := testURL("GET", baseURL+"/v0.1/tests/testId", adminTokenID, nil, http.StatusOK)
-			Expect(result).To(HaveKeyWithValue("test", expectedResponse))
 
-			result = testURL("PUT", baseURL+"/v0.1/tests/testId", adminTokenID, resource, http.StatusBadRequest)
+			result := testURL("PUT", baseURL+"/v0.1/tests/testId", adminTokenID, resource, http.StatusBadRequest)
 			Expect(result).To(HaveKeyWithValue("error", "Validation error: Json validation error:\n\tname: Invalid type. Expected: string, given: null,"))
 			resource["name"] = "a"
 			result = testURL("PUT", baseURL+"/v0.1/tests/testId", adminTokenID, resource, http.StatusBadRequest)
