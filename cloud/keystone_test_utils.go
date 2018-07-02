@@ -49,6 +49,31 @@ func getV3TokensResponse() interface{} {
 				"id":   "1234",
 				"name": "admin",
 			},
+			"roles": []interface{}{
+				map[string]interface{}{
+					"id":   "51cc68287d524c759f47c811e6463340",
+					"name": "member",
+				},
+			},
+			"catalog": []interface{}{},
+			"project": map[string]interface{}{
+				"domain": map[string]interface{}{
+					"id":   "default",
+					"name": "default",
+				},
+				"id":   "acme-id",
+				"name": "acme",
+			},
+		},
+	}
+}
+
+func getV3Unauthorized() interface{} {
+	return map[string]interface{}{
+		"error": map[string]interface{}{
+			"message": "The request you have made requires authentication.",
+			"code":    401,
+			"title":   "Unauthorized",
 		},
 	}
 }
