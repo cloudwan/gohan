@@ -1,6 +1,7 @@
 package pongo2
 
 import (
+	"bytes"
 	"io/ioutil"
 )
 
@@ -10,47 +11,47 @@ type tagSSINode struct {
 	template *Template
 }
 
-func (node *tagSSINode) Execute(ctx *ExecutionContext, writer TemplateWriter) *Error {
+func (node *tagSSINode) Execute(ctx *ExecutionContext, buffer *bytes.Buffer) *Error {
 	if node.template != nil {
 		// Execute the template within the current context
 		includeCtx := make(Context)
 		includeCtx.Update(ctx.Public)
 		includeCtx.Update(ctx.Private)
 
-		err := node.template.execute(includeCtx, writer)
+		err := node.template.ExecuteWriter(includeCtx, buffer)
 		if err != nil {
 			return err.(*Error)
 		}
 	} else {
 		// Just print out the content
-		writer.WriteString(node.content)
+		buffer.WriteString(node.content)
 	}
 	return nil
 }
 
 func tagSSIParser(doc *Parser, start *Token, arguments *Parser) (INodeTag, *Error) {
-	SSINode := &tagSSINode{}
+	ssi_node := &tagSSINode{}
 
-	if fileToken := arguments.MatchType(TokenString); fileToken != nil {
-		SSINode.filename = fileToken.Val
+	if file_token := arguments.MatchType(TokenString); file_token != nil {
+		ssi_node.filename = file_token.Val
 
 		if arguments.Match(TokenIdentifier, "parsed") != nil {
 			// parsed
-			temporaryTpl, err := doc.template.set.FromFile(doc.template.set.resolveFilename(doc.template, fileToken.Val))
+			temporary_tpl, err := doc.template.set.FromFile(doc.template.set.resolveFilename(doc.template, file_token.Val))
 			if err != nil {
-				return nil, err.(*Error).updateFromTokenIfNeeded(doc.template, fileToken)
+				return nil, err.(*Error).updateFromTokenIfNeeded(doc.template, file_token)
 			}
-			SSINode.template = temporaryTpl
+			ssi_node.template = temporary_tpl
 		} else {
 			// plaintext
-			buf, err := ioutil.ReadFile(doc.template.set.resolveFilename(doc.template, fileToken.Val))
+			buf, err := ioutil.ReadFile(doc.template.set.resolveFilename(doc.template, file_token.Val))
 			if err != nil {
 				return nil, (&Error{
 					Sender:   "tag:ssi",
 					ErrorMsg: err.Error(),
-				}).updateFromTokenIfNeeded(doc.template, fileToken)
+				}).updateFromTokenIfNeeded(doc.template, file_token)
 			}
-			SSINode.content = string(buf)
+			ssi_node.content = string(buf)
 		}
 	} else {
 		return nil, arguments.Error("First argument must be a string.", nil)
@@ -60,7 +61,7 @@ func tagSSIParser(doc *Parser, start *Token, arguments *Parser) (INodeTag, *Erro
 		return nil, arguments.Error("Malformed SSI-tag argument.", nil)
 	}
 
-	return SSINode, nil
+	return ssi_node, nil
 }
 
 func init() {

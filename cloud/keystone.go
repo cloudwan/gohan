@@ -20,13 +20,14 @@ import (
 	"net/http"
 	"regexp"
 
+	"github.com/gophercloud/gophercloud"
+	"github.com/gophercloud/gophercloud/openstack"
+	v2tenants "github.com/gophercloud/gophercloud/openstack/identity/v2/tenants"
+	v3tenants "github.com/gophercloud/gophercloud/openstack/identity/v3/projects"
+	v3tokens "github.com/gophercloud/gophercloud/openstack/identity/v3/tokens"
+	"github.com/gophercloud/gophercloud/pagination"
+
 	"github.com/cloudwan/gohan/schema"
-	"github.com/rackspace/gophercloud"
-	"github.com/rackspace/gophercloud/openstack"
-	v2tenants "github.com/rackspace/gophercloud/openstack/identity/v2/tenants"
-	v3tenants "github.com/rackspace/gophercloud/openstack/identity/v3/projects"
-	v3tokens "github.com/rackspace/gophercloud/openstack/identity/v3/tokens"
-	"github.com/rackspace/gophercloud/pagination"
 )
 
 const maxReauthAttempts = 3
@@ -161,7 +162,11 @@ func NewKeystoneV2Client(authURL, userName, password, tenantName string) (Keysto
 	if err != nil {
 		return nil, err
 	}
-	return &keystoneV2Client{client: openstack.NewIdentityV2(client)}, nil
+	identityClient, err := openstack.NewIdentityV2(client, gophercloud.EndpointOpts{})
+	if err != nil {
+		return nil, err
+	}
+	return &keystoneV2Client{client: identityClient}, nil
 }
 
 //NewKeystoneV3Client is an constructor for KeystoneV3Client
@@ -180,7 +185,11 @@ func NewKeystoneV3Client(authURL, userName, password, domainName, tenantName str
 		return nil, err
 	}
 	client.HTTPClient = NewHTTPClient()
-	return &keystoneV3Client{client: openstack.NewIdentityV3(client)}, nil
+	identityClient, err := openstack.NewIdentityV3(client, gophercloud.EndpointOpts{})
+	if err != nil {
+		return nil, err
+	}
+	return &keystoneV3Client{client: identityClient}, nil
 }
 
 //VerifyToken verifies keystone v3.0 token

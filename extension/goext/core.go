@@ -23,9 +23,13 @@ type SchemaHandler func(context Context, resource Resource, environment IEnviron
 
 // ICore is an interface to core parts of Gohan: event triggering and registering
 type ICore interface {
+	// TriggerEvent causes the given event to be handled in all environments (across different-language extensions)
 	TriggerEvent(event string, context Context) error
+	// HandleEvent Causes the given event to be handled within the same environment
 	HandleEvent(event string, context Context) error
 
+	// RegisterEventHandler registers a global handler
 	RegisterEventHandler(event string, handler Handler, priority int)
+	// RegisterSchemaEventHandler registers a schema handler
 	RegisterSchemaEventHandler(schemaID SchemaID, event string, schemaHandler SchemaHandler, priority int)
 }

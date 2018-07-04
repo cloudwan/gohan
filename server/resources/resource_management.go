@@ -17,10 +17,10 @@ package resources
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
-	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -88,6 +88,15 @@ func isForeignKeyFailed(err error) bool {
 		}
 	}
 	return false
+}
+
+func handleForeignKeyError(err error, dataMap map[string]interface{}) error {
+	log.Info("Foreign key constrain failed: %s", err.Error())
+	jsonData, _ := json.Marshal(dataMap)
+	return ResourceError{
+		err,
+		fmt.Sprintf("Related resource does not exist. Please check your request: %s", string(jsonData)),
+		ForeignKeyFailed}
 }
 
 func measureRequestTime(timeStarted time.Time, requestType string, schemaID string) {
@@ -583,22 +592,8 @@ func CreateResource(
 		return err
 	}
 
-	if resourceData, ok := context["resource"].(map[string]interface{}); ok {
-		dataMap = resourceData
-	}
-
-	//Validation
-
-	if _, ok := context[goValidationContextKey]; ok {
-		err = resourceSchema.ValidateGoOnCreate(dataMap)
-		if err != nil {
-			return ResourceError{err, fmt.Sprintf("Validation error: %s", err), WrongData}
-		}
-	} else {
-		err = resourceSchema.ValidateOnCreate(dataMap)
-		if err != nil {
-			return ResourceError{err, fmt.Sprintf("Validation error: %s", err), WrongData}
-		}
+	if err := validate(context, &dataMap, resourceSchema.ValidateOnCreate); err != nil {
+		return err
 	}
 
 	resource, err := manager.LoadResource(resourceSchema.ID, dataMap)
@@ -658,10 +653,7 @@ func CreateResourceInTransaction(context middleware.Context, resourceSchema *sch
 	if err := mainTransaction.Create(resource); err != nil {
 		log.Debug("%s transaction error", err)
 		if isForeignKeyFailed(err) {
-			return ResourceError{
-				err,
-				fmt.Sprintf("Foreign resource not found: %v", err),
-				ForeignKeyFailed}
+			return handleForeignKeyError(err, dataMap)
 		}
 		return ResourceError{
 			err,
@@ -728,12 +720,8 @@ func UpdateResource(
 	if err := extension.HandleEvent(context, environment, "pre_update", resourceSchema.ID); err != nil {
 		return err
 	}
-
-	if resourceData, ok := context["resource"].(map[string]interface{}); ok {
-		if needsDelete == true {
-			delete(resourceData, "id")
-		}
-		dataMap = resourceData
+	if needsDelete {
+		delete(dataMap, "id")
 	}
 
 	if err := resourceTransactionWithContext(
@@ -790,30 +778,14 @@ func UpdateResourceInTransaction(
 		return ResourceError{err, err.Error(), WrongQuery}
 	}
 
+	if err := validate(context, &dataMap, resourceSchema.ValidateOnUpdate); err != nil {
+		return err
+	}
 	policy := context["policy"].(*schema.Policy)
 	// apply property filter
 	err = policy.ApplyPropertyConditionFilter(schema.ActionUpdate, resource.Data(), dataMap)
 	if err != nil {
 		return ResourceError{err, "", Unauthorized}
-	}
-
-	if _, ok := context[goValidationContextKey]; ok {
-		// Go compiler fills fields which are of primitive type with 'zero value' if any golang extension
-		// have registered for PreUpdate event.
-		// This means that some fields will appear in dataMap, even they were not present
-		// in API request nor added by PreUpdate handler.
-		// This loop will remove all 'zero values' from dataMap which doesn't appear in original request data.
-		isZeroOfUnderlyingType := func(x interface{}) bool {
-			return reflect.DeepEqual(x, reflect.Zero(reflect.TypeOf(x)).Interface())
-		}
-
-		requestData := context["request_data"].(map[string]interface{})
-		for k, v := range dataMap {
-			_, isInRequest := requestData[k]
-			if !isInRequest && isZeroOfUnderlyingType(v) {
-				delete(dataMap, k)
-			}
-		}
 	}
 
 	err = resource.Update(dataMap)
@@ -838,10 +810,7 @@ func UpdateResourceInTransaction(
 	err = mainTransaction.Update(resource)
 	if err != nil {
 		if isForeignKeyFailed(err) {
-			return ResourceError{
-				err,
-				fmt.Sprintf("Foreign resource not found: %v", err),
-				ForeignKeyFailed}
+			return handleForeignKeyError(err, dataMap)
 		}
 		return ResourceError{
 			err,
@@ -1054,4 +1023,31 @@ func loadPolicy(context middleware.Context, action, path string, auth schema.Aut
 	context["policy"] = policy
 	context["role"] = role
 	return policy, nil
+}
+
+type validateFunction func(interface{})(error)
+
+func validate(context middleware.Context, dataMap *map[string]interface{}, validate validateFunction) error {
+	if _, ok := context[goValidationContextKey]; ok {
+		if err := validate(dataMap); err != nil {
+			return validationError(err)
+		}
+		copyResourceData(context, dataMap)
+	} else {
+		copyResourceData(context, dataMap)
+		if err := validate(dataMap); err != nil {
+			return validationError(err)
+		}
+	}
+	return nil
+}
+
+func validationError(err error) error {
+	return ResourceError{err, fmt.Sprintf("Validation error: %s", err), WrongData}
+}
+
+func copyResourceData(context middleware.Context, dataMap *map[string]interface{}) {
+	if resourceData, ok := context["resource"].(map[string]interface{}); ok {
+		*dataMap = resourceData
+	}
 }

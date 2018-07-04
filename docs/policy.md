@@ -8,7 +8,7 @@ A policy has following properties.
 - action: one of `create`, `read`, `update`, `delete` for CRUD operations
   on the resource or any custom actions defined by schema performed on a
   resource or `*` for all actions
-- effect : Allow API access or not
+- effect : Allow API access or not. `Deny` keyword (incasesensitive) block access, any other option (including lack of this property) allows
 - resource : target resource
   you can specify target resource using "path" and "properties"
 - condition : additional condition (see below)
@@ -240,4 +240,26 @@ In case of having both types of properties error is returned on the server start
     - id
     - a
     - is_public
+```
+
+## Effect property
+
+While checking access to given method Gohan will check all policies.
+If any policy matches it is later check if it is allowed.
+Even one policy that matches method and is marked as not allowed is sufficient to block access.
+In an example below admin has access to all methods in all paths except `delete` action in `/v2.0/restricted_method.*`.
+
+```yaml
+- action: '*'
+  effect: allow
+  id: admin_allow_all
+  principal: admin
+  resource:
+    path: .*
+- action: delete
+  effect: deny
+  id: admin_deny_delete
+  principal: admin
+  resource:
+    path: /v2.0/restricted_method.*
 ```

@@ -890,6 +890,31 @@ var _ = Describe("Server package test", func() {
 		})
 	})
 
+	Describe("PreCreate", func() {
+		It("should set data in pre_create", func() {
+			memberNetwork := map[string]interface{}{
+				"id":          "networkbeige",
+				"name":        "Networkbeige",
+				"description": "The Beige Network",
+				"tenant_id":   memberTenantID,
+			}
+			testURL("POST", networkPluralURL, powerUserTokenID, memberNetwork, http.StatusCreated)
+
+			powerUserNetwork := getNetwork("test", powerUserTenantID)
+			testURL("POST", networkPluralURL, powerUserTokenID, powerUserNetwork, http.StatusCreated)
+
+			data := testURL("GET", getNetworkSingularURL("test"), memberTokenID, nil, http.StatusOK)
+			Expect(data.(map[string]interface{})["network"]).To(HaveKeyWithValue("name", "Networktest"))
+			testURL("DELETE", getNetworkSingularURL("test"), powerUserTokenID, nil, http.StatusNoContent)
+
+			powerUserNetwork = getNetwork("test", powerUserTenantID)
+			powerUserNetwork["name"] = "run-pre-create"
+			testURL("POST", networkPluralURL, powerUserTokenID, powerUserNetwork, http.StatusCreated)
+			data = testURL("GET", getNetworkSingularURL("test"), memberTokenID, nil, http.StatusOK)
+			Expect(data.(map[string]interface{})["network"]).To(HaveKeyWithValue("name", "set-in-pre-create"))
+		})
+	})
+
 	Describe("Resource Actions", func() {
 		responderPluralURL := baseURL + "/v2.0/responders"
 		responderParentPluralURL := baseURL + "/v2.0/responder_parents"
@@ -1008,6 +1033,14 @@ var _ = Describe("Server package test", func() {
 			testURL("POST", responderPluralURL+"/r1/dzien_dobry", memberTokenID, unknownAction, http.StatusNotFound)
 			testURL("POST", responderPluralURL+"/r1/dzien_dobry", adminTokenID, unknownAction, http.StatusNotFound)
 		})
+
+		It("should deny action for member", func() {
+			testURL("GET", responderPluralURL+"/r1/denied_action", memberTokenID, nil, http.StatusUnauthorized)
+		})
+
+		It("should deny action for admin", func() {
+			testURL("GET", responderPluralURL+"/r1/denied_action", adminTokenID, nil, http.StatusUnauthorized)
+		})
 	})
 
 	Describe("Nobody resource paths", func() {
@@ -1116,6 +1149,21 @@ var _ = Describe("Server package test", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			_, err = syncConn.Fetch("/config/v2.0/subnets/test-subnet1-id")
 			Expect(err).ShouldNot(HaveOccurred())
+		})
+	})
+
+	Describe("Error messages", func() {
+		It("should not return db error when creating resource with non-existing key", func() {
+			responderPluralURL := baseURL + "/v2.0/responders"
+			responder := map[string]interface{}{
+				"id":                  "r1",
+				"pattern":             "Hello %s!",
+				"tenant_id":           memberTenantID,
+				"responder_parent_id": "not-existing-id",
+			}
+			jsonData, _ := json.Marshal(responder)
+			expectedMessage := fmt.Sprintf("Related resource does not exist. Please check your request: %s", string(jsonData))
+			testURLErrorMessage("POST", responderPluralURL, adminTokenID, responder, http.StatusBadRequest, expectedMessage)
 		})
 	})
 })
@@ -1288,6 +1336,14 @@ func testURL(method, url, token string, postData interface{}, expectedCode int) 
 	data, resp := httpRequest(method, url, token, postData)
 	jsonData, _ := json.MarshalIndent(data, "", "    ")
 	ExpectWithOffset(1, resp.StatusCode).To(Equal(expectedCode), string(jsonData))
+	return data
+}
+
+func testURLErrorMessage(method, url, token string, postData interface{}, expectedCode int, expectedMessage string) interface{} {
+	data, resp := httpRequest(method, url, token, postData)
+	jsonData, _ := json.MarshalIndent(data, "", "    ")
+	ExpectWithOffset(1, resp.StatusCode).To(Equal(expectedCode), string(jsonData))
+	Expect(data).To(HaveKeyWithValue("error", expectedMessage))
 	return data
 }
 

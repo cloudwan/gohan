@@ -19,11 +19,12 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/robertkrimen/otto"
+
 	"github.com/cloudwan/gohan/db/pagination"
 	"github.com/cloudwan/gohan/db/sql"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
-	"github.com/xyproto/otto"
 )
 
 func init() {
@@ -67,117 +68,40 @@ func init() {
 				return value
 			},
 			"gohan_db_list": func(call otto.FunctionCall) otto.Value {
-				if len(call.ArgumentList) < 4 {
-					defaultOrderKey, _ := otto.ToValue("") // no sorting
-					call.ArgumentList = append(call.ArgumentList, defaultOrderKey)
-				}
-				if len(call.ArgumentList) < 5 {
-					defaultLimit, _ := otto.ToValue(0) // no limit
-					call.ArgumentList = append(call.ArgumentList, defaultLimit)
-				}
-				if len(call.ArgumentList) < 6 {
-					defaultOffset, _ := otto.ToValue(0) // no offset
-					call.ArgumentList = append(call.ArgumentList, defaultOffset)
-				}
-				VerifyCallArguments(&call, "gohan_db_list", 6)
-
-				transaction, needCommit, err := env.GetOrCreateTransaction(call.Argument(0))
+				schema, filter, pg, transaction, needCommit, err := ottoListArgumentsHelper(&call, env)
 				if err != nil {
-					ThrowOttoException(&call, err.Error())
+					ThrowOttoException(&call, "Error during ottoListArgumentsHelper: %s", err.Error())
 				}
+
 				if needCommit {
 					defer transaction.Close()
 				}
-				schemaID, err := GetString(call.Argument(1))
-				if err != nil {
-					ThrowOttoException(&call, err.Error())
-				}
-				filter, err := GetMap(call.Argument(2))
-				if err != nil {
-					ThrowOttoException(&call, err.Error())
-				}
-				orderKey, err := GetString(call.Argument(3))
-				if err != nil {
-					ThrowOttoException(&call, err.Error())
-				}
-				rawLimit, err := GetInt64(call.Argument(4))
-				if err != nil {
-					ThrowOttoException(&call, err.Error())
-				}
-				limit := uint64(rawLimit)
-				rawOffset, err := GetInt64(call.Argument(5))
-				if err != nil {
-					ThrowOttoException(&call, err.Error())
-				}
-				offset := uint64(rawOffset)
 
-				resp, err := GohanDbList(transaction, schemaID, filter, orderKey, limit, offset)
+				resources, _, err := transaction.List(schema, filter, nil, pg)
 				if err != nil {
-					ThrowOttoException(&call, err.Error())
+					ThrowOttoException(&call, "Error during gohan_db_list: %s", err.Error())
 				}
 
+				resp := parseListResults(resources)
 				value, _ := vm.ToValue(resp)
 				return value
 			},
 			"gohan_db_lock_list": func(call otto.FunctionCall) otto.Value {
-				if len(call.ArgumentList) < 4 {
-					defaultOrderKey, _ := otto.ToValue("") // no sorting
-					call.ArgumentList = append(call.ArgumentList, defaultOrderKey)
-				}
-				if len(call.ArgumentList) < 5 {
-					defaultLimit, _ := otto.ToValue(0) // no limit
-					call.ArgumentList = append(call.ArgumentList, defaultLimit)
-				}
-				if len(call.ArgumentList) < 6 {
-					defaultOffset, _ := otto.ToValue(0) // no offset
-					call.ArgumentList = append(call.ArgumentList, defaultOffset)
-				}
-				if len(call.ArgumentList) < 7 {
-					defaultLockPolicy, _ := otto.ToValue(schema.SkipRelatedResources)
-					call.ArgumentList = append(call.ArgumentList, defaultLockPolicy)
-				}
-				VerifyCallArguments(&call, "gohan_db_lock_list", 7)
-
-				tx, needCommit, err := env.GetOrCreateTransaction(call.Argument(0))
+				schema, filter, pg, transaction, needCommit, lockPolicy, err := ottoLockListArgumentsHelper(&call, env)
 				if err != nil {
-					ThrowOttoException(&call, err.Error())
+					ThrowOttoException(&call, "Error during ottoLockListArgumentsHelper: %s", err.Error())
 				}
+
 				if needCommit {
-					defer tx.Close()
-				}
-				schemaID, err := GetString(call.Argument(1))
-				if err != nil {
-					ThrowOttoException(&call, err.Error())
-				}
-				filter, err := GetMap(call.Argument(2))
-				if err != nil {
-					ThrowOttoException(&call, err.Error())
-				}
-				orderKey, err := GetString(call.Argument(3))
-				if err != nil {
-					ThrowOttoException(&call, err.Error())
-				}
-				rawLimit, err := GetInt64(call.Argument(4))
-				if err != nil {
-					ThrowOttoException(&call, err.Error())
-				}
-				limit := uint64(rawLimit)
-				rawOffset, err := GetInt64(call.Argument(5))
-				if err != nil {
-					ThrowOttoException(&call, err.Error())
-				}
-				offset := uint64(rawOffset)
-				rawLockPolicy, err := GetInt64(call.Argument(6))
-				if err != nil {
-					ThrowOttoException(&call, err.Error())
-				}
-				lockPolicy := schema.LockPolicy(rawLockPolicy)
-
-				resp, err := GohanDbLockList(tx, schemaID, filter, orderKey, limit, offset, lockPolicy)
-				if err != nil {
-					ThrowOttoException(&call, err.Error())
+					defer transaction.Close()
 				}
 
+				resources, _, err := transaction.LockList(schema, filter, nil, pg, lockPolicy)
+				if err != nil {
+					ThrowOttoException(&call, "Error during gohan_db_lock_list: %s", err.Error())
+				}
+
+				resp := parseListResults(resources)
 				value, _ := vm.ToValue(resp)
 				return value
 			},
@@ -439,60 +363,100 @@ func init() {
 	RegisterInit(gohanDBInit)
 }
 
-func prepareListResources(schemaID string, key string, limit uint64, offset uint64) (schema *schema.Schema, paginator *pagination.Paginator, err error) {
-	schema, err = getSchema(schemaID)
-	if err != nil {
-		return nil, nil, err
-	}
+func ottoLockListArgumentsHelper(call *otto.FunctionCall, env *Environment) (sh *schema.Schema, filter map[string]interface{}, pg *pagination.Paginator, tx transaction.Transaction, needCommit bool, lockPolicy schema.LockPolicy, err error) {
+	sh, filter, pg, tx, needCommit, err = ottoListArgumentsHelper(call, env)
 
-	paginator, err = pagination.NewPaginator(schema, key, pagination.ASC, limit, offset)
-	if err != nil {
-		return nil, nil, fmt.Errorf("Error during gohan_db_list: %s", err.Error())
+	if len(call.ArgumentList) < 7 {
+		lockPolicy = schema.SkipRelatedResources
+	} else {
+		var rawLockPolicy int64
+		rawLockPolicy, err = GetInt64(call.Argument(6))
+		if err != nil {
+			return
+		}
+		lockPolicy = schema.LockPolicy(rawLockPolicy)
 	}
-
 	return
 }
 
+func ottoListArgumentsHelper(call *otto.FunctionCall, env *Environment) (
+	schema *schema.Schema,
+	filter map[string]interface{},
+	pg *pagination.Paginator,
+	tx transaction.Transaction,
+	needCommit bool,
+	err error) {
+
+	opts := []pagination.OptionPaginator{}
+
+	if len(call.ArgumentList) < 3 {
+		ThrowOttoException(call, "Error: not enough arguments for gohana_db_list")
+	}
+
+	schemaID, err := GetString(call.Argument(1))
+	if err != nil {
+		return
+	}
+
+	schema, err = getSchema(schemaID)
+	if err != nil {
+		return
+	}
+
+	filter, err = GetMap(call.Argument(2))
+	if err != nil {
+		return
+	}
+
+	if len(call.ArgumentList) > 3 {
+		var orderKey string
+		orderKey, err = GetString(call.Argument(3))
+		if err != nil {
+			return
+		}
+		opts = append(opts, pagination.OptionKey(schema, orderKey))
+	}
+
+	if len(call.ArgumentList) > 4 {
+		var rawLimit int64
+		rawLimit, err = GetInt64(call.Argument(4))
+		if err != nil {
+			return
+		}
+		limit := uint64(rawLimit)
+		opts = append(opts, pagination.OptionLimit(limit))
+	}
+
+	if len(call.ArgumentList) > 5 {
+		var rawOffset int64
+		rawOffset, err = GetInt64(call.Argument(5))
+		if err != nil {
+			return
+		}
+		offset := uint64(rawOffset)
+		opts = append(opts, pagination.OptionOffset(offset))
+	}
+
+	opts = append(opts, pagination.OptionOrder(pagination.ASC)) // To match previous implementation based on mySql default
+	pg, err = pagination.NewPaginator(opts...)
+	if err != nil {
+		return
+	}
+
+	tx, needCommit, err = env.GetOrCreateTransaction(call.Argument(0))
+	if err != nil {
+		return
+	}
+
+	return schema, filter, pg, tx, needCommit, err
+}
+
 func parseListResults(resources []*schema.Resource) []map[string]interface{} {
-	resp := []map[string]interface{}{}
-	for _, resource := range resources {
-		resp = append(resp, resource.Data())
+	resp := make([]map[string]interface{}, len(resources))
+	for i, resource := range resources {
+		resp[i] = resource.Data()
 	}
 	return resp
-}
-
-//GohanDbList lists resources in database filtered by filter and paginator
-func GohanDbList(transaction transaction.Transaction, schemaID string,
-	filter map[string]interface{}, key string, limit uint64, offset uint64) ([]map[string]interface{}, error) {
-
-	schema, paginator, err := prepareListResources(schemaID, key, limit, offset)
-	if err != nil {
-		return []map[string]interface{}{}, err
-	}
-
-	resources, _, err := transaction.List(schema, filter, nil, paginator)
-	if err != nil {
-		return []map[string]interface{}{}, fmt.Errorf("Error during gohan_db_list: %s", err.Error())
-	}
-
-	return parseListResults(resources), nil
-}
-
-//GohanDbLockList locks resources in database filtered by filter and paginator
-func GohanDbLockList(tx transaction.Transaction, schemaID string,
-	filter map[string]interface{}, key string, limit uint64, offset uint64, policy schema.LockPolicy) ([]map[string]interface{}, error) {
-
-	schema, paginator, err := prepareListResources(schemaID, key, limit, offset)
-	if err != nil {
-		return []map[string]interface{}{}, err
-	}
-
-	resources, _, err := tx.LockList(schema, filter, nil, paginator, policy)
-	if err != nil {
-		return []map[string]interface{}{}, fmt.Errorf("Error during gohan_db_lock_list: %s", err.Error())
-	}
-
-	return parseListResults(resources), nil
 }
 
 //GohanDbFetch gets resource from database

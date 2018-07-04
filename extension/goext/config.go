@@ -17,5 +17,6 @@ package goext
 
 // IConfig is an interface to config in Gohan
 type IConfig interface {
+	// Config gets a parameter from config
 	Config(key string, defaultValue interface{}) interface{}
 }

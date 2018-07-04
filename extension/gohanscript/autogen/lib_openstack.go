@@ -2,9 +2,10 @@ package autogen
 
 // AUTO GENERATED CODE DO NOT MODIFY MANUALLY
 import (
+	"github.com/gophercloud/gophercloud"
+
 	"github.com/cloudwan/gohan/extension/gohanscript"
 	"github.com/cloudwan/gohan/extension/gohanscript/lib"
-	"github.com/rackspace/gophercloud"
 )
 
 func init() {

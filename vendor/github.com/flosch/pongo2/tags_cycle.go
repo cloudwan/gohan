@@ -1,5 +1,9 @@
 package pongo2
 
+import (
+	"bytes"
+)
+
 type tagCycleValue struct {
 	node  *tagCycleNode
 	value *Value
@@ -9,7 +13,7 @@ type tagCycleNode struct {
 	position *Token
 	args     []IEvaluator
 	idx      int
-	asName   string
+	as_name  string
 	silent   bool
 }
 
@@ -17,7 +21,7 @@ func (cv *tagCycleValue) String() string {
 	return cv.value.String()
 }
 
-func (node *tagCycleNode) Execute(ctx *ExecutionContext, writer TemplateWriter) *Error {
+func (node *tagCycleNode) Execute(ctx *ExecutionContext, buffer *bytes.Buffer) *Error {
 	item := node.args[node.idx%len(node.args)]
 	node.idx++
 
@@ -42,21 +46,21 @@ func (node *tagCycleNode) Execute(ctx *ExecutionContext, writer TemplateWriter) 
 		t.value = val
 
 		if !t.node.silent {
-			writer.WriteString(val.String())
+			buffer.WriteString(val.String())
 		}
 	} else {
 		// Regular call
 
-		cycleValue := &tagCycleValue{
+		cycle_value := &tagCycleValue{
 			node:  node,
 			value: val,
 		}
 
-		if node.asName != "" {
-			ctx.Private[node.asName] = cycleValue
+		if node.as_name != "" {
+			ctx.Private[node.as_name] = cycle_value
 		}
 		if !node.silent {
-			writer.WriteString(val.String())
+			buffer.WriteString(val.String())
 		}
 	}
 
@@ -65,7 +69,7 @@ func (node *tagCycleNode) Execute(ctx *ExecutionContext, writer TemplateWriter) 
 
 // HINT: We're not supporting the old comma-seperated list of expresions argument-style
 func tagCycleParser(doc *Parser, start *Token, arguments *Parser) (INodeTag, *Error) {
-	cycleNode := &tagCycleNode{
+	cycle_node := &tagCycleNode{
 		position: start,
 	}
 
@@ -74,19 +78,19 @@ func tagCycleParser(doc *Parser, start *Token, arguments *Parser) (INodeTag, *Er
 		if err != nil {
 			return nil, err
 		}
-		cycleNode.args = append(cycleNode.args, node)
+		cycle_node.args = append(cycle_node.args, node)
 
 		if arguments.MatchOne(TokenKeyword, "as") != nil {
 			// as
 
-			nameToken := arguments.MatchType(TokenIdentifier)
-			if nameToken == nil {
+			name_token := arguments.MatchType(TokenIdentifier)
+			if name_token == nil {
 				return nil, arguments.Error("Name (identifier) expected after 'as'.", nil)
 			}
-			cycleNode.asName = nameToken.Val
+			cycle_node.as_name = name_token.Val
 
 			if arguments.MatchOne(TokenIdentifier, "silent") != nil {
-				cycleNode.silent = true
+				cycle_node.silent = true
 			}
 
 			// Now we're finished
@@ -98,7 +102,7 @@ func tagCycleParser(doc *Parser, start *Token, arguments *Parser) (INodeTag, *Er
 		return nil, arguments.Error("Malformed cycle-tag.", nil)
 	}
 
-	return cycleNode, nil
+	return cycle_node, nil
 }
 
 func init() {

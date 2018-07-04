@@ -40,16 +40,28 @@ const (
 
 // ILogger is an interface to logger in Gohan
 type ILogger interface {
+	// Critical emits a critical log message
 	Critical(format string)
+	// Criticalf emits a formatted critical log message
 	Criticalf(format string, args ...interface{})
+	// Error emits an error log message
 	Error(format string)
+	// Errorf emits a formatted error log message
 	Errorf(format string, args ...interface{})
+	// Warning emits a warning log message
 	Warning(format string)
+	// Warningf emits a formatted warning log message
 	Warningf(format string, args ...interface{})
+	// Notice emits a notice log message
 	Notice(format string)
+	// Noticef emits a formatted notice log message
 	Noticef(format string, args ...interface{})
+	// Info emits an info log message
 	Info(format string)
+	// Infof emits a formatted info log message
 	Infof(format string, args ...interface{})
+	// Debug emits a debug log message
 	Debug(format string)
+	// Debugf emits a formatted debug log message
 	Debugf(format string, args ...interface{})
 }

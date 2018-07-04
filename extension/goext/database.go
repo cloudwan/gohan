@@ -28,12 +28,17 @@ type DbOptions struct {
 
 // IDatabase is an interface to database in Gohan
 type IDatabase interface {
+	// Begin starts a new transaction
 	Begin() (ITransaction, error)
+	// BeginTx starts a new transaction with options
 	BeginTx(context Context, options *TxOptions) (ITransaction, error)
 
+	// Options return database options from the configuration file
 	Options() DbOptions
 
+	// Within calls a function in a scoped transaction
 	Within(context Context, fn func(tx ITransaction) error) error
+	// WithinTx calls a function in a scoped transaction with options
 	WithinTx(context Context, options *TxOptions, fn func(tx ITransaction) error) error
 }
 

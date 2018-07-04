@@ -3,9 +3,10 @@ package middleware
 import (
 	"time"
 
-	"github.com/cloudwan/gohan/schema"
+	"github.com/gophercloud/gophercloud"
 	"github.com/patrickmn/go-cache"
-	"github.com/rackspace/gophercloud"
+
+	"github.com/cloudwan/gohan/schema"
 )
 
 type CachedIdentityService struct {

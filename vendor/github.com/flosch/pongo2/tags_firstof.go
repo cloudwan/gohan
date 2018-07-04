@@ -1,11 +1,15 @@
 package pongo2
 
+import (
+	"bytes"
+)
+
 type tagFirstofNode struct {
 	position *Token
 	args     []IEvaluator
 }
 
-func (node *tagFirstofNode) Execute(ctx *ExecutionContext, writer TemplateWriter) *Error {
+func (node *tagFirstofNode) Execute(ctx *ExecutionContext, buffer *bytes.Buffer) *Error {
 	for _, arg := range node.args {
 		val, err := arg.Evaluate(ctx)
 		if err != nil {
@@ -20,7 +24,7 @@ func (node *tagFirstofNode) Execute(ctx *ExecutionContext, writer TemplateWriter
 				}
 			}
 
-			writer.WriteString(val.String())
+			buffer.WriteString(val.String())
 			return nil
 		}
 	}
@@ -29,7 +33,7 @@ func (node *tagFirstofNode) Execute(ctx *ExecutionContext, writer TemplateWriter
 }
 
 func tagFirstofParser(doc *Parser, start *Token, arguments *Parser) (INodeTag, *Error) {
-	firstofNode := &tagFirstofNode{
+	firstof_node := &tagFirstofNode{
 		position: start,
 	}
 
@@ -38,10 +42,10 @@ func tagFirstofParser(doc *Parser, start *Token, arguments *Parser) (INodeTag, *
 		if err != nil {
 			return nil, err
 		}
-		firstofNode.args = append(firstofNode.args, node)
+		firstof_node.args = append(firstof_node.args, node)
 	}
 
-	return firstofNode, nil
+	return firstof_node, nil
 }
 
 func init() {

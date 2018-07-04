@@ -22,8 +22,9 @@ import (
 	"net/http"
 	"regexp"
 
+	"github.com/gophercloud/gophercloud"
+
 	"github.com/cloudwan/gohan/schema"
-	"github.com/rackspace/gophercloud"
 )
 
 var (
@@ -46,7 +47,7 @@ func (gohanClientCLI *GohanClientCLI) request(method, url string, opts *gophercl
 		}
 	}
 	gohanClientCLI.logRequest(method, url, gohanClientCLI.provider.TokenID, opts.JSONBody.(map[string]interface{}))
-	return gohanClientCLI.handleResponse(gohanClientCLI.provider.Request(method, url, *opts))
+	return gohanClientCLI.handleResponse(gohanClientCLI.provider.Request(method, url, opts))
 }
 
 func (gohanClientCLI *GohanClientCLI) getCommands() []gohanCommand {

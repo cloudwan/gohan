@@ -19,9 +19,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cloudwan/gohan/sync"
-	"github.com/xyproto/otto"
+	"github.com/robertkrimen/otto"
 	"golang.org/x/net/context"
+
+	"github.com/cloudwan/gohan/sync"
 )
 
 func convertSyncEvent(event *sync.Event) map[string]interface{} {

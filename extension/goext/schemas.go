@@ -18,6 +18,7 @@ package goext
 import (
 	"context"
 	"errors"
+	"math"
 )
 
 // SchemaID is a type for schema ID
@@ -55,6 +56,49 @@ type Paginator struct {
 	Order  string
 	Limit  uint64
 	Offset uint64
+}
+
+// Below code is adapted from similar code in db/pagination/pagination.go, but
+// doesn't validate parameters.
+type OptionPaginator func(*Paginator)
+
+//NewPaginator create Paginator
+func NewPaginator(options ...OptionPaginator) *Paginator {
+	pg := &Paginator{
+		Key:    "",
+		Order:  "",
+		Limit:  math.MaxUint64,
+		Offset: 0,
+	}
+
+	for _, op := range options {
+		op(pg)
+	}
+	return pg
+}
+
+func OptionKey(key string) OptionPaginator {
+	return func(pg *Paginator) {
+		pg.Key = key
+	}
+}
+
+func OptionOrder(order string) OptionPaginator {
+	return func(pg *Paginator) {
+		pg.Order = order
+	}
+}
+
+func OptionLimit(limit uint64) OptionPaginator {
+	return func(pg *Paginator) {
+		pg.Limit = limit
+	}
+}
+
+func OptionOffset(offset uint64) OptionPaginator {
+	return func(pg *Paginator) {
+		pg.Offset = offset
+	}
 }
 
 // MakeContext creates an empty context
@@ -101,6 +145,7 @@ func (ctx Context) Clone() Context {
 	return contextCopy
 }
 
+// GetContext returns golang context from the goext requestContext
 func GetContext(requestContext Context) context.Context {
 	if rawCtx, hasCtx := requestContext["context"]; hasCtx {
 		return rawCtx.(context.Context)
@@ -246,7 +291,9 @@ type SchemaRelationInfo struct {
 
 // ISchemas is an interface to schemas manager in Gohan
 type ISchemas interface {
+	// List returns a list of loaded schemas
 	List() []ISchema
+	// Find returns a schema by id or nil if not found
 	Find(id SchemaID) ISchema
 
 	// Relations returns list of information about schema relations

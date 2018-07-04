@@ -99,7 +99,7 @@ func Unmarshal(in []byte, out interface{}) (err error) {
 // and assigns decoded values into Node representation.
 func ParseYAML(in []byte) (node *Node, err error) {
 	p := newParser(in)
-	defer handleErr(&err)
+    defer handleErr(&err)
 	defer p.destroy()
 	return p.parse(), nil
 }

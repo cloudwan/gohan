@@ -24,7 +24,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/xyproto/otto"
+	"github.com/robertkrimen/otto"
 )
 
 func init() {

@@ -4,6 +4,7 @@ import (
 	"encoding/xml"
 )
 
+// Session defines the necessary components for a NETCONF session
 type Session struct {
 	Transport          Transport
 	SessionID          int
@@ -11,17 +12,22 @@ type Session struct {
 	ErrOnWarning       bool
 }
 
+// Close is used to close and end a transport session
 func (s *Session) Close() error {
 	return s.Transport.Close()
 }
 
+// Exec is used to execute an RPC method or methods
 func (s *Session) Exec(methods ...RPCMethod) (*RPCReply, error) {
-	rpc := NewRpcMessage(methods)
+	rpc := NewRPCMessage(methods)
 
 	request, err := xml.Marshal(rpc)
 	if err != nil {
 		return nil, err
 	}
+
+	header := []byte(xml.Header)
+	request = append(header, request...)
 
 	log.Debugf("REQUEST: %s\n", request)
 
@@ -56,6 +62,7 @@ func (s *Session) Exec(methods ...RPCMethod) (*RPCReply, error) {
 	return reply, nil
 }
 
+// NewSession creates a new NETCONF session using the provided transport layer.
 func NewSession(t Transport) *Session {
 	s := new(Session)
 	s.Transport = t
@@ -66,7 +73,7 @@ func NewSession(t Transport) *Session {
 	s.ServerCapabilities = serverHello.Capabilities
 
 	// Send our hello using default capabilities.
-	t.SendHello(&HelloMessage{Capabilities: DEFAULT_CAPABILITIES})
+	t.SendHello(&HelloMessage{Capabilities: DefaultCapabilities})
 
 	return s
 }

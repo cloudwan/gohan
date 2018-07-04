@@ -20,7 +20,7 @@ import (
 	"os"
 
 	"github.com/ddliu/motto"
-	"github.com/xyproto/otto"
+	"github.com/robertkrimen/otto"
 )
 
 func fsModule(vm *motto.Motto) (otto.Value, error) {

@@ -1,6 +1,7 @@
 package pongo2
 
 import (
+	"bytes"
 	"fmt"
 )
 
@@ -21,18 +22,18 @@ func (node *tagBlockNode) getBlockWrapperByName(tpl *Template) *NodeWrapper {
 	return t
 }
 
-func (node *tagBlockNode) Execute(ctx *ExecutionContext, writer TemplateWriter) *Error {
+func (node *tagBlockNode) Execute(ctx *ExecutionContext, buffer *bytes.Buffer) *Error {
 	tpl := ctx.template
 	if tpl == nil {
 		panic("internal error: tpl == nil")
 	}
 	// Determine the block to execute
-	blockWrapper := node.getBlockWrapperByName(tpl)
-	if blockWrapper == nil {
+	block_wrapper := node.getBlockWrapperByName(tpl)
+	if block_wrapper == nil {
 		// fmt.Printf("could not find: %s\n", node.name)
 		return ctx.Error("internal error: block_wrapper == nil in tagBlockNode.Execute()", nil)
 	}
-	err := blockWrapper.Execute(ctx, writer)
+	err := block_wrapper.Execute(ctx, buffer)
 	if err != nil {
 		return err
 	}
@@ -47,8 +48,8 @@ func tagBlockParser(doc *Parser, start *Token, arguments *Parser) (INodeTag, *Er
 		return nil, arguments.Error("Tag 'block' requires an identifier.", nil)
 	}
 
-	nameToken := arguments.MatchType(TokenIdentifier)
-	if nameToken == nil {
+	name_token := arguments.MatchType(TokenIdentifier)
+	if name_token == nil {
 		return nil, arguments.Error("First argument for tag 'block' must be an identifier.", nil)
 	}
 
@@ -61,15 +62,15 @@ func tagBlockParser(doc *Parser, start *Token, arguments *Parser) (INodeTag, *Er
 		return nil, err
 	}
 	if endtagargs.Remaining() > 0 {
-		endtagnameToken := endtagargs.MatchType(TokenIdentifier)
-		if endtagnameToken != nil {
-			if endtagnameToken.Val != nameToken.Val {
+		endtagname_token := endtagargs.MatchType(TokenIdentifier)
+		if endtagname_token != nil {
+			if endtagname_token.Val != name_token.Val {
 				return nil, endtagargs.Error(fmt.Sprintf("Name for 'endblock' must equal to 'block'-tag's name ('%s' != '%s').",
-					nameToken.Val, endtagnameToken.Val), nil)
+					name_token.Val, endtagname_token.Val), nil)
 			}
 		}
 
-		if endtagnameToken == nil || endtagargs.Remaining() > 0 {
+		if endtagname_token == nil || endtagargs.Remaining() > 0 {
 			return nil, endtagargs.Error("Either no or only one argument (identifier) allowed for 'endblock'.", nil)
 		}
 	}
@@ -78,14 +79,14 @@ func tagBlockParser(doc *Parser, start *Token, arguments *Parser) (INodeTag, *Er
 	if tpl == nil {
 		panic("internal error: tpl == nil")
 	}
-	_, hasBlock := tpl.blocks[nameToken.Val]
-	if !hasBlock {
-		tpl.blocks[nameToken.Val] = wrapper
+	_, has_block := tpl.blocks[name_token.Val]
+	if !has_block {
+		tpl.blocks[name_token.Val] = wrapper
 	} else {
-		return nil, arguments.Error(fmt.Sprintf("Block named '%s' already defined", nameToken.Val), nil)
+		return nil, arguments.Error(fmt.Sprintf("Block named '%s' already defined", name_token.Val), nil)
 	}
 
-	return &tagBlockNode{name: nameToken.Val}, nil
+	return &tagBlockNode{name: name_token.Val}, nil
 }
 
 func init() {

@@ -6,9 +6,10 @@ package goext
 
 import (
 	context "context"
-	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 	time "time"
+
+	gomock "github.com/golang/mock/gomock"
 )
 
 // MockICore is a mock of ICore interface
@@ -356,6 +357,18 @@ func (m *MockISync) Fetch(arg0 string) (*Node, error) {
 // Fetch indicates an expected call of Fetch
 func (mr *MockISyncMockRecorder) Fetch(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Fetch", reflect.TypeOf((*MockISync)(nil).Fetch), arg0)
+}
+
+// Update mocks base method
+func (m *MockISync) Update(arg0, arg1 string) error {
+	ret := m.ctrl.Call(m, "Update", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Update indicates an expected call of Update
+func (mr *MockISyncMockRecorder) Update(arg0, arg1 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockISync)(nil).Update), arg0, arg1)
 }
 
 // Watch mocks base method

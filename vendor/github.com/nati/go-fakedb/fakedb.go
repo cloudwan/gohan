@@ -18,7 +18,7 @@ func init() {
 }
 
 type Driver struct {
-	header []string
+    header []string
 	data   [][]string
 }
 
@@ -52,22 +52,22 @@ type CountRows struct {
 }
 
 func (d *Driver) Open(fileName string) (driver.Conn, error) {
-	if d.header == nil {
-		file, err := os.Open(fileName)
-		if err != nil {
-			return nil, err
-		}
-		csvReader := csv.NewReader(file)
-		data, err := csvReader.ReadAll()
-		if err != nil {
-			return nil, err
-		}
-		if len(data) == 0 {
-			return nil, fmt.Errorf("missing header")
-		}
-		d.header = data[0]
-		d.data = data[1:]
+    if d.header == nil {
+     	file, err := os.Open(fileName)
+	if err != nil {
+		return nil, err
 	}
+	csvReader := csv.NewReader(file)
+	data, err := csvReader.ReadAll()
+	if err != nil {
+		return nil, err
+	}
+	if len(data) == 0 {
+		return nil, fmt.Errorf("missing header")
+	}
+    d.header = data[0]
+    d.data = data[1:]   
+    }
 
 	return &Conn{
 		header: d.header,

@@ -18,10 +18,11 @@ package otto
 import (
 	"fmt"
 
+	"github.com/robertkrimen/otto"
+
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/server/resources"
-	"github.com/xyproto/otto"
 )
 
 const (

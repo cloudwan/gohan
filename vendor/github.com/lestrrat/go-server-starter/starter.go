@@ -44,7 +44,7 @@ func makeNiceSigNames() map[syscall.Signal]string {
 
 func init() {
 	niceSigNames = makeNiceSigNames()
-	niceNameToSigs := make(map[string]syscall.Signal)
+	niceNameToSigs = make(map[string]syscall.Signal)
 	for sig, name := range niceSigNames {
 		niceNameToSigs[name] = sig
 	}
@@ -58,7 +58,7 @@ type listener struct {
 type Config interface {
 	Args() []string
 	Command() string
-	Dir() string             // Dirctory to chdir to before executing the command
+	Dir() string             // Directory to chdir to before executing the command
 	Interval() time.Duration // Time between checks for liveness
 	PidFile() string
 	Ports() []string         // Ports to bind to (addr:port or port, so it's a string)
@@ -165,7 +165,14 @@ func signame(s os.Signal) string {
 	return "UNKNOWN"
 }
 
+// SigFromName returns the signal corresponding to the given signal name string.
+// If the given name string is not defined, it returns nil.
 func SigFromName(n string) os.Signal {
+	n = strings.ToUpper(n)
+	if strings.HasPrefix(n, "SIG") {
+		n = n[3:] // remove SIG prefix
+	}
+
 	if sig, ok := niceNameToSigs[n]; ok {
 		return sig
 	}
@@ -211,13 +218,19 @@ func (s *Starter) Run() error {
 	defer s.Teardown()
 
 	if s.pidFile != "" {
-		f, err := os.OpenFile(s.pidFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+		f, err := os.OpenFile(s.pidFile, os.O_EXCL|os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 		if err != nil {
 			return err
 		}
 
+		if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
+			return err
+		}
 		fmt.Fprintf(f, "%d", os.Getpid())
-		f.Close()
+		defer func() {
+			os.Remove(f.Name())
+			f.Close()
+		}()
 	}
 
 	for _, addr := range s.ports {
@@ -553,10 +566,6 @@ func (s *Starter) StartWorker(sigCh chan os.Signal, ch chan processState) *os.Pr
 }
 
 func (s *Starter) Teardown() error {
-	if s.pidFile != "" {
-		os.Remove(s.pidFile)
-	}
-
 	if s.statusFile != "" {
 		os.Remove(s.statusFile)
 	}

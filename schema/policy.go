@@ -18,6 +18,7 @@ package schema
 import (
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/cloudwan/gohan/util"
 )
@@ -390,8 +391,8 @@ func (p *Policy) match(action, path string, auth Authorization) *Role {
 	return nil
 }
 
-func (p *Policy) isAllow() bool {
-	return p.Effect == "Allow"
+func (p *Policy) isDeny() bool {
+	return strings.ToLower(p.Effect) == "deny"
 }
 
 //RequireOwner ...
@@ -613,13 +614,18 @@ func addCustomFilters(f map[string]interface{}, tenantId string, conditionFilter
 }
 
 //PolicyValidate validates api request using policy validation
-func PolicyValidate(action, path string, auth Authorization, policies []*Policy) (*Policy, *Role) {
+func PolicyValidate(action, path string, auth Authorization, policies []*Policy) (foundPolicy *Policy, foundRole *Role) {
 	for _, policy := range policies {
 		if role := policy.match(action, path, auth); role != nil {
-			return policy, role
+			if policy.isDeny() {
+				return nil, nil
+			} else if foundPolicy == nil {
+				foundPolicy = policy
+				foundRole = role
+			}
 		}
 	}
-	return nil, nil
+	return
 }
 
 func getRegexp(input string) (*regexp.Regexp, error) {

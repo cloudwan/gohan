@@ -297,6 +297,26 @@ var _ = Describe("Policies", func() {
 				err := policy.Check("create", &authorization, data)
 				Expect(err).To(MatchError(getProhibitedError("notOwnerName (notOwnerID)", "userName (userID)")))
 			})
+
+			Describe("Effect property", func() {
+				BeforeEach(func() {
+					policy.Action = "*"
+					authorization.roles = []*Role{{"admin"}}
+				})
+				It("should allow access be default", func() {
+					policy.Effect = ""
+					receivedPolicy, role := PolicyValidate("create", "/abc", &authorization, []*Policy{policy})
+					Expect(receivedPolicy).To(Equal(policy))
+					Expect(role).To(Equal(&Role{"admin"}))
+				})
+
+				It("should deny access", func() {
+					policy.Effect = "deny"
+					policy, role := PolicyValidate("create", "/abc", &authorization, []*Policy{policy})
+					Expect(policy).To(BeNil())
+					Expect(role).To(BeNil())
+				})
+			})
 		})
 
 		Describe("Actions on shared resources", func() {
