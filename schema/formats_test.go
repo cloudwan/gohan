@@ -137,6 +137,71 @@ var _ = Describe("format checkers", func() {
 		})
 	})
 
+	Describe("IPv4 Network checker", func() {
+		BeforeEach(func() {
+			formatChecker = ipv4NetworkFormatChecker{}
+		})
+
+		It("Should pass - no '1' host bits", func() {
+			result := formatChecker.IsFormat("192.168.0.0/24")
+			Expect(result).To(Equal(true))
+		})
+
+		It("Should not pass - '1' host bits present", func() {
+			result := formatChecker.IsFormat("192.168.0.2/24")
+			Expect(result).To(Equal(false))
+		})
+
+		It("Should not pass - wrong IPv4", func() {
+			result := formatChecker.IsFormat("218.308.0.0/16")
+			Expect(result).To(Equal(false))
+		})
+
+		It("Should not pass - wrong mask with IPv4", func() {
+			result := formatChecker.IsFormat("127.0.0.0/33")
+			Expect(result).To(Equal(false))
+		})
+	})
+
+	Describe("IPv4 Address with CIDR checker", func() {
+		BeforeEach(func() {
+			formatChecker = ipv4AddressWithCidrFormatChecker{}
+		})
+
+		It("Should not pass - no '1' host bits", func() {
+			result := formatChecker.IsFormat("192.168.0.0/24")
+			Expect(result).To(Equal(false))
+		})
+
+		It("Should pass - '1' host bits present", func() {
+			result := formatChecker.IsFormat("192.168.0.2/24")
+			Expect(result).To(Equal(true))
+		})
+
+		It("Should pass - not a broadcast", func() {
+			result := formatChecker.IsFormat("192.168.255.2/16")
+			Expect(result).To(Equal(true))
+		})
+
+		It("Should not pass - broadcast bits present", func() {
+			result := formatChecker.IsFormat("192.168.255.255/16")
+			Expect(result).To(Equal(false))
+			result = formatChecker.IsFormat("192.168.2.127/25")
+			Expect(result).To(Equal(false))
+		})
+
+		It("Should not pass - wrong IPv4", func() {
+			result := formatChecker.IsFormat("218.108.149.379/16")
+			Expect(result).To(Equal(false))
+		})
+
+		It("Should not pass - wrong mask with IPv4", func() {
+			result := formatChecker.IsFormat("127.0.0.1/33")
+			Expect(result).To(Equal(false))
+		})
+
+	})
+
 	Describe("Regex format checker", func() {
 		BeforeEach(func() {
 			formatChecker = regexFormatChecker{}
