@@ -29,11 +29,13 @@ import (
 	"github.com/cloudwan/gohan/db/pagination"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/extension"
+	"github.com/cloudwan/gohan/extension/goext"
 	"github.com/cloudwan/gohan/metrics"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/server/middleware"
 	"github.com/go-sql-driver/mysql"
 	"github.com/mattn/go-sqlite3"
+	"github.com/pkg/errors"
 	"github.com/twinj/uuid"
 )
 
@@ -150,9 +152,10 @@ func ApplyPolicyForResources(context middleware.Context, resourceSchema *schema.
 		return nil
 	}
 	data := []interface{}{}
+	currCond := policy.GetCurrentResourceCondition()
 	for _, resource := range resources {
 		resourceMap := resource.(map[string]interface{})
-		if err := policy.ApplyPropertyConditionFilter(schema.ActionRead, resourceMap, nil); err != nil {
+		if err := currCond.ApplyPropertyConditionFilter(schema.ActionRead, resourceMap, nil); err != nil {
 			continue
 		}
 		data = append(data, policy.RemoveHiddenProperty(resourceMap))
@@ -177,11 +180,27 @@ func ApplyPolicyForResource(context middleware.Context, resourceSchema *schema.S
 		return nil
 	}
 	resourceMap := resource.(map[string]interface{})
-	if err := policy.ApplyPropertyConditionFilter(schema.ActionRead, resourceMap, nil); err != nil {
+	currCond := policy.GetCurrentResourceCondition()
+	if err := currCond.ApplyPropertyConditionFilter(schema.ActionRead, resourceMap, nil); err != nil {
 		return err
 	}
 	response[resourceSchema.Singular] = policy.RemoveHiddenProperty(resourceMap)
 
+	return nil
+}
+
+func ValidateAttachmentsForResource(context middleware.Context, resourceSchema *schema.Schema, resourceMap map[string]interface{}) error {
+	attachPolicies, hasAttachPolicies := context["attach_policies"].([]*schema.Policy)
+	auth, hasAuth := context["auth"].(schema.Authorization)
+	if !hasAttachPolicies || !hasAuth {
+		return nil
+	}
+
+	for _, attachPolicy := range attachPolicies {
+		if err := validateAttachment(context, attachPolicy, auth, resourceSchema, resourceMap); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -288,11 +307,12 @@ func GetMultipleResources(context middleware.Context, dataStore db.DB, resourceS
 		return err
 	}
 	filter := FilterFromQueryParameter(resourceSchema, queryParameters)
-	if policy.RequireOwner() {
-		filter["tenant_id"] = policy.GetTenantIDFilter(schema.ActionRead, auth.TenantID())
+	currCond := policy.GetCurrentResourceCondition()
+	if currCond.RequireOwner() {
+		filter["tenant_id"] = currCond.GetTenantIDFilter(schema.ActionRead, auth.TenantID())
 	}
 	filter = policy.RemoveHiddenProperty(filter)
-	policy.AddCustomFilters(filter, auth.TenantID())
+	currCond.AddCustomFilters(filter, auth.TenantID())
 	paginator, err := pagination.FromURLQuery(resourceSchema, queryParameters)
 	if err != nil {
 		return ResourceError{err, err.Error(), WrongQuery}
@@ -356,7 +376,12 @@ func GetSingleResource(context middleware.Context, dataStore db.DB, resourceSche
 
 	context["id"] = resourceID
 	auth := context["auth"].(schema.Authorization)
-	policy, err := loadPolicy(context, "read", strings.Replace(resourceSchema.GetSingleURL(), ":id", resourceID, 1), auth)
+	policy, err := loadPolicy(
+		context,
+		"read",
+		strings.Replace(resourceSchema.GetSingleURL(), ":id", resourceID, 1),
+		auth,
+	)
 	if err != nil {
 		return err
 	}
@@ -380,7 +405,8 @@ func GetSingleResource(context middleware.Context, dataStore db.DB, resourceSche
 		context, dataStore,
 		transaction.GetIsolationLevel(resourceSchema, schema.ActionRead),
 		func() error {
-			return GetSingleResourceInTransaction(context, resourceSchema, resourceID, policy.GetTenantIDFilter(schema.ActionRead, auth.TenantID()))
+			currCond := policy.GetCurrentResourceCondition()
+			return GetSingleResourceInTransaction(context, resourceSchema, resourceID, currCond.GetTenantIDFilter(schema.ActionRead, auth.TenantID()))
 		},
 	); err != nil {
 		return err
@@ -427,7 +453,8 @@ func GetSingleResourceInTransaction(context middleware.Context, resourceSchema *
 
 	auth := context["auth"].(schema.Authorization)
 	policy := context["policy"].(*schema.Policy)
-	policy.AddCustomFilters(filter, auth.TenantID())
+	currCond := policy.GetCurrentResourceCondition()
+	currCond.AddCustomFilters(filter, auth.TenantID())
 
 	object, err := mainTransaction.Fetch(resourceSchema, filter, options)
 	if object == nil {
@@ -463,7 +490,12 @@ func CreateOrUpdateResource(
 	auth := context["auth"].(schema.Authorization)
 
 	//LoadPolicy
-	policy, err := loadPolicy(context, "update", strings.Replace(resourceSchema.GetSingleURL(), ":id", resourceID, 1), auth)
+	policy, err := loadPolicy(
+		context,
+		"update",
+		strings.Replace(resourceSchema.GetSingleURL(), ":id", resourceID, 1),
+		auth,
+	)
 	if err != nil {
 		return false, err
 	}
@@ -512,11 +544,12 @@ func checkIfResourceExistsForTenant(
 ) (bool, error) {
 	filter := transaction.IDFilter(resourceID)
 
-	tenantIDs := policy.GetTenantIDFilter(schema.ActionUpdate, tenantID)
+	currCond := policy.GetCurrentResourceCondition()
+	tenantIDs := currCond.GetTenantIDFilter(schema.ActionUpdate, tenantID)
 	if tenantIDs != nil {
 		filter["tenant_id"] = tenantIDs
 	}
-	policy.AddCustomFilters(filter, tenantID)
+	currCond.AddCustomFilters(filter, tenantID)
 
 	return checkIfResourceExists(filter, resourceSchema, preTransaction)
 }
@@ -577,7 +610,8 @@ func CreateResource(
 	delete(dataMap, "tenant_name")
 
 	// apply property filter
-	err = policy.ApplyPropertyConditionFilter(schema.ActionCreate, dataMap, nil)
+	currCond := policy.GetCurrentResourceCondition()
+	err = currCond.ApplyPropertyConditionFilter(schema.ActionCreate, dataMap, nil)
 	if err != nil {
 		return ResourceError{err, err.Error(), Unauthorized}
 	}
@@ -639,6 +673,7 @@ func CreateResourceInTransaction(context middleware.Context, resourceSchema *sch
 	if !ok {
 		return fmt.Errorf("No environment for schema")
 	}
+
 	if err := extension.HandleEvent(context, environment, "pre_create_in_transaction", resourceSchema.ID); err != nil {
 		return err
 	}
@@ -648,6 +683,9 @@ func CreateResourceInTransaction(context middleware.Context, resourceSchema *sch
 		resource, err = manager.LoadResource(resourceSchema.ID, dataMap)
 		if err != nil {
 			return fmt.Errorf("Loading resource failed: %s", err)
+		}
+		if err := ValidateAttachmentsForResource(context, resourceSchema, dataMap); err != nil {
+			return err
 		}
 	}
 	if err := mainTransaction.Create(resource); err != nil {
@@ -692,7 +730,12 @@ func UpdateResource(
 	auth := context["auth"].(schema.Authorization)
 
 	//load policy
-	policy, err := loadPolicy(context, "update", strings.Replace(resourceSchema.GetSingleURL(), ":id", resourceID, 1), auth)
+	policy, err := loadPolicy(
+		context,
+		"update",
+		strings.Replace(resourceSchema.GetSingleURL(), ":id", resourceID, 1),
+		auth,
+	)
 	if err != nil {
 		return err
 	}
@@ -728,7 +771,8 @@ func UpdateResource(
 		context, dataStore,
 		transaction.GetIsolationLevel(resourceSchema, schema.ActionUpdate),
 		func() error {
-			return UpdateResourceInTransaction(context, resourceSchema, resourceID, dataMap, policy.GetTenantIDFilter(schema.ActionUpdate, auth.TenantID()))
+			currCond := policy.GetCurrentResourceCondition()
+			return UpdateResourceInTransaction(context, resourceSchema, resourceID, dataMap, currCond.GetTenantIDFilter(schema.ActionUpdate, auth.TenantID()))
 		},
 	); err != nil {
 		return err
@@ -783,7 +827,8 @@ func UpdateResourceInTransaction(
 	}
 	policy := context["policy"].(*schema.Policy)
 	// apply property filter
-	err = policy.ApplyPropertyConditionFilter(schema.ActionUpdate, resource.Data(), dataMap)
+	currCond := policy.GetCurrentResourceCondition()
+	err = currCond.ApplyPropertyConditionFilter(schema.ActionUpdate, resource.Data(), dataMap)
 	if err != nil {
 		return ResourceError{err, "", Unauthorized}
 	}
@@ -805,6 +850,10 @@ func UpdateResourceInTransaction(
 	resource, err = manager.LoadResource(resourceSchema.ID, dataMap)
 	if err != nil {
 		return fmt.Errorf("Loading Resource failed: %s", err)
+	}
+
+	if err := ValidateAttachmentsForResource(context, resourceSchema, dataMap); err != nil {
+		return err
 	}
 
 	err = mainTransaction.Update(resource)
@@ -904,16 +953,22 @@ func fetchResource(resourceID string, resourceSchema *schema.Schema, tx transact
 
 func fetchResourceForAction(action string, auth schema.Authorization, resourceID string, resourceSchema *schema.Schema,
 	tx transaction.Transaction, context middleware.Context) (*schema.Resource, error) {
-	policy, err := loadPolicy(context, action, strings.Replace(resourceSchema.GetSingleURL(), ":id", resourceID, 1), auth)
+	policy, err := loadPolicy(
+		context,
+		action,
+		strings.Replace(resourceSchema.GetSingleURL(), ":id", resourceID, 1),
+		auth,
+	)
 	if err != nil {
 		return nil, err
 	}
-	tenantIDs := policy.GetTenantIDFilter(action, auth.TenantID())
+	currCond := policy.GetCurrentResourceCondition()
+	tenantIDs := currCond.GetTenantIDFilter(action, auth.TenantID())
 	filter := transaction.IDFilter(resourceID)
 	if tenantIDs != nil {
 		filter["tenant_id"] = tenantIDs
 	}
-	policy.AddCustomFilters(filter, auth.TenantID())
+	currCond.AddCustomFilters(filter, auth.TenantID())
 	resource, err := tx.Fetch(resourceSchema, filter, nil)
 	if err != nil {
 		return nil, err
@@ -935,7 +990,8 @@ func DeleteResourceInTransaction(context middleware.Context, resourceSchema *sch
 
 	auth := context["auth"].(schema.Authorization)
 	policy := context["policy"].(*schema.Policy)
-	tenantIDs := policy.GetTenantIDFilter(schema.ActionDelete, auth.TenantID())
+	currCond := policy.GetCurrentResourceCondition()
+	tenantIDs := currCond.GetTenantIDFilter(schema.ActionDelete, auth.TenantID())
 	filter := transaction.IDFilter(resourceID)
 	if tenantIDs != nil {
 		filter["tenant_id"] = tenantIDs
@@ -959,7 +1015,7 @@ func DeleteResourceInTransaction(context middleware.Context, resourceSchema *sch
 		context["resource"] = resource.Data()
 	}
 	// apply property filter
-	err = policy.ApplyPropertyConditionFilter(schema.ActionUpdate, resource.Data(), nil)
+	err = currCond.ApplyPropertyConditionFilter(schema.ActionUpdate, resource.Data(), nil)
 	if err != nil {
 		return ResourceError{err, "", Unauthorized}
 	}
@@ -1013,6 +1069,94 @@ func ActionResource(context middleware.Context, dataStore db.DB, identityService
 	return fmt.Errorf("no response")
 }
 
+func validateAttachment(
+	context middleware.Context,
+	policy *schema.Policy,
+	auth schema.Authorization,
+	resourceSchema *schema.Schema,
+	dataMap map[string]interface{},
+) error {
+	relationPropertyName := policy.GetRelationPropertyName()
+	if relationPropertyName == "*" {
+		for i := range resourceSchema.Properties {
+			prop := &resourceSchema.Properties[i]
+			if err := validateAttachmentRelation(context, policy, auth, dataMap, prop); err != nil {
+				return err
+			}
+		}
+		return nil
+	} else {
+		prop, err := resourceSchema.GetPropertyByID(relationPropertyName)
+		if err != nil {
+			return err
+		}
+		return validateAttachmentRelation(context, policy, auth, dataMap, prop)
+	}
+}
+
+func relatedResourceNotFoundErr(schemaId, resourceId string) error {
+	return errors.Errorf("Related resource %s ID \"%s\" not found", schemaId, resourceId)
+}
+
+func errorNotFound(schemaId, resourceId string) error {
+	return goext.NewErrorNotFound(relatedResourceNotFoundErr(schemaId, resourceId))
+}
+
+func errorBadRequest(schemaId, resourceId string) error {
+	return goext.NewErrorBadRequest(relatedResourceNotFoundErr(schemaId, resourceId))
+}
+
+func validateAttachmentRelation(
+	context middleware.Context,
+	policy *schema.Policy,
+	auth schema.Authorization,
+	dataMap map[string]interface{},
+	property *schema.Property,
+) error {
+	manager := schema.GetManager()
+	if property.Relation == "" {
+		// Not a relation, so skip
+		return nil
+	}
+
+	relatedSchema, _ := manager.Schema(property.Relation)
+	relatedResourceID, _ := dataMap[property.ID].(string)
+	if relatedResourceID == "" {
+		return nil
+	}
+
+	otherCond := policy.GetOtherResourceCondition()
+	tenants := otherCond.GetTenantIDFilter(schema.ActionRead, auth.TenantID())
+	filter := transaction.IDFilter(relatedResourceID)
+	if tenants != nil {
+		filter["tenant_id"] = tenants
+	}
+	otherCond.AddCustomFilters(filter, auth.TenantID())
+
+	options := &transaction.ViewOptions{}
+
+	mainTransaction := context["transaction"].(transaction.Transaction)
+	relatedRes, err := mainTransaction.Fetch(relatedSchema, filter, options)
+
+	if err != nil {
+		if policy.IsDeny() {
+			return nil
+		} else {
+			return errorBadRequest(relatedSchema.ID, relatedResourceID)
+		}
+	}
+
+	err = otherCond.ApplyPropertyConditionFilter(schema.ActionAttach, relatedRes.Data(), nil)
+	if policy.IsDeny() {
+		if err == nil {
+			return errorBadRequest(relatedSchema.ID, relatedResourceID)
+		}
+	} else if err != nil {
+		return errorNotFound(relatedSchema.ID, relatedResourceID)
+	}
+	return nil
+}
+
 func loadPolicy(context middleware.Context, action, path string, auth schema.Authorization) (*schema.Policy, error) {
 	manager := schema.GetManager()
 	policy, role := manager.PolicyValidate(action, path, auth)
@@ -1021,6 +1165,7 @@ func loadPolicy(context middleware.Context, action, path string, auth schema.Aut
 		return nil, ResourceError{err, err.Error(), Unauthorized}
 	}
 	context["policy"] = policy
+	context["attach_policies"] = manager.GetAttachmentPolicies(path, auth)
 	context["role"] = role
 	return policy, nil
 }

@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/cloudwan/gohan/util"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -34,6 +35,8 @@ const (
 	ActionUpdate = "update"
 	// ActionDelete allows to delete a resource
 	ActionDelete = "delete"
+	// ActionAttach allows a resource to have a relation to another resource
+	ActionAttach = "__attach__"
 
 	conditionIsOwner       = "is_owner"
 	conditionTypeBelongsTo = "belongs_to"
@@ -50,29 +53,29 @@ const (
 // AllActions are all possible actions
 var AllActions = []string{ActionCreate, ActionRead, ActionUpdate, ActionDelete}
 
-func newTenant(tenantID, tenantName string) Tenant {
+func newTenant(tenantID, tenantName string) tenant {
 	tenantIDRegexp, _ := getRegexp(tenantID)
 	tenantNameRegexp, _ := getRegexp(tenantName)
-	return Tenant{ID: tenantIDRegexp, Name: tenantNameRegexp}
+	return tenant{ID: tenantIDRegexp, Name: tenantNameRegexp}
 }
 
 // Tenant ...
-type Tenant struct {
+type tenant struct {
 	ID   *regexp.Regexp
 	Name *regexp.Regexp
 }
 
-func (t *Tenant) equal(t2 Tenant) bool {
+func (t *tenant) equal(t2 tenant) bool {
 	idMatch := t.ID.MatchString(t2.ID.String()) || t2.ID.MatchString(t.ID.String())
 	nameMatch := t.Name.MatchString(t2.Name.String()) || t2.Name.MatchString(t.Name.String())
 	return idMatch && nameMatch
 }
 
-func (t *Tenant) notEqual(t2 Tenant) bool {
+func (t *tenant) notEqual(t2 tenant) bool {
 	return !t.equal(t2)
 }
 
-func (t Tenant) String() string {
+func (t tenant) String() string {
 	return fmt.Sprintf("%s (%s)", t.Name.String(), t.ID.String())
 }
 
@@ -104,19 +107,32 @@ func makeConditionFilter(filterType conditionFilterType) *conditionFilter {
 //Policy describes policy configuration for APIs
 type Policy struct {
 	ID, Description, Principal, Action, Effect string
-	Condition                                  []interface{}
-	Resource                                   *ResourcePolicy
 	RawData                                    interface{}
-	TenantID                                   *regexp.Regexp
-	TenantName                                 *regexp.Regexp
-	requireOwner                               bool
-	actionTenantFilter                         map[string][]Tenant
-	actionPropertyConditionFilter              map[string][]map[string]interface{}
-	actionFilter                               *conditionFilter
+	resource                                   *resourceFilter
+	tenantID                                   *regexp.Regexp
+	tenantName                                 *regexp.Regexp
+	currentResourceCondition                   *ResourceCondition
+	relationPropertyName                       string
+	otherResourceCondition                     *ResourceCondition
 }
 
-//ResourcePolicy describes target resources
-type ResourcePolicy struct {
+// Additional information for the "attach" action
+type AttachInfo struct {
+	SchemaID               string
+	OtherResourceCondition *ResourceCondition
+	RelationPropertyName   string
+}
+
+type ResourceCondition struct {
+	Condition                     []interface{}
+	actionTenantFilter            map[string][]tenant
+	actionPropertyConditionFilter map[string][]map[string]interface{}
+	actionFilter                  *conditionFilter
+	requireOwner                  bool
+}
+
+//resourceFilter describes which resources should be filtered, and what properties are allowed
+type resourceFilter struct {
 	PropertiesFilter *Filter
 	Path             *regexp.Regexp
 }
@@ -222,11 +238,10 @@ func NewPolicy(raw interface{}) (*Policy, error) {
 	policy.Principal, _ = typeData["principal"].(string)
 	policy.Action, _ = typeData["action"].(string)
 	policy.Effect, _ = typeData["effect"].(string)
-	policy.Condition, _ = typeData["condition"].([]interface{})
 	policy.RawData = raw
 	resourceData, _ := typeData["resource"].(map[string]interface{})
-	resource := &ResourcePolicy{}
-	policy.Resource = resource
+	resource := &resourceFilter{}
+	policy.resource = resource
 	path, _ := resourceData["path"].(string)
 	match, err := regexp.Compile(path)
 	if err != nil {
@@ -239,14 +254,14 @@ func NewPolicy(raw interface{}) (*Policy, error) {
 	if err != nil {
 		return nil, err
 	}
-	policy.TenantID = tenantID
+	policy.tenantID = tenantID
 
 	rawTenantName, _ := typeData["tenant_name"].(string)
 	tenantName, err := getRegexp(rawTenantName)
 	if err != nil {
 		return nil, err
 	}
-	policy.TenantName = tenantName
+	policy.tenantName = tenantName
 
 	if tenantName.String() != globalRegexp && tenantID.String() != globalRegexp {
 		return nil, fmt.Errorf(onlyOneOfTenantIDTenantNameError)
@@ -260,10 +275,39 @@ func NewPolicy(raw interface{}) (*Policy, error) {
 		return nil, err
 	}
 
-	if err := policy.precomputeConditions(); err != nil {
-		return nil, err
+	if policy.Action == ActionAttach {
+		// source_relation_property is required
+		relationProperty, hasSource := typeData["relation_property"].(string)
+		if !hasSource {
+			return nil, errors.New("\"relation_property\" is required in an attach policy")
+		}
+
+		// target_condition is required
+		rawTargetCondition, hasTarget := typeData["target_condition"].([]interface{})
+		if !hasTarget {
+			return nil, errors.New("\"target_condition\" is required in an attach policy")
+		}
+
+		policy.currentResourceCondition = &ResourceCondition{}
+		policy.relationPropertyName = relationProperty
+		policy.otherResourceCondition, err = NewResourceCondition(rawTargetCondition, policy.ID)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		rawCondition, _ := typeData["condition"].([]interface{})
+		condition, err := NewResourceCondition(rawCondition, policy.ID)
+		if err != nil {
+			return nil, err
+		}
+		policy.currentResourceCondition = condition
 	}
+
 	return policy, nil
+}
+
+func (p *Policy) GetCurrentResourceCondition() *ResourceCondition {
+	return p.currentResourceCondition
 }
 
 func getStringSliceFromMap(data map[string]interface{}, key string) []string {
@@ -287,8 +331,9 @@ func getStringSliceFromRawSlice(data []interface{}) []string {
 	return result
 }
 
-func (p *Policy) precomputeConditions() error {
-	p.actionTenantFilter = map[string][]Tenant{}
+func NewResourceCondition(rawCondition []interface{}, policyID string) (*ResourceCondition, error) {
+	p := &ResourceCondition{Condition: rawCondition}
+	p.actionTenantFilter = map[string][]tenant{}
 	p.actionPropertyConditionFilter = map[string][]map[string]interface{}{}
 	for _, condition := range p.Condition {
 		switch condition.(type) {
@@ -297,7 +342,7 @@ func (p *Policy) precomputeConditions() error {
 			case conditionIsOwner:
 				p.requireOwner = true
 			default:
-				panic(fmt.Sprintf("Unknown condition '%s' for policy '%s'", condition, p.ID))
+				panic(fmt.Sprintf("Unknown condition '%s' for policy '%s'", condition, policyID))
 			}
 		case map[string]interface{}:
 			conditionObject := condition.(map[string]interface{})
@@ -311,13 +356,13 @@ func (p *Policy) precomputeConditions() error {
 					rawTenantID, _ := conditionObject["tenant_id"].(string)
 					tenantID, err := getRegexp(rawTenantID)
 					if err != nil {
-						return err
+						return nil, err
 					}
 
 					rawTenantName, _ := conditionObject["tenant_name"].(string)
 					tenantName, err := getRegexp(rawTenantName)
 					if err != nil {
-						return err
+						return nil, err
 					}
 
 					if tenantName.String() != globalRegexp && tenantID.String() != globalRegexp {
@@ -325,7 +370,7 @@ func (p *Policy) precomputeConditions() error {
 					}
 
 					for _, action := range actions {
-						p.AddTenantToFilter(action, Tenant{ID: tenantID, Name: tenantName})
+						p.addTenantToFilter(action, tenant{ID: tenantID, Name: tenantName})
 					}
 				case conditionProperty:
 					actions := AllActions
@@ -337,48 +382,66 @@ func (p *Policy) precomputeConditions() error {
 						panic("match should be dict")
 					}
 					for _, action := range actions {
-						p.AddPropertyConditionFilter(action, match)
+						p.addPropertyConditionFilter(action, match)
 					}
 				default:
-					panic(fmt.Sprintf("Unknown condition type '%s' for policy '%s'", conditionObject["type"], p.ID))
+					panic(fmt.Sprintf(
+						"Unknown condition type '%s' for policy '%s'",
+						conditionObject["type"],
+						policyID,
+					))
 				}
 			} else if andType, ok := conditionObject[conditionAnd]; ok {
 				var err error
-				if p.actionFilter, err = p.precomputeAndCondition(andType); err != nil {
-					return err
+				if p.actionFilter, err = precomputeAndCondition(andType, policyID); err != nil {
+					return nil, err
 				}
 			} else if orType, ok := conditionObject[conditionOr]; ok {
 				var err error
-				if p.actionFilter, err = p.precomputeOrCondition(orType); err != nil {
-					return err
+				if p.actionFilter, err = precomputeOrCondition(orType, policyID); err != nil {
+					return nil, err
 				}
 			}
 		default:
-			panic(fmt.Sprintf("Invalid condition format for policy '%s'", p.ID))
+			panic(fmt.Sprintf("Invalid condition format for policy '%s'", policyID))
 		}
 	}
 
-	return nil
+	return p, nil
+}
+
+// addTenantToFilter adds tenant to filter for given action
+func (p *ResourceCondition) addTenantToFilter(action string, tenant tenant) {
+	p.actionTenantFilter[action] = append(p.actionTenantFilter[action], tenant)
+}
+
+// addPropertyConditionFilter adds property based filter for action
+func (p *ResourceCondition) addPropertyConditionFilter(action string, match map[string]interface{}) {
+	p.actionPropertyConditionFilter[action] = append(p.actionPropertyConditionFilter[action], match)
 }
 
 //NewEmptyPolicy Return Empty policy which match everything
 func NewEmptyPolicy() *Policy {
-	return &Policy{Resource: &ResourcePolicy{}}
+	return &Policy{resource: &resourceFilter{}, currentResourceCondition: &ResourceCondition{}}
 }
 
 func (p *Policy) match(action, path string, auth Authorization) *Role {
-	if p.Action != "*" && action != p.Action {
+	if p.Action == ActionAttach || action == ActionAttach {
+		if p.Action != action {
+			return nil
+		}
+	} else if p.Action != "*" && action != p.Action {
 		return nil
 	}
-	if !p.Resource.Path.MatchString(path) {
+	if !p.resource.Path.MatchString(path) {
 		return nil
 	}
 
-	if !p.TenantID.MatchString(auth.TenantID()) {
+	if !p.tenantID.MatchString(auth.TenantID()) {
 		return nil
 	}
 
-	if !p.TenantName.MatchString(auth.TenantName()) {
+	if !p.tenantName.MatchString(auth.TenantName()) {
 		return nil
 	}
 
@@ -388,42 +451,54 @@ func (p *Policy) match(action, path string, auth Authorization) *Role {
 			return role
 		}
 	}
+
 	return nil
 }
 
-func (p *Policy) isDeny() bool {
+func (p *Policy) matchAttach(path string, auth Authorization) bool {
+	if p.match(ActionAttach, path, auth) == nil {
+		return false
+	}
+
+	return true
+}
+
+func (p *Policy) IsDeny() bool {
 	return strings.ToLower(p.Effect) == "deny"
 }
 
 //RequireOwner ...
-func (p *Policy) RequireOwner() bool {
+func (p *ResourceCondition) RequireOwner() bool {
 	return p.requireOwner
 }
 
 //RemoveHiddenProperty removes hidden data from data by Policy
 // This method returns nil if all data get filtered out
 func (p *Policy) RemoveHiddenProperty(data map[string]interface{}) map[string]interface{} {
-	return p.Resource.PropertiesFilter.RemoveHiddenKeysFromMap(data)
+	return p.resource.PropertiesFilter.RemoveHiddenKeysFromMap(data)
 }
 
 //FilterSchema filters properties in the schema itself
-func (p *Policy) FilterSchema(properties map[string]interface{},
-	propertiesOrder, required []string) (map[string]interface{}, []string, []string) {
-	filter := p.Resource.PropertiesFilter
+func (p *Policy) FilterSchema(
+	properties map[string]interface{},
+	propertiesOrder, required []string,
+) (map[string]interface{}, []string, []string) {
+	filter := p.resource.PropertiesFilter
 	return filter.RemoveHiddenKeysFromMap(properties),
 		filter.RemoveHiddenKeysFromSlice(propertiesOrder),
 		filter.RemoveHiddenKeysFromSlice(required)
 }
 
-//Check ...
+//Checks if user is authorized to perform given action
 func (p *Policy) Check(action string, authorization Authorization, data map[string]interface{}) error {
-	if p.RequireOwner() {
+	currCond := p.GetCurrentResourceCondition()
+	if currCond.RequireOwner() {
 		ownerID, _ := data["tenant_id"].(string)
 		ownerName, _ := data["tenant_name"].(string)
 		owner := newTenant(ownerID, ownerName)
 		caller := newTenant(authorization.TenantID(), authorization.TenantName())
 
-		if caller.notEqual(owner) && !p.isTenantAllowed(action, owner, caller) {
+		if caller.notEqual(owner) && !currCond.isTenantAllowed(action, owner, caller) {
 			return fmt.Errorf("Tenant '%s' is prohibited from operating on resources of tenant '%s'", caller, owner)
 		}
 	}
@@ -432,22 +507,12 @@ func (p *Policy) Check(action string, authorization Authorization, data map[stri
 		if key == "tenant_name" {
 			continue
 		}
-		if p.Resource.PropertiesFilter.IsForbidden(key) {
+		if p.resource.PropertiesFilter.IsForbidden(key) {
 			return fmt.Errorf("%s is prohibited for this user", key)
 		}
 	}
 
 	return nil
-}
-
-// AddTenantToFilter adds tenant to filter for given action
-func (p *Policy) AddTenantToFilter(action string, tenant Tenant) {
-	p.actionTenantFilter[action] = append(p.actionTenantFilter[action], tenant)
-}
-
-// AddPropertyConditionFilter adds property based filter for action
-func (p *Policy) AddPropertyConditionFilter(action string, match map[string]interface{}) {
-	p.actionPropertyConditionFilter[action] = append(p.actionPropertyConditionFilter[action], match)
 }
 
 // ApplyPropertyConditionFilter applies filter based on Property
@@ -468,7 +533,7 @@ func (p *Policy) AddPropertyConditionFilter(action string, match map[string]inte
 // This policy check error in case of followings
 // - Original value isn't ACTIVE
 // - Update candidate value isn't ERROR
-func (p *Policy) ApplyPropertyConditionFilter(action string, data map[string]interface{}, updateCandidateData map[string]interface{}) error {
+func (p *ResourceCondition) ApplyPropertyConditionFilter(action string, data map[string]interface{}, updateCandidateData map[string]interface{}) error {
 	filters, ok := p.actionPropertyConditionFilter[action]
 	if !ok {
 		return nil
@@ -508,7 +573,7 @@ FilterLoop:
 }
 
 // GetTenantIDFilter returns tenants filter for the action performed by the tenant
-func (p *Policy) GetTenantIDFilter(action string, tenantID string) []string {
+func (p *ResourceCondition) GetTenantIDFilter(action string, tenantID string) []string {
 	if !p.requireOwner {
 		return nil
 	}
@@ -519,16 +584,16 @@ func (p *Policy) GetTenantIDFilter(action string, tenantID string) []string {
 	return append(result, tenantID)
 }
 
-// GetTenantFilter returns tenants filter for the action performed by the tenant
-func (p *Policy) GetTenantFilter(action string, tenant Tenant) []Tenant {
+// getTenantFilter returns tenants filter for the action performed by the tenant
+func (p *ResourceCondition) getTenantFilter(action string, tenant tenant) []tenant {
 	if !p.requireOwner {
 		return nil
 	}
 	return append(p.actionTenantFilter[action], tenant)
 }
 
-func (p *Policy) isTenantAllowed(action string, owner, tenant Tenant) bool {
-	for _, allowedTenant := range p.GetTenantFilter(action, tenant) {
+func (p *ResourceCondition) isTenantAllowed(action string, owner, tenant tenant) bool {
+	for _, allowedTenant := range p.getTenantFilter(action, tenant) {
 		if owner.equal(allowedTenant) {
 			return true
 		}
@@ -536,15 +601,19 @@ func (p *Policy) isTenantAllowed(action string, owner, tenant Tenant) bool {
 	return false
 }
 
-func (policy *Policy) precomputeAndCondition(andCondition interface{}) (*conditionFilter, error) {
-	return policy.precomputeCondition(andCondition, andFilter)
+func precomputeAndCondition(andCondition interface{}, policyID string) (*conditionFilter, error) {
+	return precomputeCondition(andCondition, andFilter, policyID)
 }
 
-func (policy *Policy) precomputeOrCondition(orCondition interface{}) (*conditionFilter, error) {
-	return policy.precomputeCondition(orCondition, orFilter)
+func precomputeOrCondition(orCondition interface{}, policyID string) (*conditionFilter, error) {
+	return precomputeCondition(orCondition, orFilter, policyID)
 }
 
-func (policy *Policy) precomputeCondition(conds interface{}, filterType conditionFilterType) (*conditionFilter, error) {
+func precomputeCondition(
+	conds interface{},
+	filterType conditionFilterType,
+	policyID string,
+) (*conditionFilter, error) {
 	conditions := conds.([]interface{})
 	actionFilter := makeConditionFilter(filterType)
 	for _, condition := range conditions {
@@ -552,19 +621,19 @@ func (policy *Policy) precomputeCondition(conds interface{}, filterType conditio
 		case string:
 			stringValue := condition.(string)
 			if stringValue != conditionIsOwner {
-				return nil, fmt.Errorf("Unknown condition '%s' for policy '%s'", condition, policy.ID)
+				return nil, fmt.Errorf("Unknown condition '%s' for policy '%s'", condition, policyID)
 			}
 			actionFilter.isOwner = true
 		case map[string]interface{}:
 			conditionObject := condition.(map[string]interface{})
 			if _, ok := conditionObject[conditionOr]; ok {
-				if orFilter, err := policy.precomputeOrCondition(conditionObject[conditionOr]); err != nil {
+				if orFilter, err := precomputeOrCondition(conditionObject[conditionOr], policyID); err != nil {
 					return nil, err
 				} else {
 					actionFilter.orFilters = orFilter
 				}
 			} else if _, ok := conditionObject[conditionAnd]; ok {
-				if andFilter, err := policy.precomputeAndCondition(conditionObject[conditionAnd]); err != nil {
+				if andFilter, err := precomputeAndCondition(conditionObject[conditionAnd], policyID); err != nil {
 					return nil, err
 				} else {
 					actionFilter.andFilters = andFilter
@@ -572,17 +641,34 @@ func (policy *Policy) precomputeCondition(conds interface{}, filterType conditio
 			} else if _, ok := conditionObject[conditionMatch]; ok {
 				actionFilter.matches = append(actionFilter.matches, conditionObject[conditionMatch].(map[string]interface{}))
 			} else {
-				return nil, fmt.Errorf("Unknown condition '%s' for policy '%s'", condition, policy.ID)
+				return nil, fmt.Errorf("Unknown condition '%s' for policy '%s'", condition, policyID)
 			}
 		default:
-			return nil, fmt.Errorf("Unknown condition '%s' for policy '%s'", condition, policy.ID)
+			return nil, fmt.Errorf("Unknown condition '%s' for policy '%s'", condition, policyID)
 		}
 	}
 	return actionFilter, nil
 }
 
-func (policy *Policy) AddCustomFilters(filters map[string]interface{}, tenantId string) {
+// Adds custom filters based on this policy to the `filters` map
+func (policy *ResourceCondition) AddCustomFilters(filters map[string]interface{}, tenantId string) {
 	addCustomFilters(filters, tenantId, policy.actionFilter)
+}
+
+func (policy *Policy) GetResourcePathRegexp() *regexp.Regexp {
+	return policy.resource.Path
+}
+
+func (policy *Policy) GetPropertyFilter() *Filter {
+	return policy.resource.PropertiesFilter
+}
+
+func (policy *Policy) GetRelationPropertyName() string {
+	return policy.relationPropertyName
+}
+
+func (policy *Policy) GetOtherResourceCondition() *ResourceCondition {
+	return policy.otherResourceCondition
 }
 
 func addCustomFilters(f map[string]interface{}, tenantId string, conditionFilters *conditionFilter) {
@@ -617,7 +703,7 @@ func addCustomFilters(f map[string]interface{}, tenantId string, conditionFilter
 func PolicyValidate(action, path string, auth Authorization, policies []*Policy) (foundPolicy *Policy, foundRole *Role) {
 	for _, policy := range policies {
 		if role := policy.match(action, path, auth); role != nil {
-			if policy.isDeny() {
+			if policy.IsDeny() {
 				return nil, nil
 			} else if foundPolicy == nil {
 				foundPolicy = policy
@@ -626,6 +712,16 @@ func PolicyValidate(action, path string, auth Authorization, policies []*Policy)
 		}
 	}
 	return
+}
+
+func GetAttachmentPolicies(path string, auth Authorization, policies []*Policy) []*Policy {
+	attachmentPolicies := []*Policy{}
+	for _, policy := range policies {
+		if policy.matchAttach(path, auth) {
+			attachmentPolicies = append(attachmentPolicies, policy)
+		}
+	}
+	return attachmentPolicies
 }
 
 func getRegexp(input string) (*regexp.Regexp, error) {

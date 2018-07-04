@@ -324,7 +324,7 @@ func filterSchemasForPolicy(principal string, policies []*schema.Policy, schemas
 func getMatchingPolicy(schemaUsed *schema.Schema, policies []*schema.Policy) []*schema.Policy {
 	var matchedPolicies []*schema.Policy
 	for _, policy := range policies {
-		if policy.Resource.Path.MatchString(schemaUsed.URL) {
+		if policy.GetResourcePathRegexp().MatchString(schemaUsed.URL) {
 			matchedPolicies = append(matchedPolicies, policy)
 		}
 	}
@@ -352,7 +352,7 @@ func hasMatchingPolicy(action schema.Action, policies []*schema.Policy) bool {
 
 func canUseAction(action schema.Action, policies []*schema.Policy, url string) bool {
 	for _, policy := range policies {
-		if policy.Resource.Path.MatchString(url) && isMatchingPolicy(action, policy) {
+		if policy.GetResourcePathRegexp().MatchString(url) && isMatchingPolicy(action, policy) {
 			return true
 		}
 	}
