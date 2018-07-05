@@ -125,6 +125,13 @@ var _ = Describe("Environment", func() {
 		})
 	})
 
+	Context("Sync", func() {
+		It("handles context.Cancel", func() {
+			res := testURL("POST", baseURL+"/v0.1/tests/sync_context_cancel", adminTokenID, map[string]interface{}{"test": "success"}, http.StatusOK)
+			Expect(res.(map[string]interface{})).To(HaveKeyWithValue("test", "success"))
+		})
+	})
+
 	Context("Resource creation", func() {
 		It("Creates resources", func() {
 			resource := map[string]interface{}{
@@ -190,7 +197,7 @@ var _ = Describe("Environment", func() {
 
 		It("Update resources", func() {
 			resource := map[string]interface{}{
-				"name":          nil,
+				"name": nil,
 			}
 
 			result := testURL("PUT", baseURL+"/v0.1/tests/testId", adminTokenID, resource, http.StatusBadRequest)
