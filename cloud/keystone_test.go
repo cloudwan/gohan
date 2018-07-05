@@ -16,6 +16,10 @@
 package cloud
 
 import (
+	"net/http"
+
+	"github.com/cloudwan/gohan/schema"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/ghttp"
@@ -25,10 +29,10 @@ var _ = Describe("Keystone client", func() {
 	var (
 		server     *ghttp.Server
 		client     KeystoneClient
-		username   string = "admin"
-		password   string = "password"
-		domainName string = "domain"
-		tenantName string = "admin"
+		username   = "admin"
+		password   = "password"
+		domainName = "domain"
+		tenantName = "admin"
 	)
 
 	BeforeEach(func() {
@@ -39,7 +43,7 @@ var _ = Describe("Keystone client", func() {
 		server.Close()
 	})
 
-	Describe("Match verion from auth URL", func() {
+	Describe("Match version from auth URL", func() {
 		It("Should match v2 version successfully", func() {
 			res := matchVersionFromAuthURL("http://example.com:5000/v2.0")
 			Expect(res).To(Equal("v2.0"))
@@ -168,6 +172,84 @@ var _ = Describe("Keystone client", func() {
 				tenantName, err := client.GetTenantName("santa")
 				Expect(tenantName).To(Equal(""))
 				Expect(err).To(MatchError("Tenant with ID 'santa' not found"))
+			})
+
+			Context("With expired service token and successful re-authentication", func() {
+				var (
+					serviceTokenRequest map[string]interface{}
+					newServiceToken     = "new-service-token"
+					invalidUserToken    = "invalid-user-token"
+					validUserToken      = "valid-user-token"
+				)
+
+				BeforeEach(func() {
+					serviceTokenRequest = map[string]interface{}{
+						"auth": map[string]interface{}{
+							"identity": map[string]interface{}{
+								"methods": []interface{}{
+									"password",
+								},
+								"password": map[string]interface{}{
+									"user": map[string]interface{}{
+										"password": password,
+										"name":     username,
+										"domain": map[string]interface{}{
+											"name": domainName,
+										},
+									},
+								},
+							},
+							"scope": map[string]interface{}{
+								"project": map[string]interface{}{
+									"domain": map[string]interface{}{
+										"name": domainName,
+									},
+									"name": tenantName,
+								},
+							},
+						},
+					}
+
+					server.AppendHandlers(
+						ghttp.RespondWithJSONEncoded(401, getV3Unauthorized()),
+						ghttp.CombineHandlers(
+							ghttp.VerifyJSONRepresenting(serviceTokenRequest),
+							ghttp.RespondWithJSONEncoded(201, getV3TokensResponse(), http.Header{"X-Subject-Token": {newServiceToken}}),
+						),
+					)
+				})
+
+				It("reject invalid user token", func() {
+					server.AppendHandlers(
+						ghttp.CombineHandlers(
+							ghttp.VerifyHeader(http.Header{
+								"X-Auth-Token":    {newServiceToken},
+								"X-Subject-Token": {invalidUserToken},
+							}),
+							ghttp.RespondWith(404, ""),
+						),
+					)
+
+					_, err := client.VerifyToken(invalidUserToken)
+					Expect(err).To(MatchError("Invalid token"))
+				})
+
+				It("accept valid user token", func() {
+					server.AppendHandlers(
+						ghttp.CombineHandlers(
+							ghttp.VerifyHeader(http.Header{
+								"X-Auth-Token":    {newServiceToken},
+								"X-Subject-Token": {validUserToken},
+							}),
+							ghttp.RespondWithJSONEncoded(200, getV3TokensResponse()),
+						),
+					)
+					auth, err := client.VerifyToken(validUserToken)
+					Expect(err).To(BeNil())
+					Expect(auth.TenantID()).To(Equal("acme-id"))
+					Expect(auth.TenantName()).To(Equal("acme"))
+					Expect(auth.Roles()).To(Equal([]*schema.Role{{"member"}}))
+				})
 			})
 		})
 	})

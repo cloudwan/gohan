@@ -23,8 +23,6 @@ import (
 
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
-
-	"github.com/cloudwan/gohan/cloud"
 )
 
 func newClient(endpoint string) (*gophercloud.ProviderClient, error) {
@@ -82,7 +80,6 @@ func GetOpenstackClient(authURL, userName, password, domainName, tenantName, ten
 	if err != nil {
 		return nil, err
 	}
-	client.HTTPClient = cloud.NewHTTPClient()
 	if version == "v2.0" {
 		return openstack.NewIdentityV2(client, gophercloud.EndpointOpts{})
 	} else if version == "v3" {
