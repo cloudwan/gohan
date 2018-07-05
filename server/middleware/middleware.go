@@ -17,6 +17,7 @@ package middleware
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -56,7 +57,7 @@ func (rh *responseHijacker) CloseNotify() <-chan bool {
 
 //Logging logs requests and responses
 func Logging() martini.Handler {
-	return func(res http.ResponseWriter, req *http.Request, c martini.Context) {
+	return func(req *http.Request, rw http.ResponseWriter, c martini.Context, requestContext Context) {
 		if strings.HasPrefix(req.URL.Path, webuiPATH) {
 			c.Next()
 			return
@@ -75,22 +76,21 @@ func Logging() martini.Handler {
 		buff := ioutil.NopCloser(bytes.NewBuffer(reqData))
 		req.Body = buff
 
-		log.Info("Started %s %s for client %s data: %s",
-			req.Method, req.URL.String(), addr, string(reqData))
-		log.Debug("Request headers: %v", filterHeaders(req.Header))
-		log.Debug("Request body: %s", string(reqData))
+		log.Info("[%s] Started %s %s for client %s data: %s",
+			requestContext["trace_id"], req.Method, req.URL.String(), addr, string(reqData))
+		log.Debug("[%s] Request headers: %v", requestContext["trace_id"], filterHeaders(req.Header))
+		log.Debug("[%s] Request body: %s", requestContext["trace_id"], string(reqData))
 
-		rw := res.(martini.ResponseWriter)
-		rh := newResponseHijacker(rw)
+		rh := newResponseHijacker(rw.(martini.ResponseWriter))
 		c.MapTo(rh, (*http.ResponseWriter)(nil))
 		c.MapTo(rh, (*martini.ResponseWriter)(nil))
 
 		c.Next()
 
 		response, _ := ioutil.ReadAll(rh.Response)
-		log.Debug("Response headers: %v", rh.Header())
-		log.Debug("Response body: %s", string(response))
-		log.Info("Completed %v %s in %v", rw.Status(), http.StatusText(rw.Status()), time.Since(start))
+		log.Debug("[%s] Response headers: %v", requestContext["trace_id"], rh.Header())
+		log.Debug("[%s] Response body: %s", requestContext["trace_id"], string(response))
+		log.Info("[%s] Completed %v %s in %v", requestContext["trace_id"], rh.Status(), http.StatusText(rh.Status()), time.Since(start))
 	}
 }
 
@@ -322,9 +322,37 @@ type Context map[string]interface{}
 
 //WithContext injects new empty context object
 func WithContext() martini.Handler {
-	return func(c martini.Context) {
-		c.Map(Context{})
+	return func(c martini.Context, res http.ResponseWriter, req *http.Request) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		requestContext := Context{
+			"context": ctx,
+		}
+		c.Map(requestContext)
+
+		go func(requestClosedCh <-chan bool) {
+			select {
+			case <-requestClosedCh:
+				metrics.UpdateCounter(1, "req.peer_disconnect")
+				cancel()
+			case <-ctx.Done():
+				break
+			}
+		}(res.(http.CloseNotifier).CloseNotify())
+
+		c.Next()
 	}
+}
+
+func Tracing() martini.Handler {
+	return func(ctx Context) {
+		ctx["trace_id"] = util.NewTraceID()
+	}
+}
+
+func newTraceID() string {
+	return uuid.NewV4().String()
 }
 
 //Authorization checks user permissions against policy

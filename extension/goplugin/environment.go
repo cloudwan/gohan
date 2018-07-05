@@ -18,7 +18,6 @@ package goplugin
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"path/filepath"
 	"plugin"
 	"reflect"
@@ -30,7 +29,6 @@ import (
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/extension/goext"
 	gohan_logger "github.com/cloudwan/gohan/log"
-	"github.com/cloudwan/gohan/metrics"
 	"github.com/cloudwan/gohan/schema"
 	gohan_sync "github.com/cloudwan/gohan/sync"
 	"github.com/mohae/deepcopy"
@@ -435,12 +433,8 @@ func dumpStackTrace(logger goext.ILogger, err error) {
 }
 
 func handleEventForEnv(env IEnvironment, event string, requestContext map[string]interface{}) error {
-	if !hasInterrupt(requestContext) {
-		interrupt := newInterrupt(env, event, requestContext)
-		defer func() {
-			interrupt.Cleanup()
-		}()
-	}
+	cleanup := addTimeout(env, event, requestContext)
+	defer cleanup()
 
 	requestContext["event_type"] = event
 
@@ -487,107 +481,39 @@ func handleEventForEnv(env IEnvironment, event string, requestContext map[string
 	return nil
 }
 
-func hasInterrupt(requestContext map[string]interface{}) bool {
-	_, cancelFound := requestContext["context"]
-	return cancelFound
-}
-
-// interrupt decorates a request identified by requestContext with a context.Context
-// inserted into requestContext["context"]. This context will be canceled when
-// a. extension timeout expires
-// b. HTTP client disconnects
-// Interrupts are constructed
-// Users of interrupt are supposed to call Cleanup() when request processing is done
-type interrupt struct {
-	env            IEnvironment
-	event          string
-	requestContext map[string]interface{}
-	done           chan struct{}
-	ctx            context.Context
-	cancel         context.CancelFunc
-}
-
-func newInterrupt(env IEnvironment, event string, requestContext map[string]interface{}) *interrupt {
-	ctx, cancel := context.WithCancel(context.Background())
-	doneCh := make(chan struct{}, 1)
-	interrupt := &interrupt{env, event, requestContext, doneCh, ctx, cancel}
-
-	interrupt.cancelOnTimeout()
-	interrupt.cancelOnPeerDisconnect()
-	interrupt.cancelOnDone()
-
-	requestContext["context"] = interrupt.ctx
-	return interrupt
-}
-
-func (i *interrupt) cancelOnTimeout() {
-	selectedTimeLimit := i.env.getTimeLimit()
-	for _, timeLimit := range i.env.getTimeLimits() {
-		if timeLimit.Match(i.event) {
-			selectedTimeLimit = timeLimit.TimeDuration
-			break
-		}
-	}
-	if selectedTimeLimit == 0 {
-		return
+func addTimeout(env IEnvironment, event string, requestContext map[string]interface{}) func() {
+	timeout := getTimeout(env, event)
+	if timeout == 0 {
+		return func() {}
 	}
 
-	timer := time.AfterFunc(selectedTimeLimit, func() {
-		i.env.Logger().Warningf("Timeout expired for event %s", i.event)
-		i.cancel()
-	})
+	oldCtx := requestContext["context"].(context.Context)
+	newCtx, cancel := context.WithTimeout(oldCtx, timeout)
+	requestContext["context"] = newCtx
 
-	go func() {
-		select {
-		case <-i.done:
-			timer.Stop()
-		}
-	}()
-}
-
-func (i *interrupt) cancelOnPeerDisconnect() {
-	closeNotify := getCloseChannel(i.requestContext)
-	go func() {
-		select {
-		case <-closeNotify:
-			i.env.Logger().Infof("Client disconnected for event %s", i.event)
-			metrics.UpdateCounter(1, "req.peer_disconnect")
-			i.cancel()
-		case <-i.done:
-			return
-		}
-	}()
-}
-
-func getCloseChannel(requestContext map[string]interface{}) <-chan bool {
-	var closeNotifier http.CloseNotifier
-	var closeNotify <-chan bool
-	if httpResponse, ok := requestContext["http_response"]; ok {
-		if closeNotifier, ok = httpResponse.(http.CloseNotifier); ok {
-			closeNotify = closeNotifier.CloseNotify()
-		}
-	}
-	return closeNotify
-}
-
-func (i *interrupt) cancelOnDone() {
-	go func() {
-		select {
-		case <-i.done:
-			// workaround for https://github.com/mattn/go-sqlite3/issues/380
-			// canceling the context immediately causes a race in go-sqlite3
-			// when we're done with the request the context does not matter any more,
-			// so the delay is harmless. for code clarity the goroutine + the delay
+	return func() {
+		go func() {
+			// Workaround for https://github.com/mattn/go-sqlite3/issues/380.
+			// Canceling the context immediately causes a race in go-sqlite3.
+			// When we're done with the request the context does not matter any more,
+			// so the delay is harmless. For code clarity the goroutine + the delay
 			// should be removed then the go-sqlite3 bug is fixed.
 			time.Sleep(time.Millisecond * 5)
-			i.cancel()
-		}
-	}()
+			cancel()
+		}()
+
+		requestContext["context"] = oldCtx
+	}
 }
 
-func (i *interrupt) Cleanup() {
-	close(i.done) // closes any waiting goroutines
-	delete(i.requestContext, "context")
+func getTimeout(env IEnvironment, event string) time.Duration {
+	for _, timeLimit := range env.getTimeLimits() {
+		if timeLimit.Match(event) {
+			return timeLimit.TimeDuration
+		}
+	}
+
+	return env.getTimeLimit()
 }
 
 // RegisterEventHandler registers an event handler

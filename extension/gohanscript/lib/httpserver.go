@@ -70,6 +70,8 @@ func httpServer(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interface{}
 			"history": history,
 		}
 		m.Handlers()
+		m.Use(middleware.WithContext())
+		m.Use(middleware.Tracing())
 		m.Use(middleware.Logging())
 		m.Use(martini.Recovery())
 		rawBody := util.MaybeMap(stmt.RawData["http_server"])
