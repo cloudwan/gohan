@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/cloudwan/gohan/db"
+	"github.com/cloudwan/gohan/db/dbimpl"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/pagination"
 	. "github.com/cloudwan/gohan/db/sql"
@@ -55,16 +56,16 @@ var _ = Describe("Sql", func() {
 		}
 
 		manager := schema.GetManager()
-		dbc, err := db.ConnectDB(dbType, conn, db.DefaultMaxOpenConn, options.Default())
+		dbc, err := dbimpl.ConnectDB(dbType, conn, db.DefaultMaxOpenConn, options.Default())
 		sqlConn = dbc.(*DB)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manager.LoadSchemasFromFiles(
 			"../../etc/schema/gohan.json", "../../tests/test_abstract_schema.yaml", "../../tests/test_schema.yaml")).To(Succeed())
-		db.InitDBWithSchemas(dbType, conn, db.DefaultTestInitDBParams())
+		dbimpl.InitDBWithSchemas(dbType, conn, db.DefaultTestInitDBParams())
 		// Insert fixture data
-		fixtureDB, err := db.ConnectDB("json", testFixtures, db.DefaultMaxOpenConn, options.Default())
+		fixtureDB, err := dbimpl.ConnectDB("json", testFixtures, db.DefaultMaxOpenConn, options.Default())
 		Expect(err).ToNot(HaveOccurred())
-		db.CopyDBResources(fixtureDB, dbc, true)
+		dbimpl.CopyDBResources(fixtureDB, dbc, true)
 
 		tx, err = dbc.Begin()
 		Expect(err).ToNot(HaveOccurred())

@@ -16,7 +16,6 @@
 package runner
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -26,6 +25,7 @@ import (
 	"github.com/robertkrimen/otto"
 
 	"github.com/cloudwan/gohan/db"
+	"github.com/cloudwan/gohan/db/dbimpl"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/extension"
@@ -110,7 +110,7 @@ func (env *Environment) InitializeEnvironment() error {
 		return fmt.Errorf("Failed to load extensions for '%s': %s", env.testFileName, err)
 	}
 
-	if err = db.InitDBWithSchemas("sqlite3", env.memoryDbConn(), db.DefaultTestInitDBParams()); err != nil {
+	if err = dbimpl.InitDBWithSchemas("sqlite3", env.memoryDbConn(), db.DefaultTestInitDBParams()); err != nil {
 		schema.ClearManager()
 		return fmt.Errorf("Failed to init DB: %s", err)
 	}
@@ -154,7 +154,7 @@ func (env *Environment) CheckAllMockCallsMade() error {
 }
 
 func newDBConnection(dbfilename string) (db.DB, error) {
-	connection, err := db.ConnectDB("sqlite3", dbfilename, db.DefaultMaxOpenConn, options.Default())
+	connection, err := dbimpl.ConnectDB("sqlite3", dbfilename, db.DefaultMaxOpenConn, options.Default())
 	if err != nil {
 		return nil, err
 	}
@@ -247,7 +247,7 @@ func (env *Environment) getTransaction(isNew bool, options *transaction.TxOption
 			}
 		}
 	}
-	tx, _ := env.dbConnection.BeginTx(context.Background(), options)
+	tx, _ := env.dbConnection.Begin(transaction.WithIsolationLevel(options.IsolationLevel))
 	env.dbTransactions = append(env.dbTransactions, tx)
 	return tx, nil
 }

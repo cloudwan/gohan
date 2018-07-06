@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/cloudwan/gohan/db"
+	"github.com/cloudwan/gohan/db/dbimpl"
 	"github.com/cloudwan/gohan/db/mocks"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/transaction"
@@ -123,7 +124,7 @@ var _ = Describe("Database operation test", func() {
 
 		JustBeforeEach(func() {
 			os.Remove(conn)
-			dataStore, err = db.ConnectDB(dbType, conn, db.DefaultMaxOpenConn, options.Default())
+			dataStore, err = dbimpl.ConnectDB(dbType, conn, db.DefaultMaxOpenConn, options.Default())
 			Expect(err).ToNot(HaveOccurred())
 
 			for _, s := range manager.Schemas() {
@@ -370,7 +371,7 @@ var _ = Describe("Database operation test", func() {
 		})
 
 		It("Should initialize the database without error", func() {
-			Expect(db.InitDBWithSchemas(dbType, conn, db.DefaultTestInitDBParams())).To(Succeed())
+			Expect(dbimpl.InitDBWithSchemas(dbType, conn, db.DefaultTestInitDBParams())).To(Succeed())
 		})
 	})
 
@@ -380,23 +381,23 @@ var _ = Describe("Database operation test", func() {
 		})
 
 		It("Should do it properly", func() {
-			inDB, err := db.ConnectDB("yaml", "test_data/conv_in.yaml", db.DefaultMaxOpenConn, options.Default())
+			inDB, err := dbimpl.ConnectDB("yaml", "test_data/conv_in.yaml", db.DefaultMaxOpenConn, options.Default())
 			Expect(err).ToNot(HaveOccurred())
 			defer os.Remove("test_data/conv_in.db")
 
-			db.InitDBWithSchemas("sqlite3", "test_data/conv_out.db", db.DefaultTestInitDBParams())
-			outDB, err := db.ConnectDB("sqlite3", "test_data/conv_out.db", db.DefaultMaxOpenConn, options.Default())
+			dbimpl.InitDBWithSchemas("sqlite3", "test_data/conv_out.db", db.DefaultTestInitDBParams())
+			outDB, err := dbimpl.ConnectDB("sqlite3", "test_data/conv_out.db", db.DefaultMaxOpenConn, options.Default())
 			Expect(err).ToNot(HaveOccurred())
 			defer os.Remove("test_data/conv_out.db")
 
-			db.InitDBWithSchemas("yaml", "test_data/conv_verify.yaml", db.DefaultTestInitDBParams())
-			verifyDB, err := db.ConnectDB("yaml", "test_data/conv_verify.yaml", db.DefaultMaxOpenConn, options.Default())
+			dbimpl.InitDBWithSchemas("yaml", "test_data/conv_verify.yaml", db.DefaultTestInitDBParams())
+			verifyDB, err := dbimpl.ConnectDB("yaml", "test_data/conv_verify.yaml", db.DefaultMaxOpenConn, options.Default())
 			Expect(err).ToNot(HaveOccurred())
 			defer os.Remove("test_data/conv_verify.yaml")
 
-			Expect(db.CopyDBResources(inDB, outDB, true)).To(Succeed())
+			Expect(dbimpl.CopyDBResources(inDB, outDB, true)).To(Succeed())
 
-			Expect(db.CopyDBResources(outDB, verifyDB, true)).To(Succeed())
+			Expect(dbimpl.CopyDBResources(outDB, verifyDB, true)).To(Succeed())
 
 			inTx, err := inDB.Begin()
 			Expect(err).ToNot(HaveOccurred())
@@ -423,19 +424,19 @@ var _ = Describe("Database operation test", func() {
 		})
 
 		It("Should not override existing rows", func() {
-			inDB, err := db.ConnectDB("yaml", "test_data/conv_in.yaml", db.DefaultMaxOpenConn, options.Default())
+			inDB, err := dbimpl.ConnectDB("yaml", "test_data/conv_in.yaml", db.DefaultMaxOpenConn, options.Default())
 			Expect(err).ToNot(HaveOccurred())
 			defer os.Remove("test_data/conv_in.db")
 
-			db.InitDBWithSchemas("sqlite3", "test_data/conv_out.db", db.DefaultTestInitDBParams())
-			outDB, err := db.ConnectDB("sqlite3", "test_data/conv_out.db", db.DefaultMaxOpenConn, options.Default())
+			dbimpl.InitDBWithSchemas("sqlite3", "test_data/conv_out.db", db.DefaultTestInitDBParams())
+			outDB, err := dbimpl.ConnectDB("sqlite3", "test_data/conv_out.db", db.DefaultMaxOpenConn, options.Default())
 			Expect(err).ToNot(HaveOccurred())
 			defer os.Remove("test_data/conv_out.db")
 
 			Expect(err).ToNot(HaveOccurred())
 			defer os.Remove("test_data/conv_verify.yaml")
 
-			Expect(db.CopyDBResources(inDB, outDB, false)).To(Succeed())
+			Expect(dbimpl.CopyDBResources(inDB, outDB, false)).To(Succeed())
 			subnetSchema, _ := manager.Schema("subnet")
 
 			// Update some data
@@ -453,7 +454,7 @@ var _ = Describe("Database operation test", func() {
 			tx.Commit()
 			tx.Close()
 
-			Expect(db.CopyDBResources(inDB, outDB, false)).To(Succeed())
+			Expect(dbimpl.CopyDBResources(inDB, outDB, false)).To(Succeed())
 			// check description of subnetRedA
 			tx, err = outDB.Begin()
 			Expect(err).ToNot(HaveOccurred())
@@ -489,15 +490,15 @@ var _ = Describe("Database operation test", func() {
 		BeforeEach(func() {
 			os.Remove(deadlockDbName)
 			Expect(manager.LoadSchemaFromFile(deadlockDbSchema)).To(Succeed())
-			Expect(db.InitDBWithSchemas(deadlockDbType, deadlockDbName, db.DefaultTestInitDBParams())).To(Succeed())
-			firstConn, err = db.ConnectDB(deadlockDbType, deadlockDbName, db.DefaultMaxOpenConn, connOpts)
+			Expect(dbimpl.InitDBWithSchemas(deadlockDbType, deadlockDbName, db.DefaultTestInitDBParams())).To(Succeed())
+			firstConn, err = dbimpl.ConnectDB(deadlockDbType, deadlockDbName, db.DefaultMaxOpenConn, connOpts)
 			Expect(err).ToNot(HaveOccurred())
-			secondConn, err = db.ConnectDB(deadlockDbType, deadlockDbName, db.DefaultMaxOpenConn, connOpts)
+			secondConn, err = dbimpl.ConnectDB(deadlockDbType, deadlockDbName, db.DefaultMaxOpenConn, connOpts)
 			Expect(err).ToNot(HaveOccurred())
-			initDB, err := db.ConnectDB("yaml", deadlockDbInitial, db.DefaultMaxOpenConn, options.Default())
+			initDB, err := dbimpl.ConnectDB("yaml", deadlockDbInitial, db.DefaultMaxOpenConn, options.Default())
 			defer initDB.Close()
 			Expect(err).ToNot(HaveOccurred())
-			Expect(db.CopyDBResources(initDB, firstConn, false)).To(Succeed())
+			Expect(dbimpl.CopyDBResources(initDB, firstConn, false)).To(Succeed())
 		})
 
 		AfterEach(func() {
@@ -508,8 +509,8 @@ var _ = Describe("Database operation test", func() {
 
 		It("Within() should retry a few times after a deadlock", func() {
 			deadlockCount := 0
-			Expect(db.Within(firstConn, func(firstTx transaction.Transaction) error {
-				err := db.Within(secondConn, func(secondTx transaction.Transaction) error {
+			Expect(db.WithinTx(firstConn, func(firstTx transaction.Transaction) error {
+				err := db.WithinTx(secondConn, func(secondTx transaction.Transaction) error {
 					Expect(firstTx.Exec("update todos set name = 'other_name' where id = 'first'")).To(Succeed())
 					deadlockCount++
 					if deadlockCount == 4 {
@@ -539,9 +540,9 @@ var _ = Describe("Database operation test", func() {
 		It("should not panic on DB errors", func() {
 			opts := options.Options{RetryTxCount: 3, RetryTxInterval: 0}
 			mockDB.EXPECT().Options().Return(opts)
-			mockDB.EXPECT().Begin().Return(nil, errors.New("test error"))
+			mockDB.EXPECT().BeginTx().Return(nil, errors.New("test error"))
 
-			err := db.Within(mockDB, func(_ transaction.Transaction) error {
+			err := db.WithinTx(mockDB, func(_ transaction.Transaction) error {
 				panic("should never be called")
 			})
 

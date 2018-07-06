@@ -5,12 +5,12 @@
 package mock_db
 
 import (
-	context "context"
+	reflect "reflect"
+
 	options "github.com/cloudwan/gohan/db/options"
 	transaction "github.com/cloudwan/gohan/db/transaction"
 	schema "github.com/cloudwan/gohan/schema"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
 // MockDB is a mock of DB interface
@@ -59,29 +59,20 @@ func (mr *MockDBMockRecorder) Close() *gomock.Call {
 }
 
 // Begin mocks base method
-func (m *MockDB) Begin() (transaction.Transaction, error) {
-	ret := m.ctrl.Call(m, "Begin")
+func (m *MockDB) Begin(options ...transaction.OptionTxParams) (transaction.Transaction, error) {
+	varargs := []interface{}{}
+	for _, a := range options {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Begin", varargs...)
 	ret0, _ := ret[0].(transaction.Transaction)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Begin indicates an expected call of Begin
-func (mr *MockDBMockRecorder) Begin() *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Begin", reflect.TypeOf((*MockDB)(nil).Begin))
-}
-
-// BeginTx mocks base method
-func (m *MockDB) BeginTx(ctx context.Context, options *transaction.TxOptions) (transaction.Transaction, error) {
-	ret := m.ctrl.Call(m, "BeginTx", ctx, options)
-	ret0, _ := ret[0].(transaction.Transaction)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// BeginTx indicates an expected call of BeginTx
-func (mr *MockDBMockRecorder) BeginTx(ctx, options interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BeginTx", reflect.TypeOf((*MockDB)(nil).BeginTx), ctx, options)
+func (mr *MockDBMockRecorder) Begin(options ...interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Begin", reflect.TypeOf((*MockDB)(nil).Begin), options...)
 }
 
 // RegisterTable mocks base method
@@ -118,4 +109,63 @@ func (m *MockDB) Options() options.Options {
 // Options indicates an expected call of Options
 func (mr *MockDBMockRecorder) Options() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Options", reflect.TypeOf((*MockDB)(nil).Options))
+}
+
+// MockITransaction is a mock of ITransaction interface
+type MockITransaction struct {
+	ctrl     *gomock.Controller
+	recorder *MockITransactionMockRecorder
+}
+
+// MockITransactionMockRecorder is the mock recorder for MockITransaction
+type MockITransactionMockRecorder struct {
+	mock *MockITransaction
+}
+
+// NewMockITransaction creates a new mock instance
+func NewMockITransaction(ctrl *gomock.Controller) *MockITransaction {
+	mock := &MockITransaction{ctrl: ctrl}
+	mock.recorder = &MockITransactionMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockITransaction) EXPECT() *MockITransactionMockRecorder {
+	return m.recorder
+}
+
+// Commit mocks base method
+func (m *MockITransaction) Commit() error {
+	ret := m.ctrl.Call(m, "Commit")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Commit indicates an expected call of Commit
+func (mr *MockITransactionMockRecorder) Commit() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Commit", reflect.TypeOf((*MockITransaction)(nil).Commit))
+}
+
+// Close mocks base method
+func (m *MockITransaction) Close() error {
+	ret := m.ctrl.Call(m, "Close")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Close indicates an expected call of Close
+func (mr *MockITransactionMockRecorder) Close() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockITransaction)(nil).Close))
+}
+
+// Closed mocks base method
+func (m *MockITransaction) Closed() bool {
+	ret := m.ctrl.Call(m, "Closed")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// Closed indicates an expected call of Closed
+func (mr *MockITransactionMockRecorder) Closed() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Closed", reflect.TypeOf((*MockITransaction)(nil).Closed))
 }

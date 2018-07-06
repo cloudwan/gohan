@@ -44,7 +44,7 @@ var _ = Describe("Sync watcher test", func() {
 	})
 
 	AfterEach(func() {
-		Expect(db.Within(testDB, func(tx transaction.Transaction) error {
+		Expect(db.WithinTx(testDB, func(tx transaction.Transaction) error {
 			for _, schema := range schema.GetManager().Schemas() {
 				if whitelist[schema.ID] {
 					continue

@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/cloudwan/gohan/db"
+	"github.com/cloudwan/gohan/db/dbimpl"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/extension/goext"
 	"github.com/cloudwan/gohan/extension/goext/filter"
@@ -59,7 +60,7 @@ var _ = Describe("Schemas", func() {
 		schemaManager = schema.GetManager()
 		Expect(schemaManager.LoadSchemaFromFile(SchemaPath)).To(Succeed())
 		var err error
-		rawDB, err = db.ConnectDB(dbType, dbFile, db.DefaultMaxOpenConn, options.Default())
+		rawDB, err = dbimpl.ConnectDB(dbType, dbFile, db.DefaultMaxOpenConn, options.Default())
 		Expect(err).To(BeNil())
 		env = goplugin.NewEnvironment("test", nil, nil)
 		env.SetDatabase(rawDB)
@@ -72,7 +73,7 @@ var _ = Describe("Schemas", func() {
 		Expect(testSuiteSchema).To(Not(BeNil()))
 		testSchemaNoExtensions = env.Schemas().Find("test_schema_no_ext")
 		Expect(testSchemaNoExtensions).To(Not(BeNil()))
-		Expect(db.InitDBWithSchemas(dbType, dbFile, db.DefaultTestInitDBParams())).To(Succeed())
+		Expect(dbimpl.InitDBWithSchemas(dbType, dbFile, db.DefaultTestInitDBParams())).To(Succeed())
 	})
 
 	AfterEach(func() {
@@ -333,7 +334,7 @@ var _ = Describe("Schemas", func() {
 			Expect(err).To(MatchError("Cannot delete with empty filter"))
 		})
 
-		Context("Query filters", func(){
+		Context("Query filters", func() {
 			It("Should list resources using And", func() {
 				Expect(testSchema.CreateRaw(&createdResource, context)).To(Succeed())
 

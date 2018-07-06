@@ -16,7 +16,6 @@
 package otto
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/robertkrimen/otto"
@@ -44,16 +43,17 @@ func init() {
 				var tx transaction.Transaction
 				var err error
 
+				opts := []transaction.OptionTxParams{}
+
 				if setTxIsolationLevel {
 					strIsolationLevel, err := GetString(call.Argument(0))
 					if err != nil {
 						ThrowOttoException(&call, err.Error())
 					}
-					txOptions := &transaction.TxOptions{IsolationLevel: transaction.Type(strIsolationLevel)}
-					tx, err = env.DataStore.BeginTx(context.Background(), txOptions)
-				} else {
-					tx, err = env.DataStore.Begin()
+					opts = append(opts, transaction.WithIsolationLevel(transaction.Type(strIsolationLevel)))
 				}
+
+				tx, err = env.DataStore.Begin(opts...)
 
 				if err != nil {
 					ThrowOttoException(&call, "failed to start a transaction: %s", err.Error())

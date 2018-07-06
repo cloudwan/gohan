@@ -102,7 +102,7 @@ var _ = Describe("GohanDb", func() {
 				)
 
 				mockDB := db_mocks.NewMockDB(mockCtrl)
-				mockDB.EXPECT().Begin().Return(mockTx, nil)
+				mockDB.EXPECT().BeginTx(gomock.Any()).Return(mockTx, nil)
 				env := newEnvironmentWithExtension(ext, mockDB)
 
 				context := map[string]interface{}{}
@@ -131,9 +131,14 @@ var _ = Describe("GohanDb", func() {
 					mockTx.EXPECT().Close().Return(nil).Times(2),
 				)
 
-				serializableIsolation := transaction.TxOptions{IsolationLevel: transaction.Serializable}
 				mockDB := db_mocks.NewMockDB(mockCtrl)
-				mockDB.EXPECT().BeginTx(gomock.Any(), gomock.Eq(&serializableIsolation)).Return(mockTx, nil)
+				mockDB.EXPECT().BeginTx(gomock.Any()).DoAndReturn(func(opt ...transaction.OptionTxParams) (transaction.Transaction, error) {
+					Expect(len(opt)).To(Equal(1))
+					params := &transaction.TxParams{}
+					opt[0](params)
+					Expect(params.IsolationLevel).To(Equal(transaction.Serializable))
+					return mockTx, nil
+				})
 				env := newEnvironmentWithExtension(ext, mockDB)
 
 				context := map[string]interface{}{

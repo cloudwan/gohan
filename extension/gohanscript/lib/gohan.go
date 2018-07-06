@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/cloudwan/gohan/db"
+	"github.com/cloudwan/gohan/db/dbimpl"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/sql"
 	"github.com/cloudwan/gohan/db/transaction"
@@ -115,12 +116,12 @@ func GohanLoadSchema(src string) (interface{}, error) {
 
 //ConnectDB start connection to db
 func ConnectDB(dbType string, connection string, maxOpenConn int) (db.DB, error) {
-	return db.ConnectDB(dbType, connection, maxOpenConn, options.Default())
+	return dbimpl.ConnectDB(dbType, connection, maxOpenConn, options.Default())
 }
 
 //InitDB initializes database using schema.
 func InitDB(dbType string, connection string, dropOnCreate bool, cascade bool) error {
-	err := db.InitDBWithSchemas(dbType, connection, db.InitDBParams{
+	err := dbimpl.InitDBWithSchemas(dbType, connection, db.InitDBParams{
 		DropOnCreate: dropOnCreate,
 		Cascade:      cascade,
 		AutoMigrate:  false,

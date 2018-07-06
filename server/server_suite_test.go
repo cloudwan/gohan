@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/cloudwan/gohan/db"
+	"github.com/cloudwan/gohan/db/dbimpl"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/schema"
 	. "github.com/onsi/ginkgo"
@@ -62,7 +63,7 @@ var _ = Describe("Suit set up and tear down", func() {
 
 	var _ = BeforeSuite(func() {
 		var err error
-		testDB, err = db.ConnectDB(dbType, conn, db.DefaultMaxOpenConn, options.Default())
+		testDB, err = dbimpl.ConnectDB(dbType, conn, db.DefaultMaxOpenConn, options.Default())
 		Expect(err).ToNot(HaveOccurred(), "Failed to connect database.")
 		if os.Getenv("MYSQL_TEST") == "true" {
 			err = startTestServer("./server_test_mysql_config.yaml")

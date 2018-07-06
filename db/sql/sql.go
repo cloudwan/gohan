@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -352,53 +351,24 @@ func (db *DB) Close() {
 	db.DB.Close()
 }
 
-//Begin starts new transaction
-func (db *DB) Begin() (tx transaction.Transaction, err error) {
-	defer db.measureTime(time.Now(), "begin")
-	db.updateCounter(1, "begin.waiting")
-	defer db.updateCounter(-1, "begin.waiting")
-
-	var transx Transaction
-	rawTx, err := db.DB.Beginx()
-	if err != nil {
-		db.updateCounter(1, "begin.failed")
-		return nil, err
-	}
-	db.updateCounter(1, "active")
-
-	if db.sqlType == "sqlite3" {
-		rawTx.Exec("PRAGMA foreign_keys = ON;")
-	}
-	transx = Transaction{
-		db:             db,
-		transaction:    rawTx,
-		closed:         false,
-		isolationLevel: transaction.RepeatableRead,
-	}
-
-	if os.Getenv("FUZZY_DB_TX") == "true" {
-		log.Notice("FUZZY_DB_TX is enabled")
-		tx = &transaction.FuzzyTransaction{Tx: transaction.Transaction(&transx)}
-	} else {
-		tx = MakeCachedTransaction(&transx)
-	}
-	log.Debug("[%p] Created transaction %#v, isolation level: %s", rawTx, rawTx, transx.GetIsolationLevel())
-	return
-}
-
-//BeginTx starts new transaction with given transaction options
-func (db *DB) BeginTx(ctx context.Context, options *transaction.TxOptions) (tx transaction.Transaction, err error) {
+//Begin starts new transaction with given transaction options
+func (db *DB) Begin(options ...transaction.OptionTxParams) (tx transaction.Transaction, err error) {
 	defer db.measureTime(time.Now(), "begin_tx")
 	db.updateCounter(1, "begin.waiting")
 	defer db.updateCounter(-1, "begin.waiting")
 
+	params := transaction.NewTxParams(options...)
+	todo_options := transaction.TxOptions{
+		params.IsolationLevel,
+	}
+
 	var transx Transaction
-	sqlOptions, err := mapTxOptions(options)
+	sqlOptions, err := mapTxOptions(&todo_options)
 	if err != nil {
 		return nil, err
 	}
 
-	rawTx, err := db.DB.BeginTxx(ctx, sqlOptions)
+	rawTx, err := db.DB.BeginTxx(params.Context, sqlOptions)
 	if err != nil {
 		db.updateCounter(1, "begin.failed")
 		return nil, err
@@ -411,7 +381,7 @@ func (db *DB) BeginTx(ctx context.Context, options *transaction.TxOptions) (tx t
 		db:             db,
 		transaction:    rawTx,
 		closed:         false,
-		isolationLevel: options.IsolationLevel,
+		isolationLevel: params.IsolationLevel,
 	}
 	if transx.isolationLevel == transaction.RepeatableRead || transx.isolationLevel == transaction.Serializable {
 		tx = MakeCachedTransaction(&transx)

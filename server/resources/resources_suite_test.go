@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/cloudwan/gohan/db"
+	"github.com/cloudwan/gohan/db/dbimpl"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
@@ -90,7 +91,7 @@ var _ = Describe("Suite set up and tear down", func() {
 	var _ = BeforeSuite(func() {
 		var err error
 		Expect(os.Chdir(configDir)).To(Succeed())
-		testDB, err = db.ConnectDB(dbType, dbFile, db.DefaultMaxOpenConn, options.Default())
+		testDB, err = dbimpl.ConnectDB(dbType, dbFile, db.DefaultMaxOpenConn, options.Default())
 		Expect(err).ToNot(HaveOccurred(), "Failed to connect database.")
 		testSync, err = etcdv3.NewSync([]string{testSyncEndpoint}, time.Second)
 		Expect(err).NotTo(HaveOccurred(), "Failed to connect to etcd")
@@ -100,7 +101,7 @@ var _ = Describe("Suite set up and tear down", func() {
 		schemaFiles := config.GetStringList("schemas", nil)
 		Expect(schemaFiles).NotTo(BeNil())
 		Expect(manager.LoadSchemasFromFiles(schemaFiles...)).To(Succeed())
-		Expect(db.InitDBWithSchemas(dbType, dbFile, db.DefaultTestInitDBParams())).To(Succeed())
+		Expect(dbimpl.InitDBWithSchemas(dbType, dbFile, db.DefaultTestInitDBParams())).To(Succeed())
 	})
 
 	var _ = AfterSuite(func() {

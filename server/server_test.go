@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/cloudwan/gohan/db"
+	"github.com/cloudwan/gohan/db/dbimpl"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
 	srv "github.com/cloudwan/gohan/server"
@@ -61,7 +62,7 @@ var (
 var _ = Describe("Server package test", func() {
 
 	AfterEach(func() {
-		Expect(db.Within(testDB, func(tx transaction.Transaction) error {
+		Expect(db.WithinTx(testDB, func(tx transaction.Transaction) error {
 			for _, schema := range schema.GetManager().Schemas() {
 				if whitelist[schema.ID] {
 					continue
@@ -1210,7 +1211,7 @@ func initBenchmarkDatabase() error {
 	schema.ClearManager()
 	manager := schema.GetManager()
 	manager.LoadSchemasFromFiles("../tests/test_abstract_schema.yaml", "../tests/test_schema.yaml", "../etc/schema/gohan.json")
-	return db.InitDBWithSchemas("mysql", "root@tcp(localhost:3306)/gohan_test", db.DefaultTestInitDBParams())
+	return dbimpl.InitDBWithSchemas("mysql", "root@tcp(localhost:3306)/gohan_test", db.DefaultTestInitDBParams())
 }
 
 func startTestServer(config string) error {

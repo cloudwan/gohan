@@ -30,6 +30,7 @@ import (
 	"github.com/cloudwan/gohan/extension/framework"
 	"github.com/cloudwan/gohan/extension/gohanscript"
 	// Import gohan extension autogen lib
+	"github.com/cloudwan/gohan/db/dbimpl"
 	_ "github.com/cloudwan/gohan/extension/gohanscript/autogen"
 	logger "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/schema"
@@ -242,7 +243,7 @@ Useful for development purposes.`,
 			if err := manager.OrderedLoadSchemasFromFiles(strings.Split(multipleSchemaFiles, ";")); err != nil {
 				util.ExitFatal(err)
 			}
-			if err := db.InitDBWithSchemas(dbType, dbConnection, db.InitDBParams{
+			if err := dbimpl.InitDBWithSchemas(dbType, dbConnection, db.InitDBParams{
 				DropOnCreate: dropOnCreate,
 				Cascade:      cascade,
 				AutoMigrate:  false,
@@ -295,16 +296,16 @@ Useful for development purposes.`,
 				util.ExitFatal("Error loading schema:", err)
 			}
 
-			inDB, err := db.ConnectDB(inType, in, db.DefaultMaxOpenConn, db_options.Default())
+			inDB, err := dbimpl.ConnectDB(inType, in, db.DefaultMaxOpenConn, db_options.Default())
 			if err != nil {
 				util.ExitFatal(err)
 			}
-			outDB, err := db.ConnectDB(outType, out, db.DefaultMaxOpenConn, db_options.Default())
+			outDB, err := dbimpl.ConnectDB(outType, out, db.DefaultMaxOpenConn, db_options.Default())
 			if err != nil {
 				util.ExitFatal(err)
 			}
 
-			err = db.CopyDBResources(inDB, outDB, true)
+			err = dbimpl.CopyDBResources(inDB, outDB, true)
 			if err != nil {
 				util.ExitFatal(err)
 			}
@@ -335,7 +336,7 @@ func getResyncCommand() cli.Command {
 				log.Fatalf("Chdir error: %s", err)
 			}
 
-			dbConn, err := db.CreateFromConfig(config)
+			dbConn, err := dbimpl.CreateFromConfig(config)
 			if err != nil {
 				log.Fatalf("Failed to create db conn, err: %s", err)
 			}

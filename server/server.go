@@ -33,6 +33,7 @@ import (
 
 	"github.com/braintree/manners"
 	"github.com/cloudwan/gohan/db"
+	"github.com/cloudwan/gohan/db/dbimpl"
 	"github.com/cloudwan/gohan/db/migration"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/transaction"
@@ -80,7 +81,7 @@ func (server *Server) mapRoutes() {
 	MapNamespacesRoutes(server.martini)
 	MapRouteBySchemas(server, server.db)
 
-	if txErr := db.Within(server.db, func(tx transaction.Transaction) error {
+	if txErr := db.WithinTx(server.db, func(tx transaction.Transaction) error {
 		coreSchema, _ := schemaManager.Schema("schema")
 		if coreSchema == nil {
 			return fmt.Errorf("Gohan core schema not found")
@@ -155,7 +156,7 @@ func (server *Server) resetRouter() {
 }
 
 func (server *Server) initDB() error {
-	return db.InitDBWithSchemas(server.getDatabaseConfig())
+	return dbimpl.InitDBWithSchemas(server.getDatabaseConfig())
 }
 
 func (server *Server) connectDB() error {
@@ -163,7 +164,7 @@ func (server *Server) connectDB() error {
 		return err
 	}
 	config := util.GetConfig()
-	dbConn, err := db.CreateFromConfig(config)
+	dbConn, err := dbimpl.CreateFromConfig(config)
 	if server.sync == nil {
 		server.db = dbConn
 	} else {
@@ -302,11 +303,11 @@ func NewServer(configFile string) (*Server, error) {
 			inType := initialDataConfig["type"].(string)
 			inConnection := initialDataConfig["connection"].(string)
 			log.Info("Importing data from %s ...", inConnection)
-			inDB, err := db.ConnectDB(inType, inConnection, db.DefaultMaxOpenConn, options.Default())
+			inDB, err := dbimpl.ConnectDB(inType, inConnection, db.DefaultMaxOpenConn, options.Default())
 			if err != nil {
 				log.Fatal(err)
 			}
-			db.CopyDBResources(inDB, server.db, false)
+			dbimpl.CopyDBResources(inDB, server.db, false)
 		}
 	}
 

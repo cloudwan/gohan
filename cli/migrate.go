@@ -24,7 +24,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cloudwan/gohan/db"
+	"github.com/cloudwan/gohan/db/dbimpl"
 	"github.com/cloudwan/gohan/db/migration"
 	db_options "github.com/cloudwan/gohan/db/options"
 	db_sql "github.com/cloudwan/gohan/db/sql"
@@ -284,7 +284,7 @@ func publishEventWithOptions(envName string, modifiedSchemas []string, eventName
 func publishEvent(envName string, modifiedSchemas []string, eventName string, syncETCDEvent bool, eventTimeout time.Duration) error {
 	config := util.GetConfig()
 
-	rawDB, err := db.CreateFromConfig(config)
+	rawDB, err := dbimpl.CreateFromConfig(config)
 
 	if err != nil {
 		log.Fatal(err)

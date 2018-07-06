@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/cloudwan/gohan/db"
+	"github.com/cloudwan/gohan/db/dbimpl"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
@@ -89,7 +90,7 @@ var _ = Describe("Environment", func() {
 	BeforeSuite(func() {
 		removeFileDb(conn)
 		var err error
-		testDB, err = db.ConnectDB(dbType, conn, db.DefaultMaxOpenConn, options.Default())
+		testDB, err = dbimpl.ConnectDB(dbType, conn, db.DefaultMaxOpenConn, options.Default())
 		Expect(err).ToNot(HaveOccurred(), "Failed to connect database.")
 		err = startTestServer("../test_data/test_config.yaml")
 		Expect(err).ToNot(HaveOccurred(), "Failed to start test server.")
@@ -101,7 +102,7 @@ var _ = Describe("Environment", func() {
 	})
 
 	AfterEach(func() {
-		Expect(db.Within(testDB, func(tx transaction.Transaction) error {
+		Expect(db.WithinTx(testDB, func(tx transaction.Transaction) error {
 			for _, schema := range schema.GetManager().Schemas() {
 				if whitelist[schema.ID] {
 					continue

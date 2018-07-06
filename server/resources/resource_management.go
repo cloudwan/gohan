@@ -118,20 +118,24 @@ func resourceTransactionWithContext(ctx middleware.Context, dataStore db.DB, lev
 		originalCtx[k] = v
 	}
 
-	return db.WithinTx(context.Background(), dataStore, &transaction.TxOptions{IsolationLevel: level}, func(tx transaction.Transaction) error {
-		for k := range ctx {
-			delete(ctx, k)
-		}
+	return db.WithinTx(
+		dataStore,
+		func(tx transaction.Transaction) error {
+			for k := range ctx {
+				delete(ctx, k)
+			}
 
-		for k, v := range originalCtx {
-			ctx[k] = v
-		}
+			for k, v := range originalCtx {
+				ctx[k] = v
+			}
 
-		ctx["transaction"] = tx
-		defer delete(ctx, "transaction")
+			ctx["transaction"] = tx
+			defer delete(ctx, "transaction")
 
-		return fn()
-	})
+			return fn()
+		},
+		transaction.WithContext(ctx["context"].(context.Context)),
+		transaction.WithIsolationLevel(level))
 }
 
 // ApplyPolicyForResources applies policy filtering for response
@@ -453,24 +457,24 @@ func GetSingleResourceInTransaction(context middleware.Context, resourceSchema *
 
 // CreateOrUpdateResource updates resource if it existed and otherwise creates it and returns true.
 func CreateOrUpdateResource(
-	context middleware.Context,
+	ctx middleware.Context,
 	dataStore db.DB, identityService middleware.IdentityService,
 	resourceSchema *schema.Schema,
 	resourceID string, dataMap map[string]interface{},
 ) (bool, error) {
 	defer measureRequestTime(time.Now(), "create_or_update", resourceSchema.ID)
 
-	auth := context["auth"].(schema.Authorization)
+	auth := ctx["auth"].(schema.Authorization)
 
 	//LoadPolicy
-	policy, err := loadPolicy(context, "update", strings.Replace(resourceSchema.GetSingleURL(), ":id", resourceID, 1), auth)
+	policy, err := loadPolicy(ctx, "update", strings.Replace(resourceSchema.GetSingleURL(), ":id", resourceID, 1), auth)
 	if err != nil {
 		return false, err
 	}
 
 	var exists bool
 
-	if preTxErr := db.Within(dataStore, func(preTransaction transaction.Transaction) error {
+	if preTxErr := db.WithinTx(dataStore, func(preTransaction transaction.Transaction) error {
 		exists, err = checkIfResourceExistsForTenant(auth.TenantID(), resourceID, resourceSchema, policy, preTransaction)
 		if err != nil {
 			return err
@@ -488,19 +492,19 @@ func CreateOrUpdateResource(
 			return ResourceError{transaction.ErrResourceNotFound, "", Forbidden}
 		}
 		return nil
-	}); preTxErr != nil {
+	}, transaction.WithContext(ctx["context"].(context.Context))); preTxErr != nil {
 		return false, preTxErr
 	}
 
 	if !exists {
 		dataMap["id"] = resourceID
-		if err := CreateResource(context, dataStore, identityService, resourceSchema, dataMap); err != nil {
+		if err := CreateResource(ctx, dataStore, identityService, resourceSchema, dataMap); err != nil {
 			return false, err
 		}
 		return true, err
 	}
 
-	return false, UpdateResource(context, dataStore, identityService, resourceSchema, resourceID, dataMap)
+	return false, UpdateResource(ctx, dataStore, identityService, resourceSchema, resourceID, dataMap)
 }
 
 func checkIfResourceExistsForTenant(
@@ -831,13 +835,13 @@ func UpdateResourceInTransaction(
 }
 
 // DeleteResource deletes the resource specified by the schema and ID
-func DeleteResource(context middleware.Context,
+func DeleteResource(ctx middleware.Context,
 	dataStore db.DB,
 	resourceSchema *schema.Schema,
 	resourceID string,
 ) error {
 	defer measureRequestTime(time.Now(), "delete", resourceSchema.ID)
-	context["id"] = resourceID
+	ctx["id"] = resourceID
 	environmentManager := extension.GetManager()
 	environment, ok := environmentManager.GetEnvironment(resourceSchema.ID)
 	if !ok {
@@ -847,30 +851,30 @@ func DeleteResource(context middleware.Context,
 	var resource *schema.Resource
 	var fetchErr error
 
-	if err := extension.HandleEvent(context, environment, "pre_delete", resourceSchema.ID); err != nil {
+	if err := extension.HandleEvent(ctx, environment, "pre_delete", resourceSchema.ID); err != nil {
 		return err
 	}
 
-	if errPreTx := db.Within(dataStore, func(preTransaction transaction.Transaction) error {
-		resource, fetchErr = fetchResource(resourceID, resourceSchema, preTransaction, context)
+	if errPreTx := db.WithinTx(dataStore, func(preTransaction transaction.Transaction) error {
+		resource, fetchErr = fetchResource(resourceID, resourceSchema, preTransaction, ctx)
 		return fetchErr
-	}); errPreTx != nil {
+	}, transaction.WithContext(ctx["context"].(context.Context))); errPreTx != nil {
 		return errPreTx
 	}
 
 	if resource != nil {
-		context["resource"] = resource.Data()
+		ctx["resource"] = resource.Data()
 	}
 	if err := resourceTransactionWithContext(
-		context, dataStore,
+		ctx, dataStore,
 		transaction.GetIsolationLevel(resourceSchema, schema.ActionDelete),
 		func() error {
-			return DeleteResourceInTransaction(context, resourceSchema, resourceID)
+			return DeleteResourceInTransaction(ctx, resourceSchema, resourceID)
 		},
 	); err != nil {
 		return err
 	}
-	if err := extension.HandleEvent(context, environment, "post_delete", resourceSchema.ID); err != nil {
+	if err := extension.HandleEvent(ctx, environment, "post_delete", resourceSchema.ID); err != nil {
 		return err
 	}
 	return nil

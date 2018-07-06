@@ -68,15 +68,8 @@ func (db *DB) Close() {
 	// nothing to do
 }
 
-//Begin connection starts new transaction
-func (db *DB) Begin() (transaction.Transaction, error) {
-	return &Transaction{
-		db: db,
-	}, nil
-}
-
-//BeginTx connection starts new transaction with given transaction options
-func (db *DB) BeginTx(_ context.Context, _ *transaction.TxOptions) (transaction.Transaction, error) {
+//Begin connection starts new transaction with given transaction options
+func (db *DB) Begin(options ...transaction.OptionTxParams) (transaction.Transaction, error) {
 	return &Transaction{
 		db: db,
 	}, nil

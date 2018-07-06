@@ -130,7 +130,7 @@ func (writer *SyncWriter) Sync() (synced int, err error) {
 
 func (writer *SyncWriter) listEvents() ([]*schema.Resource, error) {
 	var resourceList []*schema.Resource
-	if dbErr := db.Within(writer.db, func(tx transaction.Transaction) error {
+	if dbErr := db.WithinTx(writer.db, func(tx transaction.Transaction) error {
 		schemaManager := schema.GetManager()
 		eventSchema, _ := schemaManager.Schema("event")
 		paginator, _ := pagination.NewPaginator(
@@ -150,7 +150,7 @@ func (writer *SyncWriter) listEvents() ([]*schema.Resource, error) {
 func (writer *SyncWriter) syncEvent(resource *schema.Resource) error {
 	schemaManager := schema.GetManager()
 	eventSchema, _ := schemaManager.Schema("event")
-	return db.Within(writer.db, func(tx transaction.Transaction) error {
+	return db.WithinTx(writer.db, func(tx transaction.Transaction) error {
 		var err error
 		eventType := resource.Get("type").(string)
 		resourcePath := resource.Get("path").(string)

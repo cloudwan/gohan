@@ -44,17 +44,8 @@ type DbSyncWrapper struct {
 }
 
 // Begin wraps transaction object with sync
-func (sw *DbSyncWrapper) Begin() (transaction.Transaction, error) {
-	tx, err := sw.DB.Begin()
-	if err != nil {
-		return nil, err
-	}
-	return syncTransactionWrap(tx), nil
-}
-
-// BeginTx wraps transaction object with sync
-func (sw *DbSyncWrapper) BeginTx(ctx context.Context, options *transaction.TxOptions) (transaction.Transaction, error) {
-	tx, err := sw.DB.BeginTx(ctx, options)
+func (sw *DbSyncWrapper) BeginTx(options ...transaction.OptionTxParams) (transaction.Transaction, error) {
+	tx, err := sw.DB.Begin(options...)
 	if err != nil {
 		return nil, err
 	}

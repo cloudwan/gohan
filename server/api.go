@@ -422,12 +422,14 @@ func MapRouteBySchemas(server *Server, dataStore db.DB) {
 	route := server.martini
 	log.Debug("[Initializing Routes]")
 	schemaManager := schema.GetManager()
-	route.Get("/_all", func(w http.ResponseWriter, r *http.Request, p martini.Params, auth schema.Authorization) {
+	route.Get("/_all", func(w http.ResponseWriter, r *http.Request, p martini.Params, auth schema.Authorization, ctx middleware.Context) {
 		responses := make(map[string]interface{})
 		context := map[string]interface{}{
 			"path":          r.URL.Path,
 			"http_request":  r,
 			"http_response": w,
+			"context":       ctx["context"],
+			"trace_id":      ctx["trace_id"],
 		}
 		for _, s := range schemaManager.Schemas() {
 			policy, role := authorization(w, r, schema.ActionRead, s.GetPluralURL(), s, auth)

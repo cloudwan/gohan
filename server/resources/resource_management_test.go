@@ -16,6 +16,7 @@
 package resources_test
 
 import (
+	context_pkg "context"
 	"fmt"
 	"time"
 
@@ -63,7 +64,9 @@ var _ = Describe("Resource manager", func() {
 		adminAuth = schema.NewAuthorization(adminTenantID, "admin", adminTokenID, []string{"admin"}, nil)
 		memberAuth = schema.NewAuthorization(memberTenantID, "demo", memberTokenID, []string{"Member"}, nil)
 		auth = adminAuth
-		context = middleware.Context{}
+		context = middleware.Context{
+			"context": context_pkg.Background(),
+		}
 		events = map[string]string{}
 		timeLimit = time.Duration(10) * time.Second
 		timeLimits = []*schema.PathEventTimeLimit{}
@@ -106,7 +109,7 @@ var _ = Describe("Resource manager", func() {
 	})
 
 	AfterEach(func() {
-		Expect(db.Within(testDB, func(tx transaction.Transaction) error {
+		Expect(db.WithinTx(testDB, func(tx transaction.Transaction) error {
 
 			environmentManager.UnRegisterEnvironment(schemaID)
 			environmentManager.UnRegisterEnvironment("network")
@@ -1776,11 +1779,11 @@ var _ = Describe("Resource manager", func() {
 				"test_integer": 1,
 				"test_bool":    false,
 			}
-			listContext = middleware.Context{}
-			showContext = middleware.Context{}
-			deleteContext = middleware.Context{}
-			createContext = middleware.Context{}
-			updateContext = middleware.Context{}
+			listContext = makeContext()
+			showContext = makeContext()
+			deleteContext = makeContext()
+			createContext = makeContext()
+			updateContext = makeContext()
 			fakeIdentity = &middleware.FakeIdentity{}
 		})
 
@@ -1895,3 +1898,7 @@ var _ = Describe("Resource manager", func() {
 		})
 	})
 })
+
+func makeContext() middleware.Context {
+	return middleware.Context{"context": context_pkg.Background()}
+}

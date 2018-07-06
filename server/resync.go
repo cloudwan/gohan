@@ -16,7 +16,7 @@ func Resync(dbConn db.DB, sync sync.Sync) (err error) {
 	syncDbConn := &DbSyncWrapper{DB: dbConn}
 	schemaManager := schema.GetManager()
 
-	tx, err := syncDbConn.Begin()
+	tx, err := syncDbConn.BeginTx()
 	if err != nil {
 		return fmt.Errorf("Error when acquiring DB transaction: %s", err)
 	}

@@ -49,6 +49,38 @@ type TxOptions struct {
 	IsolationLevel Type
 }
 
+type TxParams struct {
+	Context        context.Context
+	IsolationLevel Type
+}
+
+type OptionTxParams func(*TxParams)
+
+func NewTxParams(options ...OptionTxParams) *TxParams {
+	params := &TxParams{
+		Context:        context.Background(),
+		IsolationLevel: RepeatableRead,
+	}
+
+	for _, option := range options {
+		option(params)
+	}
+
+	return params
+}
+
+func WithContext(ctx context.Context) OptionTxParams {
+	return func(params *TxParams) {
+		params.Context = ctx
+	}
+}
+
+func WithIsolationLevel(level Type) OptionTxParams {
+	return func(params *TxParams) {
+		params.IsolationLevel = level
+	}
+}
+
 //Filter represents db filter
 type Filter map[string]interface{}
 

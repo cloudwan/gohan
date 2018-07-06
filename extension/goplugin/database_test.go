@@ -70,7 +70,7 @@ var _ = Describe("Database", func() {
 		Context("BeginTx", func() {
 			It("should return an error on error", func() {
 				expectedErr := fmt.Errorf("dummy error")
-				mockDB.EXPECT().BeginTx(gomock.Any(), gomock.Any()).Return(&mocks.MockTransaction{}, expectedErr)
+				mockDB.EXPECT().Begin(gomock.Any(), gomock.Any()).Return(&mocks.MockTransaction{}, expectedErr)
 
 				tx, err := db.BeginTx(goext.MakeContext(), &goext.TxOptions{})
 
@@ -79,7 +79,7 @@ var _ = Describe("Database", func() {
 			})
 
 			It("should return an error on nil transaction received", func() {
-				mockDB.EXPECT().BeginTx(gomock.Any(), gomock.Any()).Return(nil, nil)
+				mockDB.EXPECT().Begin(gomock.Any(), gomock.Any()).Return(nil, nil)
 
 				tx, err := db.BeginTx(goext.MakeContext(), &goext.TxOptions{})
 
