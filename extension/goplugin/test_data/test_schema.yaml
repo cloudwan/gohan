@@ -108,6 +108,15 @@ schemas:
         type: object
       output:
         type: object
+    sync_context_cancel:
+      title: Test cancels in Sync
+      description: Call sync.Watch() with a canceled context and verify return type
+      path: /sync_context_cancel
+      method: POST
+      input:
+        type: object
+      output:
+        type: object
 - description: Test Suite
   id: test_suite
   plural: test_suites
