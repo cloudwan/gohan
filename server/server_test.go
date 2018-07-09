@@ -890,6 +890,31 @@ var _ = Describe("Server package test", func() {
 		})
 	})
 
+	Describe("PreCreate", func() {
+		It("should set data in pre_create", func() {
+			memberNetwork := map[string]interface{}{
+				"id":          "networkbeige",
+				"name":        "Networkbeige",
+				"description": "The Beige Network",
+				"tenant_id":   memberTenantID,
+			}
+			testURL("POST", networkPluralURL, powerUserTokenID, memberNetwork, http.StatusCreated)
+
+			powerUserNetwork := getNetwork("test", powerUserTenantID)
+			testURL("POST", networkPluralURL, powerUserTokenID, powerUserNetwork, http.StatusCreated)
+
+			data := testURL("GET", getNetworkSingularURL("test"), memberTokenID, nil, http.StatusOK)
+			Expect(data.(map[string]interface{})["network"]).To(HaveKeyWithValue("name", "Networktest"))
+			testURL("DELETE", getNetworkSingularURL("test"), powerUserTokenID, nil, http.StatusNoContent)
+
+			powerUserNetwork = getNetwork("test", powerUserTenantID)
+			powerUserNetwork["name"] = "run-pre-create"
+			testURL("POST", networkPluralURL, powerUserTokenID, powerUserNetwork, http.StatusCreated)
+			data = testURL("GET", getNetworkSingularURL("test"), memberTokenID, nil, http.StatusOK)
+			Expect(data.(map[string]interface{})["network"]).To(HaveKeyWithValue("name", "set-in-pre-create"))
+		})
+	})
+
 	Describe("Resource Actions", func() {
 		responderPluralURL := baseURL + "/v2.0/responders"
 		responderParentPluralURL := baseURL + "/v2.0/responder_parents"

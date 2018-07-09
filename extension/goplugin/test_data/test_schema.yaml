@@ -49,12 +49,15 @@ schemas:
         title: Name
         type: string
         maxLength: 255
+        minLength: 3
       subobject:
         description: Subobject description
         permission:
         - create
         title: Subobject
-        type: object
+        type:
+        - object
+        - "null"
         properties:
           subproperty:
             title: Subproperty
@@ -65,7 +68,9 @@ schemas:
         permission:
           - create
         title: Test Suite ID
-        type: string
+        type:
+        - string
+        - "null"
         relation: test_suite
         on_delete_cascade: true
     propertiesOrder:
@@ -98,6 +103,15 @@ schemas:
       title: Invoke JS
       description: Invokes JS handler from Go extension
       path: /invoke_js
+      method: POST
+      input:
+        type: object
+      output:
+        type: object
+    sync_context_cancel:
+      title: Test cancels in Sync
+      description: Call sync.Watch() with a canceled context and verify return type
+      path: /sync_context_cancel
       method: POST
       input:
         type: object
