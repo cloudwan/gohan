@@ -17,6 +17,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/cloudwan/gohan/extension/goext"
@@ -41,6 +42,7 @@ func Init(env goext.IEnvironment) error {
 	testSchema.RegisterCustomEventHandler("wait_for_context_cancel", handleWaitForContextCancel, goext.PriorityDefault)
 	testSchema.RegisterCustomEventHandler("echo", handleEcho, goext.PriorityDefault)
 	testSchema.RegisterCustomEventHandler("invoke_js", handleInvokeJs, goext.PriorityDefault)
+	testSchema.RegisterCustomEventHandler("sync_context_cancel", handleSyncContextCancel, goext.PriorityDefault)
 	testSchema.RegisterResourceEventHandler("pre_create", handlePreCreate, goext.PriorityDefault)
 
 	testSuiteSchema := env.Schemas().Find("test_suite")
@@ -66,6 +68,35 @@ func handleWaitForContextCancel(requestContext goext.Context, _ goext.IEnvironme
 
 func handleEcho(requestContext goext.Context, env goext.IEnvironment) *goext.Error {
 	env.Logger().Debug("Handling echo")
+	requestContext["response"] = requestContext["input"]
+	return nil
+}
+
+func handleSyncContextCancel(requestContext goext.Context, env goext.IEnvironment) *goext.Error {
+	env.Logger().Debug("Handling sync_context_cancel")
+
+	const etcdKey = "/sync_context_cancel"
+
+	if err := env.Sync().Update(etcdKey, "dummy value"); err != nil {
+		panic(err)
+	}
+
+	node, err := env.Sync().Fetch(etcdKey)
+	if err != nil {
+		panic(err)
+	}
+
+	ctx, cancel := context.WithCancel(requestContext["context"].(context.Context))
+	cancel()
+
+	_, err = env.Sync().Watch(ctx, etcdKey, time.Minute, node.Revision+1)
+	if err == nil {
+		panic("expecting context.Canceled")
+	}
+	if err != context.Canceled {
+		panic(fmt.Sprintf("expecting context.Canceled, got %+v", err))
+	}
+
 	requestContext["response"] = requestContext["input"]
 	return nil
 }

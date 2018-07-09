@@ -106,8 +106,8 @@ var _ = Describe("Database", func() {
 
 				env := goplugin.NewMockIEnvironment(nil, nil)
 				env.SetMockModules(goext.MockModules{
-					Util:     true,
-					Database: true,
+					Util:            true,
+					Database:        true,
 					DefaultDatabase: true,
 				})
 				env.MockUtil().EXPECT().GetTransaction(gomock.Any()).Return(

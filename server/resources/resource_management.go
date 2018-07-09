@@ -1025,7 +1025,7 @@ func loadPolicy(context middleware.Context, action, path string, auth schema.Aut
 	return policy, nil
 }
 
-type validateFunction func(interface{})(error)
+type validateFunction func(interface{}) error
 
 func validate(context middleware.Context, dataMap *map[string]interface{}, validate validateFunction) error {
 	if _, ok := context[goValidationContextKey]; ok {
