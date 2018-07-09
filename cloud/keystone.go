@@ -17,7 +17,6 @@ package cloud
 
 import (
 	"fmt"
-	"net/http"
 	"regexp"
 
 	"github.com/gophercloud/gophercloud"
@@ -29,8 +28,6 @@ import (
 
 	"github.com/cloudwan/gohan/schema"
 )
-
-const maxReauthAttempts = 3
 
 //KeystoneIdentity middleware
 type KeystoneIdentity struct {
@@ -113,41 +110,6 @@ func NewKeystoneIdentity(authURL, userName, password, domainName, tenantName, ve
 	}, nil
 }
 
-//RoundTripper limits number of Reauth attempts
-type RoundTripper struct {
-	rt                http.RoundTripper
-	numReauthAttempts int
-	maxReauthAttempts int
-}
-
-//NewHTTPClient returns http client with max reauth retry support
-func NewHTTPClient() http.Client {
-	return http.Client{
-		Transport: &RoundTripper{
-			rt:                http.DefaultTransport,
-			maxReauthAttempts: maxReauthAttempts,
-		},
-	}
-}
-
-//RoundTrip limits number of Reauth attempts
-func (lrt *RoundTripper) RoundTrip(request *http.Request) (*http.Response, error) {
-	var err error
-
-	response, err := lrt.rt.RoundTrip(request)
-	if response == nil {
-		return nil, err
-	}
-
-	if response.StatusCode == http.StatusUnauthorized {
-		if lrt.numReauthAttempts == lrt.maxReauthAttempts {
-			return response, fmt.Errorf("Failed to reauthenticate to keystone with %d attempts", lrt.maxReauthAttempts)
-		}
-		lrt.numReauthAttempts++
-	}
-	return response, err
-}
-
 //NewKeystoneV2Client is an constructor for KeystoneV2Client
 func NewKeystoneV2Client(authURL, userName, password, tenantName string) (KeystoneClient, error) {
 	opts := gophercloud.AuthOptions{
@@ -184,7 +146,6 @@ func NewKeystoneV3Client(authURL, userName, password, domainName, tenantName str
 	if err != nil {
 		return nil, err
 	}
-	client.HTTPClient = NewHTTPClient()
 	identityClient, err := openstack.NewIdentityV3(client, gophercloud.EndpointOpts{})
 	if err != nil {
 		return nil, err
@@ -198,25 +159,34 @@ func (client *keystoneV3Client) VerifyToken(token string) (schema.Authorization,
 	if tokenResult.Err != nil {
 		return nil, fmt.Errorf("Error during verifying token: %s", tokenResult.Err.Error())
 	}
-	_, err := tokenResult.Extract()
-	if err != nil {
+	_, err := tokenResult.ExtractToken()
+	body, ok := tokenResult.Body.(map[string]interface{})
+	// tricky gophercloud behavior.
+	// If system token doesn't need reauth, err is set when token is invalid
+	// If system token needed reauth and user token is invalid, err wont be propagated neither by return nor Err field,
+	// but response is nil
+	if err != nil || !ok {
 		return nil, fmt.Errorf("Invalid token")
 	}
-	tokenBody := tokenResult.Body.(map[string]interface{})["token"]
-	roles := tokenBody.(map[string]interface{})["roles"]
+
+	tokenBody, ok := body["token"]
+	if !ok {
+		return nil, fmt.Errorf("no token property in body %s", body)
+	}
+	tokenMap := tokenBody.(map[string]interface{})
+	roles := tokenMap["roles"]
 	roleIDs := []string{}
 	for _, roleBody := range roles.([]interface{}) {
 		roleIDs = append(roleIDs, roleBody.(map[string]interface{})["name"].(string))
 	}
-	tokenBodyMap := tokenBody.(map[string]interface{})
-	projectObj, ok := tokenBodyMap["project"]
+	projectObj, ok := tokenMap["project"]
 	if !ok {
 		return nil, fmt.Errorf("Token is unscoped")
 	}
 	project := projectObj.(map[string]interface{})
 	tenantID := project["id"].(string)
 	tenantName := project["name"].(string)
-	catalogList, ok := tokenBodyMap["catalog"].([]interface{})
+	catalogList, ok := tokenMap["catalog"].([]interface{})
 	catalogObj := []*schema.Catalog{}
 	if ok {
 		for _, rawCatalog := range catalogList {
