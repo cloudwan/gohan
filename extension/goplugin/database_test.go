@@ -92,9 +92,10 @@ var _ = Describe("Database", func() {
 				ctx := goext.Context{
 					"context": tempCtxWithTimeout,
 				}
-				mockDB.EXPECT().BeginTx(gomock.Any(), gomock.Any()).Return(nil, nil).
-					Do(func(ctx context.Context, options *transaction.TxOptions) {
-						_, hasDeadline := ctx.Deadline()
+				mockDB.EXPECT().Begin(gomock.Any(), gomock.Any()).Return(nil, nil).
+					Do(func(options ...transaction.Option) {
+						txParams := transaction.NewTxParams(options...)
+						_, hasDeadline := txParams.Context.Deadline()
 						Expect(hasDeadline).To(BeTrue())
 					})
 

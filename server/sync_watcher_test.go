@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/cloudwan/gohan/db"
+	"github.com/cloudwan/gohan/db/dbutil"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
 	srv "github.com/cloudwan/gohan/server"
@@ -37,7 +38,12 @@ const (
 )
 
 var _ = Describe("Sync watcher test", func() {
+	var (
+		ctx context.Context
+	)
+
 	BeforeEach(func() {
+		ctx = context.Background()
 		watcher := srv.NewSyncWatcherFromServer(server)
 		go watcher.Run(context.Background())
 		time.Sleep(time.Second)
@@ -49,7 +55,7 @@ var _ = Describe("Sync watcher test", func() {
 				if whitelist[schema.ID] {
 					continue
 				}
-				Expect(clearTable(tx, schema)).ToNot(HaveOccurred(), "Failed to clear table.")
+				Expect(dbutil.ClearTable(ctx, tx, schema)).ToNot(HaveOccurred(), "Failed to clear table.")
 			}
 			return nil
 		})).ToNot(HaveOccurred(), "Failed to create or commit transaction.")

@@ -20,6 +20,8 @@ import (
 
 	"github.com/robertkrimen/otto"
 
+	"context"
+
 	"github.com/cloudwan/gohan/db/pagination"
 	"github.com/cloudwan/gohan/db/sql"
 	"github.com/cloudwan/gohan/db/transaction"
@@ -43,14 +45,14 @@ func init() {
 				var tx transaction.Transaction
 				var err error
 
-				opts := []transaction.OptionTxParams{}
+				opts := []transaction.Option{}
 
 				if setTxIsolationLevel {
 					strIsolationLevel, err := GetString(call.Argument(0))
 					if err != nil {
 						ThrowOttoException(&call, err.Error())
 					}
-					opts = append(opts, transaction.WithIsolationLevel(transaction.Type(strIsolationLevel)))
+					opts = append(opts, transaction.IsolationLevel(transaction.Type(strIsolationLevel)))
 				}
 
 				tx, err = env.DataStore.Begin(opts...)
@@ -77,7 +79,7 @@ func init() {
 					defer transaction.Close()
 				}
 
-				resources, _, err := transaction.List(schema, filter, nil, pg)
+				resources, _, err := transaction.List(context.Background(), schema, filter, nil, pg)
 				if err != nil {
 					ThrowOttoException(&call, "Error during gohan_db_list: %s", err.Error())
 				}
@@ -96,7 +98,7 @@ func init() {
 					defer transaction.Close()
 				}
 
-				resources, _, err := transaction.LockList(schema, filter, nil, pg, lockPolicy)
+				resources, _, err := transaction.LockList(context.Background(), schema, filter, nil, pg, lockPolicy)
 				if err != nil {
 					ThrowOttoException(&call, "Error during gohan_db_lock_list: %s", err.Error())
 				}
@@ -471,7 +473,7 @@ func GohanDbFetch(tx transaction.Transaction, schemaID, ID,
 	if tenantID != "" {
 		filter["tenant_id"] = tenantID
 	}
-	resp, err := tx.Fetch(schema, filter, nil)
+	resp, err := tx.Fetch(context.Background(), schema, filter, nil)
 	if err != nil {
 		return nil, fmt.Errorf("Error during gohan_db_fetch: %s", err.Error())
 	}
@@ -488,7 +490,7 @@ func GohanDbLockFetch(tx transaction.Transaction, schemaID, ID, tenantID string,
 	if tenantID != "" {
 		filter["tenant_id"] = tenantID
 	}
-	resp, err := tx.LockFetch(schema, filter, policy, nil)
+	resp, err := tx.LockFetch(context.Background(), schema, filter, policy, nil)
 	if err != nil {
 		return nil, fmt.Errorf("Error during gohan_db_lock_fetch: %s", err.Error())
 	}
@@ -507,7 +509,7 @@ func GohanDbStateFetch(tx transaction.Transaction, schemaID, ID,
 	if tenantID != "" {
 		filter["tenant_id"] = tenantID
 	}
-	resp, err := tx.StateFetch(schema, filter)
+	resp, err := tx.StateFetch(context.Background(), schema, filter)
 	if err != nil {
 		return map[string]interface{}{}, fmt.Errorf("Error during gohan_db_state_fetch: %s", err.Error())
 	}
@@ -531,7 +533,7 @@ func GohanDbCreate(transaction transaction.Transaction, needCommit bool, schemaI
 		return nil, fmt.Errorf("Error during gohan_db_create: %s", err.Error())
 	}
 	resource.PopulateDefaults()
-	if err = transaction.Create(resource); err != nil {
+	if err = transaction.Create(context.Background(), resource); err != nil {
 		return nil, fmt.Errorf("Error during gohan_db_create: %s", err.Error())
 	}
 	if needCommit {
@@ -552,7 +554,7 @@ func GohanDbUpdate(transaction transaction.Transaction, needCommit bool, schemaI
 	if err != nil {
 		return nil, fmt.Errorf("Error during gohan_db_update: %s", err.Error())
 	}
-	if err = transaction.Update(resource); err != nil {
+	if err = transaction.Update(context.Background(), resource); err != nil {
 		return nil, fmt.Errorf("Error during gohan_db_update: %s", err.Error())
 	}
 	if needCommit {
@@ -573,7 +575,7 @@ func GohanDbStateUpdate(transaction transaction.Transaction, needCommit bool, sc
 	if err != nil {
 		return nil, fmt.Errorf("Error during gohan_db_state_update: %s", err.Error())
 	}
-	if err = transaction.StateUpdate(resource, nil); err != nil {
+	if err = transaction.StateUpdate(context.Background(), resource, nil); err != nil {
 		return nil, fmt.Errorf("Error during gohan_db_state_update: %s", err.Error())
 	}
 	if needCommit {
@@ -591,7 +593,7 @@ func GohanDbDelete(transaction transaction.Transaction, needCommit bool, schemaI
 	if err != nil {
 		return fmt.Errorf("Error during gohan_db_delete: %s", err.Error())
 	}
-	if err := transaction.Delete(schema, ID); err != nil {
+	if err := transaction.Delete(context.Background(), schema, ID); err != nil {
 		return fmt.Errorf("Error during gohan_db_delete: %s", err.Error())
 	}
 	if needCommit {
@@ -611,7 +613,7 @@ func GohanDbQuery(transaction transaction.Transaction, needCommit bool, schemaID
 	if err != nil {
 		return []map[string]interface{}{}, err
 	}
-	resources, err := transaction.Query(schema, sqlString, arguments)
+	resources, err := transaction.Query(context.Background(), schema, sqlString, arguments)
 	if err != nil {
 		return []map[string]interface{}{}, fmt.Errorf("Error during gohan_db_query: %s", err.Error())
 	}

@@ -13,9 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package dbimpl
+package dbutil
 
 import (
+	"context"
 	"errors"
 	"strings"
 
@@ -60,6 +61,8 @@ func CopyDBResources(input, output db.DB, overrideExisting bool) error {
 		return errNoSchemasInManager
 	}
 
+	ctx := context.TODO() //pass from outside?
+
 	if errInputTx := db.WithinTx(input, func(inputTx transaction.Transaction) error {
 		if errorOutputTx := db.WithinTx(output, func(outputTx transaction.Transaction) error {
 			for _, s := range schemas {
@@ -67,22 +70,22 @@ func CopyDBResources(input, output db.DB, overrideExisting bool) error {
 					continue
 				}
 				log.Info("Populating resources for schema %s", s.ID)
-				resources, _, err := inputTx.List(s, nil, nil, nil)
+				resources, _, err := inputTx.List(ctx, s, nil, nil, nil)
 				if err != nil {
 					return err
 				}
 
 				for _, resource := range resources {
 					log.Info("Creating resource %s", resource.ID())
-					destResource, _ := outputTx.Fetch(s, transaction.IDFilter(resource.ID()), nil)
+					destResource, _ := outputTx.Fetch(ctx, s, transaction.IDFilter(resource.ID()), nil)
 					if destResource == nil {
 						resource.PopulateDefaults()
-						err := outputTx.Create(resource)
+						err := outputTx.Create(ctx, resource)
 						if err != nil {
 							return err
 						}
 					} else if overrideExisting {
-						err := outputTx.Update(resource)
+						err := outputTx.Update(ctx, resource)
 						if err != nil {
 							return err
 						}
@@ -168,4 +171,38 @@ func InitDBWithSchemas(dbType, dbConnection string, initDBParams db.InitDBParams
 	}
 	defer aDb.Close()
 	return InitDBConnWithSchemas(aDb, initDBParams)
+}
+
+func ClearTable(ctx context.Context, tx transaction.Transaction, s *schema.Schema) error {
+	if s.IsAbstract() {
+		return nil
+	}
+	for _, schema := range schema.GetManager().Schemas() {
+		if schema.ParentSchema == s {
+			err := ClearTable(ctx, tx, schema)
+			if err != nil {
+				return err
+			}
+		} else {
+			for _, property := range schema.Properties {
+				if property.Relation == s.Singular {
+					err := ClearTable(ctx, tx, schema)
+					if err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+	resources, _, err := tx.List(ctx, s, nil, nil, nil)
+	if err != nil {
+		return err
+	}
+	for _, resource := range resources {
+		err = tx.Delete(ctx, s, resource.ID())
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

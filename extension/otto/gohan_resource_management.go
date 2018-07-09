@@ -16,6 +16,7 @@
 package otto
 
 import (
+	context_pkg "context"
 	"fmt"
 
 	"github.com/robertkrimen/otto"
@@ -192,6 +193,7 @@ func GohanModelList(context map[string]interface{}, schemaID string,
 	}
 	context["schema"] = currentSchema
 	context["path"] = currentSchema.GetPluralURL()
+	context["context"] = context_pkg.Background()
 
 	filter := map[string]interface{}{}
 	for key, value := range filterMap {
@@ -241,6 +243,7 @@ func GohanModelFetch(context map[string]interface{}, schemaID string, resourceID
 	}
 	context["schema"] = currentSchema
 	context["path"] = currentSchema.GetPluralURL()
+	context["context"] = context_pkg.Background()
 
 	if err := resources.GetSingleResourceInTransaction(
 		context, currentSchema, resourceID, tenantIDs); err != nil {
@@ -263,6 +266,7 @@ func GohanModelCreate(context map[string]interface{}, schemaID string,
 	}
 	context["schema"] = currentSchema
 	context["path"] = currentSchema.GetPluralURL()
+	context["context"] = context_pkg.Background()
 
 	manager := schema.GetManager()
 	resourceObj, err := manager.LoadResource(currentSchema.ID, dataMap)
@@ -290,6 +294,7 @@ func GohanModelUpdate(context map[string]interface{}, schemaID string, resourceI
 	}
 	context["schema"] = currentSchema
 	context["path"] = currentSchema.GetPluralURL()
+	context["context"] = context_pkg.Background()
 
 	err = resources.UpdateResourceInTransaction(context, currentSchema, resourceID, dataMap, tenantIDs)
 	if err != nil {
@@ -311,6 +316,7 @@ func GohanModelDelete(context map[string]interface{}, schemaID string, resourceI
 	}
 	context["schema"] = currentSchema
 	context["path"] = currentSchema.GetPluralURL()
+	context["context"] = context_pkg.Background()
 
 	return resources.DeleteResourceInTransaction(context, currentSchema, resourceID)
 }

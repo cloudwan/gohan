@@ -49,48 +49,28 @@ func MakeCachedTransaction(transx TxInterface) TxInterface {
 	return cachedTransaction
 }
 
-func (tx *CachedTransaction) Create(resource *schema.Resource) error {
-	return tx.CreateContext(context.Background(), resource)
-}
-
-func (tx *CachedTransaction) CreateContext(ctx context.Context, resource *schema.Resource) error {
+func (tx *CachedTransaction) Create(ctx context.Context, resource *schema.Resource) error {
 	tx.ClearCache()
-	return tx.TxInterface.CreateContext(ctx, resource)
+	return tx.TxInterface.Create(ctx, resource)
 }
 
-func (tx *CachedTransaction) Update(resource *schema.Resource) error {
-	return tx.UpdateContext(context.Background(), resource)
-}
-
-func (tx *CachedTransaction) UpdateContext(ctx context.Context, resource *schema.Resource) error {
+func (tx *CachedTransaction) Update(ctx context.Context, resource *schema.Resource) error {
 	tx.ClearCache()
-	return tx.TxInterface.UpdateContext(context.Background(), resource)
+	return tx.TxInterface.Update(context.Background(), resource)
 }
 
-func (tx *CachedTransaction) StateUpdate(resource *schema.Resource, state *transaction.ResourceState) error {
-	return tx.StateUpdateContext(context.Background(), resource, state)
-}
-
-func (tx *CachedTransaction) StateUpdateContext(ctx context.Context, resource *schema.Resource, state *transaction.ResourceState) error {
+func (tx *CachedTransaction) StateUpdate(ctx context.Context, resource *schema.Resource, state *transaction.ResourceState) error {
 	tx.ClearCache()
-	return tx.TxInterface.StateUpdateContext(context.Background(), resource, state)
+	return tx.TxInterface.StateUpdate(context.Background(), resource, state)
 }
 
-func (tx *CachedTransaction) Delete(s *schema.Schema, resourceID interface{}) error {
-	return tx.DeleteContext(context.Background(), s, resourceID)
-}
-
-func (tx *CachedTransaction) DeleteContext(ctx context.Context, s *schema.Schema, resourceID interface{}) error {
+func (tx *CachedTransaction) Delete(ctx context.Context, s *schema.Schema, resourceID interface{}) error {
 	tx.ClearCache()
-	return tx.TxInterface.DeleteContext(context.Background(), s, resourceID)
-}
-
-func (tx *CachedTransaction) List(s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions, pg *pagination.Paginator) (list []*schema.Resource, total uint64, err error) {
-	return tx.ListContext(context.Background(), s, filter, options, pg)
+	return tx.TxInterface.Delete(context.Background(), s, resourceID)
 }
 
 //List resources in the db
-func (tx *CachedTransaction) ListContext(ctx context.Context, s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions, pg *pagination.Paginator) (list []*schema.Resource, total uint64, err error) {
+func (tx *CachedTransaction) List(ctx context.Context, s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions, pg *pagination.Paginator) (list []*schema.Resource, total uint64, err error) {
 	sc := listContextHelper(s, filter, options, pg)
 
 	list, total, wasCached, _, err := tx.getCached(s.ID, sc)
@@ -101,7 +81,7 @@ func (tx *CachedTransaction) ListContext(ctx context.Context, s *schema.Schema, 
 
 	if !wasCached {
 		metrics.UpdateCounter(1, "tx.%s.cache.miss", s.ID)
-		list, total, err = tx.TxInterface.ListContext(ctx, s, filter, options, pg)
+		list, total, err = tx.TxInterface.List(ctx, s, filter, options, pg)
 		tx.saveCache(s.ID, sc, list, total, false, err)
 	} else {
 		metrics.UpdateCounter(1, "tx.%s.cache.hit", s.ID)
@@ -151,11 +131,7 @@ func (tx *CachedTransaction) ClearCache() {
 	tx.QueryCache = make(map[string]CachedState)
 }
 
-func (tx *CachedTransaction) LockList(s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions, pg *pagination.Paginator, lockPolicy schema.LockPolicy) (list []*schema.Resource, total uint64, err error) {
-	return tx.LockListContext(context.Background(), s, filter, options, pg, lockPolicy)
-}
-
-func (tx *CachedTransaction) LockListContext(ctx context.Context, s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions, pg *pagination.Paginator, lockPolicy schema.LockPolicy) (list []*schema.Resource, total uint64, err error) {
+func (tx *CachedTransaction) LockList(ctx context.Context, s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions, pg *pagination.Paginator, lockPolicy schema.LockPolicy) (list []*schema.Resource, total uint64, err error) {
 
 	sc := lockListContextHelper(s, filter, options, pg, lockPolicy)
 
@@ -170,7 +146,7 @@ func (tx *CachedTransaction) LockListContext(ctx context.Context, s *schema.Sche
 		}
 		metrics.UpdateCounter(1, "tx.%s.cache.missLock", s.ID)
 
-		list, total, err = tx.TxInterface.LockListContext(ctx, s, filter, options, pg, lockPolicy)
+		list, total, err = tx.TxInterface.LockList(ctx, s, filter, options, pg, lockPolicy)
 		tx.saveCache(s.ID, sc, list, total, true, err)
 	} else {
 		metrics.UpdateCounter(1, "tx.%s.cache.hitLock", s.ID)
@@ -178,29 +154,17 @@ func (tx *CachedTransaction) LockListContext(ctx context.Context, s *schema.Sche
 	return
 }
 
-func (tx *CachedTransaction) Query(s *schema.Schema, query string, arguments []interface{}) (list []*schema.Resource, err error) {
-	return tx.QueryContext(context.Background(), s, query, arguments)
-}
-
-func (tx *CachedTransaction) QueryContext(ctx context.Context, s *schema.Schema, query string, arguments []interface{}) (list []*schema.Resource, err error) {
+func (tx *CachedTransaction) Query(ctx context.Context, s *schema.Schema, query string, arguments []interface{}) (list []*schema.Resource, err error) {
 	tx.ClearCache()
-	return tx.TxInterface.QueryContext(context.Background(), s, query, arguments)
+	return tx.TxInterface.Query(context.Background(), s, query, arguments)
 }
 
-func (tx *CachedTransaction) Fetch(s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions) (*schema.Resource, error) {
-	return tx.FetchContext(context.Background(), s, filter, options)
-}
-
-func (tx *CachedTransaction) FetchContext(ctx context.Context, s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions) (*schema.Resource, error) {
-	list, _, err := tx.ListContext(ctx, s, filter, options, nil)
+func (tx *CachedTransaction) Fetch(ctx context.Context, s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions) (*schema.Resource, error) {
+	list, _, err := tx.List(ctx, s, filter, options, nil)
 	return fetchContextHelper(list, err, filter)
 }
 
-func (tx *CachedTransaction) LockFetch(s *schema.Schema, filter transaction.Filter, lockPolicy schema.LockPolicy, options *transaction.ViewOptions) (*schema.Resource, error) {
-	return tx.LockFetchContext(context.Background(), s, filter, lockPolicy, options)
-}
-
-func (tx *CachedTransaction) LockFetchContext(ctx context.Context, s *schema.Schema, filter transaction.Filter, lockPolicy schema.LockPolicy, options *transaction.ViewOptions) (*schema.Resource, error) {
-	list, _, err := tx.LockListContext(ctx, s, filter, nil, nil, lockPolicy)
+func (tx *CachedTransaction) LockFetch(ctx context.Context, s *schema.Schema, filter transaction.Filter, lockPolicy schema.LockPolicy, options *transaction.ViewOptions) (*schema.Resource, error) {
+	list, _, err := tx.LockList(ctx, s, filter, nil, nil, lockPolicy)
 	return lockFetchContextHelper(err, list, filter)
 }

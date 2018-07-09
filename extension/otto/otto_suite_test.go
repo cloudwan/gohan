@@ -21,9 +21,8 @@ import (
 	"time"
 
 	"github.com/cloudwan/gohan/db"
-	"github.com/cloudwan/gohan/db/dbimpl"
+	"github.com/cloudwan/gohan/db/dbutil"
 	"github.com/cloudwan/gohan/db/options"
-	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/sync/etcdv3"
 	"github.com/cloudwan/gohan/util"
@@ -57,31 +56,6 @@ var (
 	}
 )
 
-func clearTable(tx transaction.Transaction, s *schema.Schema) error {
-	if s.IsAbstract() {
-		return nil
-	}
-	for _, schema := range schema.GetManager().Schemas() {
-		if schema.ParentSchema == s {
-			err := clearTable(tx, schema)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	resources, _, err := tx.List(s, nil, nil, nil)
-	if err != nil {
-		return err
-	}
-	for _, resource := range resources {
-		err = tx.Delete(s, resource.ID())
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func TestOttoExtension(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Otto Extension Suite")
@@ -91,7 +65,7 @@ var _ = Describe("Suite set up and tear down", func() {
 	var _ = BeforeSuite(func() {
 		var err error
 		Expect(os.Chdir(configDir)).To(Succeed())
-		testDB, err = dbimpl.ConnectDB(dbType, dbFile, db.DefaultMaxOpenConn, options.Default())
+		testDB, err = dbutil.ConnectDB(dbType, dbFile, db.DefaultMaxOpenConn, options.Default())
 		Expect(err).ToNot(HaveOccurred(), "Failed to connect database.")
 		testSync, err = etcdv3.NewSync([]string{testSyncEndpoint}, time.Second)
 		Expect(err).NotTo(HaveOccurred(), "Failed to connect to etcd")
@@ -101,7 +75,7 @@ var _ = Describe("Suite set up and tear down", func() {
 		schemaFiles := config.GetStringList("schemas", nil)
 		Expect(schemaFiles).NotTo(BeNil())
 		Expect(manager.LoadSchemasFromFiles(schemaFiles...)).To(Succeed())
-		Expect(dbimpl.InitDBWithSchemas(dbType, dbFile, db.DefaultTestInitDBParams())).To(Succeed())
+		Expect(dbutil.InitDBWithSchemas(dbType, dbFile, db.DefaultTestInitDBParams())).To(Succeed())
 	})
 
 	var _ = AfterSuite(func() {

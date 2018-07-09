@@ -32,7 +32,7 @@ const DefaultMaxOpenConn = 100
 type DB interface {
 	Connect(string, string, int) error
 	Close()
-	Begin(options ...transaction.OptionTxParams) (transaction.Transaction, error)
+	Begin(options ...transaction.Option) (transaction.Transaction, error)
 	RegisterTable(s *schema.Schema, cascade, migrate bool) error
 	DropTable(*schema.Schema) error
 
@@ -139,7 +139,7 @@ func GetRetryInterval(retryInterval time.Duration) time.Duration {
 type FuncInTransaction func(transaction.Transaction) error
 
 // WithinTx executes a scoped transaction with options on a database
-func WithinTx(db DB, fn FuncInTransaction, options ...transaction.OptionTxParams) error {
+func WithinTx(db DB, fn FuncInTransaction, options ...transaction.Option) error {
 	return WithinTemplate(db.Options().RetryTxCount,
 		func() time.Duration {
 			return db.Options().RetryTxInterval

@@ -25,29 +25,9 @@ import (
 	"github.com/cloudwan/gohan/schema"
 )
 
-type cancelableTransaction interface {
-	Commit() error
-	Close() error
-	Closed() bool
-	GetIsolationLevel() transaction.Type
-
-	CreateContext(context.Context, *schema.Resource) error
-	UpdateContext(context.Context, *schema.Resource) error
-	StateUpdateContext(context.Context, *schema.Resource, *transaction.ResourceState) error
-	DeleteContext(context.Context, *schema.Schema, interface{}) error
-	FetchContext(context.Context, *schema.Schema, transaction.Filter, *transaction.ViewOptions) (*schema.Resource, error)
-	LockFetchContext(context.Context, *schema.Schema, transaction.Filter, schema.LockPolicy, *transaction.ViewOptions) (*schema.Resource, error)
-	StateFetchContext(context.Context, *schema.Schema, transaction.Filter) (transaction.ResourceState, error)
-	ListContext(context.Context, *schema.Schema, transaction.Filter, *transaction.ViewOptions, *pagination.Paginator) ([]*schema.Resource, uint64, error)
-	LockListContext(context.Context, *schema.Schema, transaction.Filter, *transaction.ViewOptions, *pagination.Paginator, schema.LockPolicy) ([]*schema.Resource, uint64, error)
-	QueryContext(context.Context, *schema.Schema, string, []interface{}) (list []*schema.Resource, err error)
-	ExecContext(ctx context.Context, query string, args ...interface{}) error
-	CountContext(context.Context, *schema.Schema, transaction.Filter) (uint64, error)
-}
-
 //Transaction is common interface for handling transaction
 type Transaction struct {
-	tx cancelableTransaction
+	tx transaction.Transaction
 }
 
 func (t *Transaction) findRawSchema(id goext.SchemaID) *schema.Schema {
@@ -73,7 +53,7 @@ func (t *Transaction) Create(ctx context.Context, s goext.ISchema, resource map[
 	// use context.Background to avoid cancellation mid-query for all Queries/Exec
 	// ESI-16552 context cancellation tends to break next Begin
 	// It doesn't work in mysql driver anyway https://github.com/go-sql-driver/mysql/issues/731
-	return t.tx.CreateContext(context.Background(), res)
+	return t.tx.Create(context.Background(), res)
 }
 
 // Update updates an existing resource
@@ -85,7 +65,7 @@ func (t *Transaction) Update(ctx context.Context, s goext.ISchema, resource map[
 	if err != nil {
 		return err
 	}
-	return t.tx.UpdateContext(context.Background(), res)
+	return t.tx.Update(context.Background(), res)
 }
 
 func mapGoExtResourceState(resourceState *goext.ResourceState) *transaction.ResourceState {
@@ -120,7 +100,7 @@ func (t *Transaction) StateUpdate(ctx context.Context, s goext.ISchema, resource
 	if err != nil {
 		return err
 	}
-	return t.tx.StateUpdateContext(context.Background(), res, mapGoExtResourceState(resourceState))
+	return t.tx.StateUpdate(context.Background(), res, mapGoExtResourceState(resourceState))
 }
 
 // Delete deletes an existing resource
@@ -128,7 +108,7 @@ func (t *Transaction) Delete(ctx context.Context, schema goext.ISchema, resource
 	if err := ctx.Err(); err != nil {
 		return ctx.Err()
 	}
-	return t.tx.DeleteContext(context.Background(), t.findRawSchema(schema.ID()), resourceID)
+	return t.tx.Delete(context.Background(), t.findRawSchema(schema.ID()), resourceID)
 }
 
 // Fetch fetches an existing resource
@@ -136,7 +116,7 @@ func (t *Transaction) Fetch(ctx context.Context, schema goext.ISchema, filter go
 	if err := ctx.Err(); err != nil {
 		return nil, ctx.Err()
 	}
-	res, err := t.tx.FetchContext(context.Background(), t.findRawSchema(schema.ID()), transaction.Filter(filter), nil)
+	res, err := t.tx.Fetch(context.Background(), t.findRawSchema(schema.ID()), transaction.Filter(filter), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +128,7 @@ func (t *Transaction) LockFetch(ctx context.Context, schema goext.ISchema, filte
 	if err := ctx.Err(); err != nil {
 		return nil, ctx.Err()
 	}
-	res, err := t.tx.LockFetchContext(context.Background(), t.findRawSchema(schema.ID()), transaction.Filter(filter), convertLockPolicy(lockPolicy), nil)
+	res, err := t.tx.LockFetch(context.Background(), t.findRawSchema(schema.ID()), transaction.Filter(filter), convertLockPolicy(lockPolicy), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +153,7 @@ func (t *Transaction) StateFetch(ctx context.Context, schema goext.ISchema, filt
 	if err := ctx.Err(); err != nil {
 		return goext.ResourceState{}, ctx.Err()
 	}
-	transactionResourceState, err := t.tx.StateFetchContext(context.Background(), t.findRawSchema(schema.ID()), transaction.Filter(filter))
+	transactionResourceState, err := t.tx.StateFetch(context.Background(), t.findRawSchema(schema.ID()), transaction.Filter(filter))
 	if err != nil {
 		return goext.ResourceState{}, err
 	}
@@ -187,7 +167,7 @@ func (t *Transaction) List(ctx context.Context, schema goext.ISchema, filter goe
 	if err := ctx.Err(); err != nil {
 		return nil, 0, ctx.Err()
 	}
-	data, _, err := t.tx.ListContext(context.Background(), t.findRawSchema(schemaID), transaction.Filter(filter), nil, (*pagination.Paginator)(paginator))
+	data, _, err := t.tx.List(context.Background(), t.findRawSchema(schemaID), transaction.Filter(filter), nil, (*pagination.Paginator)(paginator))
 	if err != nil {
 		return nil, 0, err
 	}
@@ -211,7 +191,7 @@ func (t *Transaction) LockList(ctx context.Context, schema goext.ISchema, filter
 	if err := ctx.Err(); err != nil {
 		return nil, 0, ctx.Err()
 	}
-	data, _, err := t.tx.LockListContext(context.Background(), t.findRawSchema(schemaID), transaction.Filter(filter), nil, (*pagination.Paginator)(paginator), convertLockPolicy(lockingPolicy))
+	data, _, err := t.tx.LockList(context.Background(), t.findRawSchema(schemaID), transaction.Filter(filter), nil, (*pagination.Paginator)(paginator), convertLockPolicy(lockingPolicy))
 	if err != nil {
 		return nil, 0, err
 	}
@@ -231,7 +211,7 @@ func (t *Transaction) Query(ctx context.Context, schema goext.ISchema, query str
 	if err := ctx.Err(); err != nil {
 		return nil, ctx.Err()
 	}
-	data, err := t.tx.QueryContext(context.Background(), t.findRawSchema(schemaID), query, args)
+	data, err := t.tx.Query(context.Background(), t.findRawSchema(schemaID), query, args)
 	if err != nil {
 		return nil, err
 	}
@@ -254,7 +234,7 @@ func (t *Transaction) Exec(ctx context.Context, query string, args ...interface{
 	if err := ctx.Err(); err != nil {
 		return ctx.Err()
 	}
-	return t.tx.ExecContext(context.Background(), query, args...)
+	return t.tx.Exec(context.Background(), query, args...)
 }
 
 // Close closes the transaction
@@ -278,5 +258,5 @@ func (t *Transaction) Count(ctx context.Context, schema goext.ISchema, filter go
 	if err := ctx.Err(); err != nil {
 		return 0, ctx.Err()
 	}
-	return t.tx.CountContext(context.Background(), t.findRawSchema(schemaID), transaction.Filter(filter))
+	return t.tx.Count(context.Background(), t.findRawSchema(schemaID), transaction.Filter(filter))
 }

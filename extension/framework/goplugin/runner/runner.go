@@ -27,7 +27,7 @@ import (
 	"github.com/twinj/uuid"
 
 	gohan_db "github.com/cloudwan/gohan/db"
-	"github.com/cloudwan/gohan/db/dbimpl"
+	"github.com/cloudwan/gohan/db/dbutil"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/extension/goext"
@@ -184,13 +184,13 @@ func (testRunner *TestRunner) runSingle(t ginkgo.GinkgoTestingT, reporter *Repor
 		// db
 		dbFileName := dbBaseFileName + "_" + uuid.NewV4().String()
 		dbConnString := fmt.Sprintf("file:%s?mode=memory&cache=shared", dbFileName)
-		db, err := dbimpl.ConnectDB("sqlite3", dbConnString, gohan_db.DefaultMaxOpenConn, options.Default())
+		db, err := dbutil.ConnectDB("sqlite3", dbConnString, gohan_db.DefaultMaxOpenConn, options.Default())
 
 		if err != nil {
 			return fmt.Errorf("failed to connect db: %s", err)
 		}
 
-		if err = dbimpl.InitDBConnWithSchemas(db, gohan_db.DefaultTestInitDBParams()); err != nil {
+		if err = dbutil.InitDBConnWithSchemas(db, gohan_db.DefaultTestInitDBParams()); err != nil {
 			return fmt.Errorf("failed to init db: %s", err)
 		}
 

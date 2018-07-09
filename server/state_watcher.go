@@ -158,11 +158,12 @@ func (watcher *StateWatcher) StateUpdate(event *gohan_sync.Event) error {
 
 	return db.WithinTx(watcher.db,
 		func(tx transaction.Transaction) error {
-			curResource, err := tx.Fetch(curSchema, transaction.IDFilter(resourceID), nil)
+			ctx := context.Background()
+			curResource, err := tx.Fetch(ctx, curSchema, transaction.IDFilter(resourceID), nil)
 			if err != nil {
 				return err
 			}
-			resourceState, err := tx.StateFetch(curSchema, transaction.IDFilter(resourceID))
+			resourceState, err := tx.StateFetch(ctx, curSchema, transaction.IDFilter(resourceID))
 			if err != nil {
 				return err
 			}
@@ -202,13 +203,14 @@ func (watcher *StateWatcher) StateUpdate(event *gohan_sync.Event) error {
 				context["state"] = event.Data
 				context["config_version"] = resourceState.ConfigVersion
 				context["transaction"] = tx
+				context["context"] = ctx
 
 				if err := extension.HandleEvent(context, environment, "pre_state_update_in_transaction", curSchema.ID); err != nil {
 					return err
 				}
 			}
 
-			err = tx.StateUpdate(curResource, &resourceState)
+			err = tx.StateUpdate(ctx, curResource, &resourceState)
 			if err != nil {
 				return err
 			}
@@ -220,7 +222,7 @@ func (watcher *StateWatcher) StateUpdate(event *gohan_sync.Event) error {
 			}
 
 			return nil
-		}, transaction.WithIsolationLevel(transaction.GetIsolationLevel(curSchema, StateUpdateEventName)))
+		}, transaction.IsolationLevel(transaction.GetIsolationLevel(curSchema, StateUpdateEventName)))
 }
 
 //MonitoringUpdate updates the state in the db based on the sync event
@@ -238,11 +240,12 @@ func (watcher *StateWatcher) MonitoringUpdate(event *gohan_sync.Event) error {
 	log.Info("Started MonitoringUpdate for %s %s %v", event.Action, event.Key, event.Data)
 
 	return db.WithinTx(watcher.db, func(tx transaction.Transaction) error {
-		curResource, err := tx.Fetch(curSchema, transaction.IDFilter(resourceID), nil)
+		ctx := context.Background()
+		curResource, err := tx.Fetch(ctx, curSchema, transaction.IDFilter(resourceID), nil)
 		if err != nil {
 			return err
 		}
-		resourceState, err := tx.StateFetch(curSchema, transaction.IDFilter(resourceID))
+		resourceState, err := tx.StateFetch(ctx, curSchema, transaction.IDFilter(resourceID))
 		if err != nil {
 			return err
 		}
@@ -274,6 +277,7 @@ func (watcher *StateWatcher) MonitoringUpdate(event *gohan_sync.Event) error {
 		context["schema"] = curSchema
 		context["monitoring"] = resourceState.Monitoring
 		context["transaction"] = tx
+		context["context"] = ctx
 
 		if haveEnvironment {
 			if err := extension.HandleEvent(context, environment, "pre_monitoring_update_in_transaction", curSchema.ID); err != nil {
@@ -281,7 +285,7 @@ func (watcher *StateWatcher) MonitoringUpdate(event *gohan_sync.Event) error {
 			}
 		}
 
-		err = tx.StateUpdate(curResource, &resourceState)
+		err = tx.StateUpdate(ctx, curResource, &resourceState)
 		if err != nil {
 			return err
 		}
@@ -293,7 +297,7 @@ func (watcher *StateWatcher) MonitoringUpdate(event *gohan_sync.Event) error {
 		}
 
 		return nil
-	}, transaction.WithIsolationLevel(transaction.GetIsolationLevel(curSchema, MonitoringUpdateEventName)))
+	}, transaction.IsolationLevel(transaction.GetIsolationLevel(curSchema, MonitoringUpdateEventName)))
 }
 
 func (watcher *StateWatcher) measureStateUpdateTime(timeStarted time.Time, event string, schemaID string) {

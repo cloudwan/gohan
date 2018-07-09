@@ -19,7 +19,7 @@ import (
 	"os"
 
 	"github.com/cloudwan/gohan/db"
-	"github.com/cloudwan/gohan/db/dbimpl"
+	"github.com/cloudwan/gohan/db/dbutil"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/extension/goext"
 	"github.com/cloudwan/gohan/extension/goplugin"
@@ -54,7 +54,7 @@ var _ = Describe("Mocks", func() {
 
 		schemaManager := schema.GetManager()
 		Expect(schemaManager.LoadSchemaFromFile(SchemaPath)).To(Succeed())
-		rawDB, err := dbimpl.ConnectDB(dbType, dbFile, db.DefaultMaxOpenConn, options.Default())
+		rawDB, err := dbutil.ConnectDB(dbType, dbFile, db.DefaultMaxOpenConn, options.Default())
 		Expect(err).ToNot(HaveOccurred())
 		envReal := goplugin.NewEnvironment("test", nil, nil)
 
@@ -65,7 +65,7 @@ var _ = Describe("Mocks", func() {
 		env.Reset()
 		testSchema = env.Schemas().Find("test")
 		Expect(testSchema).To(Not(BeNil()))
-		Expect(dbimpl.InitDBWithSchemas(dbType, dbFile, db.DefaultTestInitDBParams())).To(Succeed())
+		Expect(dbutil.InitDBWithSchemas(dbType, dbFile, db.DefaultTestInitDBParams())).To(Succeed())
 		context = goext.MakeContext()
 	})
 

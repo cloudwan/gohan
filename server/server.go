@@ -33,7 +33,7 @@ import (
 
 	"github.com/braintree/manners"
 	"github.com/cloudwan/gohan/db"
-	"github.com/cloudwan/gohan/db/dbimpl"
+	"github.com/cloudwan/gohan/db/dbutil"
 	"github.com/cloudwan/gohan/db/migration"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/transaction"
@@ -82,13 +82,14 @@ func (server *Server) mapRoutes() {
 	MapRouteBySchemas(server, server.db)
 
 	if txErr := db.WithinTx(server.db, func(tx transaction.Transaction) error {
+		ctx := context.Background()
 		coreSchema, _ := schemaManager.Schema("schema")
 		if coreSchema == nil {
 			return fmt.Errorf("Gohan core schema not found")
 		}
 
 		policySchema, _ := schemaManager.Schema("policy")
-		policyList, _, err := tx.List(policySchema, nil, nil, nil)
+		policyList, _, err := tx.List(ctx, policySchema, nil, nil, nil)
 		if err != nil {
 			return err
 		}
@@ -98,7 +99,7 @@ func (server *Server) mapRoutes() {
 		}
 
 		extensionSchema, _ := schemaManager.Schema("extension")
-		extensionList, _, err := tx.List(extensionSchema, nil, nil, nil)
+		extensionList, _, err := tx.List(ctx, extensionSchema, nil, nil, nil)
 		if err != nil {
 			return err
 		}
@@ -110,7 +111,7 @@ func (server *Server) mapRoutes() {
 		if namespaceSchema == nil {
 			return fmt.Errorf("No gohan schema. Disabling schema editing mode")
 		}
-		namespaceList, _, err := tx.List(namespaceSchema, nil, nil, nil)
+		namespaceList, _, err := tx.List(ctx, namespaceSchema, nil, nil, nil)
 		if err != nil {
 			return err
 		}
@@ -156,7 +157,7 @@ func (server *Server) resetRouter() {
 }
 
 func (server *Server) initDB() error {
-	return dbimpl.InitDBWithSchemas(server.getDatabaseConfig())
+	return dbutil.InitDBWithSchemas(server.getDatabaseConfig())
 }
 
 func (server *Server) connectDB() error {
@@ -164,7 +165,7 @@ func (server *Server) connectDB() error {
 		return err
 	}
 	config := util.GetConfig()
-	dbConn, err := dbimpl.CreateFromConfig(config)
+	dbConn, err := dbutil.CreateFromConfig(config)
 	if server.sync == nil {
 		server.db = dbConn
 	} else {
@@ -303,11 +304,11 @@ func NewServer(configFile string) (*Server, error) {
 			inType := initialDataConfig["type"].(string)
 			inConnection := initialDataConfig["connection"].(string)
 			log.Info("Importing data from %s ...", inConnection)
-			inDB, err := dbimpl.ConnectDB(inType, inConnection, db.DefaultMaxOpenConn, options.Default())
+			inDB, err := dbutil.ConnectDB(inType, inConnection, db.DefaultMaxOpenConn, options.Default())
 			if err != nil {
 				log.Fatal(err)
 			}
-			dbimpl.CopyDBResources(inDB, server.db, false)
+			dbutil.CopyDBResources(inDB, server.db, false)
 		}
 	}
 

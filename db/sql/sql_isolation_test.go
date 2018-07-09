@@ -22,7 +22,7 @@ import (
 	"strings"
 
 	"github.com/cloudwan/gohan/db"
-	"github.com/cloudwan/gohan/db/dbimpl"
+	"github.com/cloudwan/gohan/db/dbutil"
 	"github.com/cloudwan/gohan/db/options"
 	. "github.com/cloudwan/gohan/db/sql"
 	"github.com/cloudwan/gohan/db/transaction"
@@ -47,12 +47,12 @@ var _ = Describe("Mysql", func() {
 		dbType := "mysql"
 
 		manager := schema.GetManager()
-		dbc, err := dbimpl.ConnectDB(dbType, conn, db.DefaultMaxOpenConn, options.Default())
+		dbc, err := dbutil.ConnectDB(dbType, conn, db.DefaultMaxOpenConn, options.Default())
 		sqlConn = dbc.(*DB)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manager.LoadSchemasFromFiles(
 			"../../etc/schema/gohan.json", "../../tests/test_abstract_schema.yaml", "../../tests/test_schema.yaml")).To(Succeed())
-		dbimpl.InitDBWithSchemas(dbType, conn, db.DefaultTestInitDBParams())
+		dbutil.InitDBWithSchemas(dbType, conn, db.DefaultTestInitDBParams())
 		var ok bool
 		s, ok = manager.Schema("test")
 		Expect(ok).To(BeTrue())
@@ -70,31 +70,31 @@ var _ = Describe("Mysql", func() {
 			defer cancel()
 
 			tx1, err := sqlConn.Begin(
-				transaction.WithContext(ctx),
-				transaction.WithIsolationLevel(transaction.RepeatableRead),
+				transaction.Context(ctx),
+				transaction.IsolationLevel(transaction.RepeatableRead),
 			)
 			Expect(err).To(Succeed())
 
 			tx2, err := sqlConn.Begin(
-				transaction.WithContext(ctx),
-				transaction.WithIsolationLevel(transaction.ReadCommited),
+				transaction.Context(ctx),
+				transaction.IsolationLevel(transaction.ReadCommited),
 			)
 			Expect(err).To(Succeed())
 
-			Expect(tx1.Exec("INSERT INTO `tests` (`id`, `tenant_id`) values ('id', 'tenant')")).To(Succeed())
+			Expect(tx1.Exec(ctx, "INSERT INTO `tests` (`id`, `tenant_id`) values ('id', 'tenant')")).To(Succeed())
 
 			selectQuery := fmt.Sprintf(
 				"SELECT %s FROM %s",
 				strings.Join(MakeColumns(s, s.GetDbTableName(), nil, false), ", "),
 				s.GetDbTableName(),
 			)
-			results, err := tx2.Query(s, selectQuery, []interface{}{})
+			results, err := tx2.Query(ctx, s, selectQuery, []interface{}{})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(results)).To(Equal(0))
 
 			Expect(tx1.Commit()).To(Succeed())
 
-			results, err = tx2.Query(s, selectQuery, []interface{}{})
+			results, err = tx2.Query(ctx, s, selectQuery, []interface{}{})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(results)).To(Equal(1))
 

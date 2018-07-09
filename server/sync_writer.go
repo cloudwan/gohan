@@ -137,7 +137,7 @@ func (writer *SyncWriter) listEvents() ([]*schema.Resource, error) {
 			pagination.OptionKey(eventSchema, "id"),
 			pagination.OptionOrder(pagination.ASC),
 			pagination.OptionLimit(eventPollingLimit))
-		res, _, err := tx.List(eventSchema, nil, nil, paginator)
+		res, _, err := tx.List(context.Background(), eventSchema, nil, nil, paginator)
 		resourceList = res
 		return err
 	}); dbErr != nil {
@@ -240,7 +240,7 @@ func (writer *SyncWriter) syncEvent(resource *schema.Resource) error {
 		}
 		log.Debug("delete event %d", resource.Get("id"))
 		id := resource.Get("id")
-		err = tx.Delete(eventSchema, id)
+		err = tx.Delete(context.Background(), eventSchema, id)
 		if err != nil {
 			return fmt.Errorf("delete failed: %s", err)
 		}

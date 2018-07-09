@@ -16,6 +16,7 @@
 package otto_test
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -54,6 +55,7 @@ var _ = Describe("GohanDb", func() {
 		err           error
 		r0, r1        *schema.Resource
 		mockCtrl      *gomock.Controller
+		ctx           context.Context
 	)
 
 	var ()
@@ -63,6 +65,7 @@ var _ = Describe("GohanDb", func() {
 		s, ok = manager.Schema("test")
 		Expect(ok).To(BeTrue())
 		mockCtrl = gomock.NewController(GinkgoT())
+		ctx = context.Background()
 
 		fakeResources = []map[string]interface{}{
 			{"tenant_id": "t0", "test_string": "str0", "test_bool": false},
@@ -132,7 +135,7 @@ var _ = Describe("GohanDb", func() {
 				)
 
 				mockDB := db_mocks.NewMockDB(mockCtrl)
-				mockDB.EXPECT().Begin(gomock.Any()).DoAndReturn(func(opt ...transaction.OptionTxParams) (transaction.Transaction, error) {
+				mockDB.EXPECT().Begin(gomock.Any()).DoAndReturn(func(opt ...transaction.Option) (transaction.Transaction, error) {
 					Expect(len(opt)).To(Equal(1))
 					params := &transaction.TxParams{}
 					opt[0](params)
@@ -154,9 +157,9 @@ var _ = Describe("GohanDb", func() {
 	Describe("gohan_db_(lock)list", func() {
 		var listCall = func(tx *tr_mocks.MockTransaction, methodName string, s *schema.Schema, f transaction.Filter, pg *pagination.Paginator) *gomock.Call {
 			if strings.Contains(methodName, "Lock") {
-				return tx.EXPECT().LockList(s, f, nil, pg, schema.SkipRelatedResources)
+				return tx.EXPECT().LockList(ctx, s, f, nil, pg, schema.SkipRelatedResources)
 			}
-			return tx.EXPECT().List(s, f, nil, pg)
+			return tx.EXPECT().List(ctx, s, f, nil, pg)
 		}
 
 		Context("When valid minimum parameters are given", func() {
@@ -464,7 +467,7 @@ var _ = Describe("GohanDb", func() {
 				env := newEnvironmentWithExtension(extension, testDB)
 
 				mockTx := tr_mocks.NewMockTransaction(mockCtrl)
-				mockTx.EXPECT().StateFetch(s, transaction.Filter{"id": "resource_id", "tenant_id": "tenant0"}).Return(
+				mockTx.EXPECT().StateFetch(ctx, s, transaction.Filter{"id": "resource_id", "tenant_id": "tenant0"}).Return(
 					transaction.ResourceState{
 						ConfigVersion: 30,
 						StateVersion:  29,
@@ -560,7 +563,7 @@ var _ = Describe("GohanDb", func() {
 				env := newEnvironmentWithExtension(extension, testDB)
 
 				mockTx := tr_mocks.NewMockTransaction(mockCtrl)
-				mockTx.EXPECT().Query(s, "SELECT DUMMY", []interface{}{"tenant0", "obj1"}).Return(
+				mockTx.EXPECT().Query(ctx, s, "SELECT DUMMY", []interface{}{"tenant0", "obj1"}).Return(
 					[]*schema.Resource{r0, r1}, nil,
 				)
 
@@ -681,7 +684,7 @@ var _ = Describe("GohanDb", func() {
 				env := newEnvironmentWithExtension(extension, testDB)
 
 				mockTx := tr_mocks.NewMockTransaction(mockCtrl)
-				mockTx.EXPECT().Query(s, "SELECT DUMMY", []interface{}{}).Return(
+				mockTx.EXPECT().Query(ctx, s, "SELECT DUMMY", []interface{}{}).Return(
 					nil, errors.New("SOMETHING HAPPENED"),
 				)
 

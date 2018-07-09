@@ -16,6 +16,7 @@
 package otto_test
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -29,6 +30,7 @@ import (
 	"github.com/onsi/gomega/ghttp"
 	ottopkg "github.com/robertkrimen/otto"
 
+	"github.com/cloudwan/gohan/db/dbutil"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/extension/otto"
@@ -46,14 +48,20 @@ var _ = Describe("Otto extension manager", func() {
 	var (
 		manager            *schema.Manager
 		environmentManager *extension.Manager
+		ctx                context.Context
 
 		timeLimit  time.Duration
 		timeLimits []*schema.PathEventTimeLimit
 	)
 
+	makeContext := func() map[string]interface{} {
+		return map[string]interface{}{"context": ctx}
+	}
+
 	BeforeEach(func() {
 		manager = schema.GetManager()
 		environmentManager = extension.GetManager()
+		ctx = context.Background()
 
 		timeLimit = time.Duration(1) * time.Second
 		timeLimits = []*schema.PathEventTimeLimit{}
@@ -67,7 +75,7 @@ var _ = Describe("Otto extension manager", func() {
 			if whitelist[schema.ID] {
 				continue
 			}
-			err = clearTable(tx, schema)
+			err = dbutil.ClearTable(ctx, tx, schema)
 			Expect(err).ToNot(HaveOccurred(), "Failed to clear table.")
 		}
 		err = tx.Commit()
@@ -128,7 +136,8 @@ var _ = Describe("Otto extension manager", func() {
 				Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
 
 				context := map[string]interface{}{
-					"id": "test",
+					"id":      "test",
+					"context": ctx,
 				}
 				Expect(env.HandleEvent("test_event", context)).To(Succeed())
 				Expect(context["resp"]).ToNot(BeNil())
@@ -591,7 +600,7 @@ var _ = Describe("Otto extension manager", func() {
 			env := newEnvironment()
 			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
 
-			context := map[string]interface{}{}
+			context := makeContext()
 			Expect(env.HandleEvent("test_event", context)).To(Succeed())
 			Expect(context).To(HaveKeyWithValue("resp", HaveKeyWithValue("connection", "test.db")))
 			Expect(context).To(HaveKeyWithValue("resp", HaveKeyWithValue("type", "sqlite3")))
@@ -611,7 +620,7 @@ var _ = Describe("Otto extension manager", func() {
 			env := newEnvironment()
 			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
 
-			context := map[string]interface{}{}
+			context := makeContext()
 			Expect(env.HandleEvent("test_event", context)).To(Succeed())
 			Expect(context).To(HaveKeyWithValue("resp", BeFalse()))
 		})
@@ -639,7 +648,7 @@ var _ = Describe("Otto extension manager", func() {
 			adminAuth = schema.NewAuthorization(adminTenantID, "admin", adminTokenID, []string{"admin"}, nil)
 			auth = adminAuth
 
-			context = middleware.Context{}
+			context = makeContext()
 
 			events = map[string]string{}
 
@@ -712,7 +721,7 @@ var _ = Describe("Otto extension manager", func() {
 				if whitelist[schema.ID] {
 					continue
 				}
-				err = clearTable(tx, schema)
+				err = dbutil.ClearTable(ctx, tx, schema)
 				Expect(err).ToNot(HaveOccurred(), "Failed to clear table.")
 			}
 			err = tx.Commit()
@@ -877,7 +886,7 @@ var _ = Describe("Otto extension manager", func() {
 					tx, err = testDB.Begin()
 					Expect(err).NotTo(HaveOccurred())
 					defer tx.Close()
-					Expect(tx.Create(resource)).To(Succeed())
+					Expect(tx.Create(ctx, resource)).To(Succeed())
 					Expect(tx.Commit()).To(Succeed())
 
 					action = "read"
@@ -1035,7 +1044,7 @@ var _ = Describe("Otto extension manager", func() {
 					tx, err = testDB.Begin()
 					Expect(err).NotTo(HaveOccurred())
 					defer tx.Close()
-					Expect(tx.Create(resource)).To(Succeed())
+					Expect(tx.Create(ctx, resource)).To(Succeed())
 					Expect(tx.Commit()).To(Succeed())
 
 					action = "read"
@@ -1161,7 +1170,7 @@ var _ = Describe("Otto extension manager", func() {
 					tx, err = testDB.Begin()
 					Expect(err).NotTo(HaveOccurred())
 					defer tx.Close()
-					Expect(tx.Create(resource)).To(Succeed())
+					Expect(tx.Create(ctx, resource)).To(Succeed())
 					Expect(tx.Commit()).To(Succeed())
 
 					action = "create"
@@ -1282,7 +1291,7 @@ var _ = Describe("Otto extension manager", func() {
 					tx, err = testDB.Begin()
 					Expect(err).NotTo(HaveOccurred())
 					defer tx.Close()
-					Expect(tx.Create(resource)).To(Succeed())
+					Expect(tx.Create(ctx, resource)).To(Succeed())
 					Expect(tx.Commit()).To(Succeed())
 
 					action = "update"
@@ -1406,7 +1415,7 @@ var _ = Describe("Otto extension manager", func() {
 					tx, err = testDB.Begin()
 					Expect(err).NotTo(HaveOccurred())
 					defer tx.Close()
-					Expect(tx.Create(resource)).To(Succeed())
+					Expect(tx.Create(ctx, resource)).To(Succeed())
 					Expect(tx.Commit()).To(Succeed())
 
 					action = "delete"
@@ -1495,14 +1504,14 @@ var _ = Describe("Otto extension manager", func() {
 					tx, err = testDB.Begin()
 					Expect(err).NotTo(HaveOccurred())
 					defer tx.Close()
-					Expect(tx.Create(resource)).To(Succeed())
+					Expect(tx.Create(ctx, resource)).To(Succeed())
 					Expect(tx.Commit()).To(Succeed())
 
 					action = "read"
 
-					createNetworkContext = middleware.Context{}
-					createSubnetContext = middleware.Context{}
-					readSubnetContext = middleware.Context{}
+					createNetworkContext = makeContext()
+					createSubnetContext = makeContext()
+					readSubnetContext = makeContext()
 					subnetEvents = map[string]string{}
 				})
 
@@ -1709,7 +1718,7 @@ var _ = Describe("Otto extension manager", func() {
 			env2 := newEnvironment()
 			Expect(env1.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
 			Expect(env2.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
-			context := map[string]interface{}{}
+			context := makeContext()
 			Expect(env1.HandleEvent("test_event", context)).To(Succeed())
 			Expect(env2.HandleEvent("test_event", context)).To(Succeed())
 			Expect(context["resp"]).To(Equal(int64(123)))
@@ -1749,8 +1758,8 @@ var _ = Describe("Otto extension manager", func() {
 			env1, env2 := newEnvironment(), newEnvironment()
 			Expect(env1.LoadExtensionsForPath(env1Extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
 			Expect(env2.LoadExtensionsForPath(env2Extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
-			env1Context := map[string]interface{}{}
-			env2Context := map[string]interface{}{}
+			env1Context := makeContext()
+			env2Context := makeContext()
 			Expect(env1.HandleEvent("test_event", env1Context)).To(Succeed())
 			Expect(env2.HandleEvent("test_event", env2Context)).To(Succeed())
 			Expect(env1Context["resp"]).To(Equal(int64(123)))
@@ -1777,8 +1786,8 @@ var _ = Describe("Otto extension manager", func() {
 			env2 := env1.Clone()
 			Expect(env1.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
 			Expect(env2.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
-			env1Context := map[string]interface{}{}
-			env2Context := map[string]interface{}{}
+			env1Context := makeContext()
+			env2Context := makeContext()
 			Expect(env1.HandleEvent("test_event", env1Context)).To(Succeed())
 			Expect(env2.HandleEvent("test_event", env2Context)).To(Succeed())
 			Expect(env1Context["resp"]).To(Equal(int64(123)))
@@ -1808,7 +1817,7 @@ var _ = Describe("Otto extension manager", func() {
 			Expect(err).ToNot(HaveOccurred())
 			extensions := []*schema.Extension{extension}
 			env := newEnvironment()
-			context := map[string]interface{}{}
+			context := makeContext()
 			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
 			Expect(env.HandleEvent("test_event", context)).To(Succeed())
 			Expect(context["resp"]).To(Equal("123"))
@@ -1829,7 +1838,7 @@ var _ = Describe("Otto extension manager", func() {
 			Expect(err).ToNot(HaveOccurred())
 			extensions := []*schema.Extension{extension}
 			env := newEnvironment()
-			context := map[string]interface{}{}
+			context := makeContext()
 			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
 			Expect(env.HandleEvent("test_event", context)).To(Succeed())
 			Expect(context["resp"]).To(Equal("321"))
@@ -1875,7 +1884,7 @@ var _ = Describe("Otto extension manager", func() {
 			extensions := []*schema.Extension{hookExtension, extension}
 			env := newEnvironment()
 			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "hook")).To(Succeed())
-			context := map[string]interface{}{}
+			context := makeContext()
 			Expect(env.HandleEvent("reg_hook", context)).To(Succeed())
 			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
 			Expect(env.HandleEvent("test_event", context)).To(Succeed())
@@ -1901,7 +1910,7 @@ var _ = Describe("Otto extension manager", func() {
 			extensions := []*schema.Extension{extension}
 			env := newEnvironment()
 			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
-			context := map[string]interface{}{}
+			context := makeContext()
 			env.Sync.Delete("/gohan_sync_fetch_test", false)
 			env.Sync.Update("/gohan_sync_fetch_test", "{}")
 			Expect(env.HandleEvent("test_event", context)).To(Succeed())
@@ -1927,7 +1936,7 @@ var _ = Describe("Otto extension manager", func() {
 			env := newEnvironment()
 			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
 
-			context := map[string]interface{}{}
+			context := makeContext()
 			env.Sync.Delete("/gohan_sync_watch_test", false)
 			Expect(env.HandleEvent("test_event", context)).To(Succeed())
 			Expect(context).To(HaveKeyWithValue("resp", HaveLen(0)))
@@ -1951,7 +1960,7 @@ var _ = Describe("Otto extension manager", func() {
 			env := newEnvironment()
 			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
 
-			context := map[string]interface{}{}
+			context := makeContext()
 			env.Sync.Delete("/gohan_sync_watch_test", false)
 			go func() {
 				time.Sleep(time.Duration(200) * time.Millisecond)
@@ -1982,7 +1991,7 @@ var _ = Describe("Otto extension manager", func() {
 			extensions := []*schema.Extension{extension}
 			env := newEnvironment()
 			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
-			context := map[string]interface{}{}
+			context := makeContext()
 			env.Sync.Delete("/gohan_sync_delete_test", false)
 			env.Sync.Update("/gohan_sync_delete_test", "{}")
 			Expect(env.HandleEvent("test_event", context)).To(Succeed())
@@ -2010,7 +2019,7 @@ var _ = Describe("Otto extension manager", func() {
 			extensions := []*schema.Extension{extension}
 			env := newEnvironment()
 			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
-			context := map[string]interface{}{}
+			context := makeContext()
 			env.Sync.Delete("/gohan_sync_delete_test", true)
 			env.Sync.Update("/gohan_sync_delete_test/child1", "bla")
 			env.Sync.Update("/gohan_sync_delete_test/child2", "bar")
@@ -2114,7 +2123,8 @@ var _ = Describe("Otto extension manager", func() {
 				Expect(env.LoadExtensionsForPath(extensions, time.Duration(100), timeLimits, "test_path")).To(Succeed())
 
 				context := map[string]interface{}{
-					"id": "test",
+					"id":      "test",
+					"context": ctx,
 				}
 				Expect(env.HandleEvent("test_event", context)).ToNot(Succeed())
 			})
@@ -2126,6 +2136,10 @@ var _ = Describe("Otto extension manager", func() {
 			env     extension.Environment
 			context = map[string]interface{}{"id": "test"}
 		)
+
+		BeforeEach(func() {
+			context["context"] = ctx
+		})
 
 		createEnv := func(code string) {
 			extension, err := schema.NewExtension(map[string]interface{}{
@@ -2156,6 +2170,7 @@ var _ = Describe("Otto extension manager", func() {
 
 var _ = Describe("Using gohan_file builtin", func() {
 	var (
+		ctx     = context.Background()
 		context map[string]interface{}
 		env     *otto.Environment
 
@@ -2165,7 +2180,8 @@ var _ = Describe("Using gohan_file builtin", func() {
 
 	BeforeEach(func() {
 		context = map[string]interface{}{
-			"id": "test",
+			"id":      "test",
+			"context": ctx,
 		}
 		env = newEnvironment()
 

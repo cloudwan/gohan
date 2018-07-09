@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/cloudwan/gohan/db"
-	"github.com/cloudwan/gohan/db/dbimpl"
+	"github.com/cloudwan/gohan/db/dbutil"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/sync/etcdv3"
 	. "github.com/onsi/ginkgo"
@@ -48,9 +48,9 @@ var _ = Describe("Suite set up and tear down", func() {
 
 	var _ = BeforeSuite(func() {
 		var err error
-		testDB1, err = dbimpl.ConnectDB("sqlite3", testDBFile1, db.DefaultMaxOpenConn, options.Default())
+		testDB1, err = dbutil.ConnectDB("sqlite3", testDBFile1, db.DefaultMaxOpenConn, options.Default())
 		Expect(err).ToNot(HaveOccurred(), "Failed to connect database.")
-		testDB2, err = dbimpl.ConnectDB("sqlite3", testDBFile2, db.DefaultMaxOpenConn, options.Default())
+		testDB2, err = dbutil.ConnectDB("sqlite3", testDBFile2, db.DefaultMaxOpenConn, options.Default())
 		Expect(err).ToNot(HaveOccurred(), "Failed to connect database.")
 		testSync, err = etcdv3.NewSync([]string{testSyncEndpoint}, time.Second)
 		Expect(err).ToNot(HaveOccurred(), "Failed to connect to etcd")

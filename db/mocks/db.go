@@ -59,7 +59,7 @@ func (mr *MockDBMockRecorder) Close() *gomock.Call {
 }
 
 // Begin mocks base method
-func (m *MockDB) Begin(options ...transaction.OptionTxParams) (transaction.Transaction, error) {
+func (m *MockDB) Begin(options ...transaction.Option) (transaction.Transaction, error) {
 	varargs := []interface{}{}
 	for _, a := range options {
 		varargs = append(varargs, a)

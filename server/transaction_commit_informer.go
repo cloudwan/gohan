@@ -44,7 +44,7 @@ type DbSyncWrapper struct {
 }
 
 // Begin wraps transaction object with sync
-func (sw *DbSyncWrapper) BeginTx(options ...transaction.OptionTxParams) (transaction.Transaction, error) {
+func (sw *DbSyncWrapper) BeginTx(options ...transaction.Option) (transaction.Transaction, error) {
 	tx, err := sw.DB.Begin(options...)
 	if err != nil {
 		return nil, err
@@ -106,69 +106,57 @@ func (tl *transactionEventLogger) logEvent(ctx context.Context, eventType string
 		"timestamp":     int64(time.Now().Unix()),
 	})
 	tl.eventLogged = true
-	return tl.Transaction.CreateContext(ctx, eventResource)
+	return tl.Transaction.Create(ctx, eventResource)
 }
 
-func (tl *transactionEventLogger) Create(resource *schema.Resource) error {
-	return tl.CreateContext(context.Background(), resource)
-}
-
-func (tl *transactionEventLogger) CreateContext(ctx context.Context, resource *schema.Resource) error {
-	err := tl.Transaction.CreateContext(ctx, resource)
+func (tl *transactionEventLogger) Create(ctx context.Context, resource *schema.Resource) error {
+	err := tl.Transaction.Create(ctx, resource)
 	if err != nil {
 		return err
 	}
 	return tl.logEvent(ctx, "create", resource, 1)
 }
 
-func (tl *transactionEventLogger) Update(resource *schema.Resource) error {
-	return tl.UpdateContext(context.Background(), resource)
-}
-
-func (tl *transactionEventLogger) UpdateContext(ctx context.Context, resource *schema.Resource) error {
-	err := tl.Transaction.UpdateContext(ctx, resource)
+func (tl *transactionEventLogger) Update(ctx context.Context, resource *schema.Resource) error {
+	err := tl.Transaction.Update(ctx, resource)
 	if err != nil {
 		return err
 	}
 	if !resource.Schema().StateVersioning() {
 		return tl.logEvent(ctx, "update", resource, 0)
 	}
-	state, err := tl.StateFetch(resource.Schema(), transaction.IDFilter(resource.ID()))
+	state, err := tl.StateFetch(ctx, resource.Schema(), transaction.IDFilter(resource.ID()))
 	if err != nil {
 		return err
 	}
 	return tl.logEvent(ctx, "update", resource, state.ConfigVersion)
 }
 
-func (tl *transactionEventLogger) Resync(resource *schema.Resource) error {
+func (tl *transactionEventLogger) Resync(ctx context.Context, resource *schema.Resource) error {
 	if !resource.Schema().StateVersioning() {
 		return tl.logEvent(context.Background(), "update", resource, 0)
 	}
-	state, err := tl.StateFetch(resource.Schema(), transaction.IDFilter(resource.ID()))
+	state, err := tl.StateFetch(ctx, resource.Schema(), transaction.IDFilter(resource.ID()))
 	if err != nil {
 		return err
 	}
 	return tl.logEvent(context.Background(), "update", resource, state.ConfigVersion)
 }
 
-func (tl *transactionEventLogger) Delete(s *schema.Schema, resourceID interface{}) error {
-	return tl.DeleteContext(context.Background(), s, resourceID)
-}
-
-func (tl *transactionEventLogger) DeleteContext(ctx context.Context, s *schema.Schema, resourceID interface{}) error {
-	resource, err := tl.Fetch(s, transaction.IDFilter(resourceID), nil)
+func (tl *transactionEventLogger) Delete(ctx context.Context, s *schema.Schema, resourceID interface{}) error {
+	resource, err := tl.Fetch(ctx, s, transaction.IDFilter(resourceID), nil)
 	if err != nil {
 		return err
 	}
 	configVersion := int64(0)
 	if resource.Schema().StateVersioning() {
-		state, err := tl.StateFetchContext(ctx, s, transaction.IDFilter(resourceID))
+		state, err := tl.StateFetch(ctx, s, transaction.IDFilter(resourceID))
 		if err != nil {
 			return err
 		}
 		configVersion = state.ConfigVersion + 1
 	}
-	err = tl.Transaction.DeleteContext(ctx, s, resourceID)
+	err = tl.Transaction.Delete(ctx, s, resourceID)
 	if err != nil {
 		return err
 	}

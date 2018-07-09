@@ -30,7 +30,14 @@ import (
 )
 
 var _ = Describe("Transaction", func() {
-	var netSchema *schema.Schema
+	var (
+		netSchema *schema.Schema
+		ctx       context.Context
+	)
+
+	BeforeEach(func() {
+		ctx = context.Background()
+	})
 
 	Describe("GetTransactionIsolationLevel", func() {
 		BeforeEach(func() {
@@ -81,20 +88,21 @@ var _ = Describe("Transaction", func() {
 
 			countLock = 0
 			count = 0
-			transx.EXPECT().ListContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(context.Context, *schema.Schema, transaction.Filter, *transaction.ViewOptions, *pagination.Paginator) (list []*schema.Resource, total uint64, err error) {
+			transx.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(context.Context, *schema.Schema, transaction.Filter, *transaction.ViewOptions, *pagination.Paginator) (list []*schema.Resource, total uint64, err error) {
 				count++
 				return []*schema.Resource{}, 0, nil
 			}).AnyTimes()
 
-			transx.EXPECT().LockListContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(context.Context, *schema.Schema, transaction.Filter, *transaction.ViewOptions, *pagination.Paginator, schema.LockPolicy) (list []*schema.Resource, total uint64, err error) {
+			transx.EXPECT().LockList(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(context.Context, *schema.Schema, transaction.Filter, *transaction.ViewOptions, *pagination.Paginator, schema.LockPolicy) (list []*schema.Resource, total uint64, err error) {
 				countLock++
 				return []*schema.Resource{}, 0, nil
 			}).AnyTimes()
 
-			transx.EXPECT().CreateContext(gomock.Any(), gomock.Any()).AnyTimes()
-			transx.EXPECT().UpdateContext(gomock.Any(), gomock.Any()).AnyTimes()
-			transx.EXPECT().DeleteContext(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-			transx.EXPECT().QueryContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+			transx.EXPECT().Create(gomock.Any(), gomock.Any()).AnyTimes()
+			transx.EXPECT().Update(gomock.Any(), gomock.Any()).AnyTimes()
+			transx.EXPECT().Delete(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+			transx.EXPECT().Query(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+			transx.EXPECT().Exec(gomock.Any(), gomock.Any()).AnyTimes()
 		})
 		AfterEach(func() {
 			mockCtrl.Finish()
@@ -102,97 +110,67 @@ var _ = Describe("Transaction", func() {
 
 		It("First list not cached", func() {
 			Expect(count).To(Equal(0))
-			cachedTx.List(netSchema, tx.Filter{}, nil, nil)
+			cachedTx.List(ctx, netSchema, tx.Filter{}, nil, nil)
 			Expect(count).To(Equal(1))
 		})
 
 		It("List calls get cached", func() {
 			Expect(count).To(Equal(0))
-			cachedTx.List(netSchema, tx.Filter{}, nil, nil)
+			cachedTx.List(ctx, netSchema, tx.Filter{}, nil, nil)
 			Expect(count).To(Equal(1))
-			cachedTx.List(netSchema, tx.Filter{}, nil, nil)
+			cachedTx.List(ctx, netSchema, tx.Filter{}, nil, nil)
 			Expect(count).To(Equal(1))
 			Expect(countLock).To(Equal(0))
-			cachedTx.LockList(netSchema, tx.Filter{}, nil, nil, schema.LockRelatedResources)
+			cachedTx.LockList(ctx, netSchema, tx.Filter{}, nil, nil, schema.LockRelatedResources)
 			Expect(count).To(Equal(1))
 			Expect(countLock).To(Equal(1))
-			cachedTx.LockList(netSchema, tx.Filter{}, nil, nil, schema.SkipRelatedResources)
+			cachedTx.LockList(ctx, netSchema, tx.Filter{}, nil, nil, schema.SkipRelatedResources)
 			Expect(count).To(Equal(1))
 			Expect(countLock).To(Equal(2)) //Lock policy changes hash
 		})
 
 		It("Fetch calls get cached", func() {
 			Expect(count).To(Equal(0))
-			cachedTx.Fetch(netSchema, tx.Filter{}, nil)
+			cachedTx.Fetch(ctx, netSchema, tx.Filter{}, nil)
 			Expect(count).To(Equal(1))
-			cachedTx.Fetch(netSchema, tx.Filter{}, nil)
+			cachedTx.Fetch(ctx, netSchema, tx.Filter{}, nil)
 			Expect(count).To(Equal(1))
-		})
+			cachedTx.LockFetch(ctx, netSchema, tx.Filter{}, schema.LockRelatedResources, nil)
+			Expect(count).To(Equal(1))
+			cachedTx.LockFetch(ctx, netSchema, tx.Filter{}, schema.SkipRelatedResources, nil)
+			Expect(count).To(Equal(1))
 
-		It("ListCtx calls get cached", func() {
-			Expect(count).To(Equal(0))
-			cachedTx.ListContext(nil, netSchema, tx.Filter{}, nil, nil)
-			Expect(count).To(Equal(1))
-			cachedTx.ListContext(nil, netSchema, tx.Filter{}, nil, nil)
-			Expect(count).To(Equal(1))
-			cachedTx.LockListContext(nil, netSchema, tx.Filter{}, nil, nil, schema.LockRelatedResources)
-			Expect(count).To(Equal(1))
-			cachedTx.LockListContext(nil, netSchema, tx.Filter{}, nil, nil, schema.SkipRelatedResources)
-			Expect(count).To(Equal(1))
-		})
-
-		It("FetchCtx calls get cached", func() {
-			Expect(count).To(Equal(0))
-			cachedTx.FetchContext(nil, netSchema, tx.Filter{}, nil)
-			Expect(count).To(Equal(1))
-			cachedTx.FetchContext(nil, netSchema, tx.Filter{}, nil)
-			Expect(count).To(Equal(1))
-			cachedTx.LockFetchContext(nil, netSchema, tx.Filter{}, schema.LockRelatedResources, nil)
-			Expect(count).To(Equal(1))
-			cachedTx.LockFetchContext(nil, netSchema, tx.Filter{}, schema.SkipRelatedResources, nil)
-			Expect(count).To(Equal(1))
 		})
 
 		It("Updates / inserts clear cache", func() {
 			Expect(count).To(Equal(0))
-			cachedTx.List(netSchema, tx.Filter{}, nil, nil)
+			cachedTx.List(ctx, netSchema, tx.Filter{}, nil, nil)
 			Expect(count).To(Equal(1))
-			cachedTx.Create(nil)
-			cachedTx.List(netSchema, tx.Filter{}, nil, nil)
+			cachedTx.Create(ctx, nil)
+			cachedTx.List(ctx, netSchema, tx.Filter{}, nil, nil)
 			Expect(count).To(Equal(2))
-			cachedTx.Update(nil)
+			cachedTx.Update(ctx, nil)
 			Expect(count).To(Equal(2))
-			cachedTx.List(netSchema, tx.Filter{}, nil, nil)
+			cachedTx.List(ctx, netSchema, tx.Filter{}, nil, nil)
 			Expect(count).To(Equal(3))
-			cachedTx.Delete(nil, nil)
+			cachedTx.Delete(ctx, nil, nil)
 			Expect(count).To(Equal(3))
-			cachedTx.List(netSchema, tx.Filter{}, nil, nil)
+			cachedTx.List(ctx, netSchema, tx.Filter{}, nil, nil)
 			Expect(count).To(Equal(4))
-			cachedTx.Query(nil, "", nil)
+			cachedTx.Query(ctx, nil, "", nil)
 			Expect(count).To(Equal(4))
-			cachedTx.List(netSchema, tx.Filter{}, nil, nil)
+			cachedTx.List(ctx, netSchema, tx.Filter{}, nil, nil)
 			Expect(count).To(Equal(5))
 		})
 
-		It("Updates / inserts with ctx clear cache", func() {
-			Expect(count).To(Equal(0))
-			cachedTx.List(netSchema, tx.Filter{}, nil, nil)
+		It("Exec clears cache", func() {
+			cachedTx.List(ctx, netSchema, tx.Filter{}, nil, nil)
 			Expect(count).To(Equal(1))
-			cachedTx.CreateContext(nil, nil)
-			cachedTx.List(netSchema, tx.Filter{}, nil, nil)
+
+			cachedTx.Exec(context.Background(), "DELETE ignored FROM not_important")
+
+			cachedTx.List(ctx, netSchema, tx.Filter{}, nil, nil)
 			Expect(count).To(Equal(2))
-			cachedTx.UpdateContext(nil, nil)
-			Expect(count).To(Equal(2))
-			cachedTx.List(netSchema, tx.Filter{}, nil, nil)
-			Expect(count).To(Equal(3))
-			cachedTx.DeleteContext(nil, nil, nil)
-			Expect(count).To(Equal(3))
-			cachedTx.List(netSchema, tx.Filter{}, nil, nil)
-			Expect(count).To(Equal(4))
-			cachedTx.QueryContext(nil, nil, "", nil)
-			Expect(count).To(Equal(4))
-			cachedTx.List(netSchema, tx.Filter{}, nil, nil)
-			Expect(count).To(Equal(5))
 		})
 	})
 })

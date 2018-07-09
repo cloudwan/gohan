@@ -134,9 +134,9 @@ func resourceTransactionWithContext(ctx middleware.Context, dataStore db.DB, lev
 
 			return fn()
 		},
-		transaction.WithContext(mustGetContext(ctx)),
-		transaction.WithTraceId(traceIdOrEmpty(ctx)),
-		transaction.WithIsolationLevel(level))
+		transaction.Context(mustGetContext(ctx)),
+		transaction.TraceId(traceIdOrEmpty(ctx)),
+		transaction.IsolationLevel(level))
 }
 
 // ApplyPolicyForResources applies policy filtering for response
@@ -224,6 +224,7 @@ func GetResourcesInTransaction(context middleware.Context, resourceSchema *schem
 		o = listOptionsFromQueryParameter(r.URL.Query())
 	}
 	list, total, err := mainTransaction.List(
+		mustGetContext(context),
 		resourceSchema,
 		filter,
 		o,
@@ -434,7 +435,7 @@ func GetSingleResourceInTransaction(context middleware.Context, resourceSchema *
 	policy := context["policy"].(*schema.Policy)
 	policy.AddCustomFilters(filter, auth.TenantID())
 
-	object, err := mainTransaction.Fetch(resourceSchema, filter, options)
+	object, err := mainTransaction.Fetch(mustGetContext(context), resourceSchema, filter, options)
 	if object == nil {
 		switch err {
 		case transaction.ErrResourceNotFound:
@@ -476,7 +477,7 @@ func CreateOrUpdateResource(
 	var exists bool
 
 	if preTxErr := db.WithinTx(dataStore, func(preTransaction transaction.Transaction) error {
-		exists, err = checkIfResourceExistsForTenant(auth.TenantID(), resourceID, resourceSchema, policy, preTransaction)
+		exists, err = checkIfResourceExistsForTenant(mustGetContext(ctx), auth.TenantID(), resourceID, resourceSchema, policy, preTransaction)
 		if err != nil {
 			return err
 		}
@@ -485,7 +486,7 @@ func CreateOrUpdateResource(
 		}
 
 		filter := transaction.IDFilter(resourceID)
-		exists, err = checkIfResourceExists(filter, resourceSchema, preTransaction)
+		exists, err = checkIfResourceExists(mustGetContext(ctx), filter, resourceSchema, preTransaction)
 		if err != nil {
 			return err
 		}
@@ -493,7 +494,7 @@ func CreateOrUpdateResource(
 			return ResourceError{transaction.ErrResourceNotFound, "", Forbidden}
 		}
 		return nil
-	}, transaction.WithContext(mustGetContext(ctx)), transaction.WithTraceId(traceIdOrEmpty(ctx)),
+	}, transaction.Context(mustGetContext(ctx)), transaction.TraceId(traceIdOrEmpty(ctx)),
 	); preTxErr != nil {
 		return false, preTxErr
 	}
@@ -510,6 +511,7 @@ func CreateOrUpdateResource(
 }
 
 func checkIfResourceExistsForTenant(
+	context context.Context,
 	tenantID,
 	resourceID string,
 	resourceSchema *schema.Schema,
@@ -524,11 +526,11 @@ func checkIfResourceExistsForTenant(
 	}
 	policy.AddCustomFilters(filter, tenantID)
 
-	return checkIfResourceExists(filter, resourceSchema, preTransaction)
+	return checkIfResourceExists(context, filter, resourceSchema, preTransaction)
 }
 
-func checkIfResourceExists(filter transaction.Filter, resourceSchema *schema.Schema, preTransaction transaction.Transaction) (bool, error) {
-	_, err := preTransaction.Fetch(resourceSchema, filter, nil)
+func checkIfResourceExists(context context.Context, filter transaction.Filter, resourceSchema *schema.Schema, preTransaction transaction.Transaction) (bool, error) {
+	_, err := preTransaction.Fetch(context, resourceSchema, filter, nil)
 	if err != nil {
 		if err != transaction.ErrResourceNotFound {
 			return false, err
@@ -656,7 +658,7 @@ func CreateResourceInTransaction(context middleware.Context, resourceSchema *sch
 			return fmt.Errorf("Loading resource failed: %s", err)
 		}
 	}
-	if err := mainTransaction.Create(resource); err != nil {
+	if err := mainTransaction.Create(mustGetContext(context), resource); err != nil {
 		log.Debug("%s transaction error", err)
 		if isForeignKeyFailed(err) {
 			return handleForeignKeyError(err, dataMap)
@@ -773,11 +775,11 @@ func UpdateResourceInTransaction(
 	var err error
 	switch resourceSchema.GetLockingPolicy("update") {
 	case schema.NoLocking:
-		resource, err = mainTransaction.Fetch(resourceSchema, filter, nil)
+		resource, err = mainTransaction.Fetch(mustGetContext(context), resourceSchema, filter, nil)
 	case schema.LockRelatedResources:
-		resource, err = mainTransaction.LockFetch(resourceSchema, filter, schema.LockRelatedResources, nil)
+		resource, err = mainTransaction.LockFetch(mustGetContext(context), resourceSchema, filter, schema.LockRelatedResources, nil)
 	case schema.SkipRelatedResources:
-		resource, err = mainTransaction.LockFetch(resourceSchema, filter, schema.SkipRelatedResources, nil)
+		resource, err = mainTransaction.LockFetch(mustGetContext(context), resourceSchema, filter, schema.SkipRelatedResources, nil)
 	}
 
 	if err != nil {
@@ -813,7 +815,7 @@ func UpdateResourceInTransaction(
 		return fmt.Errorf("Loading Resource failed: %s", err)
 	}
 
-	err = mainTransaction.Update(resource)
+	err = mainTransaction.Update(mustGetContext(context), resource)
 	if err != nil {
 		if isForeignKeyFailed(err) {
 			return handleForeignKeyError(err, dataMap)
@@ -860,7 +862,7 @@ func DeleteResource(ctx middleware.Context,
 	if errPreTx := db.WithinTx(dataStore, func(preTransaction transaction.Transaction) error {
 		resource, fetchErr = fetchResource(resourceID, resourceSchema, preTransaction, ctx)
 		return fetchErr
-	}, transaction.WithContext(mustGetContext(ctx)), transaction.WithTraceId(traceIdOrEmpty(ctx))); errPreTx != nil {
+	}, transaction.Context(mustGetContext(ctx)), transaction.TraceId(traceIdOrEmpty(ctx))); errPreTx != nil {
 		return errPreTx
 	}
 
@@ -920,7 +922,7 @@ func fetchResourceForAction(action string, auth schema.Authorization, resourceID
 		filter["tenant_id"] = tenantIDs
 	}
 	policy.AddCustomFilters(filter, auth.TenantID())
-	resource, err := tx.Fetch(resourceSchema, filter, nil)
+	resource, err := tx.Fetch(mustGetContext(context), resourceSchema, filter, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -951,11 +953,11 @@ func DeleteResourceInTransaction(context middleware.Context, resourceSchema *sch
 	var err error
 	switch resourceSchema.GetLockingPolicy("delete") {
 	case schema.NoLocking:
-		resource, err = mainTransaction.Fetch(resourceSchema, filter, nil)
+		resource, err = mainTransaction.Fetch(mustGetContext(context), resourceSchema, filter, nil)
 	case schema.LockRelatedResources:
-		resource, err = mainTransaction.LockFetch(resourceSchema, filter, schema.LockRelatedResources, nil)
+		resource, err = mainTransaction.LockFetch(mustGetContext(context), resourceSchema, filter, schema.LockRelatedResources, nil)
 	case schema.SkipRelatedResources:
-		resource, err = mainTransaction.LockFetch(resourceSchema, filter, schema.SkipRelatedResources, nil)
+		resource, err = mainTransaction.LockFetch(mustGetContext(context), resourceSchema, filter, schema.SkipRelatedResources, nil)
 	}
 
 	if err != nil {
@@ -974,7 +976,7 @@ func DeleteResourceInTransaction(context middleware.Context, resourceSchema *sch
 		return err
 	}
 
-	err = mainTransaction.Delete(resourceSchema, resourceID)
+	err = mainTransaction.Delete(mustGetContext(context), resourceSchema, resourceID)
 	if err != nil {
 		return ResourceError{err, "", DeleteFailed}
 	}

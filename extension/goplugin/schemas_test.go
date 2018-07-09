@@ -16,12 +16,13 @@
 package goplugin_test
 
 import (
+	"context"
 	"os"
 	"sync"
 	"time"
 
 	"github.com/cloudwan/gohan/db"
-	"github.com/cloudwan/gohan/db/dbimpl"
+	"github.com/cloudwan/gohan/db/dbutil"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/extension/goext"
 	"github.com/cloudwan/gohan/extension/goext/filter"
@@ -42,6 +43,7 @@ var _ = Describe("Schemas", func() {
 		testSchemaNoExtensions goext.ISchema
 		rawDB                  db.DB
 		schemaManager          *schema.Manager
+		ctx                    context.Context
 	)
 
 	const (
@@ -60,10 +62,11 @@ var _ = Describe("Schemas", func() {
 		schemaManager = schema.GetManager()
 		Expect(schemaManager.LoadSchemaFromFile(SchemaPath)).To(Succeed())
 		var err error
-		rawDB, err = dbimpl.ConnectDB(dbType, dbFile, db.DefaultMaxOpenConn, options.Default())
+		rawDB, err = dbutil.ConnectDB(dbType, dbFile, db.DefaultMaxOpenConn, options.Default())
 		Expect(err).To(BeNil())
 		env = goplugin.NewEnvironment("test", nil, nil)
 		env.SetDatabase(rawDB)
+		ctx = context.Background()
 
 		Expect(env.Load("test_data/ext_good/ext_good.so")).To(Succeed())
 		Expect(env.Start()).To(Succeed())
@@ -73,7 +76,7 @@ var _ = Describe("Schemas", func() {
 		Expect(testSuiteSchema).To(Not(BeNil()))
 		testSchemaNoExtensions = env.Schemas().Find("test_schema_no_ext")
 		Expect(testSchemaNoExtensions).To(Not(BeNil()))
-		Expect(dbimpl.InitDBWithSchemas(dbType, dbFile, db.DefaultTestInitDBParams())).To(Succeed())
+		Expect(dbutil.InitDBWithSchemas(dbType, dbFile, db.DefaultTestInitDBParams())).To(Succeed())
 	})
 
 	AfterEach(func() {
@@ -380,7 +383,7 @@ var _ = Describe("Schemas", func() {
 					"name": resourceName,
 				})
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(tx.Create(resource)).To(Succeed())
+				Expect(tx.Create(ctx, resource)).To(Succeed())
 				Expect(tx.Commit()).To(Succeed())
 			})
 

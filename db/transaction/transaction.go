@@ -44,20 +44,15 @@ const (
 	Serializable Type = "SERIALIZABLE"
 )
 
-// TxOptions represents transaction options
-type TxOptions struct {
-	IsolationLevel Type
-}
-
 type TxParams struct {
 	Context        context.Context
 	IsolationLevel Type
 	TraceID        string
 }
 
-type OptionTxParams func(*TxParams)
+type Option func(*TxParams)
 
-func NewTxParams(options ...OptionTxParams) *TxParams {
+func NewTxParams(options ...Option) *TxParams {
 	params := &TxParams{
 		Context:        context.Background(),
 		IsolationLevel: RepeatableRead,
@@ -70,19 +65,19 @@ func NewTxParams(options ...OptionTxParams) *TxParams {
 	return params
 }
 
-func WithContext(ctx context.Context) OptionTxParams {
+func Context(ctx context.Context) Option {
 	return func(params *TxParams) {
 		params.Context = ctx
 	}
 }
 
-func WithIsolationLevel(level Type) OptionTxParams {
+func IsolationLevel(level Type) Option {
 	return func(params *TxParams) {
 		params.IsolationLevel = level
 	}
 }
 
-func WithTraceId(traceId string) OptionTxParams {
+func TraceId(traceId string) Option {
 	return func(params *TxParams) {
 		params.TraceID = traceId
 	}
@@ -111,35 +106,24 @@ type ViewOptions struct {
 
 //Transaction is common interface for handling transaction
 type Transaction interface {
-	Create(*schema.Resource) error
-	Update(*schema.Resource) error
-	StateUpdate(*schema.Resource, *ResourceState) error
-	Delete(*schema.Schema, interface{}) error
-	Fetch(*schema.Schema, Filter, *ViewOptions) (*schema.Resource, error)
-	LockFetch(*schema.Schema, Filter, schema.LockPolicy, *ViewOptions) (*schema.Resource, error)
-	StateFetch(*schema.Schema, Filter) (ResourceState, error)
-	List(*schema.Schema, Filter, *ViewOptions, *pagination.Paginator) ([]*schema.Resource, uint64, error)
-	LockList(*schema.Schema, Filter, *ViewOptions, *pagination.Paginator, schema.LockPolicy) ([]*schema.Resource, uint64, error)
 	RawTransaction() *sqlx.Tx
-	Query(*schema.Schema, string, []interface{}) (list []*schema.Resource, err error)
 	Commit() error
-	Exec(query string, args ...interface{}) error
 	Close() error
 	Closed() bool
 	GetIsolationLevel() Type
 
-	CreateContext(context.Context, *schema.Resource) error
-	UpdateContext(context.Context, *schema.Resource) error
-	StateUpdateContext(context.Context, *schema.Resource, *ResourceState) error
-	DeleteContext(context.Context, *schema.Schema, interface{}) error
-	FetchContext(context.Context, *schema.Schema, Filter, *ViewOptions) (*schema.Resource, error)
-	LockFetchContext(context.Context, *schema.Schema, Filter, schema.LockPolicy, *ViewOptions) (*schema.Resource, error)
-	StateFetchContext(context.Context, *schema.Schema, Filter) (ResourceState, error)
-	ListContext(context.Context, *schema.Schema, Filter, *ViewOptions, *pagination.Paginator) ([]*schema.Resource, uint64, error)
-	LockListContext(context.Context, *schema.Schema, Filter, *ViewOptions, *pagination.Paginator, schema.LockPolicy) ([]*schema.Resource, uint64, error)
-	CountContext(context.Context, *schema.Schema, Filter) (uint64, error)
-	QueryContext(context.Context, *schema.Schema, string, []interface{}) (list []*schema.Resource, err error)
-	ExecContext(ctx context.Context, query string, args ...interface{}) error
+	Create(context.Context, *schema.Resource) error
+	Update(context.Context, *schema.Resource) error
+	StateUpdate(context.Context, *schema.Resource, *ResourceState) error
+	Delete(context.Context, *schema.Schema, interface{}) error
+	Fetch(context.Context, *schema.Schema, Filter, *ViewOptions) (*schema.Resource, error)
+	LockFetch(context.Context, *schema.Schema, Filter, schema.LockPolicy, *ViewOptions) (*schema.Resource, error)
+	StateFetch(context.Context, *schema.Schema, Filter) (ResourceState, error)
+	List(context.Context, *schema.Schema, Filter, *ViewOptions, *pagination.Paginator) ([]*schema.Resource, uint64, error)
+	LockList(context.Context, *schema.Schema, Filter, *ViewOptions, *pagination.Paginator, schema.LockPolicy) ([]*schema.Resource, uint64, error)
+	Count(context.Context, *schema.Schema, Filter) (uint64, error)
+	Query(context.Context, *schema.Schema, string, []interface{}) (list []*schema.Resource, err error)
+	Exec(ctx context.Context, query string, args ...interface{}) error
 }
 
 // GetIsolationLevel returns isolation level for an action
