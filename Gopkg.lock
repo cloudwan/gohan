@@ -8,6 +8,12 @@
   version = "v0.1.1"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/Masterminds/semver"
+  packages = ["."]
+  revision = "3c560837130448941620d7694991d3ec440aefc0"
+
+[[projects]]
   name = "github.com/braintree/manners"
   packages = ["."]
   revision = "0b5e6b2c2843f4c83c2a40f96980b09cf4af733c"
@@ -121,6 +127,7 @@
   version = "v1.1.0"
 
 [[projects]]
+  branch = "master"
   name = "github.com/gophercloud/gophercloud"
   packages = [
     ".",
@@ -132,7 +139,7 @@
     "openstack/utils",
     "pagination"
   ]
-  revision = "master"
+  revision = "aac68cb146cb045a2c7c76ea060c81c9318f3dcd"
 
 [[projects]]
   branch = "master"
@@ -538,6 +545,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "64b42302e308d5159389ab44fe2b48af0605527ee2f741813d5abb010df7389f"
+  inputs-digest = "4bc49adacc12c3859e31058152743d8453bb3ef1f62ef864a84faa3227306735"
   solver-name = "gps-cdcl"
   solver-version = 1

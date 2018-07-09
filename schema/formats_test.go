@@ -17,6 +17,7 @@ package schema
 
 import (
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/xeipuuv/gojsonschema"
 )
@@ -359,5 +360,29 @@ var _ = Describe("format checkers", func() {
 			result := formatChecker.IsFormat("65536")
 			Expect(result).To(Equal(false))
 		})
+	})
+
+	Describe("Version format checker", func() {
+		BeforeEach(func() {
+			formatChecker = versionFormatChecker{}
+		})
+
+		DescribeTable("should pass", func(version string) {
+			Expect(formatChecker.IsFormat(version)).To(BeTrue())
+		},
+			Entry("", "1.1.1"),
+			Entry("", "1.1.1-abc"),
+			Entry("", "1"),
+			Entry("", "1.1"),
+			Entry("", "v1.1.1"),
+		)
+
+		DescribeTable("should fail", func(version string) {
+			Expect(formatChecker.IsFormat(version)).To(BeFalse())
+		},
+			Entry("", "1.1,1"),
+			Entry("", "1.1."),
+			Entry("", "1.1.1abc"),
+		)
 	})
 })

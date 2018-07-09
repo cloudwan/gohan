@@ -394,6 +394,18 @@
                         "unique": false,
                         "format": "regex",
                         "default": ".*"
+                    },
+                    "version": {
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "title": "version",
+                        "description": "version",
+                        "type": "string",
+                        "unique": false,
+                        "format": "version",
+                        "default": "1.2.3"
                     }
                 },
                 "propertiesOrder": [

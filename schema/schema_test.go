@@ -470,6 +470,14 @@ var _ = Describe("Schema", func() {
 			netMap = map[string]interface{}{"regex": "[a-z0-7]{3}.*[,.;']{1,2}"}
 			Expect(netSchema.ValidateOnCreate(netMap)).To(Succeed())
 		})
+
+		It("Version", func() {
+			netMap := map[string]interface{}{"version": "1.2,3"}
+			Expect(netSchema.ValidateOnCreate(netMap)).To(MatchError(getErrorMessage("version", "version")))
+
+			netMap = map[string]interface{}{"version": "1.2.3"}
+			Expect(netSchema.ValidateOnCreate(netMap)).To(Succeed())
+		})
 	})
 
 	It("should ignore empty schema file", func() {
