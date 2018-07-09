@@ -52,6 +52,7 @@ type TxOptions struct {
 type TxParams struct {
 	Context        context.Context
 	IsolationLevel Type
+	TraceID        string
 }
 
 type OptionTxParams func(*TxParams)
@@ -78,6 +79,12 @@ func WithContext(ctx context.Context) OptionTxParams {
 func WithIsolationLevel(level Type) OptionTxParams {
 	return func(params *TxParams) {
 		params.IsolationLevel = level
+	}
+}
+
+func WithTraceId(traceId string) OptionTxParams {
+	return func(params *TxParams) {
+		params.TraceID = traceId
 	}
 }
 

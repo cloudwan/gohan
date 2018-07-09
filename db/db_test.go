@@ -540,7 +540,7 @@ var _ = Describe("Database operation test", func() {
 		It("should not panic on DB errors", func() {
 			opts := options.Options{RetryTxCount: 3, RetryTxInterval: 0}
 			mockDB.EXPECT().Options().Return(opts)
-			mockDB.EXPECT().BeginTx().Return(nil, errors.New("test error"))
+			mockDB.EXPECT().Begin().Return(nil, errors.New("test error"))
 
 			err := db.WithinTx(mockDB, func(_ transaction.Transaction) error {
 				panic("should never be called")

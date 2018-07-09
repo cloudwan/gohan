@@ -32,7 +32,6 @@ const DefaultMaxOpenConn = 100
 type DB interface {
 	Connect(string, string, int) error
 	Close()
-	//Begin() (transaction.Transaction, error)
 	Begin(options ...transaction.OptionTxParams) (transaction.Transaction, error)
 	RegisterTable(s *schema.Schema, cascade, migrate bool) error
 	DropTable(*schema.Schema) error

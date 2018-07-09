@@ -85,6 +85,10 @@ func (config *Config) ReadConfig(path string) error {
 	return nil
 }
 
+func NewConfig(data map[string]interface{}) *Config {
+	return &Config{data}
+}
+
 //GetString returns string parameter from config
 func (config *Config) GetString(key, defaultValue string) string {
 	data := config.GetParam(key, defaultValue)

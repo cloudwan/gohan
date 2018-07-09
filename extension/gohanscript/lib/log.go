@@ -19,4 +19,4 @@ import (
 	l "github.com/cloudwan/gohan/log"
 )
 
-var log = l.NewLoggerForModule("gohanscript")
+var log = l.NewLogger(l.ModuleName("gohanscript"))

@@ -30,7 +30,9 @@ type Level int
 
 // Level values.
 const (
-	CRITICAL Level = iota
+	FATAL Level = iota
+	PANIC
+	CRITICAL
 	ERROR
 	WARNING
 	NOTICE
@@ -62,14 +64,44 @@ type Logger interface {
 	Debug(format string, args ...interface{})
 }
 
-// NewLogger creates new logger for automatically retrieved module name.
-func NewLogger() Logger {
-	return NewLoggerForModule(getModuleName())
+type Options struct {
+	moduleName string
+	traceId    string
 }
 
-// NewLoggerForModule creates new logger for a given module name.
-func NewLoggerForModule(module string) Logger {
-	return logging.MustGetLogger(module)
+type LoggingOption func(op *Options)
+
+func ModuleName(name string) LoggingOption {
+	return func(op *Options) {
+		op.moduleName = name
+	}
+}
+
+func TraceId(id string) LoggingOption {
+	return func(op *Options) {
+		op.traceId = id
+	}
+}
+
+// NewLogger creates new logger for automatically retrieved module name.
+func NewLogger(opts ...LoggingOption) Logger {
+	options := Options{}
+
+	for _, op := range opts {
+		op(&options)
+	}
+
+	if options.moduleName == "" {
+		options.moduleName = getModuleName()
+	}
+
+	var logger Logger = logging.MustGetLogger(options.moduleName)
+
+	if options.traceId != "" {
+		logger = &tracingLogger{logger, options.traceId}
+	}
+
+	return logger
 }
 
 var (

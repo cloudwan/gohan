@@ -16,6 +16,7 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"net"
 
@@ -73,11 +74,13 @@ func startSNMPProcess(server *Server) {
 				trap[oid.String()] = fmt.Sprintf("%v", listInfo[2])
 			}
 
-			context := map[string]interface{}{
-				"trap":   trap,
-				"remote": remote,
+			ctx := map[string]interface{}{
+				"trap":     trap,
+				"remote":   remote,
+				"context":  context.Background(),
+				"trace_id": util.NewTraceID(),
 			}
-			if err := env.HandleEvent("notification", context); err != nil {
+			if err := env.HandleEvent("notification", ctx); err != nil {
 				log.Warning(fmt.Sprintf("extension error: %s", err))
 			}
 		}

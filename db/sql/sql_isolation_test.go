@@ -69,13 +69,13 @@ var _ = Describe("Mysql", func() {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			tx1, err := sqlConn.BeginTx(
+			tx1, err := sqlConn.Begin(
 				transaction.WithContext(ctx),
 				transaction.WithIsolationLevel(transaction.RepeatableRead),
 			)
 			Expect(err).To(Succeed())
 
-			tx2, err := sqlConn.BeginTx(
+			tx2, err := sqlConn.Begin(
 				transaction.WithContext(ctx),
 				transaction.WithIsolationLevel(transaction.ReadCommited),
 			)

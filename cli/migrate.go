@@ -17,6 +17,7 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -268,6 +269,8 @@ func publishEventWithOptions(envName string, modifiedSchemas []string, eventName
 		eventContext["sync"] = sync
 		eventContext["db"] = db
 		eventContext["identity_service"] = ident
+		eventContext["context"] = context.Background()
+		eventContext["trace_id"] = util.NewTraceID()
 
 		if err := env.HandleEvent(eventName, eventContext); err != nil {
 			log.Fatalf("Failed to handle event '%s': %s", eventName, err)

@@ -134,7 +134,8 @@ func resourceTransactionWithContext(ctx middleware.Context, dataStore db.DB, lev
 
 			return fn()
 		},
-		transaction.WithContext(ctx["context"].(context.Context)),
+		transaction.WithContext(mustGetContext(ctx)),
+		transaction.WithTraceId(traceIdOrEmpty(ctx)),
 		transaction.WithIsolationLevel(level))
 }
 
@@ -492,7 +493,8 @@ func CreateOrUpdateResource(
 			return ResourceError{transaction.ErrResourceNotFound, "", Forbidden}
 		}
 		return nil
-	}, transaction.WithContext(ctx["context"].(context.Context))); preTxErr != nil {
+	}, transaction.WithContext(mustGetContext(ctx)), transaction.WithTraceId(traceIdOrEmpty(ctx)),
+	); preTxErr != nil {
 		return false, preTxErr
 	}
 
@@ -858,7 +860,7 @@ func DeleteResource(ctx middleware.Context,
 	if errPreTx := db.WithinTx(dataStore, func(preTransaction transaction.Transaction) error {
 		resource, fetchErr = fetchResource(resourceID, resourceSchema, preTransaction, ctx)
 		return fetchErr
-	}, transaction.WithContext(ctx["context"].(context.Context))); errPreTx != nil {
+	}, transaction.WithContext(mustGetContext(ctx)), transaction.WithTraceId(traceIdOrEmpty(ctx))); errPreTx != nil {
 		return errPreTx
 	}
 
@@ -1054,4 +1056,16 @@ func copyResourceData(context middleware.Context, dataMap *map[string]interface{
 	if resourceData, ok := context["resource"].(map[string]interface{}); ok {
 		*dataMap = resourceData
 	}
+}
+
+func mustGetContext(requestContext middleware.Context) context.Context {
+	return requestContext["context"].(context.Context)
+}
+
+func traceIdOrEmpty(requestContext middleware.Context) string {
+	if traceId, hasTraceId := requestContext["trace_id"]; hasTraceId {
+		return traceId.(string)
+	}
+
+	return ""
 }

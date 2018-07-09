@@ -29,6 +29,7 @@ import (
 	"github.com/cloudwan/gohan/db/pagination"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/extension/goext"
+	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/metrics"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
@@ -70,11 +71,12 @@ type Transaction struct {
 	db             *DB
 	closed         bool
 	isolationLevel transaction.Type
+	log            l.Logger
 }
 
 type TxInterface transaction.Transaction
 
-func mapTxOptions(options *transaction.TxOptions) (*sql.TxOptions, error) {
+func (tx *Transaction) mapTxOptions(options *transaction.TxOptions) (*sql.TxOptions, error) {
 	sqlOptions := &sql.TxOptions{}
 	switch options.IsolationLevel {
 	case transaction.ReadCommited:
@@ -87,7 +89,7 @@ func mapTxOptions(options *transaction.TxOptions) (*sql.TxOptions, error) {
 		sqlOptions.Isolation = sql.LevelSerializable
 	default:
 		msg := fmt.Sprintf("Unknown transaction isolation level: %s", options.IsolationLevel)
-		log.Error(msg)
+		tx.log.Error(msg)
 		return nil, fmt.Errorf(msg)
 	}
 	return sqlOptions, nil
@@ -363,7 +365,7 @@ func (db *DB) Begin(options ...transaction.OptionTxParams) (tx transaction.Trans
 	}
 
 	var transx Transaction
-	sqlOptions, err := mapTxOptions(&todo_options)
+	sqlOptions, err := transx.mapTxOptions(&todo_options)
 	if err != nil {
 		return nil, err
 	}
@@ -383,13 +385,19 @@ func (db *DB) Begin(options ...transaction.OptionTxParams) (tx transaction.Trans
 		closed:         false,
 		isolationLevel: params.IsolationLevel,
 	}
+	if params.TraceID != "" {
+		transx.log = l.NewLogger(l.TraceId(params.TraceID))
+	} else {
+		transx.log = log
+	}
+
 	if transx.isolationLevel == transaction.RepeatableRead || transx.isolationLevel == transaction.Serializable {
 		tx = MakeCachedTransaction(&transx)
 	} else {
 		tx = &transx
 	}
 
-	log.Debug("[%p] Created transaction %#v, isolation level: %s", rawTx, rawTx, transx.GetIsolationLevel())
+	transx.log.Debug("[%p] Created transaction %#v, isolation level: %s", rawTx, rawTx, transx.GetIsolationLevel())
 	return
 }
 
@@ -560,14 +568,10 @@ func (db *DB) DropTable(s *schema.Schema) error {
 	return err
 }
 
-func escapeID(ID string) string {
-	return strings.Replace(ID, "-", "_escape_", -1)
-}
-
 func (tx *Transaction) logQuery(sql string, args ...interface{}) {
 	sqlFormat := strings.Replace(sql, "?", "%s", -1)
 	query := fmt.Sprintf(sqlFormat, args...)
-	log.Debug("[%p] Executing SQL query '%s'", tx.transaction, query)
+	tx.log.Debug("[%p] Executing SQL query '%s'", tx.transaction, query)
 }
 
 func (tx *Transaction) measureTime(timeStarted time.Time, schemaId, action string) {
@@ -1028,7 +1032,7 @@ func (tx *Transaction) decode(s *schema.Schema, tableName string, skipNil, recur
 		if value != nil || (property.Nullable && !skipNil) {
 			decoded, err := handler.decode(&property, value)
 			if err != nil {
-				log.Error(fmt.Sprintf("SQL List decoding error: %s", err))
+				tx.log.Error(fmt.Sprintf("SQL List decoding error: %s", err))
 			}
 			resourceData[property.ID] = decoded
 		}
@@ -1161,10 +1165,10 @@ func (tx *Transaction) Commit() error {
 	defer tx.db.measureTime(time.Now(), "commit")
 	defer tx.db.updateCounter(-1, "active")
 
-	log.Debug("[%p] Committing transaction %#v", tx.transaction, tx)
+	tx.log.Debug("[%p] Committing transaction %#v", tx.transaction, tx)
 	err := tx.transaction.Commit()
 	if err != nil {
-		log.Error("[%p] Commit %#v failed: %s", tx.transaction, tx, err)
+		tx.log.Error("[%p] Commit %#v failed: %s", tx.transaction, tx, err)
 		tx.db.updateCounter(1, "commit.failed")
 		return err
 	}
@@ -1177,14 +1181,14 @@ func (tx *Transaction) Close() error {
 	defer tx.db.measureTime(time.Now(), "rollback")
 
 	//Rollback if it isn't committed yet
-	log.Debug("[%p] Closing transaction %#v", tx.transaction, tx)
+	tx.log.Debug("[%p] Closing transaction %#v", tx.transaction, tx)
 	var err error
 	if !tx.closed {
 		defer tx.db.updateCounter(-1, "active")
-		log.Debug("[%p] Rolling back %#v", tx.transaction, tx)
+		tx.log.Debug("[%p] Rolling back %#v", tx.transaction, tx)
 		err = tx.transaction.Rollback()
 		if err != nil {
-			log.Error("[%p] Rolling back %#v failed: %s", tx.transaction, tx, err)
+			tx.log.Error("[%p] Rolling back %#v failed: %s", tx.transaction, tx, err)
 			tx.db.updateCounter(1, "rollback.failed")
 			return err
 		}

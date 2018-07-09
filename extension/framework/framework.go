@@ -35,7 +35,7 @@ import (
 
 var (
 	logWriter io.Writer = os.Stderr
-	log                 = l.NewLoggerForModule("extest")
+	log                 = l.NewLogger(l.ModuleName("extest"))
 )
 
 func setupConfig(c *cli.Context) *util.Config {

@@ -351,10 +351,6 @@ func Tracing() martini.Handler {
 	}
 }
 
-func newTraceID() string {
-	return uuid.NewV4().String()
-}
-
 //Authorization checks user permissions against policy
 func Authorization(action string) martini.Handler {
 	return func(res http.ResponseWriter, req *http.Request, auth schema.Authorization, context Context) {

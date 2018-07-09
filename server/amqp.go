@@ -16,6 +16,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -122,10 +123,12 @@ func listenAMQP(server *Server) {
 							if strings.HasPrefix(eventType, event) {
 								env := extensions[event]
 
-								context := map[string]interface{}{
-									"event": message,
+								ctx := map[string]interface{}{
+									"event":    message,
+									"context":  context.Background(),
+									"trace_id": util.NewTraceID(),
 								}
-								if err := env.HandleEvent("notification", context); err != nil {
+								if err := env.HandleEvent("notification", ctx); err != nil {
 									log.Warning(fmt.Sprintf("extension error: %s", err))
 								}
 							}

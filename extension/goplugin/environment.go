@@ -33,7 +33,6 @@ import (
 	gohan_sync "github.com/cloudwan/gohan/sync"
 	"github.com/mohae/deepcopy"
 	"github.com/pkg/errors"
-	"github.com/twinj/uuid"
 )
 
 var log = gohan_logger.NewLogger()
@@ -238,7 +237,7 @@ func (env *Environment) Start() error {
 		log.Debug("Before start init is not set for go environment: %s", env.name)
 	}
 
-	env.traceID = newTraceID()
+	env.traceID = "goext-base-env"
 
 	// init extensions
 	log.Debug("Start go extension: %s", env.name)
@@ -417,6 +416,13 @@ func (env *Environment) HandleEvent(event string, context map[string]interface{}
 		defer delete(context, goext.KeyTopLevelHandler)
 	}
 
+	if traceId, hasTraceId := context["trace_id"]; hasTraceId {
+		defer func(oldTraceId string) {
+			env.traceID = oldTraceId
+		}(env.traceID)
+		env.traceID = traceId.(string)
+	}
+
 	err := handleEventForEnv(env, event, context)
 	if err != nil && !hasParent {
 		dumpStackTrace(env.Logger(), err)
@@ -580,7 +586,7 @@ func (env *Environment) Stop() {
 	env.handlers = nil
 	env.schemaHandlers = nil
 
-	env.traceID = ""
+	env.traceID = fmt.Sprintf("stopped-%s", env.traceID)
 
 	env.rawTypes = make(map[goext.SchemaID]reflect.Type)
 	env.types = make(map[goext.SchemaID]reflect.Type)
@@ -602,10 +608,6 @@ func (env *Environment) Reset() {
 	env.Start()
 }
 
-func newTraceID() string {
-	return uuid.NewV4().String()
-}
-
 // Clone makes a clone of the rawEnvironment
 func (env *Environment) Clone() extension.Environment {
 	clone := &Environment{
@@ -617,7 +619,7 @@ func (env *Environment) Clone() extension.Environment {
 		databaseImpl: env.databaseImpl.Clone(),
 
 		name:    env.name,
-		traceID: newTraceID(),
+		traceID: fmt.Sprintf("%s-clone", env.traceID),
 
 		handlers:       deepcopy.Copy(env.handlers).(EventPrioritizedHandlers),
 		schemaHandlers: deepcopy.Copy(env.schemaHandlers).(EventSchemaPrioritizedSchemaHandlers),
