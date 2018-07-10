@@ -16,10 +16,13 @@
 package goplugin_test
 
 import (
+	"context"
 	"fmt"
+	"time"
 
 	"github.com/cloudwan/gohan/db/mocks"
 	"github.com/cloudwan/gohan/db/options"
+	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/db/transaction/mocks"
 	"github.com/cloudwan/gohan/extension/goext"
 	"github.com/cloudwan/gohan/extension/goplugin"
@@ -82,6 +85,20 @@ var _ = Describe("Database", func() {
 
 				Expect(err).To(HaveOccurred())
 				Expect(tx).To(BeNil())
+			})
+
+			It("should call inner function using Context with Timeout", func() {
+				tempCtxWithTimeout, _ := context.WithTimeout(context.Background(), 50*time.Millisecond)
+				ctx := goext.Context{
+					"context": tempCtxWithTimeout,
+				}
+				mockDB.EXPECT().BeginTx(gomock.Any(), gomock.Any()).Return(nil, nil).
+					Do(func(ctx context.Context, options *transaction.TxOptions) {
+						_, hasDeadline := ctx.Deadline()
+						Expect(hasDeadline).To(BeTrue())
+					})
+
+				db.BeginTx(ctx, &goext.TxOptions{})
 			})
 		})
 
