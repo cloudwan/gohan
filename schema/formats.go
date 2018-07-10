@@ -21,6 +21,7 @@ import (
 	"regexp"
 	"strconv"
 
+	"github.com/Masterminds/semver"
 	"github.com/twinj/uuid"
 	"github.com/xeipuuv/gojsonschema"
 )
@@ -37,6 +38,7 @@ type nonHyphenatedUUIDFormatChecker struct{}
 type portFormatChecker struct{}
 type yamlFormatChecker struct{}
 type textFormatChecker struct{}
+type versionFormatChecker struct{}
 
 func (f macFormatChecker) IsFormat(input string) bool {
 	match, _ := regexp.MatchString(`^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$`, input)
@@ -130,6 +132,11 @@ func (f textFormatChecker) IsFormat(input string) bool {
 	return true
 }
 
+func (f versionFormatChecker) IsFormat(input string) bool {
+	_, err := semver.NewVersion(input)
+	return err == nil
+}
+
 func registerGohanFormats(checkers gojsonschema.FormatCheckerChain) {
 	checkers.Add("mac", macFormatChecker{})
 	checkers.Add("cidr", cidrFormatChecker{})
@@ -143,4 +150,5 @@ func registerGohanFormats(checkers gojsonschema.FormatCheckerChain) {
 	checkers.Add("port", portFormatChecker{})
 	checkers.Add("yaml", yamlFormatChecker{})
 	checkers.Add("text", textFormatChecker{})
+	checkers.Add("version", versionFormatChecker{})
 }

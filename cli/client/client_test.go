@@ -843,19 +843,21 @@ var _ = Describe("CLI functions", func() {
 								"id":    "test",
 								"port":  "port",
 								"regex": "regex",
+								"version": "version",
 							},
 						}
 						result := gohanClientCLI.formatOutput(netSchema, rawResult)
 						Expect(result).To(Equal(
-							`+----------+-------+
-| PROPERTY | VALUE |
-+----------+-------+
-| CIDR     | cidr  |
-| MAC      | mac   |
-| UUID     | test  |
-| port     | port  |
-| regex    | regex |
-+----------+-------+
+							`+----------+---------+
+| PROPERTY |  VALUE  |
++----------+---------+
+| CIDR     | cidr    |
+| MAC      | mac     |
+| UUID     | test    |
+| port     | port    |
+| regex    | regex   |
+| version  | version |
++----------+---------+
 `))
 					})
 
@@ -890,6 +892,7 @@ var _ = Describe("CLI functions", func() {
 									"id":    "test1",
 									"port":  "port1",
 									"regex": "regex1",
+									"version": "version1",
 								},
 								map[string]interface{}{
 									"cidr":  "cidr2",
@@ -897,6 +900,7 @@ var _ = Describe("CLI functions", func() {
 									"id":    "test2",
 									"port":  "port2",
 									"regex": "regex2",
+									"version": "version2",
 								},
 								map[string]interface{}{
 									"cidr":  "cidr3",
@@ -904,18 +908,19 @@ var _ = Describe("CLI functions", func() {
 									"id":    "test3",
 									"port":  "port3",
 									"regex": "regex3",
+									"version": "version3",
 								},
 							},
 						}
 						result := gohanClientCLI.formatOutput(netSchema, rawResult)
 						Expect(result).To(Equal(
-							`+-------+------+-------+-------+--------+
-| CIDR  | MAC  | UUID  | PORT  | REGEX  |
-+-------+------+-------+-------+--------+
-| cidr1 | mac1 | test1 | port1 | regex1 |
-| cidr2 | mac2 | test2 | port2 | regex2 |
-| cidr3 | mac3 | test3 | port3 | regex3 |
-+-------+------+-------+-------+--------+
+							`+-------+------+-------+-------+--------+----------+
+| CIDR  | MAC  | UUID  | PORT  | REGEX  | VERSION  |
++-------+------+-------+-------+--------+----------+
+| cidr1 | mac1 | test1 | port1 | regex1 | version1 |
+| cidr2 | mac2 | test2 | port2 | regex2 | version2 |
+| cidr3 | mac3 | test3 | port3 | regex3 | version3 |
++-------+------+-------+-------+--------+----------+
 `))
 					})
 
@@ -947,13 +952,13 @@ var _ = Describe("CLI functions", func() {
 						}
 						result := gohanClientCLI.formatOutput(netSchema, rawResult)
 						Expect(result).To(Equal(
-							`+-------+------+-------+-------+--------+
-| CIDR  | MAC  | UUID  | PORT  | REGEX  |
-+-------+------+-------+-------+--------+
-| cidr1 | mac1 | test1 | port1 | regex1 |
-|       | mac2 |       | port2 |        |
-| cidr3 |      | test3 |       | regex3 |
-+-------+------+-------+-------+--------+
+							`+-------+------+-------+-------+--------+---------+
+| CIDR  | MAC  | UUID  | PORT  | REGEX  | VERSION |
++-------+------+-------+-------+--------+---------+
+| cidr1 | mac1 | test1 | port1 | regex1 |         |
+|       | mac2 |       | port2 |        |         |
+| cidr3 |      | test3 |       | regex3 |         |
++-------+------+-------+-------+--------+---------+
 `))
 					})
 
