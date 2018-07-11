@@ -40,7 +40,7 @@
 
 [[constraint]]
   name = "github.com/flosch/pongo2"
-  version = "3.0.0"
+  branch = "master"
 
 [[constraint]]
   name = "github.com/go-martini/martini"
