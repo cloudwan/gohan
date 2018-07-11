@@ -56,17 +56,22 @@ func (tx *CachedTransaction) Create(ctx context.Context, resource *schema.Resour
 
 func (tx *CachedTransaction) Update(ctx context.Context, resource *schema.Resource) error {
 	tx.ClearCache()
-	return tx.TxInterface.Update(context.Background(), resource)
+	return tx.TxInterface.Update(ctx, resource)
 }
 
 func (tx *CachedTransaction) StateUpdate(ctx context.Context, resource *schema.Resource, state *transaction.ResourceState) error {
 	tx.ClearCache()
-	return tx.TxInterface.StateUpdate(context.Background(), resource, state)
+	return tx.TxInterface.StateUpdate(ctx, resource, state)
 }
 
 func (tx *CachedTransaction) Delete(ctx context.Context, s *schema.Schema, resourceID interface{}) error {
 	tx.ClearCache()
-	return tx.TxInterface.Delete(context.Background(), s, resourceID)
+	return tx.TxInterface.Delete(ctx, s, resourceID)
+}
+
+func (tx *CachedTransaction) Exec(ctx context.Context, query string, args ...interface{}) error {
+	tx.ClearCache()
+	return tx.TxInterface.Exec(ctx, query, args...)
 }
 
 //List resources in the db
@@ -156,7 +161,7 @@ func (tx *CachedTransaction) LockList(ctx context.Context, s *schema.Schema, fil
 
 func (tx *CachedTransaction) Query(ctx context.Context, s *schema.Schema, query string, arguments []interface{}) (list []*schema.Resource, err error) {
 	tx.ClearCache()
-	return tx.TxInterface.Query(context.Background(), s, query, arguments)
+	return tx.TxInterface.Query(ctx, s, query, arguments)
 }
 
 func (tx *CachedTransaction) Fetch(ctx context.Context, s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions) (*schema.Resource, error) {
