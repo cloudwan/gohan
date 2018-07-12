@@ -1,20 +1,29 @@
-package pongo2
+package pongo2_test
 
 import (
 	"testing"
 
-	. "gopkg.in/check.v1"
+	"github.com/flosch/pongo2"
 )
 
-// Hook up gocheck into the "go test" runner.
+func TestIssue151(t *testing.T) {
+	tpl, err := pongo2.FromString("{{ mydict.51232_3 }}{{ 12345_123}}{{ 995189baz }}")
+	if err != nil {
+		t.Fatal(err)
+	}
 
-func TestIssues(t *testing.T) { TestingT(t) }
+	str, err := tpl.Execute(pongo2.Context{
+		"mydict": map[string]string{
+			"51232_3": "foo",
+		},
+		"12345_123": "bar",
+		"995189baz": "baz",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
-type IssueTestSuite struct{}
-
-var _ = Suite(&IssueTestSuite{})
-
-func (s *TestSuite) TestIssues(c *C) {
-	// Add a test for any issue
-	c.Check(42, Equals, 42)
+	if str != "foobarbaz" {
+		t.Fatalf("Expected output 'foobarbaz', but got '%s'.", str)
+	}
 }

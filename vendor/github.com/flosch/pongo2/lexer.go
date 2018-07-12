@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/juju/errors"
 )
 
 const (
@@ -28,6 +30,7 @@ var (
 	// Available symbols in pongo2 (within filters/tag)
 	TokenSymbols = []string{
 		// 3-Char symbols
+		"{{-", "-}}", "{%-", "-%}",
 
 		// 2-Char symbols
 		"==", ">=", "<=", "&&", "||", "{{", "}}", "{%", "%}", "!=", "<>",
@@ -42,11 +45,12 @@ var (
 
 type TokenType int
 type Token struct {
-	Filename string
-	Typ      TokenType
-	Val      string
-	Line     int
-	Col      int
+	Filename        string
+	Typ             TokenType
+	Val             string
+	Line            int
+	Col             int
+	TrimWhitespaces bool
 }
 
 type lexerStateFn func() lexerStateFn
@@ -63,8 +67,8 @@ type lexer struct {
 	line      int
 	col       int
 
-	in_verbatim   bool
-	verbatim_name string
+	inVerbatim   bool
+	verbatimName string
 }
 
 func (t *Token) String() string {
@@ -93,8 +97,8 @@ func (t *Token) String() string {
 		typ = "Unknown"
 	}
 
-	return fmt.Sprintf("<Token Typ=%s (%d) Val='%s' Line=%d Col=%d>",
-		typ, t.Typ, val, t.Line, t.Col)
+	return fmt.Sprintf("<Token Typ=%s (%d) Val='%s' Line=%d Col=%d, WT=%t>",
+		typ, t.Typ, val, t.Line, t.Col, t.TrimWhitespaces)
 }
 
 func lex(name string, input string) ([]*Token, *Error) {
@@ -111,11 +115,11 @@ func lex(name string, input string) ([]*Token, *Error) {
 	if l.errored {
 		errtoken := l.tokens[len(l.tokens)-1]
 		return nil, &Error{
-			Filename: name,
-			Line:     errtoken.Line,
-			Column:   errtoken.Col,
-			Sender:   "lexer",
-			ErrorMsg: errtoken.Val,
+			Filename:  name,
+			Line:      errtoken.Line,
+			Column:    errtoken.Col,
+			Sender:    "lexer",
+			OrigError: errors.New(errtoken.Val),
 		}
 	}
 	return l.tokens, nil
@@ -142,6 +146,11 @@ func (l *lexer) emit(t TokenType) {
 		// Escape sequence \" in strings
 		tok.Val = strings.Replace(tok.Val, `\"`, `"`, -1)
 		tok.Val = strings.Replace(tok.Val, `\\`, `\`, -1)
+	}
+
+	if t == TokenSymbol && len(tok.Val) == 3 && (strings.HasSuffix(tok.Val, "-") || strings.HasPrefix(tok.Val, "-")) {
+		tok.TrimWhitespaces = true
+		tok.Val = strings.Replace(tok.Val, "-", "", -1)
 	}
 
 	l.tokens = append(l.tokens, tok)
@@ -216,8 +225,8 @@ func (l *lexer) run() {
 	for {
 		// TODO: Support verbatim tag names
 		// https://docs.djangoproject.com/en/dev/ref/templates/builtins/#verbatim
-		if l.in_verbatim {
-			name := l.verbatim_name
+		if l.inVerbatim {
+			name := l.verbatimName
 			if name != "" {
 				name += " "
 			}
@@ -229,20 +238,20 @@ func (l *lexer) run() {
 				l.pos += w
 				l.col += w
 				l.ignore()
-				l.in_verbatim = false
+				l.inVerbatim = false
 			}
 		} else if strings.HasPrefix(l.input[l.pos:], "{% verbatim %}") { // tag
 			if l.pos > l.start {
 				l.emit(TokenHTML)
 			}
-			l.in_verbatim = true
+			l.inVerbatim = true
 			w := len("{% verbatim %}")
 			l.pos += w
 			l.col += w
 			l.ignore()
 		}
 
-		if !l.in_verbatim {
+		if !l.inVerbatim {
 			// Ignore single-line comments {# ... #}
 			if strings.HasPrefix(l.input[l.pos:], "{#") {
 				if l.pos > l.start {
@@ -303,7 +312,7 @@ func (l *lexer) run() {
 		l.emit(TokenHTML)
 	}
 
-	if l.in_verbatim {
+	if l.inVerbatim {
 		l.errorf("verbatim-tag not closed, got EOF.")
 	}
 }
@@ -328,7 +337,7 @@ outer_loop:
 			return l.stateIdentifier
 		case l.accept(tokenDigits):
 			return l.stateNumber
-		case l.accept(`"`):
+		case l.accept(`"'`):
 			return l.stateString
 		}
 
@@ -339,17 +348,13 @@ outer_loop:
 				l.col += l.length()
 				l.emit(TokenSymbol)
 
-				if sym == "%}" || sym == "}}" {
+				if sym == "%}" || sym == "-%}" || sym == "}}" || sym == "-}}" {
 					// Tag/variable end, return after emit
 					return nil
 				}
 
 				continue outer_loop
 			}
-		}
-
-		if l.pos < len(l.input) {
-			return l.errorf("Unknown character: %q (%d)", l.peek(), l.peek())
 		}
 
 		break
@@ -374,6 +379,11 @@ func (l *lexer) stateIdentifier() lexerStateFn {
 
 func (l *lexer) stateNumber() lexerStateFn {
 	l.acceptRun(tokenDigits)
+	if l.accept(tokenIdentifierCharsWithDigits) {
+		// This seems to be an identifier starting with a number.
+		// See https://github.com/flosch/pongo2/issues/151
+		return l.stateIdentifier()
+	}
 	/*
 		Maybe context-sensitive number lexing?
 		* comments.0.Text // first comment
@@ -393,9 +403,10 @@ func (l *lexer) stateNumber() lexerStateFn {
 }
 
 func (l *lexer) stateString() lexerStateFn {
+	quotationMark := l.value()
 	l.ignore()
-	l.startcol -= 1 // we're starting the position at the first "
-	for !l.accept(`"`) {
+	l.startcol-- // we're starting the position at the first "
+	for !l.accept(quotationMark) {
 		switch l.next() {
 		case '\\':
 			// escape sequence

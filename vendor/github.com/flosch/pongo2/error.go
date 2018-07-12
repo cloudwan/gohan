@@ -6,20 +6,20 @@ import (
 	"os"
 )
 
-// This Error type is being used to address an error during lexing, parsing or
+// The Error type is being used to address an error during lexing, parsing or
 // execution. If you want to return an error object (for example in your own
 // tag or filter) fill this object with as much information as you have.
 // Make sure "Sender" is always given (if you're returning an error within
 // a filter, make Sender equals 'filter:yourfilter'; same goes for tags: 'tag:mytag').
 // It's okay if you only fill in ErrorMsg if you don't have any other details at hand.
 type Error struct {
-	Template *Template
-	Filename string
-	Line     int
-	Column   int
-	Token    *Token
-	Sender   string
-	ErrorMsg string
+	Template  *Template
+	Filename  string
+	Line      int
+	Column    int
+	Token     *Token
+	Sender    string
+	OrigError error
 }
 
 func (e *Error) updateFromTokenIfNeeded(template *Template, t *Token) *Error {
@@ -54,14 +54,14 @@ func (e *Error) Error() string {
 		}
 	}
 	s += "] "
-	s += e.ErrorMsg
+	s += e.OrigError.Error()
 	return s
 }
 
-// Returns the affected line from the original template, if available.
-func (e *Error) RawLine() (line string, available bool) {
+// RawLine returns the affected line from the original template, if available.
+func (e *Error) RawLine() (line string, available bool, outErr error) {
 	if e.Line <= 0 || e.Filename == "<string>" {
-		return "", false
+		return "", false, nil
 	}
 
 	filename := e.Filename
@@ -70,17 +70,22 @@ func (e *Error) RawLine() (line string, available bool) {
 	}
 	file, err := os.Open(filename)
 	if err != nil {
-		panic(err)
+		return "", false, err
 	}
-	defer file.Close()
+	defer func() {
+		err := file.Close()
+		if err != nil && outErr == nil {
+			outErr = err
+		}
+	}()
 
 	scanner := bufio.NewScanner(file)
 	l := 0
 	for scanner.Scan() {
 		l++
 		if l == e.Line {
-			return scanner.Text(), true
+			return scanner.Text(), true, nil
 		}
 	}
-	return "", false
+	return "", false, nil
 }
