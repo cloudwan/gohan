@@ -272,7 +272,7 @@ Such policy defines restrictions for a property between a _source_ and a _target
 The syntax is slightly different than in the case of a standard policy:
 
 - id, principal, resource, tenant_id: as in the case of a standard policy
-- action: Must be `attach`
+- action: Must be `__attach__`
 - effect: If the condition in the policy allows for the access, or denies it.
   Possible values (case insensitive, default is `allow`):
     - `allow`: policy denies if source or target conditions are false
