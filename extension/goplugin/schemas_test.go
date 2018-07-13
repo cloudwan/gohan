@@ -333,7 +333,7 @@ var _ = Describe("Schemas", func() {
 			Expect(err).To(MatchError("Cannot delete with empty filter"))
 		})
 
-		Context("Query filters", func(){
+		Context("Query filters", func() {
 			It("Should list resources using And", func() {
 				Expect(testSchema.CreateRaw(&createdResource, context)).To(Succeed())
 

@@ -52,7 +52,7 @@ func GetSchema(s *schema.Schema, authorization schema.Authorization) (result *sc
 	for _, action := range schema.AllActions {
 		if p, _ := manager.PolicyValidate(action, s.GetPluralURL(), authorization); p != nil {
 			permission = append(permission, action)
-			filterPermission(action, schemaProperties, p.Resource.PropertiesFilter)
+			filterPermission(action, schemaProperties, p.GetPropertyFilter())
 		} else {
 			filterPermission(action, schemaProperties, defaultFilter)
 		}

@@ -370,6 +370,77 @@ policies:
   principal: admin
   resource:
     path: /v2.0/responder.*
+- action: '*'
+  condition:
+  - is_owner
+  effect: allow
+  id: allow_attacher
+  principal: Member
+  resource:
+    path: /v2.0/attacher.*
+- action: '*'
+  condition:
+  - is_owner
+  effect: allow
+  id: allow_attach_target
+  principal: Member
+  resource:
+    path: /v2.0/wildcard_attacher.*
+- action: '*'
+  condition:
+  - is_owner
+  effect: allow
+  id: allow_attach_target
+  principal: Member
+  resource:
+    path: /v2.0/attach_target.*
+- action: '__attach__'
+  id: attach_if_accessible
+  effect: allow
+  principal: Member
+  relation_property: attach_if_accessible_id
+  target_condition:
+  - or:
+    - is_owner
+    - match:
+        property: accessibility
+        type: eq
+        value: everybody
+  resource:
+    path: /v2.0/attacher.*
+- action: '__attach__'
+  id: attach_if_same_owner
+  effect: allow
+  principal: Member
+  relation_property: attach_if_same_owner_id
+  target_condition:
+  - is_owner
+  resource:
+    path: /v2.0/attacher.*
+- action: '__attach__'
+  id: deny_if_blocked
+  effect: deny
+  principal: Member
+  relation_property: attach_if_accessible_id
+  target_condition:
+  - and:
+    - is_owner
+    - match:
+        property: block_flag
+        type: eq
+        value: true
+  resource:
+    path: /v2.0/attacher.*
+- action: '__attach__'
+  id: wildcard
+  effect: allow
+  principal: Member
+  relation_property: "*"
+  target_condition:
+  - is_owner
+  resource:
+    path: /v2.0/wildcard_attacher.*
+
 schemas:
 - description: Network
   id: network
@@ -880,5 +951,147 @@ schemas:
     - b
     type: object
   title: Test Visible Properties
+- description: Resource that attaches to "attach_target"
+  id: attacher
+  singular: attacher
+  plural: attachers
+  prefix: /v2.0
+  schema:
+    properties:
+      id:
+        description: ID
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: true
+      attach_if_accessible_id:
+        permission:
+        - create
+        - update
+        relation: attach_target
+        relation_property: attach_if_accessible
+        title: Attach target ID
+        type:
+        - string
+        - "null"
+        unique: false
+        description: A property that can attach to 'attach_target' iff it is accessible
+      attach_if_same_owner_id:
+        permission:
+        - create
+        - update
+        relation: attach_target
+        relation_property: attach_if_same_owner
+        title: Other attach target ID
+        type:
+        - string
+        - "null"
+        unique: false
+        description: A property that can attach to 'attach_target' iff it has the same owner
+      not_a_relation:
+        permission:
+        - create
+        - update
+        type: integer
+        title: Not a relation
+        unique: false
+        description: A property that is not a relation
+      tenant_id:
+        description: Tenant ID
+        permission:
+        - create
+        title: TenantID
+        type: string
+        unique: false
+  title: Attacher
+- description: Resource that attaches to "attach_target", and has attachments regulated via a wildcard policy
+  id: wildcard_attacher
+  singular: wildcard_attacher
+  plural: wildcard_attachers
+  prefix: /v2.0
+  schema:
+    properties:
+      id:
+        description: ID
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: true
+      attach_a_id:
+        permission:
+        - create
+        - update
+        relation: attach_target
+        relation_property: attach_a
+        title: Attach target ID
+        type:
+        - string
+        - "null"
+        unique: false
+        description: Attach point
+      attach_b_id:
+        permission:
+        - create
+        - update
+        relation: attach_target
+        relation_property: attach_b
+        title: Attach target ID
+        type:
+        - string
+        - "null"
+        unique: false
+        description: Attach point
+      tenant_id:
+        description: Tenant ID
+        permission:
+        - create
+        title: TenantID
+        type: string
+        unique: false
+  title: Wildcard attacher
+- description: Target of attach
+  id: attach_target
+  singular: attach_target
+  plural: attach_targets
+  prefix: /v2.0
+  schema:
+    properties:
+      id:
+        description: ID
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: true
+      tenant_id:
+        description: Tenant ID
+        permission:
+        - create
+        title: TenantID
+        type: string
+        unique: false
+      accessibility:
+        description: Who can access this resource
+        permission:
+        - create
+        - update
+        type: string
+        enum:
+        - owner_only
+        - everybody
+        title: Accessibility
+      block_flag:
+        description: Attachment block flag
+        permission:
+        - create
+        - update
+        type: boolean
+        title: Block flag
+    required:
+      - accessibility
+      - block_flag
+  title: Target of attach
 
 subnets: []
