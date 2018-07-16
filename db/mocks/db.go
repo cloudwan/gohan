@@ -5,12 +5,11 @@
 package mock_db
 
 import (
-	reflect "reflect"
-
 	options "github.com/cloudwan/gohan/db/options"
 	transaction "github.com/cloudwan/gohan/db/transaction"
 	schema "github.com/cloudwan/gohan/schema"
 	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
 )
 
 // MockDB is a mock of DB interface

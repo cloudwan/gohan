@@ -8,7 +8,7 @@ A policy has following properties.
 - action: one of `create`, `read`, `update`, `delete` for CRUD operations
   on the resource or any custom actions defined by schema performed on a
   resource or `*` for all actions
-- effect : Allow API access or not. `Deny` keyword (incasesensitive) block access, any other option (including lack of this property) allows
+- effect : Allow API access or not. `Deny` keyword (case insensitive) block access, any other option (including lack of this property) allows
 - resource : target resource
   you can specify target resource using "path" and "properties"
 - condition : additional condition (see below)
@@ -262,4 +262,60 @@ In an example below admin has access to all methods in all paths except `delete`
   principal: admin
   resource:
     path: /v2.0/restricted_method.*
+```
+
+## Attach policy
+
+Attach policy defines allowed values for a relation property
+(a resource "attaches" to another resource by having a relation to it).
+Such policy defines restrictions for a property between a _source_ and a _target_ resource.
+The syntax is slightly different than in the case of a standard policy:
+
+- id, principal, resource, tenant_id: as in the case of a standard policy
+- action: Must be `__attach__`
+- effect: If the condition in the policy allows for the access, or denies it.
+  Possible values (case insensitive, default is `allow`):
+    - `allow`: policy denies if source or target conditions are false
+    - `deny`: policy denies if source and target conditions are true
+- resource: Like in the case of a standard policy, but considers the source resource
+- relation_property: Name of the relation property the policy is applied to.
+  Can be `*`, then it applies to all properties of the source resource
+- target_condition: Condition for the target resource (for syntax, see the 'Condition' section)
+
+Attach policies are checked during creation/update of the _source_ resource.
+An attach policy is applied only if relation field is non-nil.
+If any of the policies deny access, then modification is forbidden and a 404 response is returned.
+In contrast to standard policies, the fact that no attach policies apply to the resource does not restrict access to the resource.
+
+An example:
+
+```yaml
+- action: '__attach__'
+  id: attach_if_accessible
+  effect: allow
+  principal: Member
+  relation_property: some_relation_id
+  target_condition:
+  - or:
+    - is_owner
+    - match:
+        property: accessibility
+        type: eq
+        value: everybody
+  resource:
+    path: /v2.0/attacher.*
+- action: '__attach__'
+  id: deny_if_blocked
+  effect: deny
+  principal: Member
+  relation_property: some_relation_id
+  target_condition:
+  - and:
+    - is_owner
+    - match:
+        property: block_flag
+        type: eq
+        value: true
+  resource:
+    path: /v2.0/attacher.*
 ```

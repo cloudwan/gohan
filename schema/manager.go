@@ -541,6 +541,11 @@ func (manager *Manager) PolicyValidate(action, path string, auth Authorization) 
 	return PolicyValidate(action, path, auth, manager.policies)
 }
 
+//GetAttachmentPolicies returns policies that will validate relations (attachments)
+func (manager *Manager) GetAttachmentPolicies(path string, auth Authorization) []*Policy {
+	return GetAttachmentPolicies(path, auth, manager.policies)
+}
+
 //NobodyResourcePaths returns a list of paths that do not require authorization
 func (manager *Manager) NobodyResourcePaths() []*regexp.Regexp {
 	manager.mu.RLock()
@@ -549,8 +554,9 @@ func (manager *Manager) NobodyResourcePaths() []*regexp.Regexp {
 	nobodyResourcePaths := []*regexp.Regexp{}
 	for _, policy := range manager.policies {
 		if policy.Principal == nobodyPrincipal {
-			log.Debug("Adding nobody resource path: " + policy.Resource.Path.String())
-			nobodyResourcePaths = append(nobodyResourcePaths, policy.Resource.Path)
+			path := policy.GetResourcePathRegexp()
+			log.Debug("Adding nobody resource path: " + path.String())
+			nobodyResourcePaths = append(nobodyResourcePaths, path)
 		}
 	}
 

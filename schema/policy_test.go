@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 )
 
@@ -51,7 +52,8 @@ var _ = Describe("Policies", func() {
 			adminPolicy, role := manager.PolicyValidate("create", "/v2.0/networks", adminAuth)
 			Expect(adminPolicy).NotTo(BeNil())
 			Expect(role.Match("admin")).To(BeTrue())
-			Expect(adminPolicy.RequireOwner()).To(BeFalse(), "Admin should not require ownership")
+			currCond := adminPolicy.GetCurrentResourceCondition()
+			Expect(currCond.RequireOwner()).To(BeFalse(), "Admin should not require ownership")
 		})
 
 		It("creates network as member", func() {
@@ -64,7 +66,8 @@ var _ = Describe("Policies", func() {
 			memberPolicy, role := manager.PolicyValidate("create", "/v2.0/networks/red", memberAuth)
 			Expect(memberPolicy).NotTo(BeNil())
 			Expect(role.Match("Member")).To(BeTrue())
-			Expect(memberPolicy.RequireOwner()).To(BeTrue(), "Member should require ownership")
+			currCond := memberPolicy.GetCurrentResourceCondition()
+			Expect(currCond.RequireOwner()).To(BeTrue(), "Member should require ownership")
 		})
 
 		It("creates subnet as member", func() {
@@ -75,9 +78,13 @@ var _ = Describe("Policies", func() {
 	})
 
 	Describe("Creation", func() {
-		var testPolicy map[string]interface{}
+		var (
+			manager    *Manager
+			testPolicy map[string]interface{}
+		)
 
 		BeforeEach(func() {
+			manager = GetManager()
 			testPolicy = map[string]interface{}{
 				"action":    '*',
 				"effect":    "allow",
@@ -138,11 +145,12 @@ var _ = Describe("Policies", func() {
 			}
 			policy, err := NewPolicy(testPolicy)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(policy.RequireOwner()).To(BeTrue())
-			Expect(policy.GetTenantIDFilter("create", "xyz")).To(ConsistOf("xyz"))
-			Expect(policy.GetTenantIDFilter("read", "xyz")).To(ConsistOf("xyz", "acf5662bbff44060b93ac3db3c25a590"))
-			Expect(policy.GetTenantIDFilter("update", "xyz")).To(ConsistOf("xyz", "acf5662bbff44060b93ac3db3c25a590"))
-			Expect(policy.GetTenantIDFilter("delete", "xyz")).To(ConsistOf("xyz"))
+			currCond := policy.GetCurrentResourceCondition()
+			Expect(currCond.RequireOwner()).To(BeTrue())
+			Expect(currCond.GetTenantIDFilter("create", "xyz")).To(ConsistOf("xyz"))
+			Expect(currCond.GetTenantIDFilter("read", "xyz")).To(ConsistOf("xyz", "acf5662bbff44060b93ac3db3c25a590"))
+			Expect(currCond.GetTenantIDFilter("update", "xyz")).To(ConsistOf("xyz", "acf5662bbff44060b93ac3db3c25a590"))
+			Expect(currCond.GetTenantIDFilter("delete", "xyz")).To(ConsistOf("xyz"))
 		})
 
 		It("tests glob action", func() {
@@ -156,11 +164,63 @@ var _ = Describe("Policies", func() {
 			}
 			policy, err := NewPolicy(testPolicy)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(policy.RequireOwner()).To(BeTrue())
-			Expect(policy.GetTenantIDFilter("create", "xyz")).To(ConsistOf("xyz", "acf5662bbff44060b93ac3db3c25a590"))
-			Expect(policy.GetTenantIDFilter("read", "xyz")).To(ConsistOf("xyz", "acf5662bbff44060b93ac3db3c25a590"))
-			Expect(policy.GetTenantIDFilter("update", "xyz")).To(ConsistOf("xyz", "acf5662bbff44060b93ac3db3c25a590"))
-			Expect(policy.GetTenantIDFilter("delete", "xyz")).To(ConsistOf("xyz", "acf5662bbff44060b93ac3db3c25a590"))
+			currCond := policy.GetCurrentResourceCondition()
+			Expect(currCond.RequireOwner()).To(BeTrue())
+			Expect(currCond.GetTenantIDFilter("create", "xyz")).To(ConsistOf("xyz", "acf5662bbff44060b93ac3db3c25a590"))
+			Expect(currCond.GetTenantIDFilter("read", "xyz")).To(ConsistOf("xyz", "acf5662bbff44060b93ac3db3c25a590"))
+			Expect(currCond.GetTenantIDFilter("update", "xyz")).To(ConsistOf("xyz", "acf5662bbff44060b93ac3db3c25a590"))
+			Expect(currCond.GetTenantIDFilter("delete", "xyz")).To(ConsistOf("xyz", "acf5662bbff44060b93ac3db3c25a590"))
+		})
+
+		Describe("'__attach__' policy", func() {
+			var (
+				abstractSchemaPath = "../tests/test_abstract_schema.yaml"
+				schemaPath         = "../tests/test_schema.yaml"
+				testPolicy         map[string]interface{}
+			)
+
+			BeforeEach(func() {
+				Expect(manager.LoadSchemaFromFile(abstractSchemaPath)).To(Succeed())
+				Expect(manager.LoadSchemaFromFile(schemaPath)).To(Succeed())
+				testPolicy = map[string]interface{}{
+					"action":    "__attach__",
+					"id":        "attach_test",
+					"effect":    "allow",
+					"principal": "admin",
+					"resource": map[string]interface{}{
+						"path": ".*",
+					},
+					"relation_property": "attach_if_accessible_id",
+					"target_condition":  []interface{}{"is_owner"},
+				}
+			})
+
+			type policyModifier func(p map[string]interface{})
+
+			It("should create a valid attach policy successfully", func() {
+				policy, err := NewPolicy(testPolicy)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(policy.Action).To(Equal(ActionAttach))
+				Expect(policy.GetCurrentResourceCondition()).ToNot(BeNil())
+				Expect(policy.GetRelationPropertyName()).To(Equal("attach_if_accessible_id"))
+			})
+
+			DescribeTable("Attach policy creation failure tests",
+				func(modifier policyModifier, expectedMessage string) {
+					modifier(testPolicy)
+					_, err := NewPolicy(testPolicy)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(Equal(expectedMessage))
+				},
+				Entry("missing relation_property",
+					func(p map[string]interface{}) { delete(p, "relation_property") },
+					"\"relation_property\" is required in an attach policy",
+				),
+				Entry("missing target_condition",
+					func(p map[string]interface{}) { delete(p, "target_condition") },
+					"\"target_condition\" is required in an attach policy",
+				),
+			)
 		})
 	})
 
@@ -252,12 +312,14 @@ var _ = Describe("Policies", func() {
 	})
 
 	Describe("Policy check", func() {
+		var manager *Manager
 		var testPolicy map[string]interface{}
 		var policy *Policy
 		var authorization BaseAuthorization
 		var data map[string]interface{}
 
 		BeforeEach(func() {
+			manager = GetManager()
 			testPolicy = map[string]interface{}{
 				"action":    '*',
 				"effect":    "allow",
@@ -367,13 +429,14 @@ var _ = Describe("Policies", func() {
 				}
 
 				policy, _ = NewPolicy(testPolicy)
-				Expect(policy.ApplyPropertyConditionFilter("read", map[string]interface{}{
+				currCond := policy.GetCurrentResourceCondition()
+				Expect(currCond.ApplyPropertyConditionFilter("read", map[string]interface{}{
 					"status": "ACTIVE",
 				}, nil)).To(Succeed())
-				Expect(policy.ApplyPropertyConditionFilter("read", map[string]interface{}{
+				Expect(currCond.ApplyPropertyConditionFilter("read", map[string]interface{}{
 					"status": "ERROR",
 				}, nil)).NotTo(Succeed())
-				Expect(policy.ApplyPropertyConditionFilter("read", map[string]interface{}{}, nil)).NotTo(Succeed())
+				Expect(currCond.ApplyPropertyConditionFilter("read", map[string]interface{}{}, nil)).NotTo(Succeed())
 			})
 
 			It("should work with string array condition based on property", func() {
@@ -406,39 +469,41 @@ var _ = Describe("Policies", func() {
 				}
 
 				policy, _ = NewPolicy(testPolicy)
-				Expect(policy.ApplyPropertyConditionFilter("create", map[string]interface{}{
+				currCond := policy.GetCurrentResourceCondition()
+				Expect(currCond.ApplyPropertyConditionFilter("create", map[string]interface{}{
 					"status": "ACTIVE",
 				}, nil)).To(Succeed())
-				Expect(policy.ApplyPropertyConditionFilter("read", map[string]interface{}{
+				Expect(currCond.ApplyPropertyConditionFilter("read", map[string]interface{}{
 					"status": "ACTIVE",
 				}, nil)).To(Succeed())
-				Expect(policy.ApplyPropertyConditionFilter("read", map[string]interface{}{
+				Expect(currCond.ApplyPropertyConditionFilter("read", map[string]interface{}{
 					"status": "CREATING",
 				}, nil)).To(Succeed())
-				Expect(policy.ApplyPropertyConditionFilter("read", map[string]interface{}{
+				Expect(currCond.ApplyPropertyConditionFilter("read", map[string]interface{}{
 					"status": "ERROR",
 				}, nil)).NotTo(Succeed())
-				Expect(policy.ApplyPropertyConditionFilter("update", map[string]interface{}{
+				Expect(currCond.ApplyPropertyConditionFilter("update", map[string]interface{}{
 					"status": "ACTIVE",
 				}, map[string]interface{}{
 					"status": "UPDATING",
 				})).To(Succeed())
-				Expect(policy.ApplyPropertyConditionFilter("update", map[string]interface{}{
+				Expect(currCond.ApplyPropertyConditionFilter("update", map[string]interface{}{
 					"status": "ACTIVE",
 				}, map[string]interface{}{
 					"status": "ERROR",
 				})).To(Succeed())
-				Expect(policy.ApplyPropertyConditionFilter("update", map[string]interface{}{
+				Expect(currCond.ApplyPropertyConditionFilter("update", map[string]interface{}{
 					"status": "ACTIVE",
 				}, map[string]interface{}{
 					"status": "FATAL_ERROR",
 				})).NotTo(Succeed())
-				Expect(policy.ApplyPropertyConditionFilter("read", map[string]interface{}{
+				Expect(currCond.ApplyPropertyConditionFilter("read", map[string]interface{}{
 					"status": "ERROR",
 				}, nil)).NotTo(Succeed())
-				Expect(policy.ApplyPropertyConditionFilter("read", map[string]interface{}{}, nil)).NotTo(Succeed())
+				Expect(currCond.ApplyPropertyConditionFilter("read", map[string]interface{}{}, nil)).NotTo(Succeed())
 			})
 		})
+
 		Describe("Custom filter", func() {
 			It("should work with string condition based on conjunction property", func() {
 				testPolicy["condition"] = []interface{}{
@@ -466,7 +531,8 @@ var _ = Describe("Policies", func() {
 				policy, err = NewPolicy(testPolicy)
 				Expect(err).ToNot(HaveOccurred())
 				filter := map[string]interface{}{}
-				policy.AddCustomFilters(filter, "test")
+				currCond := policy.GetCurrentResourceCondition()
+				currCond.AddCustomFilters(filter, "test")
 				expected := map[string]interface{}{
 					"__and__": []map[string]interface{}{
 						{
@@ -509,7 +575,8 @@ var _ = Describe("Policies", func() {
 				policy, err = NewPolicy(testPolicy)
 				Expect(err).ToNot(HaveOccurred())
 				filter := map[string]interface{}{}
-				policy.AddCustomFilters(filter, "test")
+				currCond := policy.GetCurrentResourceCondition()
+				currCond.AddCustomFilters(filter, "test")
 				expected := map[string]interface{}{
 					"__or__": []map[string]interface{}{
 						{
@@ -565,7 +632,8 @@ var _ = Describe("Policies", func() {
 				Expect(err).ToNot(HaveOccurred())
 				filter := map[string]interface{}{}
 				tenantID := "test"
-				policy.AddCustomFilters(filter, tenantID)
+				currCond := policy.GetCurrentResourceCondition()
+				currCond.AddCustomFilters(filter, tenantID)
 				expected := map[string]interface{}{
 					"__or__": []map[string]interface{}{
 						{
