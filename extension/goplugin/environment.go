@@ -18,6 +18,7 @@ package goplugin
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"path/filepath"
 	"plugin"
 	"reflect"
@@ -608,6 +609,8 @@ func (env *Environment) Reset() {
 	env.Start()
 }
 
+const maxEnvId = 1000
+
 // Clone makes a clone of the rawEnvironment
 func (env *Environment) Clone() extension.Environment {
 	clone := &Environment{
@@ -619,7 +622,7 @@ func (env *Environment) Clone() extension.Environment {
 		databaseImpl: env.databaseImpl.Clone(),
 
 		name:    env.name,
-		traceID: fmt.Sprintf("%s-clone", env.traceID),
+		traceID: fmt.Sprintf("%s-clone-%03d", env.traceID, rand.Int31n(maxEnvId)),
 
 		handlers:       deepcopy.Copy(env.handlers).(EventPrioritizedHandlers),
 		schemaHandlers: deepcopy.Copy(env.schemaHandlers).(EventSchemaPrioritizedSchemaHandlers),

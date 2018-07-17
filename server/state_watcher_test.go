@@ -54,8 +54,8 @@ var _ = Describe("Updating the state", func() {
 		var err error
 		networkResource, err = manager.LoadResource("network", network)
 		Expect(err).ToNot(HaveOccurred())
-		wrappedTestDB = &srv.DbSyncWrapper{DB: testDB}
-		tx, err := wrappedTestDB.Begin()
+		wrappedTestDB = srv.NewDbSyncWrapper(testDB)
+		tx, err := wrappedTestDB.BeginTx()
 		defer tx.Close()
 		Expect(err).ToNot(HaveOccurred())
 		Expect(tx.Create(ctx, networkResource)).To(Succeed())
@@ -63,7 +63,7 @@ var _ = Describe("Updating the state", func() {
 	})
 
 	AfterEach(func() {
-		tx, err := testDB.Begin()
+		tx, err := testDB.BeginTx()
 		Expect(err).ToNot(HaveOccurred(), "Failed to create transaction.")
 		defer tx.Close()
 		for _, schema := range schema.GetManager().Schemas() {
@@ -92,7 +92,7 @@ var _ = Describe("Updating the state", func() {
 				watcher := srv.NewStateWatcherFromServer(server)
 				Expect(watcher.StateUpdate(&possibleEvent)).To(Succeed())
 
-				tx, err := wrappedTestDB.Begin()
+				tx, err := wrappedTestDB.BeginTx()
 				Expect(err).ToNot(HaveOccurred())
 				defer tx.Close()
 				afterState, err := tx.StateFetch(ctx, networkSchema, transaction.IDFilter(networkResource.ID()))
@@ -128,7 +128,7 @@ var _ = Describe("Updating the state", func() {
 				}
 				Expect(watcher.StateUpdate(&possibleEvent)).To(Succeed())
 
-				tx, err := wrappedTestDB.Begin()
+				tx, err := wrappedTestDB.BeginTx()
 				Expect(err).ToNot(HaveOccurred())
 				defer tx.Close()
 				afterState, err := tx.StateFetch(ctx, networkSchema, transaction.IDFilter(networkResource.ID()))
@@ -164,7 +164,7 @@ var _ = Describe("Updating the state", func() {
 				}
 				Expect(watcher.StateUpdate(&possibleEvent)).To(Succeed())
 
-				tx, err := wrappedTestDB.Begin()
+				tx, err := wrappedTestDB.BeginTx()
 				Expect(err).ToNot(HaveOccurred())
 				defer tx.Close()
 				afterState, err := tx.StateFetch(ctx, networkSchema, transaction.IDFilter(networkResource.ID()))
@@ -249,7 +249,7 @@ var _ = Describe("Updating the state", func() {
 				}
 				Expect(watcher.MonitoringUpdate(&possibleEvent)).To(Succeed())
 
-				tx, err := wrappedTestDB.Begin()
+				tx, err := wrappedTestDB.BeginTx()
 				Expect(err).ToNot(HaveOccurred())
 				defer tx.Close()
 				afterMonitoring, err := tx.StateFetch(ctx, networkSchema, transaction.IDFilter(networkResource.ID()))
@@ -274,7 +274,7 @@ var _ = Describe("Updating the state", func() {
 				watcher := srv.NewStateWatcherFromServer(server)
 				Expect(watcher.MonitoringUpdate(&possibleEvent)).To(Succeed())
 
-				tx, err := wrappedTestDB.Begin()
+				tx, err := wrappedTestDB.BeginTx()
 				Expect(err).ToNot(HaveOccurred())
 				defer tx.Close()
 				afterMonitoring, err := tx.StateFetch(ctx, networkSchema, transaction.IDFilter(networkResource.ID()))
@@ -309,7 +309,7 @@ var _ = Describe("Updating the state", func() {
 				}
 				Expect(watcher.MonitoringUpdate(&possibleEvent)).To(Succeed())
 
-				tx, err := wrappedTestDB.Begin()
+				tx, err := wrappedTestDB.BeginTx()
 				Expect(err).ToNot(HaveOccurred())
 				defer tx.Close()
 				afterMonitoring, err := tx.StateFetch(ctx, networkSchema, transaction.IDFilter(networkResource.ID()))

@@ -376,7 +376,7 @@ var _ = Describe("Schemas", func() {
 			}
 
 			BeforeEach(func() {
-				tx, err := rawDB.Begin()
+				tx, err := rawDB.BeginTx()
 				Expect(err).ShouldNot(HaveOccurred())
 				resource, err := schemaManager.LoadResource("test_schema_no_ext", map[string]interface{}{
 					"id":   resourceID,

@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/dbutil"
 	"github.com/cloudwan/gohan/db/migration"
 	db_options "github.com/cloudwan/gohan/db/options"
@@ -226,7 +227,7 @@ func actionMigrateCreateInitialMigration() func(context *cli.Context) {
 	}
 }
 
-func publishEventWithOptions(envName string, modifiedSchemas []string, eventName string, syncETCDEvent bool, eventTimeout time.Duration, db *server.DbSyncWrapper, manager *schema.Manager, envManager *extension.Manager, sync sync.Sync, ident middleware.IdentityService) {
+func publishEventWithOptions(envName string, modifiedSchemas []string, eventName string, syncETCDEvent bool, eventTimeout time.Duration, db db.DB, manager *schema.Manager, envManager *extension.Manager, sync sync.Sync, ident middleware.IdentityService) {
 	deadline := time.Now().Add(eventTimeout)
 
 	for _, s := range manager.Schemas() {
@@ -293,7 +294,7 @@ func publishEvent(envName string, modifiedSchemas []string, eventName string, sy
 		log.Fatal(err)
 	}
 
-	db := &server.DbSyncWrapper{DB: rawDB}
+	db := server.NewDbSyncWrapper(rawDB)
 
 	sync, err := sync_util.CreateFromConfig(config)
 

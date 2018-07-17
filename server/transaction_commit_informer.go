@@ -22,7 +22,9 @@ import (
 	"time"
 
 	"github.com/cloudwan/gohan/db"
+	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/transaction"
+	"github.com/cloudwan/gohan/metrics"
 	"github.com/cloudwan/gohan/schema"
 )
 
@@ -40,16 +42,40 @@ func transactionCommitInformer() chan int {
 
 //DbSyncWrapper wraps db.DB so it logs events in database on every transaction.
 type DbSyncWrapper struct {
-	db.DB
+	db db.DB
 }
 
-// Begin wraps transaction object with sync
+func NewDbSyncWrapper(db db.DB) db.DB {
+	return &DbSyncWrapper{db}
+}
+
+// BeginTx wraps transaction object with sync
 func (sw *DbSyncWrapper) BeginTx(options ...transaction.Option) (transaction.Transaction, error) {
-	tx, err := sw.DB.Begin(options...)
+	tx, err := sw.db.BeginTx(options...)
 	if err != nil {
 		return nil, err
 	}
 	return syncTransactionWrap(tx), nil
+}
+
+func (sw *DbSyncWrapper) Connect(dbType string, conn string, maxOpenConn int) error {
+	return sw.db.Connect(dbType, conn, maxOpenConn)
+}
+
+func (sw *DbSyncWrapper) Close() {
+	sw.db.Close()
+}
+
+func (sw *DbSyncWrapper) RegisterTable(s *schema.Schema, cascade, migrate bool) error {
+	return sw.db.RegisterTable(s, cascade, migrate)
+}
+
+func (sw *DbSyncWrapper) DropTable(s *schema.Schema) error {
+	return sw.db.DropTable(s)
+}
+
+func (sw *DbSyncWrapper) Options() options.Options {
+	return sw.db.Options()
 }
 
 type transactionEventLogger struct {
@@ -174,7 +200,9 @@ func (tl *transactionEventLogger) Commit() error {
 	committed := transactionCommitInformer()
 	select {
 	case committed <- 1:
+		metrics.UpdateCounter(1, "event_logger.notified")
 	default:
+		metrics.UpdateCounter(1, "event_logger.skipped")
 	}
 	return nil
 }

@@ -245,7 +245,7 @@ func (env *Environment) getTransaction(isNew bool, isolationLevel transaction.Ty
 			}
 		}
 	}
-	tx, _ := env.dbConnection.Begin(transaction.IsolationLevel(isolationLevel))
+	tx, _ := env.dbConnection.BeginTx(transaction.IsolationLevel(isolationLevel))
 	env.dbTransactions = append(env.dbTransactions, tx)
 	return tx, nil
 }

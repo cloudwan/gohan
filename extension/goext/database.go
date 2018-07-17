@@ -30,7 +30,7 @@ type DbOptions struct {
 type IDatabase interface {
 	// Begin starts a new transaction
 	Begin() (ITransaction, error)
-	// Begin starts a new transaction with options
+	// BeginTx starts a new transaction with options
 	BeginTx(context Context, options *TxOptions) (ITransaction, error)
 
 	// Options return database options from the configuration file

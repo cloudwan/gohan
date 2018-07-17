@@ -134,7 +134,7 @@ var _ = Describe("Database operation test", func() {
 				Expect(dataStore.RegisterTable(s, false, true)).To(Succeed())
 			}
 
-			tx, err = dataStore.Begin()
+			tx, err = dataStore.BeginTx()
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -176,7 +176,7 @@ var _ = Describe("Database operation test", func() {
 					Expect(tx.Create(ctx, serverResource)).To(Succeed())
 					Expect(tx.Commit()).To(Succeed())
 					tx.Close()
-					tx, err = dataStore.Begin()
+					tx, err = dataStore.BeginTx()
 					Expect(err).ToNot(HaveOccurred())
 				})
 
@@ -402,13 +402,13 @@ var _ = Describe("Database operation test", func() {
 
 			Expect(dbutil.CopyDBResources(outDB, verifyDB, true)).To(Succeed())
 
-			inTx, err := inDB.Begin()
+			inTx, err := inDB.BeginTx()
 			Expect(err).ToNot(HaveOccurred())
 			defer inTx.Close()
 
 			// SQL returns different types than JSON/YAML Database
 			// So we need to move it back again so that DeepEqual would work correctly
-			verifyTx, err := verifyDB.Begin()
+			verifyTx, err := verifyDB.BeginTx()
 			Expect(err).ToNot(HaveOccurred())
 			defer verifyTx.Close()
 
@@ -443,7 +443,7 @@ var _ = Describe("Database operation test", func() {
 			subnetSchema, _ := manager.Schema("subnet")
 
 			// Update some data
-			tx, err := outDB.Begin()
+			tx, err := outDB.BeginTx()
 			Expect(err).ToNot(HaveOccurred())
 			list, _, err := tx.List(ctx, subnetSchema, map[string]interface{}{
 				"name": "subnetRedA",
@@ -459,7 +459,7 @@ var _ = Describe("Database operation test", func() {
 
 			Expect(dbutil.CopyDBResources(inDB, outDB, false)).To(Succeed())
 			// check description of subnetRedA
-			tx, err = outDB.Begin()
+			tx, err = outDB.BeginTx()
 			Expect(err).ToNot(HaveOccurred())
 			list, _, err = tx.List(ctx, subnetSchema, map[string]interface{}{
 				"name": "subnetRedA",
@@ -543,7 +543,7 @@ var _ = Describe("Database operation test", func() {
 		It("should not panic on DB errors", func() {
 			opts := options.Options{RetryTxCount: 3, RetryTxInterval: 0}
 			mockDB.EXPECT().Options().Return(opts)
-			mockDB.EXPECT().Begin().Return(nil, errors.New("test error"))
+			mockDB.EXPECT().BeginTx().Return(nil, errors.New("test error"))
 
 			err := db.WithinTx(mockDB, func(_ transaction.Transaction) error {
 				panic("should never be called")

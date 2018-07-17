@@ -55,7 +55,7 @@ func init() {
 					opts = append(opts, transaction.IsolationLevel(transaction.Type(strIsolationLevel)))
 				}
 
-				tx, err = env.DataStore.Begin(opts...)
+				tx, err = env.DataStore.BeginTx(opts...)
 
 				if err != nil {
 					ThrowOttoException(&call, "failed to start a transaction: %s", err.Error())

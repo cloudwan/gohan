@@ -55,7 +55,7 @@ func transactionFunc(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interf
 			return nil, err
 		}
 		connection := rawDB.(db.DB)
-		tx, err := connection.Begin()
+		tx, err := connection.BeginTx()
 		if err != nil {
 			return nil, err
 		}
@@ -134,7 +134,7 @@ func InitDB(dbType string, connection string, dropOnCreate bool, cascade bool) e
 
 //DBBegin starts transaction
 func DBBegin(connection db.DB) (transaction.Transaction, error) {
-	return connection.Begin()
+	return connection.BeginTx()
 }
 
 //DBCommit commits transaction

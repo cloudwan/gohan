@@ -353,8 +353,8 @@ func (db *DB) Close() {
 	db.DB.Close()
 }
 
-//Begin starts new transaction with given transaction options
-func (db *DB) Begin(options ...transaction.Option) (tx transaction.Transaction, err error) {
+//BeginTx starts new transaction with given transaction options
+func (db *DB) BeginTx(options ...transaction.Option) (tx transaction.Transaction, err error) {
 	defer db.measureTime(time.Now(), "begin_tx")
 	db.updateCounter(1, "begin.waiting")
 	defer db.updateCounter(-1, "begin.waiting")

@@ -43,7 +43,7 @@ var _ = Describe("Gohanscript extension manager", func() {
 	})
 
 	AfterEach(func() {
-		tx, err := testDB.Begin()
+		tx, err := testDB.BeginTx()
 		Expect(err).ToNot(HaveOccurred(), "Failed to create transaction.")
 		defer tx.Close()
 		for _, schema := range schema.GetManager().Schemas() {

@@ -105,7 +105,7 @@ var _ = Describe("GohanDb", func() {
 				)
 
 				mockDB := db_mocks.NewMockDB(mockCtrl)
-				mockDB.EXPECT().Begin(gomock.Any()).Return(mockTx, nil)
+				mockDB.EXPECT().BeginTx(gomock.Any()).Return(mockTx, nil)
 				env := newEnvironmentWithExtension(ext, mockDB)
 
 				context := map[string]interface{}{}
@@ -135,7 +135,7 @@ var _ = Describe("GohanDb", func() {
 				)
 
 				mockDB := db_mocks.NewMockDB(mockCtrl)
-				mockDB.EXPECT().Begin(gomock.Any()).DoAndReturn(func(opt ...transaction.Option) (transaction.Transaction, error) {
+				mockDB.EXPECT().BeginTx(gomock.Any()).DoAndReturn(func(opt ...transaction.Option) (transaction.Transaction, error) {
 					Expect(len(opt)).To(Equal(1))
 					params := &transaction.TxParams{}
 					opt[0](params)

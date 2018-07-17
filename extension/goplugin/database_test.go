@@ -46,10 +46,10 @@ var _ = Describe("Database", func() {
 	})
 
 	Describe("Error handling", func() {
-		Context("Begin", func() {
+		Context("BeginTx", func() {
 			It("should return an error on error", func() {
 				expectedErr := fmt.Errorf("dummy error")
-				mockDB.EXPECT().Begin().Return(&mocks.MockTransaction{}, expectedErr)
+				mockDB.EXPECT().BeginTx().Return(&mocks.MockTransaction{}, expectedErr)
 
 				tx, err := db.Begin()
 
@@ -58,7 +58,7 @@ var _ = Describe("Database", func() {
 			})
 
 			It("should return an error on nil transaction received", func() {
-				mockDB.EXPECT().Begin().Return(nil, nil)
+				mockDB.EXPECT().BeginTx().Return(nil, nil)
 
 				tx, err := db.Begin()
 
@@ -70,7 +70,7 @@ var _ = Describe("Database", func() {
 		Context("BeginTx", func() {
 			It("should return an error on error", func() {
 				expectedErr := fmt.Errorf("dummy error")
-				mockDB.EXPECT().Begin(gomock.Any(), gomock.Any()).Return(&mocks.MockTransaction{}, expectedErr)
+				mockDB.EXPECT().BeginTx(gomock.Any(), gomock.Any()).Return(&mocks.MockTransaction{}, expectedErr)
 
 				tx, err := db.BeginTx(goext.MakeContext(), &goext.TxOptions{})
 
@@ -79,7 +79,7 @@ var _ = Describe("Database", func() {
 			})
 
 			It("should return an error on nil transaction received", func() {
-				mockDB.EXPECT().Begin(gomock.Any(), gomock.Any()).Return(nil, nil)
+				mockDB.EXPECT().BeginTx(gomock.Any(), gomock.Any()).Return(nil, nil)
 
 				tx, err := db.BeginTx(goext.MakeContext(), &goext.TxOptions{})
 
@@ -92,7 +92,7 @@ var _ = Describe("Database", func() {
 				ctx := goext.Context{
 					"context": tempCtxWithTimeout,
 				}
-				mockDB.EXPECT().Begin(gomock.Any(), gomock.Any()).Return(nil, nil).
+				mockDB.EXPECT().BeginTx(gomock.Any(), gomock.Any()).Return(nil, nil).
 					Do(func(options ...transaction.Option) {
 						txParams := transaction.NewTxParams(options...)
 						_, hasDeadline := txParams.Context.Deadline()

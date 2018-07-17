@@ -359,7 +359,7 @@ func (env *Environment) GetOrCreateTransaction(value otto.Value) (transaction.Tr
 		return tx, false, err
 	}
 	dataStore := env.DataStore
-	tx, err := dataStore.Begin()
+	tx, err := dataStore.BeginTx()
 	if err != nil {
 		return nil, false, fmt.Errorf("Error creating transaction: %v", err.Error())
 	}

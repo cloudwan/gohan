@@ -68,7 +68,7 @@ var _ = Describe("Otto extension manager", func() {
 	})
 
 	AfterEach(func() {
-		tx, err := testDB.Begin()
+		tx, err := testDB.BeginTx()
 		Expect(err).ToNot(HaveOccurred(), "Failed to create transaction.")
 		defer tx.Close()
 		for _, schema := range schema.GetManager().Schemas() {
@@ -713,7 +713,7 @@ var _ = Describe("Otto extension manager", func() {
 		})
 
 		AfterEach(func() {
-			tx, err := testDB.Begin()
+			tx, err := testDB.BeginTx()
 			Expect(err).ToNot(HaveOccurred(), "Failed to create transaction.")
 			environmentManager.UnRegisterEnvironment(schemaID)
 			defer tx.Close()
@@ -736,7 +736,7 @@ var _ = Describe("Otto extension manager", func() {
 
 			Context("When given a transaction", func() {
 				It("Correctly handles CRUD operations", func() {
-					tx, err := testDB.Begin()
+					tx, err := testDB.BeginTx()
 					Expect(err).ToNot(HaveOccurred(), "Failed to create transaction.")
 					defer tx.Commit()
 
@@ -781,7 +781,7 @@ var _ = Describe("Otto extension manager", func() {
 
 			Context("When given no transaction", func() {
 				It("Correctly handles CRUD operations", func() {
-					tx, err := testDB.Begin()
+					tx, err := testDB.BeginTx()
 					Expect(err).ToNot(HaveOccurred(), "Failed to create transaction.")
 					defer tx.Commit()
 
@@ -883,7 +883,7 @@ var _ = Describe("Otto extension manager", func() {
 				BeforeEach(func() {
 					resource, err := manager.LoadResource(schemaID, network1)
 					Expect(err).NotTo(HaveOccurred())
-					tx, err = testDB.Begin()
+					tx, err = testDB.BeginTx()
 					Expect(err).NotTo(HaveOccurred())
 					defer tx.Close()
 					Expect(tx.Create(ctx, resource)).To(Succeed())
@@ -900,7 +900,7 @@ var _ = Describe("Otto extension manager", func() {
 						})
 
 						It("Correctly lists elements", func() {
-							tx, err := testDB.Begin()
+							tx, err := testDB.BeginTx()
 							Expect(err).NotTo(HaveOccurred())
 							defer tx.Close()
 							context["transaction"] = tx
@@ -919,7 +919,7 @@ var _ = Describe("Otto extension manager", func() {
 						})
 
 						It("Correctly lists elements", func() {
-							tx, err := testDB.Begin()
+							tx, err := testDB.BeginTx()
 							Expect(err).NotTo(HaveOccurred())
 							defer tx.Close()
 							context["transaction"] = tx
@@ -935,7 +935,7 @@ var _ = Describe("Otto extension manager", func() {
 						})
 
 						It("Correctly lists elements", func() {
-							tx, err := testDB.Begin()
+							tx, err := testDB.BeginTx()
 							Expect(err).NotTo(HaveOccurred())
 							defer tx.Close()
 							context["transaction"] = tx
@@ -953,7 +953,7 @@ var _ = Describe("Otto extension manager", func() {
 						})
 
 						It("Returns the proper error", func() {
-							tx, err := testDB.Begin()
+							tx, err := testDB.BeginTx()
 							Expect(err).NotTo(HaveOccurred())
 							defer tx.Close()
 							context["transaction"] = tx
@@ -972,7 +972,7 @@ var _ = Describe("Otto extension manager", func() {
 						})
 
 						It("Returns the proper error", func() {
-							tx, err := testDB.Begin()
+							tx, err := testDB.BeginTx()
 							Expect(err).NotTo(HaveOccurred())
 							defer tx.Close()
 							context["transaction"] = tx
@@ -1041,7 +1041,7 @@ var _ = Describe("Otto extension manager", func() {
 				BeforeEach(func() {
 					resource, err := manager.LoadResource(schemaID, network1)
 					Expect(err).NotTo(HaveOccurred())
-					tx, err = testDB.Begin()
+					tx, err = testDB.BeginTx()
 					Expect(err).NotTo(HaveOccurred())
 					defer tx.Close()
 					Expect(tx.Create(ctx, resource)).To(Succeed())
@@ -1059,7 +1059,7 @@ var _ = Describe("Otto extension manager", func() {
 						})
 
 						It("Correctly fetches the element", func() {
-							tx, err := testDB.Begin()
+							tx, err := testDB.BeginTx()
 							Expect(err).NotTo(HaveOccurred())
 							defer tx.Close()
 							context["transaction"] = tx
@@ -1081,7 +1081,7 @@ var _ = Describe("Otto extension manager", func() {
 						})
 
 						It("Returns the not found error", func() {
-							tx, err := testDB.Begin()
+							tx, err := testDB.BeginTx()
 							Expect(err).NotTo(HaveOccurred())
 							defer tx.Close()
 							context["transaction"] = tx
@@ -1100,7 +1100,7 @@ var _ = Describe("Otto extension manager", func() {
 						})
 
 						It("Returns the proper error", func() {
-							tx, err := testDB.Begin()
+							tx, err := testDB.BeginTx()
 							Expect(err).NotTo(HaveOccurred())
 							defer tx.Close()
 							context["transaction"] = tx
@@ -1121,7 +1121,7 @@ var _ = Describe("Otto extension manager", func() {
 						})
 
 						It("Returns the proper error", func() {
-							tx, err := testDB.Begin()
+							tx, err := testDB.BeginTx()
 							Expect(err).NotTo(HaveOccurred())
 							defer tx.Close()
 							context["transaction"] = tx
@@ -1167,7 +1167,7 @@ var _ = Describe("Otto extension manager", func() {
 				BeforeEach(func() {
 					resource, err := manager.LoadResource(schemaID, network1)
 					Expect(err).NotTo(HaveOccurred())
-					tx, err = testDB.Begin()
+					tx, err = testDB.BeginTx()
 					Expect(err).NotTo(HaveOccurred())
 					defer tx.Close()
 					Expect(tx.Create(ctx, resource)).To(Succeed())
@@ -1185,7 +1185,7 @@ var _ = Describe("Otto extension manager", func() {
 						})
 
 						It("Correctly creates the element", func() {
-							tx, err := testDB.Begin()
+							tx, err := testDB.BeginTx()
 							Expect(err).NotTo(HaveOccurred())
 							defer tx.Close()
 							context["transaction"] = tx
@@ -1208,7 +1208,7 @@ var _ = Describe("Otto extension manager", func() {
 						})
 
 						It("Returns the proper error", func() {
-							tx, err := testDB.Begin()
+							tx, err := testDB.BeginTx()
 							Expect(err).NotTo(HaveOccurred())
 							defer tx.Close()
 							context["transaction"] = tx
@@ -1230,7 +1230,7 @@ var _ = Describe("Otto extension manager", func() {
 						})
 
 						It("Returns the proper error", func() {
-							tx, err := testDB.Begin()
+							tx, err := testDB.BeginTx()
 							Expect(err).NotTo(HaveOccurred())
 							defer tx.Close()
 							context["transaction"] = tx
@@ -1288,7 +1288,7 @@ var _ = Describe("Otto extension manager", func() {
 				BeforeEach(func() {
 					resource, err := manager.LoadResource(schemaID, network1)
 					Expect(err).NotTo(HaveOccurred())
-					tx, err = testDB.Begin()
+					tx, err = testDB.BeginTx()
 					Expect(err).NotTo(HaveOccurred())
 					defer tx.Close()
 					Expect(tx.Create(ctx, resource)).To(Succeed())
@@ -1306,7 +1306,7 @@ var _ = Describe("Otto extension manager", func() {
 						})
 
 						It("Correctly updates the element", func() {
-							tx, err := testDB.Begin()
+							tx, err := testDB.BeginTx()
 							Expect(err).NotTo(HaveOccurred())
 							defer tx.Close()
 							context["transaction"] = tx
@@ -1327,7 +1327,7 @@ var _ = Describe("Otto extension manager", func() {
 						})
 
 						It("Returns the proper error", func() {
-							tx, err := testDB.Begin()
+							tx, err := testDB.BeginTx()
 							Expect(err).NotTo(HaveOccurred())
 							defer tx.Close()
 							context["transaction"] = tx
@@ -1348,7 +1348,7 @@ var _ = Describe("Otto extension manager", func() {
 						})
 
 						It("Returns the proper error", func() {
-							tx, err := testDB.Begin()
+							tx, err := testDB.BeginTx()
 							Expect(err).NotTo(HaveOccurred())
 							defer tx.Close()
 							context["transaction"] = tx
@@ -1392,7 +1392,7 @@ var _ = Describe("Otto extension manager", func() {
 						})
 
 						It("Returns the proper error", func() {
-							tx, err := testDB.Begin()
+							tx, err := testDB.BeginTx()
 							Expect(err).NotTo(HaveOccurred())
 							defer tx.Close()
 							context["transaction"] = tx
@@ -1412,7 +1412,7 @@ var _ = Describe("Otto extension manager", func() {
 				BeforeEach(func() {
 					resource, err := manager.LoadResource(schemaID, network1)
 					Expect(err).NotTo(HaveOccurred())
-					tx, err = testDB.Begin()
+					tx, err = testDB.BeginTx()
 					Expect(err).NotTo(HaveOccurred())
 					defer tx.Close()
 					Expect(tx.Create(ctx, resource)).To(Succeed())
@@ -1429,7 +1429,7 @@ var _ = Describe("Otto extension manager", func() {
 						})
 
 						It("Correctly deletes the element", func() {
-							tx, err := testDB.Begin()
+							tx, err := testDB.BeginTx()
 							Expect(err).NotTo(HaveOccurred())
 							defer tx.Close()
 							context["transaction"] = tx
@@ -1448,7 +1448,7 @@ var _ = Describe("Otto extension manager", func() {
 						})
 
 						It("Returns the proper error", func() {
-							tx, err := testDB.Begin()
+							tx, err := testDB.BeginTx()
 							Expect(err).NotTo(HaveOccurred())
 							defer tx.Close()
 							context["transaction"] = tx
@@ -1501,7 +1501,7 @@ var _ = Describe("Otto extension manager", func() {
 
 					resource, err := manager.LoadResource(schemaID, network1)
 					Expect(err).NotTo(HaveOccurred())
-					tx, err = testDB.Begin()
+					tx, err = testDB.BeginTx()
 					Expect(err).NotTo(HaveOccurred())
 					defer tx.Close()
 					Expect(tx.Create(ctx, resource)).To(Succeed())
@@ -1606,7 +1606,7 @@ var _ = Describe("Otto extension manager", func() {
 						})
 
 						It("Correctly handles chaining", func() {
-							tx, err := testDB.Begin()
+							tx, err := testDB.BeginTx()
 							Expect(err).NotTo(HaveOccurred())
 							createNetworkContext["transaction"] = tx
 							By("Creating the network")
@@ -1618,7 +1618,7 @@ var _ = Describe("Otto extension manager", func() {
 								Expect(createNetworkContext).To(HaveKeyWithValue("network", HaveKeyWithValue(key, value)))
 							}
 
-							tx, err = testDB.Begin()
+							tx, err = testDB.BeginTx()
 							Expect(err).NotTo(HaveOccurred())
 							readSubnetContext["transaction"] = tx
 
@@ -1648,7 +1648,7 @@ var _ = Describe("Otto extension manager", func() {
 						})
 
 						It("Returns the proper error", func() {
-							tx, err := testDB.Begin()
+							tx, err := testDB.BeginTx()
 							Expect(err).NotTo(HaveOccurred())
 							defer tx.Close()
 							createNetworkContext["transaction"] = tx

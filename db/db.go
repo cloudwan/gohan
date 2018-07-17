@@ -32,7 +32,7 @@ const DefaultMaxOpenConn = 100
 type DB interface {
 	Connect(string, string, int) error
 	Close()
-	Begin(options ...transaction.Option) (transaction.Transaction, error)
+	BeginTx(options ...transaction.Option) (transaction.Transaction, error)
 	RegisterTable(s *schema.Schema, cascade, migrate bool) error
 	DropTable(*schema.Schema) error
 
@@ -145,7 +145,7 @@ func WithinTx(db DB, fn FuncInTransaction, options ...transaction.Option) error 
 			return db.Options().RetryTxInterval
 		},
 		func() (ITransaction, error) {
-			return db.Begin(options...)
+			return db.BeginTx(options...)
 		},
 		func(tx ITransaction) error {
 			return fn(tx.(transaction.Transaction))

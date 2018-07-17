@@ -71,7 +71,7 @@ var _ = Describe("Sql", func() {
 		Expect(err).ToNot(HaveOccurred())
 		dbutil.CopyDBResources(fixtureDB, dbc, true)
 
-		tx, err = dbc.Begin()
+		tx, err = dbc.BeginTx()
 		Expect(err).ToNot(HaveOccurred())
 
 		var ok bool

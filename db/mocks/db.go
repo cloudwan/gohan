@@ -5,11 +5,12 @@
 package mock_db
 
 import (
+	reflect "reflect"
+
 	options "github.com/cloudwan/gohan/db/options"
 	transaction "github.com/cloudwan/gohan/db/transaction"
 	schema "github.com/cloudwan/gohan/schema"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
 // MockDB is a mock of DB interface
@@ -57,21 +58,21 @@ func (mr *MockDBMockRecorder) Close() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockDB)(nil).Close))
 }
 
-// Begin mocks base method
-func (m *MockDB) Begin(options ...transaction.Option) (transaction.Transaction, error) {
+// BeginTx mocks base method
+func (m *MockDB) BeginTx(options ...transaction.Option) (transaction.Transaction, error) {
 	varargs := []interface{}{}
 	for _, a := range options {
 		varargs = append(varargs, a)
 	}
-	ret := m.ctrl.Call(m, "Begin", varargs...)
+	ret := m.ctrl.Call(m, "BeginTx", varargs...)
 	ret0, _ := ret[0].(transaction.Transaction)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// Begin indicates an expected call of Begin
-func (mr *MockDBMockRecorder) Begin(options ...interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Begin", reflect.TypeOf((*MockDB)(nil).Begin), options...)
+// BeginTx indicates an expected call of BeginTx
+func (mr *MockDBMockRecorder) BeginTx(options ...interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BeginTx", reflect.TypeOf((*MockDB)(nil).BeginTx), options...)
 }
 
 // RegisterTable mocks base method

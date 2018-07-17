@@ -48,19 +48,19 @@ var (
 )
 
 const (
-	baseURL                 = "http://localhost:19090"
-	schemaURL               = baseURL + "/gohan/v0.1/schemas"
-	networkPluralURL        = baseURL + "/v2.0/networks"
-	subnetPluralURL         = baseURL + "/v2.0/subnets"
-	serverPluralURL         = baseURL + "/v2.0/servers"
-	testPluralURL           = baseURL + "/v2.0/tests"
-	parentsPluralURL        = baseURL + "/v1.0/parents"
-	childrenPluralURL       = baseURL + "/v1.0/children"
-	schoolsPluralURL        = baseURL + "/v1.0/schools"
-	citiesPluralURL         = baseURL + "/v1.0/cities"
-	profilingURL            = baseURL + "/debug/pprof/"
-	filterTestPluralURL     = baseURL + "/v2.0/filter_tests"
-	visibilityTestPluralURL = baseURL + "/v2.0/visible_properties_tests"
+	baseURL                   = "http://localhost:19090"
+	schemaURL                 = baseURL + "/gohan/v0.1/schemas"
+	networkPluralURL          = baseURL + "/v2.0/networks"
+	subnetPluralURL           = baseURL + "/v2.0/subnets"
+	serverPluralURL           = baseURL + "/v2.0/servers"
+	testPluralURL             = baseURL + "/v2.0/tests"
+	parentsPluralURL          = baseURL + "/v1.0/parents"
+	childrenPluralURL         = baseURL + "/v1.0/children"
+	schoolsPluralURL          = baseURL + "/v1.0/schools"
+	citiesPluralURL           = baseURL + "/v1.0/cities"
+	profilingURL              = baseURL + "/debug/pprof/"
+	filterTestPluralURL       = baseURL + "/v2.0/filter_tests"
+	visibilityTestPluralURL   = baseURL + "/v2.0/visible_properties_tests"
 	attacherPluralURL         = baseURL + "/v2.0/attachers"
 	attacherWildcardPluralURL = baseURL + "/v2.0/wildcard_attachers"
 	attachTargetPluralURL     = baseURL + "/v2.0/attach_targets"
@@ -1110,7 +1110,7 @@ var _ = Describe("Server package test", func() {
 			networkSchema, _ := manager.Schema("network")
 			subnetSchema, _ := manager.Schema("subnet")
 
-			tx, err := testDB.Begin()
+			tx, err := testDB.BeginTx()
 			if err != nil {
 				Fail(err.Error())
 			}
