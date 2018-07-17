@@ -20,22 +20,6 @@ jobs:
       - run: sudo install etcd-v3.1.7-linux-amd64/etcd /usr/bin
       - run: go get github.com/mattn/goveralls
       - run: make test
-  deploy:
-    docker:
-      - image: circleci/golang:1.9
-    working_directory: /go/src/github.com/cloudwan/gohan
-    steps:
-      - checkout
-      - run:
-          name: Upload package to Github
-          command: |
-            go get github.com/karalabe/xgo
-            ./tools/crosscompile.sh
-            sudo apt-get install -y zip
-            curl -L https://github.com/tcnksm/ghr/releases/download/v0.5.0/ghr_v0.5.0_linux_amd64.zip -o ghr_v0.5.0_linux_amd64.zip
-            unzip ghr_v0.5.0_linux_amd64.zip
-            chmod 0755 ghr
-            ./ghr -t $GITHUB_TOKEN -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME -replace pre-release dist/
 
 workflows:
   version: 2
@@ -43,9 +27,3 @@ workflows:
     jobs:
       - build
       - test
-      - deploy:
-          requires:
-            - test
-          filters:
-            branches:
-              only: master
