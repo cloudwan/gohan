@@ -21,7 +21,6 @@ import (
 	"strings"
 
 	"github.com/cloudwan/gohan/db"
-	"github.com/cloudwan/gohan/db/file"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/sql"
 	"github.com/cloudwan/gohan/db/transaction"
@@ -37,14 +36,7 @@ var (
 
 //ConnectDB is builder function of DB
 func ConnectDB(dbType, conn string, maxOpenConn int, opt options.Options) (db.DB, error) {
-	var db db.DB
-
-	if dbType == "json" || dbType == "yaml" {
-		db = file.NewDB(opt)
-	} else {
-		db = sql.NewDB(opt)
-	}
-
+	db := sql.NewDB(opt)
 	err := db.Connect(dbType, conn, maxOpenConn)
 	if err != nil {
 		return nil, err
@@ -111,12 +103,7 @@ func CreateFromConfig(config *util.Config) (db.DB, error) {
 	maxConn := config.GetInt("database/max_open_conn", db.DefaultMaxOpenConn)
 	dbOptions := options.Read(config)
 
-	var dbConn db.DB
-	if dbType == "json" || dbType == "yaml" {
-		dbConn = file.NewDB(dbOptions)
-	} else {
-		dbConn = sql.NewDB(dbOptions)
-	}
+	dbConn := sql.NewDB(dbOptions)
 	err := dbConn.Connect(dbType, dbConnection, maxConn)
 	if err != nil {
 		return nil, err

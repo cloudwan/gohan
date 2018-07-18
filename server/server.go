@@ -177,9 +177,6 @@ func (server *Server) connectDB() error {
 func (server *Server) getDatabaseConfig() (string, string, db.InitDBParams) {
 	config := util.GetConfig()
 	databaseType := config.GetString("database/type", "sqlite3")
-	if databaseType == "json" || databaseType == "yaml" {
-		log.Fatal("json or yaml isn't supported as main db backend")
-	}
 	databaseConnection := config.GetString("database/connection", "")
 	if databaseConnection == "" {
 		log.Fatal("no database connection specified in the configuration file.")

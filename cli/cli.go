@@ -26,7 +26,6 @@ import (
 	"github.com/cloudwan/gohan/cli/client"
 	"github.com/cloudwan/gohan/converter/app"
 	"github.com/cloudwan/gohan/db"
-	db_options "github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/extension/framework"
 	"github.com/cloudwan/gohan/extension/gohanscript"
 	// Import gohan extension autogen lib
@@ -63,7 +62,6 @@ func Run(name, usage string) {
 		getGohanClientCommand(),
 		getValidateCommand(),
 		getInitDbCommand(),
-		getConvertCommand(),
 		getServerCommand(),
 		getTestExtensionsCommand(),
 		getMigrateCommand(),
@@ -252,65 +250,6 @@ Useful for development purposes.`,
 				util.ExitFatal(err)
 			}
 			fmt.Println("DB is initialized")
-		},
-	}
-}
-
-func getConvertCommand() cli.Command {
-	return cli.Command{
-		Name:      "convert",
-		ShortName: "conv",
-		Usage:     "Convert DB",
-		Description: `
-Gohan convert can be used to migrate Gohan resources between different types of databases.
-
-Setting meta-schema option will additionally convert meta-schema table with schema resources.
-Useful for development purposes.`,
-		Flags: []cli.Flag{
-			cli.StringFlag{Name: "in-type, it", Value: "", Usage: "Input db type (yaml, json, sqlite3, mysql)"},
-			cli.StringFlag{Name: "in, i", Value: "", Usage: "Input db connection spec (or filename)"},
-			cli.StringFlag{Name: "out-type, ot", Value: "", Usage: "Output db type (yaml, json, sqlite3, mysql)"},
-			cli.StringFlag{Name: "out, o", Value: "", Usage: "Output db connection spec (or filename)"},
-			cli.StringFlag{Name: "schema, s", Value: "", Usage: "Schema file"},
-			cli.StringFlag{Name: "meta-schema, m", Value: "embed://etc/schema/gohan.json", Usage: "Meta-schema file (optional)"},
-		},
-		Action: func(c *cli.Context) {
-			inType, in := c.String("in-type"), c.String("in")
-			if inType == "" || in == "" {
-				util.ExitFatal("Need to provide input database specification")
-			}
-			outType, out := c.String("out-type"), c.String("out")
-			if outType == "" || out == "" {
-				util.ExitFatal("Need to provide output database specification")
-			}
-
-			schemaFile := c.String("schema")
-			if schemaFile == "" {
-				util.ExitFatal("Need to provide schema file")
-			}
-			metaSchemaFile := c.String("meta-schema")
-
-			schemaManager := schema.GetManager()
-			err := schemaManager.LoadSchemasFromFiles(schemaFile, metaSchemaFile)
-			if err != nil {
-				util.ExitFatal("Error loading schema:", err)
-			}
-
-			inDB, err := dbutil.ConnectDB(inType, in, db.DefaultMaxOpenConn, db_options.Default())
-			if err != nil {
-				util.ExitFatal(err)
-			}
-			outDB, err := dbutil.ConnectDB(outType, out, db.DefaultMaxOpenConn, db_options.Default())
-			if err != nil {
-				util.ExitFatal(err)
-			}
-
-			err = dbutil.CopyDBResources(inDB, outDB, true)
-			if err != nil {
-				util.ExitFatal(err)
-			}
-
-			fmt.Println("Conversion complete")
 		},
 	}
 }

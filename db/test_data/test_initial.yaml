@@ -1,9 +1,0 @@
-todos:
-- id: first_id
-  description: first_description
-  name: first_name
-  tenant_id: first_tenant_id
-- id: second_id
-  description: second_description
-  name: second_name
-  tenant_id: second_tenant_id

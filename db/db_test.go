@@ -378,100 +378,6 @@ var _ = Describe("Database operation test", func() {
 		})
 	})
 
-	Context("Converting", func() {
-		BeforeEach(func() {
-			Expect(manager.LoadSchemaFromFile("test_data/conv_in.yaml")).To(Succeed())
-		})
-
-		It("Should do it properly", func() {
-			inDB, err := dbutil.ConnectDB("yaml", "test_data/conv_in.yaml", db.DefaultMaxOpenConn, options.Default())
-			Expect(err).ToNot(HaveOccurred())
-			defer os.Remove("test_data/conv_in.db")
-
-			dbutil.InitDBWithSchemas("sqlite3", "test_data/conv_out.db", db.DefaultTestInitDBParams())
-			outDB, err := dbutil.ConnectDB("sqlite3", "test_data/conv_out.db", db.DefaultMaxOpenConn, options.Default())
-			Expect(err).ToNot(HaveOccurred())
-			defer os.Remove("test_data/conv_out.db")
-
-			dbutil.InitDBWithSchemas("yaml", "test_data/conv_verify.yaml", db.DefaultTestInitDBParams())
-			verifyDB, err := dbutil.ConnectDB("yaml", "test_data/conv_verify.yaml", db.DefaultMaxOpenConn, options.Default())
-			Expect(err).ToNot(HaveOccurred())
-			defer os.Remove("test_data/conv_verify.yaml")
-
-			Expect(dbutil.CopyDBResources(inDB, outDB, true)).To(Succeed())
-
-			Expect(dbutil.CopyDBResources(outDB, verifyDB, true)).To(Succeed())
-
-			inTx, err := inDB.BeginTx()
-			Expect(err).ToNot(HaveOccurred())
-			defer inTx.Close()
-
-			// SQL returns different types than JSON/YAML Database
-			// So we need to move it back again so that DeepEqual would work correctly
-			verifyTx, err := verifyDB.BeginTx()
-			Expect(err).ToNot(HaveOccurred())
-			defer verifyTx.Close()
-
-			for _, s := range manager.OrderedSchemas() {
-				if s.Metadata["type"] == "metaschema" {
-					continue
-				}
-				resources, _, err := inTx.List(ctx, s, nil, nil, nil)
-				Expect(err).ToNot(HaveOccurred())
-				for _, inResource := range resources {
-					outResource, err := verifyTx.Fetch(ctx, s, transaction.Filter{"id": inResource.ID()}, nil)
-					Expect(err).ToNot(HaveOccurred())
-					Expect(outResource).To(Equal(inResource))
-				}
-			}
-		})
-
-		It("Should not override existing rows", func() {
-			inDB, err := dbutil.ConnectDB("yaml", "test_data/conv_in.yaml", db.DefaultMaxOpenConn, options.Default())
-			Expect(err).ToNot(HaveOccurred())
-			defer os.Remove("test_data/conv_in.db")
-
-			dbutil.InitDBWithSchemas("sqlite3", "test_data/conv_out.db", db.DefaultTestInitDBParams())
-			outDB, err := dbutil.ConnectDB("sqlite3", "test_data/conv_out.db", db.DefaultMaxOpenConn, options.Default())
-			Expect(err).ToNot(HaveOccurred())
-			defer os.Remove("test_data/conv_out.db")
-
-			Expect(err).ToNot(HaveOccurred())
-			defer os.Remove("test_data/conv_verify.yaml")
-
-			Expect(dbutil.CopyDBResources(inDB, outDB, false)).To(Succeed())
-			subnetSchema, _ := manager.Schema("subnet")
-
-			// Update some data
-			tx, err := outDB.BeginTx()
-			Expect(err).ToNot(HaveOccurred())
-			list, _, err := tx.List(ctx, subnetSchema, map[string]interface{}{
-				"name": "subnetRedA",
-			}, nil, nil)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(list).To(HaveLen(1))
-			subnet := list[0]
-			subnet.Data()["description"] = "Updated description"
-			err = tx.Update(ctx, subnet)
-			Expect(err).ToNot(HaveOccurred())
-			tx.Commit()
-			tx.Close()
-
-			Expect(dbutil.CopyDBResources(inDB, outDB, false)).To(Succeed())
-			// check description of subnetRedA
-			tx, err = outDB.BeginTx()
-			Expect(err).ToNot(HaveOccurred())
-			list, _, err = tx.List(ctx, subnetSchema, map[string]interface{}{
-				"name": "subnetRedA",
-			}, nil, nil)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(list).To(HaveLen(1))
-			subnet = list[0]
-			Expect(subnet.Data()["description"]).To(Equal("Updated description"))
-			tx.Close()
-		})
-	})
-
 	Context("Transaction retry after a deadlock", func() {
 		var (
 			firstConn  db.DB
@@ -485,7 +391,7 @@ var _ = Describe("Database operation test", func() {
 
 		const (
 			deadlockDbSchema  = "test_data/test_schema.yaml"
-			deadlockDbInitial = "test_data/test_initial.yaml"
+			deadlockDbInitial = "test_data/test_initial.sqlite"
 			deadlockDbName    = "test_data/deadlock_db.db"
 			deadlockDbType    = "sqlite3"
 		)
@@ -498,7 +404,7 @@ var _ = Describe("Database operation test", func() {
 			Expect(err).ToNot(HaveOccurred())
 			secondConn, err = dbutil.ConnectDB(deadlockDbType, deadlockDbName, db.DefaultMaxOpenConn, connOpts)
 			Expect(err).ToNot(HaveOccurred())
-			initDB, err := dbutil.ConnectDB("yaml", deadlockDbInitial, db.DefaultMaxOpenConn, options.Default())
+			initDB, err := dbutil.ConnectDB(deadlockDbType, deadlockDbInitial, db.DefaultMaxOpenConn, options.Default())
 			defer initDB.Close()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(dbutil.CopyDBResources(initDB, firstConn, false)).To(Succeed())

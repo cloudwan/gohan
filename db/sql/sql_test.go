@@ -47,6 +47,54 @@ var _ = Describe("Sql", func() {
 		ctx        context.Context
 	)
 
+	loadTestFixture := func(conn db.DB) {
+		db.WithinTx(conn, func(tx transaction.Transaction) error {
+			manager := schema.GetManager()
+
+			for _, rawResource := range []map[string]interface{}{
+				{
+					"id":           "0",
+					"tenant_id":    "tenant0",
+					"test_string":  "obj0",
+					"test_number":  0.0,
+					"test_integer": 0,
+					"test_bool":    true,
+				},
+				{
+					"id":           "1",
+					"tenant_id":    "tenant0",
+					"test_string":  "obj1",
+					"test_number":  -0.1,
+					"test_integer": -1,
+					"test_bool":    true,
+				},
+				{
+					"id":           "2",
+					"tenant_id":    "tenant1",
+					"test_string":  "obj2",
+					"test_number":  0.2,
+					"test_integer": 2,
+					"test_bool":    true,
+				},
+				{
+					"id":           "3",
+					"tenant_id":    "tenant1",
+					"test_string":  "obj3",
+					"test_number":  -0.3,
+					"test_integer": 3,
+					"test_bool":    true,
+				},
+			} {
+				resource, err := manager.LoadResource("test", rawResource)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(tx.Create(context.Background(), resource)).To(Succeed())
+			}
+
+			return nil
+		})
+	}
+
 	BeforeEach(func() {
 		var dbType string
 		if os.Getenv("MYSQL_TEST") == "true" {
@@ -66,10 +114,8 @@ var _ = Describe("Sql", func() {
 		Expect(manager.LoadSchemasFromFiles(
 			"../../etc/schema/gohan.json", "../../tests/test_abstract_schema.yaml", "../../tests/test_schema.yaml")).To(Succeed())
 		dbutil.InitDBWithSchemas(dbType, conn, db.DefaultTestInitDBParams())
-		// Insert fixture data
-		fixtureDB, err := dbutil.ConnectDB("json", testFixtures, db.DefaultMaxOpenConn, options.Default())
-		Expect(err).ToNot(HaveOccurred())
-		dbutil.CopyDBResources(fixtureDB, dbc, true)
+
+		loadTestFixture(dbc)
 
 		tx, err = dbc.BeginTx()
 		Expect(err).ToNot(HaveOccurred())
