@@ -493,34 +493,6 @@ a sample configuration.
 
 WARNING: The value of watched etcd keys must be a JSON dictionary.
 
-- amqp
-
-  You can listen to notification event from OpenStack components using
-  AMQP. You need to specify listen to queues and events.
-
-  You can also run extension for amqp based event specifying path for
-  amqp://{{event_type}}.
-
-```yaml
-  amqp:
-      connection: amqp://guest:guest@172.16.25.130:5672/
-      queues:
-        - notifications.info
-        - notifications.error
-      events:
-        - orchestration.stack
-```
-
-- snmp
-
- You can listen to snmp trap, and execute extension for that trap.
- An extension path should be snmp://
-
-```yaml
-  snmp:
-    address: "localhost:8888"
-```
-
 - cron
 
   You can periodically execute CRON job using configuration.

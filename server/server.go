@@ -455,8 +455,6 @@ func (server *Server) Router() http.Handler {
 func (server *Server) Stop() {
 	server.running = false
 	server.masterCtxCancel()
-	stopAMQPProcess(server)
-	stopSNMPProcess(server)
 	stopCRONProcess(server)
 	manners.Close()
 	server.queue.Stop()
@@ -524,16 +522,10 @@ func RunServer(configFile string) {
 		go syncWatcher.Run(server.masterCtx)
 
 	}
-	startAMQPProcess(server)
-	startSNMPProcess(server)
 	startCRONProcess(server)
 	metrics.StartMetricsProcess()
 	err = server.Start()
 	if err != nil {
 		log.Fatal(err)
 	}
-}
-
-func startAMQPNotificationProcess(server *Server) {
-
 }

@@ -193,7 +193,7 @@ Comparison of different types of extensions:
 
 ### notification
 
-  executed when you receive amqp/snmp/cron notification
+  executed when you receive a cron notification
 
 # Context
 
