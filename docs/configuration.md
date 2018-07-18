@@ -360,7 +360,6 @@ You can select extension types you use.
     default: javascript
     use:
     - javascript
-    - gohanscript
     - go
 ```
 

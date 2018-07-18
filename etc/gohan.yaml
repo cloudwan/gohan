@@ -81,10 +81,8 @@ logging:
         level: DEBUG
 
 extension:
-  default: gohanscript
+  default: go
   use:
-  - gohanscript
- # - javascript
   - go
 
   # default time limit in secs for running extension

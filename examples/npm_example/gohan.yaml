@@ -63,9 +63,8 @@ logging:
         level: INFO
 
 extension:
-  default: gohanscript
+  default: javascript
   use:
-  - gohanscript
   - javascript
   - go
   npm_path: .

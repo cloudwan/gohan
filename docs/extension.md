@@ -19,7 +19,6 @@ Example Code
 ```
 
 Gohan supports four types of extensions:
-- gohanscript
 - javascript
 - golang (as a callback, built-in)
 - golang (as a plugin, loadable at runtime) 
@@ -28,7 +27,6 @@ Comparison of different types of extensions:
 
 | Name | type-id | language | execution performance | loadable at runtime |
 | --- | --- | --- | --- | --- |
-| gohanscript | gohanscript | custom | interpreted | yes |
 | javascript | javascript | javascript | interpreted | yes |
 | golang (callback) | go | golang | native | no |
 | golang (plugin) | goext | golang | native | yes |

@@ -35,7 +35,6 @@ import (
 	"fmt"
 
 	"github.com/cloudwan/gohan/extension"
-	"github.com/cloudwan/gohan/extension/gohanscript"
 	"github.com/cloudwan/gohan/extension/golang"
 	"github.com/cloudwan/gohan/extension/goplugin"
 	"github.com/cloudwan/gohan/extension/otto"
@@ -48,8 +47,6 @@ func (server *Server) newEnvironment(name string) extension.Environment {
 		switch extension {
 		case "javascript":
 			envs = append(envs, otto.NewEnvironment(name, server.db, server.keystoneIdentity, server.sync))
-		case "gohanscript":
-			envs = append(envs, gohanscript.NewEnvironment())
 		case "go":
 			envs = append(envs, golang.NewEnvironment())
 		case "goext":

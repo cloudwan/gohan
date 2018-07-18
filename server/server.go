@@ -234,7 +234,6 @@ func NewServer(configFile string) (*Server, error) {
 	server.extensions = config.GetStringList("extension/use", []string{
 		"goext",
 		"javascript",
-		"gohanscript",
 		"go",
 	})
 	schema.DefaultExtension = config.GetString("extension/default", "javascript")
