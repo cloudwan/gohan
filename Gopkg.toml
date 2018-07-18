@@ -8,10 +8,6 @@
 
 [[constraint]]
   branch = "master"
-  name = "github.com/cdevr/WapSNMP"
-
-[[constraint]]
-  branch = "master"
   name = "github.com/cloudwan/goose"
 
 [[constraint]]
@@ -21,10 +17,6 @@
 [[constraint]]
   name = "github.com/coreos/etcd"
   version = "3.3.8"
-
-[[constraint]]
-  name = "github.com/coreos/go-etcd"
-  version = "2.0.0"
 
 [[constraint]]
   branch = "master"
@@ -63,14 +55,6 @@
   name = "github.com/jmoiron/sqlx"
 
 [[constraint]]
-  name = "github.com/k0kubun/pp"
-  version = "2.3.0"
-
-[[constraint]]
-  name = "github.com/kr/pretty"
-  version = "0.1.0"
-
-[[constraint]]
   name = "github.com/lann/squirrel"
   version = "1.0.0"
 
@@ -97,10 +81,6 @@
 [[constraint]]
   branch = "master"
   name = "github.com/nati/go-fakedb"
-
-[[constraint]]
-  branch = "master"
-  name = "github.com/nati/yaml"
 
 [[constraint]]
   branch = "master"
@@ -137,10 +117,6 @@
 [[constraint]]
   branch = "master"
   name = "github.com/serenize/snaker"
-
-[[constraint]]
-  branch = "master"
-  name = "github.com/streadway/amqp"
 
 [[constraint]]
   branch = "master"

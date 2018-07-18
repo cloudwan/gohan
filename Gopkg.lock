@@ -27,14 +27,6 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:4252cb531dc6363e7767fbb3d6ed0839f95de5e5555a698cabf9063e9e27a0b0"
-  name = "github.com/cdevr/WapSNMP"
-  packages = ["."]
-  pruneopts = ""
-  revision = "94cbc6d187508e069da813a406056e5f92c65bc6"
-
-[[projects]]
-  branch = "master"
   digest = "1:ca0b5f2d3ae0c0dca6889ad4c210c8341022604741c3373468bf9d6a07e61c78"
   name = "github.com/cloudwan/goose"
   packages = ["."]
@@ -72,14 +64,6 @@
   pruneopts = ""
   revision = "33245c6b5b49130ca99280408fadfab01aac0e48"
   version = "v3.3.8"
-
-[[projects]]
-  digest = "1:2b8d679522541e61c1adaa29b1665830c4f4980f77f790ee7f9dddc118925af0"
-  name = "github.com/coreos/go-etcd"
-  packages = ["etcd"]
-  pruneopts = ""
-  revision = "f02171fbd43c7b9b53ce8679b03235a1ef3c7b12"
-  version = "v2.0.0"
 
 [[projects]]
   branch = "master"
@@ -199,30 +183,6 @@
   revision = "c7d06af17c68cd34c835053720b21f6549d9b0ee"
 
 [[projects]]
-  digest = "1:01228049049d301adb9fe2a35683db8ec9d20419aac36b5cc48e92c5d05444c3"
-  name = "github.com/k0kubun/pp"
-  packages = ["."]
-  pruneopts = ""
-  revision = "027a6d1765d673d337e687394dbe780dd64e2a1e"
-  version = "v2.3.0"
-
-[[projects]]
-  digest = "1:3108ec0946181c60040ff51b811908f89d03e521e2b4ade5ef5c65b3c0e911ae"
-  name = "github.com/kr/pretty"
-  packages = ["."]
-  pruneopts = ""
-  revision = "73f6ac0b30a98e433b289500d779f50c1a6f0712"
-  version = "v0.1.0"
-
-[[projects]]
-  digest = "1:d8e556ad2bc71bfd231c6dafad85375f958e39d17fa8379df28b936053086f55"
-  name = "github.com/kr/text"
-  packages = ["."]
-  pruneopts = ""
-  revision = "e2ffdb16a802fe2bb95e2e35ff34f0e53aeef34f"
-  version = "v0.1.0"
-
-[[projects]]
   branch = "master"
   digest = "1:63d75c4f611d0d43b5ba3b6609161c0ddb81275a183f05f607f8279cafa86b7e"
   name = "github.com/lann/builder"
@@ -266,22 +226,6 @@
   revision = "b9631fb8c188bec7aefed202f05fb3b76abadced"
 
 [[projects]]
-  digest = "1:74a81a9187cef23a4dd57d626ce2792c1452974c08cfa1ab84f193c539512950"
-  name = "github.com/mattn/go-colorable"
-  packages = ["."]
-  pruneopts = ""
-  revision = "167de6bfdfba052fa6b2d3664c8f5272e23c9072"
-  version = "v0.0.9"
-
-[[projects]]
-  digest = "1:78229b46ddb7434f881390029bd1af7661294af31f6802e0e1bedaad4ab0af3c"
-  name = "github.com/mattn/go-isatty"
-  packages = ["."]
-  pruneopts = ""
-  revision = "0360b2af4f38e8d38c7fce2a9f4e702702d73a39"
-  version = "v0.0.3"
-
-[[projects]]
   digest = "1:81e673df85e765593a863f67cba4544cf40e8919590f04d67664940786c2b61a"
   name = "github.com/mattn/go-runewidth"
   packages = ["."]
@@ -320,14 +264,6 @@
   packages = ["."]
   pruneopts = ""
   revision = "9f51f98721b1a99df2e64585e7160d5e08d82f50"
-
-[[projects]]
-  branch = "master"
-  digest = "1:6d56c640c181bfa0801e3e572a34b63451106a869282fd849d3a2e078911ffdd"
-  name = "github.com/nati/yaml"
-  packages = ["."]
-  pruneopts = ""
-  revision = "99af09bce2f8cd195ccf671cf9b329249e4b3893"
 
 [[projects]]
   branch = "master"
@@ -459,14 +395,6 @@
   packages = ["."]
   pruneopts = ""
   revision = "a683aaf2d516deecd70cad0c72e3ca773ecfcef0"
-
-[[projects]]
-  branch = "master"
-  digest = "1:0a1f8d01a0191f558910bcbfd7e1dc11a53ac374473d13b68b8fe520f21efb07"
-  name = "github.com/streadway/amqp"
-  packages = ["."]
-  pruneopts = ""
-  revision = "e5adc2ada8b8efff032bf61173a233d143e9318e"
 
 [[projects]]
   branch = "master"
@@ -687,13 +615,11 @@
     "github.com/Juniper/go-netconf/netconf",
     "github.com/Masterminds/semver",
     "github.com/braintree/manners",
-    "github.com/cdevr/WapSNMP",
     "github.com/cloudwan/goose",
     "github.com/codegangsta/cli",
     "github.com/coreos/etcd/clientv3",
     "github.com/coreos/etcd/clientv3/concurrency",
     "github.com/coreos/etcd/mvcc/mvccpb",
-    "github.com/coreos/go-etcd/etcd",
     "github.com/cyberdelia/go-metrics-graphite",
     "github.com/ddliu/motto",
     "github.com/drone/routes",
@@ -709,8 +635,6 @@
     "github.com/gophercloud/gophercloud/pagination",
     "github.com/jmoiron/sqlx",
     "github.com/jmoiron/sqlx/reflectx",
-    "github.com/k0kubun/pp",
-    "github.com/kr/pretty",
     "github.com/lann/squirrel",
     "github.com/lestrrat/go-server-starter",
     "github.com/lestrrat/go-server-starter/listener",
@@ -719,7 +643,6 @@
     "github.com/mitchellh/hashstructure",
     "github.com/mohae/deepcopy",
     "github.com/nati/go-fakedb",
-    "github.com/nati/yaml",
     "github.com/olekukonko/tablewriter",
     "github.com/onsi/ginkgo",
     "github.com/onsi/ginkgo/config",
@@ -740,7 +663,6 @@
     "github.com/robertkrimen/otto/underscore",
     "github.com/robfig/cron",
     "github.com/serenize/snaker",
-    "github.com/streadway/amqp",
     "github.com/streamrail/concurrent-map",
     "github.com/twinj/uuid",
     "github.com/tylerb/gls",
