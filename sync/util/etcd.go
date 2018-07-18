@@ -6,7 +6,6 @@ import (
 
 	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/sync"
-	"github.com/cloudwan/gohan/sync/etcd"
 	"github.com/cloudwan/gohan/sync/etcdv3"
 	"github.com/cloudwan/gohan/util"
 )
@@ -17,14 +16,8 @@ const etcdTimeoutDefaultValueMS = 1000
 
 // CreateFromConfig creates etcd sync from config
 func CreateFromConfig(config *util.Config) (s sync.Sync, err error) {
-	syncType := config.GetString("sync", "etcd")
+	syncType := config.GetString("sync", "etcdv3")
 	switch syncType {
-	case "etcd":
-		etcdServers := config.GetStringList("etcd", nil)
-		if etcdServers != nil {
-			log.Info("etcd servers: %s", etcdServers)
-			s = etcd.NewSync(etcdServers)
-		}
 	case "etcdv3":
 		etcdServers := config.GetStringList("etcd", nil)
 		if etcdServers != nil {
