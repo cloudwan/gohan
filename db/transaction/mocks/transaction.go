@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	pagination "github.com/cloudwan/gohan/db/pagination"
-	"github.com/cloudwan/gohan/db/transaction"
+	. "github.com/cloudwan/gohan/db/transaction"
 	schema "github.com/cloudwan/gohan/schema"
 	gomock "github.com/golang/mock/gomock"
 	sqlx "github.com/jmoiron/sqlx"
@@ -38,121 +38,6 @@ func (m *MockTransaction) EXPECT() *MockTransactionMockRecorder {
 	return m.recorder
 }
 
-// Create mocks base method
-func (m *MockTransaction) Create(arg0 *schema.Resource) error {
-	ret := m.ctrl.Call(m, "Create", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Create indicates an expected call of Create
-func (mr *MockTransactionMockRecorder) Create(arg0 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockTransaction)(nil).Create), arg0)
-}
-
-// Update mocks base method
-func (m *MockTransaction) Update(arg0 *schema.Resource) error {
-	ret := m.ctrl.Call(m, "Update", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Update indicates an expected call of Update
-func (mr *MockTransactionMockRecorder) Update(arg0 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockTransaction)(nil).Update), arg0)
-}
-
-// StateUpdate mocks base method
-func (m *MockTransaction) StateUpdate(arg0 *schema.Resource, arg1 *transaction.ResourceState) error {
-	ret := m.ctrl.Call(m, "StateUpdate", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// StateUpdate indicates an expected call of StateUpdate
-func (mr *MockTransactionMockRecorder) StateUpdate(arg0, arg1 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StateUpdate", reflect.TypeOf((*MockTransaction)(nil).StateUpdate), arg0, arg1)
-}
-
-// Delete mocks base method
-func (m *MockTransaction) Delete(arg0 *schema.Schema, arg1 interface{}) error {
-	ret := m.ctrl.Call(m, "Delete", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Delete indicates an expected call of Delete
-func (mr *MockTransactionMockRecorder) Delete(arg0, arg1 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockTransaction)(nil).Delete), arg0, arg1)
-}
-
-// Fetch mocks base method
-func (m *MockTransaction) Fetch(arg0 *schema.Schema, arg1 transaction.Filter, arg2 *transaction.ViewOptions) (*schema.Resource, error) {
-	ret := m.ctrl.Call(m, "Fetch", arg0, arg1, arg2)
-	ret0, _ := ret[0].(*schema.Resource)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Fetch indicates an expected call of Fetch
-func (mr *MockTransactionMockRecorder) Fetch(arg0, arg1, arg2 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Fetch", reflect.TypeOf((*MockTransaction)(nil).Fetch), arg0, arg1, arg2)
-}
-
-// LockFetch mocks base method
-func (m *MockTransaction) LockFetch(arg0 *schema.Schema, arg1 transaction.Filter, arg2 schema.LockPolicy, arg3 *transaction.ViewOptions) (*schema.Resource, error) {
-	ret := m.ctrl.Call(m, "LockFetch", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(*schema.Resource)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// LockFetch indicates an expected call of LockFetch
-func (mr *MockTransactionMockRecorder) LockFetch(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockFetch", reflect.TypeOf((*MockTransaction)(nil).LockFetch), arg0, arg1, arg2, arg3)
-}
-
-// StateFetch mocks base method
-func (m *MockTransaction) StateFetch(arg0 *schema.Schema, arg1 transaction.Filter) (transaction.ResourceState, error) {
-	ret := m.ctrl.Call(m, "StateFetch", arg0, arg1)
-	ret0, _ := ret[0].(transaction.ResourceState)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// StateFetch indicates an expected call of StateFetch
-func (mr *MockTransactionMockRecorder) StateFetch(arg0, arg1 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StateFetch", reflect.TypeOf((*MockTransaction)(nil).StateFetch), arg0, arg1)
-}
-
-// List mocks base method
-func (m *MockTransaction) List(arg0 *schema.Schema, arg1 transaction.Filter, arg2 *transaction.ViewOptions, arg3 *pagination.Paginator) ([]*schema.Resource, uint64, error) {
-	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].([]*schema.Resource)
-	ret1, _ := ret[1].(uint64)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
-}
-
-// List indicates an expected call of List
-func (mr *MockTransactionMockRecorder) List(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockTransaction)(nil).List), arg0, arg1, arg2, arg3)
-}
-
-// LockList mocks base method
-func (m *MockTransaction) LockList(arg0 *schema.Schema, arg1 transaction.Filter, arg2 *transaction.ViewOptions, arg3 *pagination.Paginator, arg4 schema.LockPolicy) ([]*schema.Resource, uint64, error) {
-	ret := m.ctrl.Call(m, "LockList", arg0, arg1, arg2, arg3, arg4)
-	ret0, _ := ret[0].([]*schema.Resource)
-	ret1, _ := ret[1].(uint64)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
-}
-
-// LockList indicates an expected call of LockList
-func (mr *MockTransactionMockRecorder) LockList(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockList", reflect.TypeOf((*MockTransaction)(nil).LockList), arg0, arg1, arg2, arg3, arg4)
-}
-
 // RawTransaction mocks base method
 func (m *MockTransaction) RawTransaction() *sqlx.Tx {
 	ret := m.ctrl.Call(m, "RawTransaction")
@@ -165,19 +50,6 @@ func (mr *MockTransactionMockRecorder) RawTransaction() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RawTransaction", reflect.TypeOf((*MockTransaction)(nil).RawTransaction))
 }
 
-// Query mocks base method
-func (m *MockTransaction) Query(arg0 *schema.Schema, arg1 string, arg2 []interface{}) ([]*schema.Resource, error) {
-	ret := m.ctrl.Call(m, "Query", arg0, arg1, arg2)
-	ret0, _ := ret[0].([]*schema.Resource)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Query indicates an expected call of Query
-func (mr *MockTransactionMockRecorder) Query(arg0, arg1, arg2 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Query", reflect.TypeOf((*MockTransaction)(nil).Query), arg0, arg1, arg2)
-}
-
 // Commit mocks base method
 func (m *MockTransaction) Commit() error {
 	ret := m.ctrl.Call(m, "Commit")
@@ -188,23 +60,6 @@ func (m *MockTransaction) Commit() error {
 // Commit indicates an expected call of Commit
 func (mr *MockTransactionMockRecorder) Commit() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Commit", reflect.TypeOf((*MockTransaction)(nil).Commit))
-}
-
-// Exec mocks base method
-func (m *MockTransaction) Exec(query string, args ...interface{}) error {
-	varargs := []interface{}{query}
-	for _, a := range args {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "Exec", varargs...)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Exec indicates an expected call of Exec
-func (mr *MockTransactionMockRecorder) Exec(query interface{}, args ...interface{}) *gomock.Call {
-	varargs := append([]interface{}{query}, args...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exec", reflect.TypeOf((*MockTransaction)(nil).Exec), varargs...)
 }
 
 // Close mocks base method
@@ -232,9 +87,9 @@ func (mr *MockTransactionMockRecorder) Closed() *gomock.Call {
 }
 
 // GetIsolationLevel mocks base method
-func (m *MockTransaction) GetIsolationLevel() transaction.Type {
+func (m *MockTransaction) GetIsolationLevel() Type {
 	ret := m.ctrl.Call(m, "GetIsolationLevel")
-	ret0, _ := ret[0].(transaction.Type)
+	ret0, _ := ret[0].(Type)
 	return ret0
 }
 
@@ -243,160 +98,160 @@ func (mr *MockTransactionMockRecorder) GetIsolationLevel() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIsolationLevel", reflect.TypeOf((*MockTransaction)(nil).GetIsolationLevel))
 }
 
-// CreateContext mocks base method
-func (m *MockTransaction) CreateContext(arg0 context.Context, arg1 *schema.Resource) error {
-	ret := m.ctrl.Call(m, "CreateContext", arg0, arg1)
+// Create mocks base method
+func (m *MockTransaction) Create(arg0 context.Context, arg1 *schema.Resource) error {
+	ret := m.ctrl.Call(m, "Create", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// CreateContext indicates an expected call of CreateContext
-func (mr *MockTransactionMockRecorder) CreateContext(arg0, arg1 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateContext", reflect.TypeOf((*MockTransaction)(nil).CreateContext), arg0, arg1)
+// Create indicates an expected call of Create
+func (mr *MockTransactionMockRecorder) Create(arg0, arg1 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockTransaction)(nil).Create), arg0, arg1)
 }
 
-// UpdateContext mocks base method
-func (m *MockTransaction) UpdateContext(arg0 context.Context, arg1 *schema.Resource) error {
-	ret := m.ctrl.Call(m, "UpdateContext", arg0, arg1)
+// Update mocks base method
+func (m *MockTransaction) Update(arg0 context.Context, arg1 *schema.Resource) error {
+	ret := m.ctrl.Call(m, "Update", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// UpdateContext indicates an expected call of UpdateContext
-func (mr *MockTransactionMockRecorder) UpdateContext(arg0, arg1 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateContext", reflect.TypeOf((*MockTransaction)(nil).UpdateContext), arg0, arg1)
+// Update indicates an expected call of Update
+func (mr *MockTransactionMockRecorder) Update(arg0, arg1 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockTransaction)(nil).Update), arg0, arg1)
 }
 
-// StateUpdateContext mocks base method
-func (m *MockTransaction) StateUpdateContext(arg0 context.Context, arg1 *schema.Resource, arg2 *transaction.ResourceState) error {
-	ret := m.ctrl.Call(m, "StateUpdateContext", arg0, arg1, arg2)
+// StateUpdate mocks base method
+func (m *MockTransaction) StateUpdate(arg0 context.Context, arg1 *schema.Resource, arg2 *ResourceState) error {
+	ret := m.ctrl.Call(m, "StateUpdate", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// StateUpdateContext indicates an expected call of StateUpdateContext
-func (mr *MockTransactionMockRecorder) StateUpdateContext(arg0, arg1, arg2 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StateUpdateContext", reflect.TypeOf((*MockTransaction)(nil).StateUpdateContext), arg0, arg1, arg2)
+// StateUpdate indicates an expected call of StateUpdate
+func (mr *MockTransactionMockRecorder) StateUpdate(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StateUpdate", reflect.TypeOf((*MockTransaction)(nil).StateUpdate), arg0, arg1, arg2)
 }
 
-// DeleteContext mocks base method
-func (m *MockTransaction) DeleteContext(arg0 context.Context, arg1 *schema.Schema, arg2 interface{}) error {
-	ret := m.ctrl.Call(m, "DeleteContext", arg0, arg1, arg2)
+// Delete mocks base method
+func (m *MockTransaction) Delete(arg0 context.Context, arg1 *schema.Schema, arg2 interface{}) error {
+	ret := m.ctrl.Call(m, "Delete", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// DeleteContext indicates an expected call of DeleteContext
-func (mr *MockTransactionMockRecorder) DeleteContext(arg0, arg1, arg2 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteContext", reflect.TypeOf((*MockTransaction)(nil).DeleteContext), arg0, arg1, arg2)
+// Delete indicates an expected call of Delete
+func (mr *MockTransactionMockRecorder) Delete(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockTransaction)(nil).Delete), arg0, arg1, arg2)
 }
 
-// FetchContext mocks base method
-func (m *MockTransaction) FetchContext(arg0 context.Context, arg1 *schema.Schema, arg2 transaction.Filter, arg3 *transaction.ViewOptions) (*schema.Resource, error) {
-	ret := m.ctrl.Call(m, "FetchContext", arg0, arg1, arg2, arg3)
+// Fetch mocks base method
+func (m *MockTransaction) Fetch(arg0 context.Context, arg1 *schema.Schema, arg2 Filter, arg3 *ViewOptions) (*schema.Resource, error) {
+	ret := m.ctrl.Call(m, "Fetch", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(*schema.Resource)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// FetchContext indicates an expected call of FetchContext
-func (mr *MockTransactionMockRecorder) FetchContext(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FetchContext", reflect.TypeOf((*MockTransaction)(nil).FetchContext), arg0, arg1, arg2, arg3)
+// Fetch indicates an expected call of Fetch
+func (mr *MockTransactionMockRecorder) Fetch(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Fetch", reflect.TypeOf((*MockTransaction)(nil).Fetch), arg0, arg1, arg2, arg3)
 }
 
-// LockFetchContext mocks base method
-func (m *MockTransaction) LockFetchContext(arg0 context.Context, arg1 *schema.Schema, arg2 transaction.Filter, arg3 schema.LockPolicy, arg4 *transaction.ViewOptions) (*schema.Resource, error) {
-	ret := m.ctrl.Call(m, "LockFetchContext", arg0, arg1, arg2, arg3, arg4)
+// LockFetch mocks base method
+func (m *MockTransaction) LockFetch(arg0 context.Context, arg1 *schema.Schema, arg2 Filter, arg3 schema.LockPolicy, arg4 *ViewOptions) (*schema.Resource, error) {
+	ret := m.ctrl.Call(m, "LockFetch", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].(*schema.Resource)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// LockFetchContext indicates an expected call of LockFetchContext
-func (mr *MockTransactionMockRecorder) LockFetchContext(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockFetchContext", reflect.TypeOf((*MockTransaction)(nil).LockFetchContext), arg0, arg1, arg2, arg3, arg4)
+// LockFetch indicates an expected call of LockFetch
+func (mr *MockTransactionMockRecorder) LockFetch(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockFetch", reflect.TypeOf((*MockTransaction)(nil).LockFetch), arg0, arg1, arg2, arg3, arg4)
 }
 
-// StateFetchContext mocks base method
-func (m *MockTransaction) StateFetchContext(arg0 context.Context, arg1 *schema.Schema, arg2 transaction.Filter) (transaction.ResourceState, error) {
-	ret := m.ctrl.Call(m, "StateFetchContext", arg0, arg1, arg2)
-	ret0, _ := ret[0].(transaction.ResourceState)
+// StateFetch mocks base method
+func (m *MockTransaction) StateFetch(arg0 context.Context, arg1 *schema.Schema, arg2 Filter) (ResourceState, error) {
+	ret := m.ctrl.Call(m, "StateFetch", arg0, arg1, arg2)
+	ret0, _ := ret[0].(ResourceState)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// StateFetchContext indicates an expected call of StateFetchContext
-func (mr *MockTransactionMockRecorder) StateFetchContext(arg0, arg1, arg2 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StateFetchContext", reflect.TypeOf((*MockTransaction)(nil).StateFetchContext), arg0, arg1, arg2)
+// StateFetch indicates an expected call of StateFetch
+func (mr *MockTransactionMockRecorder) StateFetch(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StateFetch", reflect.TypeOf((*MockTransaction)(nil).StateFetch), arg0, arg1, arg2)
 }
 
-// ListContext mocks base method
-func (m *MockTransaction) ListContext(arg0 context.Context, arg1 *schema.Schema, arg2 transaction.Filter, arg3 *transaction.ViewOptions, arg4 *pagination.Paginator) ([]*schema.Resource, uint64, error) {
-	ret := m.ctrl.Call(m, "ListContext", arg0, arg1, arg2, arg3, arg4)
+// List mocks base method
+func (m *MockTransaction) List(arg0 context.Context, arg1 *schema.Schema, arg2 Filter, arg3 *ViewOptions, arg4 *pagination.Paginator) ([]*schema.Resource, uint64, error) {
+	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].([]*schema.Resource)
 	ret1, _ := ret[1].(uint64)
 	ret2, _ := ret[2].(error)
 	return ret0, ret1, ret2
 }
 
-// ListContext indicates an expected call of ListContext
-func (mr *MockTransactionMockRecorder) ListContext(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListContext", reflect.TypeOf((*MockTransaction)(nil).ListContext), arg0, arg1, arg2, arg3, arg4)
+// List indicates an expected call of List
+func (mr *MockTransactionMockRecorder) List(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockTransaction)(nil).List), arg0, arg1, arg2, arg3, arg4)
 }
 
-// LockListContext mocks base method
-func (m *MockTransaction) LockListContext(arg0 context.Context, arg1 *schema.Schema, arg2 transaction.Filter, arg3 *transaction.ViewOptions, arg4 *pagination.Paginator, arg5 schema.LockPolicy) ([]*schema.Resource, uint64, error) {
-	ret := m.ctrl.Call(m, "LockListContext", arg0, arg1, arg2, arg3, arg4, arg5)
+// LockList mocks base method
+func (m *MockTransaction) LockList(arg0 context.Context, arg1 *schema.Schema, arg2 Filter, arg3 *ViewOptions, arg4 *pagination.Paginator, arg5 schema.LockPolicy) ([]*schema.Resource, uint64, error) {
+	ret := m.ctrl.Call(m, "LockList", arg0, arg1, arg2, arg3, arg4, arg5)
 	ret0, _ := ret[0].([]*schema.Resource)
 	ret1, _ := ret[1].(uint64)
 	ret2, _ := ret[2].(error)
 	return ret0, ret1, ret2
 }
 
-// LockListContext indicates an expected call of LockListContext
-func (mr *MockTransactionMockRecorder) LockListContext(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockListContext", reflect.TypeOf((*MockTransaction)(nil).LockListContext), arg0, arg1, arg2, arg3, arg4, arg5)
+// LockList indicates an expected call of LockList
+func (mr *MockTransactionMockRecorder) LockList(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockList", reflect.TypeOf((*MockTransaction)(nil).LockList), arg0, arg1, arg2, arg3, arg4, arg5)
 }
 
-// CountContext mocks base method
-func (m *MockTransaction) CountContext(arg0 context.Context, arg1 *schema.Schema, arg2 transaction.Filter) (uint64, error) {
-	ret := m.ctrl.Call(m, "CountContext", arg0, arg1, arg2)
+// Count mocks base method
+func (m *MockTransaction) Count(arg0 context.Context, arg1 *schema.Schema, arg2 Filter) (uint64, error) {
+	ret := m.ctrl.Call(m, "Count", arg0, arg1, arg2)
 	ret0, _ := ret[0].(uint64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// CountContext indicates an expected call of CountContext
-func (mr *MockTransactionMockRecorder) CountContext(arg0, arg1, arg2 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountContext", reflect.TypeOf((*MockTransaction)(nil).CountContext), arg0, arg1, arg2)
+// Count indicates an expected call of Count
+func (mr *MockTransactionMockRecorder) Count(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Count", reflect.TypeOf((*MockTransaction)(nil).Count), arg0, arg1, arg2)
 }
 
-// QueryContext mocks base method
-func (m *MockTransaction) QueryContext(arg0 context.Context, arg1 *schema.Schema, arg2 string, arg3 []interface{}) ([]*schema.Resource, error) {
-	ret := m.ctrl.Call(m, "QueryContext", arg0, arg1, arg2, arg3)
+// Query mocks base method
+func (m *MockTransaction) Query(arg0 context.Context, arg1 *schema.Schema, arg2 string, arg3 []interface{}) ([]*schema.Resource, error) {
+	ret := m.ctrl.Call(m, "Query", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].([]*schema.Resource)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// QueryContext indicates an expected call of QueryContext
-func (mr *MockTransactionMockRecorder) QueryContext(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryContext", reflect.TypeOf((*MockTransaction)(nil).QueryContext), arg0, arg1, arg2, arg3)
+// Query indicates an expected call of Query
+func (mr *MockTransactionMockRecorder) Query(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Query", reflect.TypeOf((*MockTransaction)(nil).Query), arg0, arg1, arg2, arg3)
 }
 
-// ExecContext mocks base method
-func (m *MockTransaction) ExecContext(ctx context.Context, query string, args ...interface{}) error {
+// Exec mocks base method
+func (m *MockTransaction) Exec(ctx context.Context, query string, args ...interface{}) error {
 	varargs := []interface{}{ctx, query}
 	for _, a := range args {
 		varargs = append(varargs, a)
 	}
-	ret := m.ctrl.Call(m, "ExecContext", varargs...)
+	ret := m.ctrl.Call(m, "Exec", varargs...)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// ExecContext indicates an expected call of ExecContext
-func (mr *MockTransactionMockRecorder) ExecContext(ctx, query interface{}, args ...interface{}) *gomock.Call {
+// Exec indicates an expected call of Exec
+func (mr *MockTransactionMockRecorder) Exec(ctx, query interface{}, args ...interface{}) *gomock.Call {
 	varargs := append([]interface{}{ctx, query}, args...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecContext", reflect.TypeOf((*MockTransaction)(nil).ExecContext), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exec", reflect.TypeOf((*MockTransaction)(nil).Exec), varargs...)
 }

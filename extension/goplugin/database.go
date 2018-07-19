@@ -56,14 +56,16 @@ func (db *Database) Clone() *Database {
 
 // Begin starts a new transaction
 func (db *Database) Begin() (goext.ITransaction, error) {
-	t, err := db.raw.Begin()
+	t, err := db.raw.BeginTx()
 	return handleBeginError(t, err)
 }
 
 // BeginTx starts a new transaction with options
 func (db *Database) BeginTx(ctx goext.Context, options *goext.TxOptions) (goext.ITransaction, error) {
-	opts := transaction.TxOptions{IsolationLevel: transaction.Type(options.IsolationLevel)}
-	t, err := db.raw.BeginTx(goext.GetContext(ctx), &opts)
+	t, err := db.raw.BeginTx(
+		transaction.Context(goext.GetContext(ctx)),
+		transaction.IsolationLevel(transaction.Type(options.IsolationLevel)),
+	)
 	return handleBeginError(t, err)
 }
 

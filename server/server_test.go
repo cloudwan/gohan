@@ -17,6 +17,7 @@ package server_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -29,6 +30,7 @@ import (
 	"time"
 
 	"github.com/cloudwan/gohan/db"
+	"github.com/cloudwan/gohan/db/dbutil"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
 	srv "github.com/cloudwan/gohan/server"
@@ -42,7 +44,10 @@ import (
 )
 
 var (
-	server                    *srv.Server
+	server *srv.Server
+)
+
+const (
 	baseURL                   = "http://localhost:19090"
 	schemaURL                 = baseURL + "/gohan/v0.1/schemas"
 	networkPluralURL          = baseURL + "/v2.0/networks"
@@ -62,14 +67,21 @@ var (
 )
 
 var _ = Describe("Server package test", func() {
+	var (
+		ctx context.Context
+	)
+
+	BeforeEach(func() {
+		ctx = context.Background()
+	})
 
 	AfterEach(func() {
-		Expect(db.Within(testDB, func(tx transaction.Transaction) error {
+		Expect(db.WithinTx(testDB, func(tx transaction.Transaction) error {
 			for _, schema := range schema.GetManager().Schemas() {
 				if whitelist[schema.ID] {
 					continue
 				}
-				Expect(clearTable(tx, schema)).ToNot(HaveOccurred(), "Failed to clear table.")
+				Expect(dbutil.ClearTable(ctx, tx, schema)).ToNot(HaveOccurred(), "Failed to clear table.")
 			}
 			return nil
 		})).ToNot(HaveOccurred(), "Failed to create or commit transaction.")
@@ -1098,7 +1110,7 @@ var _ = Describe("Server package test", func() {
 			networkSchema, _ := manager.Schema("network")
 			subnetSchema, _ := manager.Schema("subnet")
 
-			tx, err := testDB.Begin()
+			tx, err := testDB.BeginTx()
 			if err != nil {
 				Fail(err.Error())
 			}
@@ -1130,9 +1142,9 @@ var _ = Describe("Server package test", func() {
 				"cidr":        "10.11.23.0/24",
 				"tenant_id":   "tenant1",
 			})
-			Expect(tx.Create(net1)).To(Succeed())
-			Expect(tx.Create(subnet1)).To(Succeed())
-			Expect(tx.Create(net2)).To(Succeed())
+			Expect(tx.Create(ctx, net1)).To(Succeed())
+			Expect(tx.Create(ctx, subnet1)).To(Succeed())
+			Expect(tx.Create(ctx, net2)).To(Succeed())
 			Expect(tx.Commit()).To(Succeed())
 
 			if err != nil {
@@ -1354,7 +1366,7 @@ func initBenchmarkDatabase() error {
 	schema.ClearManager()
 	manager := schema.GetManager()
 	manager.LoadSchemasFromFiles("../tests/test_abstract_schema.yaml", "../tests/test_schema.yaml", "../etc/schema/gohan.json")
-	return db.InitDBWithSchemas("mysql", "root@tcp(localhost:3306)/gohan_test", db.DefaultTestInitDBParams())
+	return dbutil.InitDBWithSchemas("mysql", "root@tcp(localhost:3306)/gohan_test", db.DefaultTestInitDBParams())
 }
 
 func startTestServer(config string) error {
@@ -1509,38 +1521,4 @@ func httpRequest(method, url, token string, postData interface{}) (interface{}, 
 	decoder := json.NewDecoder(resp.Body)
 	decoder.Decode(&data)
 	return data, resp
-}
-
-func clearTable(tx transaction.Transaction, s *schema.Schema) error {
-	if s.IsAbstract() {
-		return nil
-	}
-	for _, schema := range schema.GetManager().Schemas() {
-		if schema.ParentSchema == s {
-			err := clearTable(tx, schema)
-			if err != nil {
-				return err
-			}
-		} else {
-			for _, property := range schema.Properties {
-				if property.Relation == s.Singular {
-					err := clearTable(tx, schema)
-					if err != nil {
-						return err
-					}
-				}
-			}
-		}
-	}
-	resources, _, err := tx.List(s, nil, nil, nil)
-	if err != nil {
-		return err
-	}
-	for _, resource := range resources {
-		err = tx.Delete(s, resource.ID())
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }

@@ -16,6 +16,7 @@
 package server_test
 
 import (
+	"context"
 	"encoding/json"
 	"time"
 
@@ -28,6 +29,14 @@ import (
 )
 
 var _ = Describe("Server package test", func() {
+	var (
+		ctx context.Context
+	)
+
+	BeforeEach(func() {
+		ctx = context.Background()
+	})
+
 	Describe("Sync", func() {
 		It("should work", func() {
 			manager := schema.GetManager()
@@ -35,10 +44,10 @@ var _ = Describe("Server package test", func() {
 			network := getNetwork("Red", "red")
 			networkResource, err := manager.LoadResource("network", network)
 			Expect(err).ToNot(HaveOccurred())
-			testDB1 := &srv.DbSyncWrapper{DB: testDB}
-			tx, err := testDB1.Begin()
+			testDB1 := srv.NewDbSyncWrapper(testDB)
+			tx, err := testDB1.BeginTx()
 			Expect(err).ToNot(HaveOccurred())
-			Expect(tx.Create(networkResource)).To(Succeed())
+			Expect(tx.Create(ctx, networkResource)).To(Succeed())
 			Expect(tx.Commit()).To(Succeed())
 			tx.Close()
 
@@ -62,9 +71,9 @@ var _ = Describe("Server package test", func() {
 			Expect(ok).To(BeTrue())
 			Expect(configNetwork).To(util.MatchAsJSON(network))
 
-			tx, err = testDB1.Begin()
+			tx, err = testDB1.BeginTx()
 			Expect(err).ToNot(HaveOccurred())
-			Expect(tx.Delete(networkSchema, networkResource.ID())).To(Succeed())
+			Expect(tx.Delete(ctx, networkSchema, networkResource.ID())).To(Succeed())
 			Expect(tx.Commit()).To(Succeed())
 			tx.Close()
 
@@ -83,10 +92,10 @@ var _ = Describe("Server package test", func() {
 						"id": "r0", "p0": "property0",
 					})
 				Expect(err).ToNot(HaveOccurred())
-				testDB1 := &srv.DbSyncWrapper{DB: testDB}
-				tx, err := testDB1.Begin()
+				testDB1 := srv.NewDbSyncWrapper(testDB)
+				tx, err := testDB1.BeginTx()
 				Expect(err).ToNot(HaveOccurred())
-				Expect(tx.Create(resource)).To(Succeed())
+				Expect(tx.Create(ctx, resource)).To(Succeed())
 				Expect(tx.Commit()).To(Succeed())
 				tx.Close()
 
@@ -110,9 +119,9 @@ var _ = Describe("Server package test", func() {
 				Expect(ok).To(BeTrue())
 				Expect(p0).To(BeEquivalentTo("property0"))
 
-				tx, err = testDB1.Begin()
+				tx, err = testDB1.BeginTx()
 				Expect(err).ToNot(HaveOccurred())
-				Expect(tx.Delete(schema, resource.ID())).To(Succeed())
+				Expect(tx.Delete(ctx, schema, resource.ID())).To(Succeed())
 				Expect(tx.Commit()).To(Succeed())
 				tx.Close()
 
@@ -132,10 +141,10 @@ var _ = Describe("Server package test", func() {
 						"id": "r0", "p0": "property0",
 					})
 				Expect(err).ToNot(HaveOccurred())
-				testDB1 := &srv.DbSyncWrapper{DB: testDB}
-				tx, err := testDB1.Begin()
+				testDB1 := srv.NewDbSyncWrapper(testDB)
+				tx, err := testDB1.BeginTx()
 				Expect(err).ToNot(HaveOccurred())
-				Expect(tx.Create(resource)).To(Succeed())
+				Expect(tx.Create(ctx, resource)).To(Succeed())
 				Expect(tx.Commit()).To(Succeed())
 				tx.Close()
 
@@ -153,9 +162,9 @@ var _ = Describe("Server package test", func() {
 				Expect(configContentsRaw).To(HaveKeyWithValue("id", "r0"))
 				Expect(configContentsRaw).To(HaveKeyWithValue("p0", "property0"))
 
-				tx, err = testDB1.Begin()
+				tx, err = testDB1.BeginTx()
 				Expect(err).ToNot(HaveOccurred())
-				Expect(tx.Delete(schema, resource.ID())).To(Succeed())
+				Expect(tx.Delete(ctx, schema, resource.ID())).To(Succeed())
 				Expect(tx.Commit()).To(Succeed())
 				tx.Close()
 
@@ -175,10 +184,10 @@ var _ = Describe("Server package test", func() {
 						"id": "r0", "p0": "property0",
 					})
 				Expect(err).ToNot(HaveOccurred())
-				testDB1 := &srv.DbSyncWrapper{DB: testDB}
-				tx, err := testDB1.Begin()
+				testDB1 := srv.NewDbSyncWrapper(testDB)
+				tx, err := testDB1.BeginTx()
 				Expect(err).ToNot(HaveOccurred())
-				Expect(tx.Create(resource)).To(Succeed())
+				Expect(tx.Create(ctx, resource)).To(Succeed())
 				Expect(tx.Commit()).To(Succeed())
 				tx.Close()
 
@@ -192,9 +201,9 @@ var _ = Describe("Server package test", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(writtenConfig.Value).To(BeEquivalentTo("property0"))
 
-				tx, err = testDB1.Begin()
+				tx, err = testDB1.BeginTx()
 				Expect(err).ToNot(HaveOccurred())
-				Expect(tx.Delete(schema, resource.ID())).To(Succeed())
+				Expect(tx.Delete(ctx, schema, resource.ID())).To(Succeed())
 				Expect(tx.Commit()).To(Succeed())
 				tx.Close()
 
@@ -214,10 +223,10 @@ var _ = Describe("Server package test", func() {
 						"id": "abcdef", "p0": "property0",
 					})
 				Expect(err).ToNot(HaveOccurred())
-				testDB1 := &srv.DbSyncWrapper{DB: testDB}
-				tx, err := testDB1.Begin()
+				testDB1 := srv.NewDbSyncWrapper(testDB)
+				tx, err := testDB1.BeginTx()
 				Expect(err).ToNot(HaveOccurred())
-				Expect(tx.Create(resource)).To(Succeed())
+				Expect(tx.Create(ctx, resource)).To(Succeed())
 				Expect(tx.Commit()).To(Succeed())
 				tx.Close()
 
@@ -231,9 +240,9 @@ var _ = Describe("Server package test", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(writtenConfig.Value).To(BeEquivalentTo("property0"))
 
-				tx, err = testDB1.Begin()
+				tx, err = testDB1.BeginTx()
 				Expect(err).ToNot(HaveOccurred())
-				Expect(tx.Delete(schema, resource.ID())).To(Succeed())
+				Expect(tx.Delete(ctx, schema, resource.ID())).To(Succeed())
 				Expect(tx.Commit()).To(Succeed())
 				tx.Close()
 

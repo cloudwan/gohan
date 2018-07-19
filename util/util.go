@@ -29,6 +29,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/twinj/uuid"
 	"github.com/xeipuuv/gojsonpointer"
 	"golang.org/x/crypto/ssh"
 	"gopkg.in/yaml.v2"
@@ -354,4 +355,8 @@ func Index(slice []string, elem string) int {
 		}
 	}
 	return -1
+}
+
+func NewTraceID() string {
+	return uuid.NewV4().String()
 }

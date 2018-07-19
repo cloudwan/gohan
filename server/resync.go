@@ -3,6 +3,8 @@ package server
 import (
 	"fmt"
 
+	"context"
+
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
@@ -13,10 +15,12 @@ import (
 // Resync performs resync
 func Resync(dbConn db.DB, sync sync.Sync) (err error) {
 
-	syncDbConn := &DbSyncWrapper{DB: dbConn}
+	syncDbConn := NewDbSyncWrapper(dbConn)
 	schemaManager := schema.GetManager()
 
-	tx, err := syncDbConn.Begin()
+	ctx := context.Background()
+
+	tx, err := syncDbConn.BeginTx(transaction.Context(ctx))
 	if err != nil {
 		return fmt.Errorf("Error when acquiring DB transaction: %s", err)
 	}
@@ -45,12 +49,12 @@ func Resync(dbConn db.DB, sync sync.Sync) (err error) {
 		}
 
 		log.Info("Re-emitting events for resource type %s", schemaType.ID)
-		all, _, err := tl.List(schemaType, transaction.Filter{}, nil, nil)
+		all, _, err := tl.List(ctx, schemaType, transaction.Filter{}, nil, nil)
 		if err != nil {
 			util.ExitFatal(fmt.Sprintf("Error when acquiring DB transaction: %s", err))
 		}
 		for _, resource := range all {
-			tl.Resync(resource)
+			tl.Resync(ctx, resource)
 		}
 		log.Info("Done re-emitting events for resource type %s", schemaType.ID)
 	}

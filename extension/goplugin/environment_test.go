@@ -338,10 +338,10 @@ var _ = Describe("Environment", func() {
 
 		Context("execution termination", func() {
 			It("should exit gracefully when HTTP peer disconnects", func() {
-				closeNotifier := SimpleCloseNotifier{make(chan bool, 1)}
+				ctx, cancel := context.WithCancel(context.Background())
 
 				context := goext.MakeContext()
-				context["http_response"] = closeNotifier
+				context["context"] = ctx
 
 				done := make(chan bool, 1)
 				go func() {
@@ -350,8 +350,7 @@ var _ = Describe("Environment", func() {
 					done <- true
 				}()
 
-				closeNotifier.Close()
-
+				cancel()
 				Eventually(done).Should(Receive())
 			})
 
@@ -359,10 +358,14 @@ var _ = Describe("Environment", func() {
 				err := env.LoadExtensionsForPath(manager.Extensions, time.Millisecond*100, nil, "wait_for_context_cancel")
 				Expect(err).To(Succeed())
 
+				ctx := context.Background()
+				context := goext.MakeContext()
+				context["context"] = ctx
+
 				done := make(chan bool, 1)
 				go func() {
 					defer GinkgoRecover()
-					Expect(env.HandleEvent("wait_for_context_cancel", goext.MakeContext())).To(Succeed())
+					Expect(env.HandleEvent("wait_for_context_cancel", context)).To(Succeed())
 					done <- true
 				}()
 
@@ -377,10 +380,14 @@ var _ = Describe("Environment", func() {
 				err := env.LoadExtensionsForPath(manager.Extensions, 0, timeLimits, "wait_for_context_cancel")
 				Expect(err).To(Succeed())
 
+				ctx := context.Background()
+				context := goext.MakeContext()
+				context["context"] = ctx
+
 				done := make(chan bool, 1)
 				go func() {
 					defer GinkgoRecover()
-					Expect(env.HandleEvent("wait_for_context_cancel", goext.MakeContext())).To(Succeed())
+					Expect(env.HandleEvent("wait_for_context_cancel", context)).To(Succeed())
 					done <- true
 				}()
 

@@ -16,6 +16,7 @@
 package server
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"runtime/debug"
@@ -85,15 +86,14 @@ func startCRONProcess(server *Server) {
 				server.sync.Unlock(lockKey)
 			}()
 
-			context := map[string]interface{}{
-				"path": path,
+			ctx := map[string]interface{}{
+				"path":     path,
+				"context":  context.Background(),
+				"trace_id": util.NewTraceID(),
 			}
-			if err != nil {
-				log.Warning(fmt.Sprintf("extension error: %s", err))
-				return
-			}
+
 			clone := env.Clone()
-			if err := clone.HandleEvent("notification", context); err != nil {
+			if err := clone.HandleEvent("notification", ctx); err != nil {
 				log.Warning(fmt.Sprintf("extension error: %s", err))
 				return
 			}

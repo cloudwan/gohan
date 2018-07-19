@@ -24,6 +24,7 @@ import (
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/pagination"
 	"github.com/cloudwan/gohan/db/transaction"
+	"github.com/cloudwan/gohan/metrics"
 	"github.com/cloudwan/gohan/schema"
 	gohan_sync "github.com/cloudwan/gohan/sync"
 )
@@ -81,6 +82,7 @@ func (writer *SyncWriter) Run(ctx context.Context) error {
 			for {
 				select {
 				case <-lost:
+					metrics.UpdateCounter(1, "sync_writer.locks_lost")
 					return fmt.Errorf("lost lock for sync")
 				case <-ctx.Done():
 					return nil
@@ -89,8 +91,10 @@ func (writer *SyncWriter) Run(ctx context.Context) error {
 						recentlySynced = false
 						continue
 					}
+					metrics.UpdateCounter(1, "sync_writer.wake_up.on_timer")
 				case <-committed:
 					recentlySynced = true
+					metrics.UpdateCounter(1, "sync_writer.wake_up.on_commit")
 				}
 				_, err := writer.Sync()
 				if err != nil {
@@ -114,6 +118,7 @@ func (writer *SyncWriter) Run(ctx context.Context) error {
 // Sync runs a synchronization iteration, which
 // executes requests in the event table.
 func (writer *SyncWriter) Sync() (synced int, err error) {
+	metrics.UpdateCounter(1, "sync_writer.syncs")
 	resourceList, err := writer.listEvents()
 	if err != nil {
 		return
@@ -125,19 +130,24 @@ func (writer *SyncWriter) Sync() (synced int, err error) {
 		}
 		synced++
 	}
+
+	if synced == 0 {
+		metrics.UpdateCounter(1, "sync_writer.empty_syncs")
+	}
+
 	return
 }
 
 func (writer *SyncWriter) listEvents() ([]*schema.Resource, error) {
 	var resourceList []*schema.Resource
-	if dbErr := db.Within(writer.db, func(tx transaction.Transaction) error {
+	if dbErr := db.WithinTx(writer.db, func(tx transaction.Transaction) error {
 		schemaManager := schema.GetManager()
 		eventSchema, _ := schemaManager.Schema("event")
 		paginator, _ := pagination.NewPaginator(
 			pagination.OptionKey(eventSchema, "id"),
 			pagination.OptionOrder(pagination.ASC),
 			pagination.OptionLimit(eventPollingLimit))
-		res, _, err := tx.List(eventSchema, nil, nil, paginator)
+		res, _, err := tx.List(context.Background(), eventSchema, nil, nil, paginator)
 		resourceList = res
 		return err
 	}); dbErr != nil {
@@ -150,7 +160,7 @@ func (writer *SyncWriter) listEvents() ([]*schema.Resource, error) {
 func (writer *SyncWriter) syncEvent(resource *schema.Resource) error {
 	schemaManager := schema.GetManager()
 	eventSchema, _ := schemaManager.Schema("event")
-	return db.Within(writer.db, func(tx transaction.Transaction) error {
+	return db.WithinTx(writer.db, func(tx transaction.Transaction) error {
 		var err error
 		eventType := resource.Get("type").(string)
 		resourcePath := resource.Get("path").(string)
@@ -240,7 +250,7 @@ func (writer *SyncWriter) syncEvent(resource *schema.Resource) error {
 		}
 		log.Debug("delete event %d", resource.Get("id"))
 		id := resource.Get("id")
-		err = tx.Delete(eventSchema, id)
+		err = tx.Delete(context.Background(), eventSchema, id)
 		if err != nil {
 			return fmt.Errorf("delete failed: %s", err)
 		}

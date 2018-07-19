@@ -19,7 +19,10 @@ import (
 	"fmt"
 	"strings"
 
+	"context"
+
 	"github.com/cloudwan/gohan/db"
+	"github.com/cloudwan/gohan/db/dbutil"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/sql"
 	"github.com/cloudwan/gohan/db/transaction"
@@ -52,7 +55,7 @@ func transactionFunc(stmt *gohanscript.Stmt) (func(*gohanscript.Context) (interf
 			return nil, err
 		}
 		connection := rawDB.(db.DB)
-		tx, err := connection.Begin()
+		tx, err := connection.BeginTx()
 		if err != nil {
 			return nil, err
 		}
@@ -115,12 +118,12 @@ func GohanLoadSchema(src string) (interface{}, error) {
 
 //ConnectDB start connection to db
 func ConnectDB(dbType string, connection string, maxOpenConn int) (db.DB, error) {
-	return db.ConnectDB(dbType, connection, maxOpenConn, options.Default())
+	return dbutil.ConnectDB(dbType, connection, maxOpenConn, options.Default())
 }
 
 //InitDB initializes database using schema.
 func InitDB(dbType string, connection string, dropOnCreate bool, cascade bool) error {
-	err := db.InitDBWithSchemas(dbType, connection, db.InitDBParams{
+	err := dbutil.InitDBWithSchemas(dbType, connection, db.InitDBParams{
 		DropOnCreate: dropOnCreate,
 		Cascade:      cascade,
 		AutoMigrate:  false,
@@ -131,7 +134,7 @@ func InitDB(dbType string, connection string, dropOnCreate bool, cascade bool) e
 
 //DBBegin starts transaction
 func DBBegin(connection db.DB) (transaction.Transaction, error) {
-	return connection.Begin()
+	return connection.BeginTx()
 }
 
 //DBCommit commits transaction
@@ -155,7 +158,7 @@ func DBGet(tx transaction.Transaction, schemaID string, id string, tenantID stri
 	if tenantID != "" {
 		filter["tenant_id"] = tenantID
 	}
-	resp, err := tx.Fetch(schemaObj, filter, nil)
+	resp, err := tx.Fetch(context.Background(), schemaObj, filter, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +172,7 @@ func DBCreate(tx transaction.Transaction, schemaID string, data map[string]inter
 	if err != nil {
 		return err
 	}
-	return tx.Create(resource)
+	return tx.Create(context.Background(), resource)
 }
 
 //DBList lists data from database.
@@ -195,7 +198,7 @@ func DBList(tx transaction.Transaction, schemaID string, filter map[string]inter
 			filter[key] = filterList
 		}
 	}
-	resources, _, err := tx.List(schemaObj, filter, nil, nil)
+	resources, _, err := tx.List(context.Background(), schemaObj, filter, nil, nil)
 	resp := []interface{}{}
 	for _, resource := range resources {
 		resp = append(resp, resource.Data())
@@ -210,7 +213,7 @@ func DBUpdate(tx transaction.Transaction, schemaID string, data map[string]inter
 	if err != nil {
 		return err
 	}
-	return tx.Update(resource)
+	return tx.Update(context.Background(), resource)
 }
 
 //DBDelete deletes a resource in a db.
@@ -220,7 +223,7 @@ func DBDelete(tx transaction.Transaction, schemaID string, id string) error {
 	if !ok {
 		return fmt.Errorf("Schema %s not found", schemaID)
 	}
-	return tx.Delete(schemaObj, id)
+	return tx.Delete(context.Background(), schemaObj, id)
 }
 
 //DBQuery fetchs data from db with additional query
@@ -230,7 +233,7 @@ func DBQuery(tx transaction.Transaction, schemaID string, sql string, arguments 
 	if !ok {
 		return nil, fmt.Errorf("Schema %s not found", schemaID)
 	}
-	resources, err := tx.Query(schemaObj, sql, arguments)
+	resources, err := tx.Query(context.Background(), schemaObj, sql, arguments)
 	resp := []interface{}{}
 	for _, resource := range resources {
 		resp = append(resp, resource.Data())
@@ -240,7 +243,7 @@ func DBQuery(tx transaction.Transaction, schemaID string, sql string, arguments 
 
 //DBExec closes a transaction.
 func DBExec(tx transaction.Transaction, sql string, arguments []interface{}) error {
-	return tx.Exec(sql, arguments...)
+	return tx.Exec(context.Background(), sql, arguments...)
 }
 
 //DBColumn makes partiall part of sql query from schema

@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -30,6 +29,7 @@ import (
 	"github.com/cloudwan/gohan/db/pagination"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/extension/goext"
+	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/metrics"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
@@ -71,13 +71,14 @@ type Transaction struct {
 	db             *DB
 	closed         bool
 	isolationLevel transaction.Type
+	log            l.Logger
 }
 
 type TxInterface transaction.Transaction
 
-func mapTxOptions(options *transaction.TxOptions) (*sql.TxOptions, error) {
+func (tx *Transaction) getTxOptions(isolationLevel transaction.Type) (*sql.TxOptions, error) {
 	sqlOptions := &sql.TxOptions{}
-	switch options.IsolationLevel {
+	switch isolationLevel {
 	case transaction.ReadCommited:
 		sqlOptions.Isolation = sql.LevelReadCommitted
 	case transaction.ReadUncommitted:
@@ -87,8 +88,8 @@ func mapTxOptions(options *transaction.TxOptions) (*sql.TxOptions, error) {
 	case transaction.Serializable:
 		sqlOptions.Isolation = sql.LevelSerializable
 	default:
-		msg := fmt.Sprintf("Unknown transaction isolation level: %s", options.IsolationLevel)
-		log.Error(msg)
+		msg := fmt.Sprintf("Unknown transaction isolation level: %s", isolationLevel)
+		tx.log.Error(msg)
 		return nil, fmt.Errorf(msg)
 	}
 	return sqlOptions, nil
@@ -352,53 +353,21 @@ func (db *DB) Close() {
 	db.DB.Close()
 }
 
-//Begin starts new transaction
-func (db *DB) Begin() (tx transaction.Transaction, err error) {
-	defer db.measureTime(time.Now(), "begin")
-	db.updateCounter(1, "begin.waiting")
-	defer db.updateCounter(-1, "begin.waiting")
-
-	var transx Transaction
-	rawTx, err := db.DB.Beginx()
-	if err != nil {
-		db.updateCounter(1, "begin.failed")
-		return nil, err
-	}
-	db.updateCounter(1, "active")
-
-	if db.sqlType == "sqlite3" {
-		rawTx.Exec("PRAGMA foreign_keys = ON;")
-	}
-	transx = Transaction{
-		db:             db,
-		transaction:    rawTx,
-		closed:         false,
-		isolationLevel: transaction.RepeatableRead,
-	}
-
-	if os.Getenv("FUZZY_DB_TX") == "true" {
-		log.Notice("FUZZY_DB_TX is enabled")
-		tx = &transaction.FuzzyTransaction{Tx: transaction.Transaction(&transx)}
-	} else {
-		tx = MakeCachedTransaction(&transx)
-	}
-	log.Debug("[%p] Created transaction %#v, isolation level: %s", rawTx, rawTx, transx.GetIsolationLevel())
-	return
-}
-
 //BeginTx starts new transaction with given transaction options
-func (db *DB) BeginTx(ctx context.Context, options *transaction.TxOptions) (tx transaction.Transaction, err error) {
+func (db *DB) BeginTx(options ...transaction.Option) (tx transaction.Transaction, err error) {
 	defer db.measureTime(time.Now(), "begin_tx")
 	db.updateCounter(1, "begin.waiting")
 	defer db.updateCounter(-1, "begin.waiting")
 
+	params := transaction.NewTxParams(options...)
+
 	var transx Transaction
-	sqlOptions, err := mapTxOptions(options)
+	sqlOptions, err := transx.getTxOptions(params.IsolationLevel)
 	if err != nil {
 		return nil, err
 	}
 
-	rawTx, err := db.DB.BeginTxx(ctx, sqlOptions)
+	rawTx, err := db.DB.BeginTxx(params.Context, sqlOptions)
 	if err != nil {
 		db.updateCounter(1, "begin.failed")
 		return nil, err
@@ -411,15 +380,21 @@ func (db *DB) BeginTx(ctx context.Context, options *transaction.TxOptions) (tx t
 		db:             db,
 		transaction:    rawTx,
 		closed:         false,
-		isolationLevel: options.IsolationLevel,
+		isolationLevel: params.IsolationLevel,
 	}
+	if params.TraceID != "" {
+		transx.log = l.NewLogger(l.TraceId(params.TraceID))
+	} else {
+		transx.log = log
+	}
+
 	if transx.isolationLevel == transaction.RepeatableRead || transx.isolationLevel == transaction.Serializable {
 		tx = MakeCachedTransaction(&transx)
 	} else {
 		tx = &transx
 	}
 
-	log.Debug("[%p] Created transaction %#v, isolation level: %s", rawTx, rawTx, transx.GetIsolationLevel())
+	transx.log.Debug("[%p] Created transaction %#v, isolation level: %s", rawTx, rawTx, transx.GetIsolationLevel())
 	return
 }
 
@@ -590,26 +565,18 @@ func (db *DB) DropTable(s *schema.Schema) error {
 	return err
 }
 
-func escapeID(ID string) string {
-	return strings.Replace(ID, "-", "_escape_", -1)
-}
-
 func (tx *Transaction) logQuery(sql string, args ...interface{}) {
 	sqlFormat := strings.Replace(sql, "?", "%s", -1)
 	query := fmt.Sprintf(sqlFormat, args...)
-	log.Debug("[%p] Executing SQL query '%s'", tx.transaction, query)
+	tx.log.Debug("[%p] Executing SQL query '%s'", tx.transaction, query)
 }
 
 func (tx *Transaction) measureTime(timeStarted time.Time, schemaId, action string) {
 	metrics.UpdateTimer(timeStarted, "tx.%s.%s", schemaId, action)
 }
 
-func (tx *Transaction) Exec(sql string, args ...interface{}) error {
-	return tx.ExecContext(context.Background(), sql, args...)
-}
-
 // Exec executes sql in transaction
-func (tx *Transaction) ExecContext(ctx context.Context, sql string, args ...interface{}) error {
+func (tx *Transaction) Exec(ctx context.Context, sql string, args ...interface{}) error {
 	defer tx.measureTime(time.Now(), "unknown_schema", "exec")
 	return tx.exec(ctx, sql, args...)
 }
@@ -620,12 +587,8 @@ func (tx *Transaction) exec(ctx context.Context, sql string, args ...interface{}
 	return err
 }
 
-func (tx *Transaction) Create(resource *schema.Resource) error {
-	return tx.CreateContext(context.Background(), resource)
-}
-
 //Create create resource in the db
-func (tx *Transaction) CreateContext(ctx context.Context, resource *schema.Resource) error {
+func (tx *Transaction) Create(ctx context.Context, resource *schema.Resource) error {
 	defer tx.measureTime(time.Now(), resource.Schema().ID, "create")
 
 	var cols []string
@@ -676,12 +639,8 @@ func (tx *Transaction) updateQuery(resource *schema.Resource) (sq.UpdateBuilder,
 	return q, nil
 }
 
-func (tx *Transaction) Update(resource *schema.Resource) error {
-	return tx.UpdateContext(context.Background(), resource)
-}
-
 //Update update resource in the db
-func (tx *Transaction) UpdateContext(ctx context.Context, resource *schema.Resource) error {
+func (tx *Transaction) Update(ctx context.Context, resource *schema.Resource) error {
 	defer tx.measureTime(time.Now(), resource.Schema().ID, "update")
 
 	q, err := tx.updateQuery(resource)
@@ -700,12 +659,8 @@ func (tx *Transaction) UpdateContext(ctx context.Context, resource *schema.Resou
 	return tx.exec(ctx, sql, args...)
 }
 
-func (tx *Transaction) StateUpdate(resource *schema.Resource, state *transaction.ResourceState) error {
-	return tx.StateUpdateContext(context.Background(), resource, state)
-}
-
 //StateUpdate update resource state
-func (tx *Transaction) StateUpdateContext(ctx context.Context, resource *schema.Resource, state *transaction.ResourceState) error {
+func (tx *Transaction) StateUpdate(ctx context.Context, resource *schema.Resource, state *transaction.ResourceState) error {
 	defer tx.measureTime(time.Now(), resource.Schema().ID, "state_update")
 
 	q, err := tx.updateQuery(resource)
@@ -726,12 +681,8 @@ func (tx *Transaction) StateUpdateContext(ctx context.Context, resource *schema.
 	return tx.exec(ctx, sql, args...)
 }
 
-func (tx *Transaction) Delete(s *schema.Schema, resourceID interface{}) error {
-	return tx.DeleteContext(context.Background(), s, resourceID)
-}
-
 //Delete delete resource from db
-func (tx *Transaction) DeleteContext(ctx context.Context, s *schema.Schema, resourceID interface{}) error {
+func (tx *Transaction) Delete(ctx context.Context, s *schema.Schema, resourceID interface{}) error {
 	defer tx.measureTime(time.Now(), s.ID, "delete")
 
 	sql, args, err := sq.Delete(quote(s.GetDbTableName())).Where(sq.Eq{"id": resourceID}).ToSql()
@@ -915,16 +866,12 @@ func (tx *Transaction) executeSelect(ctx context.Context, sc *selectContext, sql
 	if err != nil {
 		return nil, 0, err
 	}
-	total, err = tx.CountContext(ctx, sc.schema, sc.filter)
+	total, err = tx.Count(ctx, sc.schema, sc.filter)
 	return
 }
 
-func (tx *Transaction) List(s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions, pg *pagination.Paginator) (list []*schema.Resource, total uint64, err error) {
-	return tx.ListContext(context.Background(), s, filter, options, pg)
-}
-
 //List resources in the db
-func (tx *Transaction) ListContext(ctx context.Context, s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions, pg *pagination.Paginator) (list []*schema.Resource, total uint64, err error) {
+func (tx *Transaction) List(ctx context.Context, s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions, pg *pagination.Paginator) (list []*schema.Resource, total uint64, err error) {
 	defer tx.measureTime(time.Now(), s.ID, "list")
 
 	sc := listContextHelper(s, filter, options, pg)
@@ -963,12 +910,8 @@ func shouldJoin(policy schema.LockPolicy) bool {
 	}
 }
 
-func (tx *Transaction) LockList(s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions, pg *pagination.Paginator, lockPolicy schema.LockPolicy) (list []*schema.Resource, total uint64, err error) {
-	return tx.LockListContext(context.Background(), s, filter, options, pg, lockPolicy)
-}
-
 // LockList locks resources in the db
-func (tx *Transaction) LockListContext(ctx context.Context, s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions, pg *pagination.Paginator, lockPolicy schema.LockPolicy) (list []*schema.Resource, total uint64, err error) {
+func (tx *Transaction) LockList(ctx context.Context, s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions, pg *pagination.Paginator, lockPolicy schema.LockPolicy) (list []*schema.Resource, total uint64, err error) {
 	defer tx.measureTime(time.Now(), s.ID, "lock_list")
 
 	sc := lockListContextHelper(s, filter, options, pg, lockPolicy)
@@ -1007,12 +950,8 @@ func lockListContextHelper(s *schema.Schema, filter transaction.Filter, options 
 	return sc
 }
 
-func (tx *Transaction) Query(s *schema.Schema, query string, arguments []interface{}) (list []*schema.Resource, err error) {
-	return tx.QueryContext(context.Background(), s, query, arguments)
-}
-
 // Query with raw sql string
-func (tx *Transaction) QueryContext(ctx context.Context, s *schema.Schema, query string, arguments []interface{}) (list []*schema.Resource, err error) {
+func (tx *Transaction) Query(ctx context.Context, s *schema.Schema, query string, arguments []interface{}) (list []*schema.Resource, err error) {
 	defer tx.measureTime(time.Now(), s.ID, "query")
 
 	tx.logQuery(query, arguments...)
@@ -1058,7 +997,7 @@ func (tx *Transaction) decode(s *schema.Schema, tableName string, skipNil, recur
 		if value != nil || (property.Nullable && !skipNil) {
 			decoded, err := handler.decode(&property, value)
 			if err != nil {
-				log.Error(fmt.Sprintf("SQL List decoding error: %s", err))
+				tx.log.Error(fmt.Sprintf("SQL List decoding error: %s", err))
 			}
 			resourceData[property.ID] = decoded
 		}
@@ -1075,8 +1014,8 @@ func (tx *Transaction) decode(s *schema.Schema, tableName string, skipNil, recur
 	return resourceData
 }
 
-//CountContext count all matching resources in the db
-func (tx *Transaction) CountContext(ctx context.Context, s *schema.Schema, filter transaction.Filter) (res uint64, err error) {
+//Count count all matching resources in the db
+func (tx *Transaction) Count(ctx context.Context, s *schema.Schema, filter transaction.Filter) (res uint64, err error) {
 	defer tx.measureTime(time.Now(), s.ID, "count")
 
 	q := sq.Select("Count(id) as count").From(quote(s.GetDbTableName()))
@@ -1102,15 +1041,11 @@ func (tx *Transaction) CountContext(ctx context.Context, s *schema.Schema, filte
 	return
 }
 
-func (tx *Transaction) Fetch(s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions) (*schema.Resource, error) {
-	return tx.FetchContext(context.Background(), s, filter, options)
-}
-
 //Fetch resources by ID in the db
-func (tx *Transaction) FetchContext(ctx context.Context, s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions) (*schema.Resource, error) {
+func (tx *Transaction) Fetch(ctx context.Context, s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions) (*schema.Resource, error) {
 	defer tx.measureTime(time.Now(), s.ID, "fetch")
 
-	list, _, err := tx.ListContext(ctx, s, filter, options, nil)
+	list, _, err := tx.List(ctx, s, filter, options, nil)
 	return fetchContextHelper(list, err, filter)
 }
 
@@ -1124,15 +1059,11 @@ func fetchContextHelper(list []*schema.Resource, err error, filter transaction.F
 	return list[0], nil
 }
 
-func (tx *Transaction) LockFetch(s *schema.Schema, filter transaction.Filter, lockPolicy schema.LockPolicy, options *transaction.ViewOptions) (*schema.Resource, error) {
-	return tx.LockFetchContext(context.Background(), s, filter, lockPolicy, options)
-}
-
 // LockFetch fetches & locks a resource
-func (tx *Transaction) LockFetchContext(ctx context.Context, s *schema.Schema, filter transaction.Filter, lockPolicy schema.LockPolicy, options *transaction.ViewOptions) (*schema.Resource, error) {
+func (tx *Transaction) LockFetch(ctx context.Context, s *schema.Schema, filter transaction.Filter, lockPolicy schema.LockPolicy, options *transaction.ViewOptions) (*schema.Resource, error) {
 	defer tx.measureTime(time.Now(), s.ID, "lock_fetch")
 
-	list, _, err := tx.LockListContext(ctx, s, filter, nil, nil, lockPolicy)
+	list, _, err := tx.LockList(ctx, s, filter, nil, nil, lockPolicy)
 	return lockFetchContextHelper(err, list, filter)
 }
 
@@ -1146,12 +1077,8 @@ func lockFetchContextHelper(err error, list []*schema.Resource, filter transacti
 	return list[0], nil
 }
 
-func (tx *Transaction) StateFetch(s *schema.Schema, filter transaction.Filter) (state transaction.ResourceState, err error) {
-	return tx.StateFetchContext(context.Background(), s, filter)
-}
-
 //StateFetch fetches the state of the specified resource
-func (tx *Transaction) StateFetchContext(ctx context.Context, s *schema.Schema, filter transaction.Filter) (state transaction.ResourceState, err error) {
+func (tx *Transaction) StateFetch(ctx context.Context, s *schema.Schema, filter transaction.Filter) (state transaction.ResourceState, err error) {
 	defer tx.measureTime(time.Now(), s.ID, "state_fetch")
 
 	if !s.StateVersioning() {
@@ -1191,10 +1118,10 @@ func (tx *Transaction) Commit() error {
 	defer tx.db.measureTime(time.Now(), "commit")
 	defer tx.db.updateCounter(-1, "active")
 
-	log.Debug("[%p] Committing transaction %#v", tx.transaction, tx)
+	tx.log.Debug("[%p] Committing transaction %#v", tx.transaction, tx)
 	err := tx.transaction.Commit()
 	if err != nil {
-		log.Error("[%p] Commit %#v failed: %s", tx.transaction, tx, err)
+		tx.log.Error("[%p] Commit %#v failed: %s", tx.transaction, tx, err)
 		tx.db.updateCounter(1, "commit.failed")
 		return err
 	}
@@ -1207,14 +1134,14 @@ func (tx *Transaction) Close() error {
 	defer tx.db.measureTime(time.Now(), "rollback")
 
 	//Rollback if it isn't committed yet
-	log.Debug("[%p] Closing transaction %#v", tx.transaction, tx)
+	tx.log.Debug("[%p] Closing transaction %#v", tx.transaction, tx)
 	var err error
 	if !tx.closed {
 		defer tx.db.updateCounter(-1, "active")
-		log.Debug("[%p] Rolling back %#v", tx.transaction, tx)
+		tx.log.Debug("[%p] Rolling back %#v", tx.transaction, tx)
 		err = tx.transaction.Rollback()
 		if err != nil {
-			log.Error("[%p] Rolling back %#v failed: %s", tx.transaction, tx, err)
+			tx.log.Error("[%p] Rolling back %#v failed: %s", tx.transaction, tx, err)
 			tx.db.updateCounter(1, "rollback.failed")
 			return err
 		}

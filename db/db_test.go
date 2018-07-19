@@ -16,10 +16,12 @@
 package db_test
 
 import (
+	"context"
 	"os"
 	"time"
 
 	"github.com/cloudwan/gohan/db"
+	"github.com/cloudwan/gohan/db/dbutil"
 	"github.com/cloudwan/gohan/db/mocks"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/transaction"
@@ -48,11 +50,13 @@ var _ = Describe("Database operation test", func() {
 		serverResource   *schema.Resource
 
 		dataStore db.DB
+		ctx       context.Context
 	)
 
 	BeforeEach(func() {
 		manager = schema.GetManager()
 		Expect(manager.LoadSchemaFromFile("../etc/schema/gohan.json")).To(Succeed())
+		ctx = context.Background()
 	})
 
 	AfterEach(func() {
@@ -123,14 +127,14 @@ var _ = Describe("Database operation test", func() {
 
 		JustBeforeEach(func() {
 			os.Remove(conn)
-			dataStore, err = db.ConnectDB(dbType, conn, db.DefaultMaxOpenConn, options.Default())
+			dataStore, err = dbutil.ConnectDB(dbType, conn, db.DefaultMaxOpenConn, options.Default())
 			Expect(err).ToNot(HaveOccurred())
 
 			for _, s := range manager.Schemas() {
 				Expect(dataStore.RegisterTable(s, false, true)).To(Succeed())
 			}
 
-			tx, err = dataStore.Begin()
+			tx, err = dataStore.BeginTx()
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -151,7 +155,7 @@ var _ = Describe("Database operation test", func() {
 
 			Context("When the database is empty", func() {
 				It("Returns an empty list", func() {
-					list, num, err := tx.List(networkSchema, nil, nil, nil)
+					list, num, err := tx.List(ctx, networkSchema, nil, nil, nil)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(num).To(Equal(uint64(0)))
 					Expect(list).To(BeEmpty())
@@ -159,7 +163,7 @@ var _ = Describe("Database operation test", func() {
 				})
 
 				It("Creates a resource", func() {
-					Expect(tx.Create(networkResource1)).To(Succeed())
+					Expect(tx.Create(ctx, networkResource1)).To(Succeed())
 
 					Expect(tx.Commit()).To(Succeed())
 				})
@@ -167,17 +171,17 @@ var _ = Describe("Database operation test", func() {
 
 			Describe("When the database is not empty", func() {
 				JustBeforeEach(func() {
-					Expect(tx.Create(networkResource1)).To(Succeed())
-					Expect(tx.Create(networkResource2)).To(Succeed())
-					Expect(tx.Create(serverResource)).To(Succeed())
+					Expect(tx.Create(ctx, networkResource1)).To(Succeed())
+					Expect(tx.Create(ctx, networkResource2)).To(Succeed())
+					Expect(tx.Create(ctx, serverResource)).To(Succeed())
 					Expect(tx.Commit()).To(Succeed())
 					tx.Close()
-					tx, err = dataStore.Begin()
+					tx, err = dataStore.BeginTx()
 					Expect(err).ToNot(HaveOccurred())
 				})
 
 				It("Returns the expected list", func() {
-					list, num, err := tx.List(networkSchema, nil, nil, nil)
+					list, num, err := tx.List(ctx, networkSchema, nil, nil, nil)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(num).To(Equal(uint64(2)))
 					Expect(list).To(HaveLen(2))
@@ -187,7 +191,7 @@ var _ = Describe("Database operation test", func() {
 				})
 
 				It("Locks the expected list", func() {
-					list, num, err := tx.LockList(networkSchema, nil, nil, nil, schema.LockRelatedResources)
+					list, num, err := tx.LockList(ctx, networkSchema, nil, nil, nil, schema.LockRelatedResources)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(num).To(Equal(uint64(2)))
 					Expect(list).To(HaveLen(2))
@@ -200,7 +204,7 @@ var _ = Describe("Database operation test", func() {
 					filter := map[string]interface{}{
 						"tenant_id": []string{"red"},
 					}
-					list, num, err := tx.List(networkSchema, filter, nil, nil)
+					list, num, err := tx.List(ctx, networkSchema, filter, nil, nil)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(num).To(Equal(uint64(1)))
 					Expect(list).To(HaveLen(1))
@@ -212,7 +216,7 @@ var _ = Describe("Database operation test", func() {
 					filter := map[string]interface{}{
 						"tenant_id": []string{"red"},
 					}
-					list, num, err := tx.LockList(networkSchema, filter, nil, nil, schema.LockRelatedResources)
+					list, num, err := tx.LockList(ctx, networkSchema, filter, nil, nil, schema.LockRelatedResources)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(num).To(Equal(uint64(1)))
 					Expect(list).To(HaveLen(1))
@@ -224,7 +228,7 @@ var _ = Describe("Database operation test", func() {
 					filter := map[string]interface{}{
 						"bad_filter": []string{"red"},
 					}
-					_, _, err := tx.List(networkSchema, filter, nil, nil)
+					_, _, err := tx.List(ctx, networkSchema, filter, nil, nil)
 					Expect(err).To(HaveOccurred())
 				})
 
@@ -232,12 +236,12 @@ var _ = Describe("Database operation test", func() {
 					filter := map[string]interface{}{
 						"bad_filter": []string{"red"},
 					}
-					_, _, err := tx.LockList(networkSchema, filter, nil, nil, schema.LockRelatedResources)
+					_, _, err := tx.LockList(ctx, networkSchema, filter, nil, nil, schema.LockRelatedResources)
 					Expect(err).To(HaveOccurred())
 				})
 
 				It("Shows related resources", func() {
-					list, num, err := tx.List(serverSchema, nil, nil, nil)
+					list, num, err := tx.List(ctx, serverSchema, nil, nil, nil)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(num).To(Equal(uint64(1)))
 					Expect(list).To(HaveLen(1))
@@ -246,7 +250,7 @@ var _ = Describe("Database operation test", func() {
 				})
 
 				It("Locks related resources when requested", func() {
-					list, num, err := tx.LockList(serverSchema, nil, nil, nil, schema.LockRelatedResources)
+					list, num, err := tx.LockList(ctx, serverSchema, nil, nil, nil, schema.LockRelatedResources)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(num).To(Equal(uint64(1)))
 					Expect(list).To(HaveLen(1))
@@ -255,7 +259,7 @@ var _ = Describe("Database operation test", func() {
 				})
 
 				It("Doesn't lock related resources when requested", func() {
-					list, num, err := tx.LockList(serverSchema, nil, nil, nil, schema.SkipRelatedResources)
+					list, num, err := tx.LockList(ctx, serverSchema, nil, nil, nil, schema.SkipRelatedResources)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(num).To(Equal(uint64(1)))
 					Expect(list).To(HaveLen(1))
@@ -264,7 +268,7 @@ var _ = Describe("Database operation test", func() {
 				})
 
 				It("Doesn't show related resources when details is false", func() {
-					list, num, err := tx.List(serverSchema, nil, &transaction.ViewOptions{Details: false}, nil)
+					list, num, err := tx.List(ctx, serverSchema, nil, &transaction.ViewOptions{Details: false}, nil)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(num).To(Equal(uint64(1)))
 					Expect(list).To(HaveLen(1))
@@ -273,7 +277,7 @@ var _ = Describe("Database operation test", func() {
 				})
 
 				It("Doesn't show related resources when fields is set and nothing is selected", func() {
-					list, num, err := tx.List(serverSchema, nil, &transaction.ViewOptions{
+					list, num, err := tx.List(ctx, serverSchema, nil, &transaction.ViewOptions{
 						Details: true,
 						Fields:  []string{"id"},
 					}, nil)
@@ -286,7 +290,7 @@ var _ = Describe("Database operation test", func() {
 				})
 
 				It("Show related resources when fields is set and something is selected", func() {
-					list, num, err := tx.List(serverSchema, nil, &transaction.ViewOptions{
+					list, num, err := tx.List(ctx, serverSchema, nil, &transaction.ViewOptions{
 						Details: true,
 						Fields:  []string{"id", "network.name"},
 					}, nil)
@@ -300,28 +304,28 @@ var _ = Describe("Database operation test", func() {
 				})
 
 				It("Fetches an existing resource", func() {
-					networkResourceFetched, err := tx.Fetch(networkSchema, transaction.IDFilter(networkResource1.ID()), nil)
+					networkResourceFetched, err := tx.Fetch(ctx, networkSchema, transaction.IDFilter(networkResource1.ID()), nil)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(networkResourceFetched).To(util.MatchAsJSON(networkResource1))
 					Expect(tx.Commit()).To(Succeed())
 				})
 
 				It("Fetches and locks an existing resource", func() {
-					networkResourceFetched, err := tx.LockFetch(networkSchema, transaction.IDFilter(networkResource1.ID()), schema.LockRelatedResources, nil)
+					networkResourceFetched, err := tx.LockFetch(ctx, networkSchema, transaction.IDFilter(networkResource1.ID()), schema.LockRelatedResources, nil)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(networkResourceFetched).To(util.MatchAsJSON(networkResource1))
 					Expect(tx.Commit()).To(Succeed())
 				})
 
 				It("Fetches and locks related resources when requested", func() {
-					networkResourceFetched, err := tx.LockFetch(serverSchema, nil, schema.LockRelatedResources, nil)
+					networkResourceFetched, err := tx.LockFetch(ctx, serverSchema, nil, schema.LockRelatedResources, nil)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(networkResourceFetched.Data()).To(HaveKeyWithValue("network", HaveKeyWithValue("name", networkResource1.Data()["name"])))
 					Expect(tx.Commit()).To(Succeed())
 				})
 
 				It("Fetches and doesn't lock related resources when requested", func() {
-					networkResourceFetched, err := tx.LockFetch(serverSchema, nil, schema.SkipRelatedResources, nil)
+					networkResourceFetched, err := tx.LockFetch(ctx, serverSchema, nil, schema.SkipRelatedResources, nil)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(networkResourceFetched.Data()).To(HaveKeyWithValue("network", HaveKeyWithValue("name", BeNil())))
 					Expect(tx.Commit()).To(Succeed())
@@ -330,24 +334,24 @@ var _ = Describe("Database operation test", func() {
 				It("Updates the resource properly", func() {
 					By("Updating other fields")
 					Expect(networkResource1.Update(map[string]interface{}{"name": "new_name"})).To(Succeed())
-					Expect(tx.Update(networkResource1)).To(Succeed())
+					Expect(tx.Update(ctx, networkResource1)).To(Succeed())
 					Expect(tx.Commit()).To(Succeed())
 				})
 
 				It("Creates a dependent resource", func() {
-					Expect(tx.Create(subnetResource)).To(Succeed())
+					Expect(tx.Create(ctx, subnetResource)).To(Succeed())
 					Expect(tx.Commit()).To(Succeed())
 				})
 
 				It("Deletes the resource", func() {
-					Expect(tx.Delete(serverSchema, serverResource.ID())).To(Succeed())
-					Expect(tx.Delete(networkSchema, networkResource1.ID())).To(Succeed())
+					Expect(tx.Delete(ctx, serverSchema, serverResource.ID())).To(Succeed())
+					Expect(tx.Delete(ctx, networkSchema, networkResource1.ID())).To(Succeed())
 					Expect(tx.Commit()).To(Succeed())
 				})
 
 				Context("Using StateFetch", func() {
 					It("Returns the defaults", func() {
-						beforeState, err := tx.StateFetch(networkSchema, transaction.IDFilter(networkResource1.ID()))
+						beforeState, err := tx.StateFetch(ctx, networkSchema, transaction.IDFilter(networkResource1.ID()))
 						Expect(err).ToNot(HaveOccurred())
 						Expect(tx.Commit()).To(Succeed())
 						Expect(beforeState.ConfigVersion).To(Equal(int64(1)))
@@ -370,7 +374,7 @@ var _ = Describe("Database operation test", func() {
 		})
 
 		It("Should initialize the database without error", func() {
-			Expect(db.InitDBWithSchemas(dbType, conn, db.DefaultTestInitDBParams())).To(Succeed())
+			Expect(dbutil.InitDBWithSchemas(dbType, conn, db.DefaultTestInitDBParams())).To(Succeed())
 		})
 	})
 
@@ -380,31 +384,31 @@ var _ = Describe("Database operation test", func() {
 		})
 
 		It("Should do it properly", func() {
-			inDB, err := db.ConnectDB("yaml", "test_data/conv_in.yaml", db.DefaultMaxOpenConn, options.Default())
+			inDB, err := dbutil.ConnectDB("yaml", "test_data/conv_in.yaml", db.DefaultMaxOpenConn, options.Default())
 			Expect(err).ToNot(HaveOccurred())
 			defer os.Remove("test_data/conv_in.db")
 
-			db.InitDBWithSchemas("sqlite3", "test_data/conv_out.db", db.DefaultTestInitDBParams())
-			outDB, err := db.ConnectDB("sqlite3", "test_data/conv_out.db", db.DefaultMaxOpenConn, options.Default())
+			dbutil.InitDBWithSchemas("sqlite3", "test_data/conv_out.db", db.DefaultTestInitDBParams())
+			outDB, err := dbutil.ConnectDB("sqlite3", "test_data/conv_out.db", db.DefaultMaxOpenConn, options.Default())
 			Expect(err).ToNot(HaveOccurred())
 			defer os.Remove("test_data/conv_out.db")
 
-			db.InitDBWithSchemas("yaml", "test_data/conv_verify.yaml", db.DefaultTestInitDBParams())
-			verifyDB, err := db.ConnectDB("yaml", "test_data/conv_verify.yaml", db.DefaultMaxOpenConn, options.Default())
+			dbutil.InitDBWithSchemas("yaml", "test_data/conv_verify.yaml", db.DefaultTestInitDBParams())
+			verifyDB, err := dbutil.ConnectDB("yaml", "test_data/conv_verify.yaml", db.DefaultMaxOpenConn, options.Default())
 			Expect(err).ToNot(HaveOccurred())
 			defer os.Remove("test_data/conv_verify.yaml")
 
-			Expect(db.CopyDBResources(inDB, outDB, true)).To(Succeed())
+			Expect(dbutil.CopyDBResources(inDB, outDB, true)).To(Succeed())
 
-			Expect(db.CopyDBResources(outDB, verifyDB, true)).To(Succeed())
+			Expect(dbutil.CopyDBResources(outDB, verifyDB, true)).To(Succeed())
 
-			inTx, err := inDB.Begin()
+			inTx, err := inDB.BeginTx()
 			Expect(err).ToNot(HaveOccurred())
 			defer inTx.Close()
 
 			// SQL returns different types than JSON/YAML Database
 			// So we need to move it back again so that DeepEqual would work correctly
-			verifyTx, err := verifyDB.Begin()
+			verifyTx, err := verifyDB.BeginTx()
 			Expect(err).ToNot(HaveOccurred())
 			defer verifyTx.Close()
 
@@ -412,10 +416,10 @@ var _ = Describe("Database operation test", func() {
 				if s.Metadata["type"] == "metaschema" {
 					continue
 				}
-				resources, _, err := inTx.List(s, nil, nil, nil)
+				resources, _, err := inTx.List(ctx, s, nil, nil, nil)
 				Expect(err).ToNot(HaveOccurred())
 				for _, inResource := range resources {
-					outResource, err := verifyTx.Fetch(s, transaction.Filter{"id": inResource.ID()}, nil)
+					outResource, err := verifyTx.Fetch(ctx, s, transaction.Filter{"id": inResource.ID()}, nil)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(outResource).To(Equal(inResource))
 				}
@@ -423,41 +427,41 @@ var _ = Describe("Database operation test", func() {
 		})
 
 		It("Should not override existing rows", func() {
-			inDB, err := db.ConnectDB("yaml", "test_data/conv_in.yaml", db.DefaultMaxOpenConn, options.Default())
+			inDB, err := dbutil.ConnectDB("yaml", "test_data/conv_in.yaml", db.DefaultMaxOpenConn, options.Default())
 			Expect(err).ToNot(HaveOccurred())
 			defer os.Remove("test_data/conv_in.db")
 
-			db.InitDBWithSchemas("sqlite3", "test_data/conv_out.db", db.DefaultTestInitDBParams())
-			outDB, err := db.ConnectDB("sqlite3", "test_data/conv_out.db", db.DefaultMaxOpenConn, options.Default())
+			dbutil.InitDBWithSchemas("sqlite3", "test_data/conv_out.db", db.DefaultTestInitDBParams())
+			outDB, err := dbutil.ConnectDB("sqlite3", "test_data/conv_out.db", db.DefaultMaxOpenConn, options.Default())
 			Expect(err).ToNot(HaveOccurred())
 			defer os.Remove("test_data/conv_out.db")
 
 			Expect(err).ToNot(HaveOccurred())
 			defer os.Remove("test_data/conv_verify.yaml")
 
-			Expect(db.CopyDBResources(inDB, outDB, false)).To(Succeed())
+			Expect(dbutil.CopyDBResources(inDB, outDB, false)).To(Succeed())
 			subnetSchema, _ := manager.Schema("subnet")
 
 			// Update some data
-			tx, err := outDB.Begin()
+			tx, err := outDB.BeginTx()
 			Expect(err).ToNot(HaveOccurred())
-			list, _, err := tx.List(subnetSchema, map[string]interface{}{
+			list, _, err := tx.List(ctx, subnetSchema, map[string]interface{}{
 				"name": "subnetRedA",
 			}, nil, nil)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(list).To(HaveLen(1))
 			subnet := list[0]
 			subnet.Data()["description"] = "Updated description"
-			err = tx.Update(subnet)
+			err = tx.Update(ctx, subnet)
 			Expect(err).ToNot(HaveOccurred())
 			tx.Commit()
 			tx.Close()
 
-			Expect(db.CopyDBResources(inDB, outDB, false)).To(Succeed())
+			Expect(dbutil.CopyDBResources(inDB, outDB, false)).To(Succeed())
 			// check description of subnetRedA
-			tx, err = outDB.Begin()
+			tx, err = outDB.BeginTx()
 			Expect(err).ToNot(HaveOccurred())
-			list, _, err = tx.List(subnetSchema, map[string]interface{}{
+			list, _, err = tx.List(ctx, subnetSchema, map[string]interface{}{
 				"name": "subnetRedA",
 			}, nil, nil)
 			Expect(err).ToNot(HaveOccurred())
@@ -489,15 +493,15 @@ var _ = Describe("Database operation test", func() {
 		BeforeEach(func() {
 			os.Remove(deadlockDbName)
 			Expect(manager.LoadSchemaFromFile(deadlockDbSchema)).To(Succeed())
-			Expect(db.InitDBWithSchemas(deadlockDbType, deadlockDbName, db.DefaultTestInitDBParams())).To(Succeed())
-			firstConn, err = db.ConnectDB(deadlockDbType, deadlockDbName, db.DefaultMaxOpenConn, connOpts)
+			Expect(dbutil.InitDBWithSchemas(deadlockDbType, deadlockDbName, db.DefaultTestInitDBParams())).To(Succeed())
+			firstConn, err = dbutil.ConnectDB(deadlockDbType, deadlockDbName, db.DefaultMaxOpenConn, connOpts)
 			Expect(err).ToNot(HaveOccurred())
-			secondConn, err = db.ConnectDB(deadlockDbType, deadlockDbName, db.DefaultMaxOpenConn, connOpts)
+			secondConn, err = dbutil.ConnectDB(deadlockDbType, deadlockDbName, db.DefaultMaxOpenConn, connOpts)
 			Expect(err).ToNot(HaveOccurred())
-			initDB, err := db.ConnectDB("yaml", deadlockDbInitial, db.DefaultMaxOpenConn, options.Default())
+			initDB, err := dbutil.ConnectDB("yaml", deadlockDbInitial, db.DefaultMaxOpenConn, options.Default())
 			defer initDB.Close()
 			Expect(err).ToNot(HaveOccurred())
-			Expect(db.CopyDBResources(initDB, firstConn, false)).To(Succeed())
+			Expect(dbutil.CopyDBResources(initDB, firstConn, false)).To(Succeed())
 		})
 
 		AfterEach(func() {
@@ -508,14 +512,14 @@ var _ = Describe("Database operation test", func() {
 
 		It("Within() should retry a few times after a deadlock", func() {
 			deadlockCount := 0
-			Expect(db.Within(firstConn, func(firstTx transaction.Transaction) error {
-				err := db.Within(secondConn, func(secondTx transaction.Transaction) error {
-					Expect(firstTx.Exec("update todos set name = 'other_name' where id = 'first'")).To(Succeed())
+			Expect(db.WithinTx(firstConn, func(firstTx transaction.Transaction) error {
+				err := db.WithinTx(secondConn, func(secondTx transaction.Transaction) error {
+					Expect(firstTx.Exec(ctx, "update todos set name = 'other_name' where id = 'first'")).To(Succeed())
 					deadlockCount++
 					if deadlockCount == 4 {
 						return nil
 					}
-					err := secondTx.Exec("update todos set description = 'other_description' where id = 'second'")
+					err := secondTx.Exec(ctx, "update todos set description = 'other_description' where id = 'second'")
 					Expect(db.IsDeadlock(err)).To(BeTrue())
 					return err
 				})
@@ -539,9 +543,9 @@ var _ = Describe("Database operation test", func() {
 		It("should not panic on DB errors", func() {
 			opts := options.Options{RetryTxCount: 3, RetryTxInterval: 0}
 			mockDB.EXPECT().Options().Return(opts)
-			mockDB.EXPECT().Begin().Return(nil, errors.New("test error"))
+			mockDB.EXPECT().BeginTx().Return(nil, errors.New("test error"))
 
-			err := db.Within(mockDB, func(_ transaction.Transaction) error {
+			err := db.WithinTx(mockDB, func(_ transaction.Transaction) error {
 				panic("should never be called")
 			})
 

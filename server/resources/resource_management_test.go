@@ -16,10 +16,12 @@
 package resources_test
 
 import (
+	context_pkg "context"
 	"fmt"
 	"time"
 
 	"github.com/cloudwan/gohan/db"
+	"github.com/cloudwan/gohan/db/dbutil"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/extension/otto"
@@ -55,15 +57,19 @@ var _ = Describe("Resource manager", func() {
 		events        map[string]string
 		timeLimit     time.Duration
 		timeLimits    []*schema.PathEventTimeLimit
+		ctx           context_pkg.Context
 	)
 
 	BeforeEach(func() {
 		manager = schema.GetManager()
+		ctx = context_pkg.Background()
 
 		adminAuth = schema.NewAuthorization(adminTenantID, "admin", adminTokenID, []string{"admin"}, nil)
 		memberAuth = schema.NewAuthorization(memberTenantID, "demo", memberTokenID, []string{"Member"}, nil)
 		auth = adminAuth
-		context = middleware.Context{}
+		context = middleware.Context{
+			"context": ctx,
+		}
 		events = map[string]string{}
 		timeLimit = time.Duration(10) * time.Second
 		timeLimits = []*schema.PathEventTimeLimit{}
@@ -106,7 +112,7 @@ var _ = Describe("Resource manager", func() {
 	})
 
 	AfterEach(func() {
-		Expect(db.Within(testDB, func(tx transaction.Transaction) error {
+		Expect(db.WithinTx(testDB, func(tx transaction.Transaction) error {
 
 			environmentManager.UnRegisterEnvironment(schemaID)
 			environmentManager.UnRegisterEnvironment("network")
@@ -115,7 +121,7 @@ var _ = Describe("Resource manager", func() {
 				if whitelist[schema.ID] {
 					continue
 				}
-				Expect(clearTable(tx, schema)).ToNot(HaveOccurred(), "Failed to clear table.")
+				Expect(dbutil.ClearTable(ctx, tx, schema)).ToNot(HaveOccurred(), "Failed to clear table.")
 			}
 			return nil
 		})).ToNot(HaveOccurred(), "Failed to create or commit transaction.")
@@ -402,11 +408,11 @@ var _ = Describe("Resource manager", func() {
 				Expect(err).NotTo(HaveOccurred())
 				memberResource, err := manager.LoadResource(currentSchema.ID, memberResourceData)
 				Expect(err).NotTo(HaveOccurred())
-				transaction, err := testDB.Begin()
+				transaction, err := testDB.BeginTx()
 				Expect(err).NotTo(HaveOccurred())
 				defer transaction.Close()
-				Expect(transaction.Create(adminResource)).To(Succeed())
-				Expect(transaction.Create(memberResource)).To(Succeed())
+				Expect(transaction.Create(ctx, adminResource)).To(Succeed())
+				Expect(transaction.Create(ctx, memberResource)).To(Succeed())
 				Expect(transaction.Commit()).To(Succeed())
 			})
 
@@ -565,11 +571,11 @@ var _ = Describe("Resource manager", func() {
 				Expect(err).NotTo(HaveOccurred())
 				memberResource, err := manager.LoadResource(currentSchema.ID, memberResourceData)
 				Expect(err).NotTo(HaveOccurred())
-				transaction, err := testDB.Begin()
+				transaction, err := testDB.BeginTx()
 				Expect(err).NotTo(HaveOccurred())
 				defer transaction.Close()
-				Expect(transaction.Create(adminResource)).To(Succeed())
-				Expect(transaction.Create(memberResource)).To(Succeed())
+				Expect(transaction.Create(ctx, adminResource)).To(Succeed())
+				Expect(transaction.Create(ctx, memberResource)).To(Succeed())
 				Expect(transaction.Commit()).To(Succeed())
 			})
 
@@ -820,11 +826,11 @@ var _ = Describe("Resource manager", func() {
 				Expect(err).NotTo(HaveOccurred())
 				memberResource, err := manager.LoadResource(currentSchema.ID, memberResourceData)
 				Expect(err).NotTo(HaveOccurred())
-				transaction, err := testDB.Begin()
+				transaction, err := testDB.BeginTx()
 				Expect(err).NotTo(HaveOccurred())
 				defer transaction.Close()
-				Expect(transaction.Create(adminResource)).To(Succeed())
-				Expect(transaction.Create(memberResource)).To(Succeed())
+				Expect(transaction.Create(ctx, adminResource)).To(Succeed())
+				Expect(transaction.Create(ctx, memberResource)).To(Succeed())
 				Expect(transaction.Commit()).To(Succeed())
 			})
 
@@ -1128,11 +1134,11 @@ var _ = Describe("Resource manager", func() {
 				Expect(err).NotTo(HaveOccurred())
 				memberResource, err := manager.LoadResource(currentSchema.ID, memberResourceData)
 				Expect(err).NotTo(HaveOccurred())
-				transaction, err := testDB.Begin()
+				transaction, err := testDB.BeginTx()
 				Expect(err).NotTo(HaveOccurred())
 				defer transaction.Close()
-				Expect(transaction.Create(adminResource)).To(Succeed())
-				Expect(transaction.Create(memberResource)).To(Succeed())
+				Expect(transaction.Create(ctx, adminResource)).To(Succeed())
+				Expect(transaction.Create(ctx, memberResource)).To(Succeed())
 				Expect(transaction.Commit()).To(Succeed())
 			})
 
@@ -1274,11 +1280,11 @@ var _ = Describe("Resource manager", func() {
 				Expect(err).NotTo(HaveOccurred())
 				memberResource, err := manager.LoadResource(currentSchema.ID, memberResourceData)
 				Expect(err).NotTo(HaveOccurred())
-				transaction, err := testDB.Begin()
+				transaction, err := testDB.BeginTx()
 				Expect(err).NotTo(HaveOccurred())
 				defer transaction.Close()
-				Expect(transaction.Create(adminResource)).To(Succeed())
-				Expect(transaction.Create(memberResource)).To(Succeed())
+				Expect(transaction.Create(ctx, adminResource)).To(Succeed())
+				Expect(transaction.Create(ctx, memberResource)).To(Succeed())
 				Expect(transaction.Commit()).To(Succeed())
 			})
 
@@ -1776,11 +1782,11 @@ var _ = Describe("Resource manager", func() {
 				"test_integer": 1,
 				"test_bool":    false,
 			}
-			listContext = middleware.Context{}
-			showContext = middleware.Context{}
-			deleteContext = middleware.Context{}
-			createContext = middleware.Context{}
-			updateContext = middleware.Context{}
+			listContext = makeContext()
+			showContext = makeContext()
+			deleteContext = makeContext()
+			createContext = makeContext()
+			updateContext = makeContext()
 			fakeIdentity = &middleware.FakeIdentity{}
 		})
 
@@ -1895,3 +1901,7 @@ var _ = Describe("Resource manager", func() {
 		})
 	})
 })
+
+func makeContext() middleware.Context {
+	return middleware.Context{"context": context_pkg.Background()}
+}

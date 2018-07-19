@@ -332,9 +332,11 @@ func (watcher *SyncWatcher) runExtensionOnSync(response *gohan_sync.Event, env e
 	defer watcher.measureSyncTime(time.Now(), response.Action)
 
 	context := map[string]interface{}{
-		"action": response.Action,
-		"data":   response.Data,
-		"key":    response.Key,
+		"action":   response.Action,
+		"data":     response.Data,
+		"key":      response.Key,
+		"context":  context.TODO(), // change to proper context after SyncWatcher refactoring towards contexts
+		"trace_id": util.NewTraceID(),
 	}
 	if err := env.HandleEvent("notification", context); err != nil {
 		log.Warning(fmt.Sprintf("extension error: %s", err))

@@ -16,12 +16,14 @@
 package sql_test
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 
 	"github.com/cloudwan/gohan/db"
+	"github.com/cloudwan/gohan/db/dbutil"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/pagination"
 	. "github.com/cloudwan/gohan/db/sql"
@@ -42,6 +44,7 @@ var _ = Describe("Sql", func() {
 		tx         transaction.Transaction
 		sqlConn    *DB
 		testSchema *schema.Schema
+		ctx        context.Context
 	)
 
 	BeforeEach(func() {
@@ -54,19 +57,21 @@ var _ = Describe("Sql", func() {
 			dbType = "sqlite3"
 		}
 
+		ctx = context.Background()
+
 		manager := schema.GetManager()
-		dbc, err := db.ConnectDB(dbType, conn, db.DefaultMaxOpenConn, options.Default())
+		dbc, err := dbutil.ConnectDB(dbType, conn, db.DefaultMaxOpenConn, options.Default())
 		sqlConn = dbc.(*DB)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(manager.LoadSchemasFromFiles(
 			"../../etc/schema/gohan.json", "../../tests/test_abstract_schema.yaml", "../../tests/test_schema.yaml")).To(Succeed())
-		db.InitDBWithSchemas(dbType, conn, db.DefaultTestInitDBParams())
+		dbutil.InitDBWithSchemas(dbType, conn, db.DefaultTestInitDBParams())
 		// Insert fixture data
-		fixtureDB, err := db.ConnectDB("json", testFixtures, db.DefaultMaxOpenConn, options.Default())
+		fixtureDB, err := dbutil.ConnectDB("json", testFixtures, db.DefaultMaxOpenConn, options.Default())
 		Expect(err).ToNot(HaveOccurred())
-		db.CopyDBResources(fixtureDB, dbc, true)
+		dbutil.CopyDBResources(fixtureDB, dbc, true)
 
-		tx, err = dbc.Begin()
+		tx, err = dbc.BeginTx()
 		Expect(err).ToNot(HaveOccurred())
 
 		var ok bool
@@ -97,12 +102,12 @@ var _ = Describe("Sql", func() {
 
 		It("Empty key doesn't exclude limit/offset pagination", func() {
 
-			Expect(tx.Exec("INSERT INTO `tests` (`id`, `tenant_id`) values ('id1', 'tenant1')")).To(Succeed())
-			Expect(tx.Exec("INSERT INTO `tests` (`id`, `tenant_id`) values ('id2', 'tenant2')")).To(Succeed())
+			Expect(tx.Exec(ctx, "INSERT INTO `tests` (`id`, `tenant_id`) values ('id1', 'tenant1')")).To(Succeed())
+			Expect(tx.Exec(ctx, "INSERT INTO `tests` (`id`, `tenant_id`) values ('id2', 'tenant2')")).To(Succeed())
 
 			pg, err := pagination.NewPaginator(pagination.OptionLimit(1))
 			Expect(err).To(Succeed())
-			results, _, err := tx.List(s, map[string]interface{}{}, nil, pg)
+			results, _, err := tx.List(ctx, s, map[string]interface{}{}, nil, pg)
 			Expect(err).To(Succeed())
 			Expect(len(results)).To(Equal(1))
 		})
@@ -167,7 +172,7 @@ var _ = Describe("Sql", func() {
 					strings.Join(MakeColumns(s, s.GetDbTableName(), nil, false), ", "),
 					s.GetDbTableName(),
 				)
-				results, err := tx.Query(s, query, []interface{}{})
+				results, err := tx.Query(ctx, s, query, []interface{}{})
 				Expect(err).ToNot(HaveOccurred())
 				Expect(len(results)).To(Equal(4))
 
@@ -191,7 +196,7 @@ var _ = Describe("Sql", func() {
 					strings.Join(MakeColumns(s, s.GetDbTableName(), nil, false), ", "),
 					s.GetDbTableName(),
 				)
-				results, err := tx.Query(s, query, []interface{}{"tenant0"})
+				results, err := tx.Query(ctx, s, query, []interface{}{"tenant0"})
 				Expect(err).ToNot(HaveOccurred())
 				Expect(len(results)).To(Equal(2))
 
@@ -215,7 +220,7 @@ var _ = Describe("Sql", func() {
 					strings.Join(MakeColumns(s, s.GetDbTableName(), nil, false), ", "),
 					s.GetDbTableName(),
 				)
-				results, err := tx.Query(s, query, []interface{}{"tenant0", "obj1"})
+				results, err := tx.Query(ctx, s, query, []interface{}{"tenant0", "obj1"})
 				Expect(err).ToNot(HaveOccurred())
 				Expect(len(results)).To(Equal(1))
 

@@ -20,6 +20,7 @@ import (
 	"os"
 
 	"github.com/cloudwan/gohan/db"
+	"github.com/cloudwan/gohan/db/dbutil"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/extension/goext"
 	"github.com/cloudwan/gohan/extension/goplugin"
@@ -42,7 +43,7 @@ var _ = Describe("Transaction", func() {
 	BeforeEach(func() {
 		manager := schema.GetManager()
 		Expect(manager.LoadSchemaFromFile(SchemaPath)).To(Succeed())
-		db, err := db.ConnectDB(DbType, DbFile, db.DefaultMaxOpenConn, options.Default())
+		db, err := dbutil.ConnectDB(DbType, DbFile, db.DefaultMaxOpenConn, options.Default())
 		Expect(err).To(BeNil())
 		env = goplugin.NewEnvironment("test", nil, nil)
 		env.SetDatabase(db)
@@ -66,7 +67,7 @@ var _ = Describe("Transaction", func() {
 			Expect(env.Start()).To(Succeed())
 			testSchema = env.Schemas().Find("test")
 			Expect(testSchema).To(Not(BeNil()))
-			Expect(db.InitDBWithSchemas(DbType, DbFile, db.DefaultTestInitDBParams())).To(Succeed())
+			Expect(dbutil.InitDBWithSchemas(DbType, DbFile, db.DefaultTestInitDBParams())).To(Succeed())
 
 			tx, err = env.Database().Begin()
 			Expect(err).To(BeNil())

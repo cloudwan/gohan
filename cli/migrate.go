@@ -17,6 +17,7 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -25,6 +26,7 @@ import (
 	"time"
 
 	"github.com/cloudwan/gohan/db"
+	"github.com/cloudwan/gohan/db/dbutil"
 	"github.com/cloudwan/gohan/db/migration"
 	db_options "github.com/cloudwan/gohan/db/options"
 	db_sql "github.com/cloudwan/gohan/db/sql"
@@ -225,7 +227,7 @@ func actionMigrateCreateInitialMigration() func(context *cli.Context) {
 	}
 }
 
-func publishEventWithOptions(envName string, modifiedSchemas []string, eventName string, syncETCDEvent bool, eventTimeout time.Duration, db *server.DbSyncWrapper, manager *schema.Manager, envManager *extension.Manager, sync sync.Sync, ident middleware.IdentityService) {
+func publishEventWithOptions(envName string, modifiedSchemas []string, eventName string, syncETCDEvent bool, eventTimeout time.Duration, db db.DB, manager *schema.Manager, envManager *extension.Manager, sync sync.Sync, ident middleware.IdentityService) {
 	deadline := time.Now().Add(eventTimeout)
 
 	for _, s := range manager.Schemas() {
@@ -268,6 +270,8 @@ func publishEventWithOptions(envName string, modifiedSchemas []string, eventName
 		eventContext["sync"] = sync
 		eventContext["db"] = db
 		eventContext["identity_service"] = ident
+		eventContext["context"] = context.Background()
+		eventContext["trace_id"] = util.NewTraceID()
 
 		if err := env.HandleEvent(eventName, eventContext); err != nil {
 			log.Fatalf("Failed to handle event '%s': %s", eventName, err)
@@ -284,13 +288,13 @@ func publishEventWithOptions(envName string, modifiedSchemas []string, eventName
 func publishEvent(envName string, modifiedSchemas []string, eventName string, syncETCDEvent bool, eventTimeout time.Duration) error {
 	config := util.GetConfig()
 
-	rawDB, err := db.CreateFromConfig(config)
+	rawDB, err := dbutil.CreateFromConfig(config)
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	db := &server.DbSyncWrapper{DB: rawDB}
+	db := server.NewDbSyncWrapper(rawDB)
 
 	sync, err := sync_util.CreateFromConfig(config)
 

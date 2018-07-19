@@ -68,15 +68,8 @@ func (db *DB) Close() {
 	// nothing to do
 }
 
-//Begin connection starts new transaction
-func (db *DB) Begin() (transaction.Transaction, error) {
-	return &Transaction{
-		db: db,
-	}, nil
-}
-
 //BeginTx connection starts new transaction with given transaction options
-func (db *DB) BeginTx(_ context.Context, _ *transaction.TxOptions) (transaction.Transaction, error) {
+func (db *DB) BeginTx(options ...transaction.Option) (transaction.Transaction, error) {
 	return &Transaction{
 		db: db,
 	}, nil
@@ -137,12 +130,8 @@ func (tx *Transaction) Commit() error {
 	return nil
 }
 
-func (tx *Transaction) CreateContext(_ context.Context, resource *schema.Resource) error {
-	return tx.Create(resource)
-}
-
 //Create create resource in the db
-func (tx *Transaction) Create(resource *schema.Resource) error {
+func (tx *Transaction) Create(_ context.Context, resource *schema.Resource) error {
 	db := tx.db
 	db.load()
 	s := resource.Schema()
@@ -153,12 +142,8 @@ func (tx *Transaction) Create(resource *schema.Resource) error {
 	return nil
 }
 
-func (tx *Transaction) UpdateContext(_ context.Context, resource *schema.Resource) error {
-	return tx.Update(resource)
-}
-
 //Update update resource in the db
-func (tx *Transaction) Update(resource *schema.Resource) error {
+func (tx *Transaction) Update(_ context.Context, resource *schema.Resource) error {
 	db := tx.db
 	db.load()
 	s := resource.Schema()
@@ -176,21 +161,13 @@ func (tx *Transaction) Update(resource *schema.Resource) error {
 	return nil
 }
 
-func (tx *Transaction) StateUpdateContext(_ context.Context, resource *schema.Resource, state *transaction.ResourceState) error {
-	return tx.StateUpdate(resource, state)
-}
-
 //StateUpdate update resource state
-func (tx *Transaction) StateUpdate(resource *schema.Resource, _ *transaction.ResourceState) error {
-	return tx.Update(resource)
-}
-
-func (tx *Transaction) DeleteContext(_ context.Context, s *schema.Schema, resourceID interface{}) error {
-	return tx.Delete(s, resourceID)
+func (tx *Transaction) StateUpdate(ctx context.Context, resource *schema.Resource, _ *transaction.ResourceState) error {
+	return tx.Update(ctx, resource)
 }
 
 //Delete delete resource from db
-func (tx *Transaction) Delete(s *schema.Schema, resourceID interface{}) error {
+func (tx *Transaction) Delete(_ context.Context, s *schema.Schema, resourceID interface{}) error {
 	db := tx.db
 	db.load()
 	table := db.getTable(s)
@@ -240,12 +217,8 @@ func (s byPaginator) Less(i, j int) bool {
 	return less
 }
 
-func (tx *Transaction) ListContext(_ context.Context, s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions, pg *pagination.Paginator) (list []*schema.Resource, total uint64, err error) {
-	return tx.List(s, filter, options, pg)
-}
-
 //List resources in the db
-func (tx *Transaction) List(s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions, pg *pagination.Paginator) (list []*schema.Resource, total uint64, err error) {
+func (tx *Transaction) List(_ context.Context, s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions, pg *pagination.Paginator) (list []*schema.Resource, total uint64, err error) {
 	db := tx.db
 	db.load()
 	table := db.getTable(s)
@@ -310,27 +283,23 @@ func (tx *Transaction) List(s *schema.Schema, filter transaction.Filter, options
 	return
 }
 
-func (tx *Transaction) LockListContext(_ context.Context, s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions, pg *pagination.Paginator, policy schema.LockPolicy) (list []*schema.Resource, total uint64, err error) {
-	return tx.LockList(s, filter, options, pg, policy)
-}
-
-func (tx *Transaction) CountContext(_ context.Context, s *schema.Schema, filter transaction.Filter) (uint64, error) {
-	_, total, err := tx.List(s, filter, nil, nil)
+func (tx *Transaction) Count(ctx context.Context, s *schema.Schema, filter transaction.Filter) (uint64, error) {
+	_, total, err := tx.List(ctx, s, filter, nil, nil)
 	return total, err
 }
 
 // LockList locks resources in the db. Not supported in file db
-func (tx *Transaction) LockList(s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions, pg *pagination.Paginator, policy schema.LockPolicy) (list []*schema.Resource, total uint64, err error) {
-	return tx.List(s, filter, options, pg)
+func (tx *Transaction) LockList(ctx context.Context, s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions, pg *pagination.Paginator, policy schema.LockPolicy) (list []*schema.Resource, total uint64, err error) {
+	return tx.List(ctx, s, filter, options, pg)
 }
 
-func (tx *Transaction) FetchContext(_ context.Context, s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions) (*schema.Resource, error) {
-	return tx.Fetch(s, filter, options)
+func (tx *Transaction) FetchContext(ctx context.Context, s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions) (*schema.Resource, error) {
+	return tx.Fetch(ctx, s, filter, options)
 }
 
 //Fetch resources by ID in the db
-func (tx *Transaction) Fetch(s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions) (*schema.Resource, error) {
-	list, _, err := tx.List(s, filter, options, nil)
+func (tx *Transaction) Fetch(ctx context.Context, s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions) (*schema.Resource, error) {
+	list, _, err := tx.List(ctx, s, filter, options, nil)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to fetch %s: %s", filter, err)
 	}
@@ -340,21 +309,13 @@ func (tx *Transaction) Fetch(s *schema.Schema, filter transaction.Filter, option
 	return list[0], nil
 }
 
-func (tx *Transaction) LockFetchContext(_ context.Context, s *schema.Schema, filter transaction.Filter, policy schema.LockPolicy, options *transaction.ViewOptions) (*schema.Resource, error) {
-	return tx.LockFetch(s, filter, policy, options)
-}
-
 // LockFetch fetches & locks a resource. Not supported in file db
-func (tx *Transaction) LockFetch(s *schema.Schema, filter transaction.Filter, policy schema.LockPolicy, options *transaction.ViewOptions) (*schema.Resource, error) {
-	return tx.Fetch(s, filter, options)
-}
-
-func (tx *Transaction) StateFetchContext(_ context.Context, s *schema.Schema, filter transaction.Filter) (state transaction.ResourceState, err error) {
-	return tx.StateFetch(s, filter)
+func (tx *Transaction) LockFetch(ctx context.Context, s *schema.Schema, filter transaction.Filter, policy schema.LockPolicy, options *transaction.ViewOptions) (*schema.Resource, error) {
+	return tx.Fetch(ctx, s, filter, options)
 }
 
 //StateFetch is not supported in file databases
-func (tx *Transaction) StateFetch(s *schema.Schema, filter transaction.Filter) (state transaction.ResourceState, err error) {
+func (tx *Transaction) StateFetch(_ context.Context, s *schema.Schema, filter transaction.Filter) (state transaction.ResourceState, err error) {
 	err = fmt.Errorf("StateFetch is not supported for file databases")
 	return
 }
@@ -369,21 +330,13 @@ func (tx *Transaction) RawTransaction() *sqlx.Tx {
 	panic("Not implemented")
 }
 
-func (tx *Transaction) QueryContext(_ context.Context, s *schema.Schema, query string, arguments []interface{}) (list []*schema.Resource, err error) {
-	return tx.Query(s, query, arguments)
-}
-
 // Query with raw string
-func (tx *Transaction) Query(s *schema.Schema, query string, arguments []interface{}) (list []*schema.Resource, err error) {
+func (tx *Transaction) Query(_ context.Context, s *schema.Schema, query string, arguments []interface{}) (list []*schema.Resource, err error) {
 	panic("Not implemented")
 }
 
-func (tx *Transaction) ExecContext(_ context.Context, sql string, args ...interface{}) error {
-	return tx.Exec(sql, args...)
-}
-
 // Exec executes sql in transaction
-func (tx *Transaction) Exec(sql string, args ...interface{}) error {
+func (tx *Transaction) Exec(_ context.Context, sql string, args ...interface{}) error {
 	panic("Not implemented")
 }
 

@@ -20,6 +20,9 @@ import (
 
 	"github.com/cloudwan/gohan/extension/gohanscript"
 	//Import gohan script lib
+	"context"
+
+	"github.com/cloudwan/gohan/db/dbutil"
 	"github.com/cloudwan/gohan/extension"
 	_ "github.com/cloudwan/gohan/extension/gohanscript/autogen"
 	"github.com/cloudwan/gohan/schema"
@@ -40,14 +43,14 @@ var _ = Describe("Gohanscript extension manager", func() {
 	})
 
 	AfterEach(func() {
-		tx, err := testDB.Begin()
+		tx, err := testDB.BeginTx()
 		Expect(err).ToNot(HaveOccurred(), "Failed to create transaction.")
 		defer tx.Close()
 		for _, schema := range schema.GetManager().Schemas() {
 			if whitelist[schema.ID] {
 				continue
 			}
-			err = clearTable(tx, schema)
+			err = dbutil.ClearTable(context.Background(), tx, schema)
 			Expect(err).ToNot(HaveOccurred(), "Failed to clear table.")
 		}
 		err = tx.Commit()

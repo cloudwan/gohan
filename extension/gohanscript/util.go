@@ -29,7 +29,7 @@ import (
 	"github.com/nati/yaml"
 )
 
-var log = l.NewLoggerForModule("gohanscript")
+var log = l.NewLogger(l.ModuleName("gohanscript"))
 
 func init() {
 	l.SetUpBasicLogging(os.Stderr, l.DefaultFormat)

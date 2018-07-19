@@ -33,7 +33,7 @@ import (
 )
 
 var (
-	log                       = l.NewLoggerForModule("gohan.cli.client")
+	log                       = l.NewLogger(l.ModuleName("gohan.cli.client"))
 	logOutput       io.Writer = os.Stderr
 	defaultCommands           = []string{"list", "show", "create", "set", "delete"}
 )

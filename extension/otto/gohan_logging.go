@@ -46,7 +46,7 @@ func init() {
 				if err != nil {
 					ThrowOttoException(&call, "Log module: %v", err)
 				}
-				logger := l.NewLoggerForModule(module)
+				logger := l.NewLogger(l.ModuleName(module))
 
 				intLevel, err := GetInt64(call.Argument(1))
 				if err != nil {

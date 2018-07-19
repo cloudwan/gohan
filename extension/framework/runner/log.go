@@ -4,4 +4,4 @@ import (
 	l "github.com/cloudwan/gohan/log"
 )
 
-var log = l.NewLoggerForModule("extest")
+var log = l.NewLogger(l.ModuleName("extest"))

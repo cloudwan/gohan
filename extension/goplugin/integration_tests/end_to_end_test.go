@@ -17,6 +17,7 @@ package goplugin_integration_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -26,6 +27,7 @@ import (
 	"time"
 
 	"github.com/cloudwan/gohan/db"
+	"github.com/cloudwan/gohan/db/dbutil"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
@@ -52,6 +54,7 @@ var _ = Describe("Environment", func() {
 			"extension": true,
 			"namespace": true,
 		}
+		ctx context.Context
 	)
 
 	startTestServer := func(config string) error {
@@ -89,7 +92,7 @@ var _ = Describe("Environment", func() {
 	BeforeSuite(func() {
 		removeFileDb(conn)
 		var err error
-		testDB, err = db.ConnectDB(dbType, conn, db.DefaultMaxOpenConn, options.Default())
+		testDB, err = dbutil.ConnectDB(dbType, conn, db.DefaultMaxOpenConn, options.Default())
 		Expect(err).ToNot(HaveOccurred(), "Failed to connect database.")
 		err = startTestServer("../test_data/test_config.yaml")
 		Expect(err).ToNot(HaveOccurred(), "Failed to start test server.")
@@ -100,13 +103,17 @@ var _ = Describe("Environment", func() {
 		removeFileDb(conn)
 	})
 
+	BeforeEach(func() {
+		ctx = context.Background()
+	})
+
 	AfterEach(func() {
-		Expect(db.Within(testDB, func(tx transaction.Transaction) error {
+		Expect(db.WithinTx(testDB, func(tx transaction.Transaction) error {
 			for _, schema := range schema.GetManager().Schemas() {
 				if whitelist[schema.ID] {
 					continue
 				}
-				Expect(clearTable(tx, schema)).ToNot(HaveOccurred(), "Failed to clear table.")
+				Expect(dbutil.ClearTable(ctx, tx, schema)).ToNot(HaveOccurred(), "Failed to clear table.")
 			}
 			return nil
 		})).ToNot(HaveOccurred(), "Failed to create or commit transaction.")
@@ -255,40 +262,6 @@ func httpRequest(method, url, token string, postData interface{}) (interface{}, 
 	decoder := json.NewDecoder(resp.Body)
 	decoder.Decode(&data)
 	return data, resp
-}
-
-func clearTable(tx transaction.Transaction, s *schema.Schema) error {
-	if s.IsAbstract() {
-		return nil
-	}
-	for _, schema := range schema.GetManager().Schemas() {
-		if schema.ParentSchema == s {
-			err := clearTable(tx, schema)
-			if err != nil {
-				return err
-			}
-		} else {
-			for _, property := range schema.Properties {
-				if property.Relation == s.Singular {
-					err := clearTable(tx, schema)
-					if err != nil {
-						return err
-					}
-				}
-			}
-		}
-	}
-	resources, _, err := tx.List(s, nil, nil, nil)
-	if err != nil {
-		return err
-	}
-	for _, resource := range resources {
-		err = tx.Delete(s, resource.ID())
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func removeFileDb(fileName string) {

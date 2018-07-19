@@ -16,7 +16,6 @@
 package runner
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -26,6 +25,7 @@ import (
 	"github.com/robertkrimen/otto"
 
 	"github.com/cloudwan/gohan/db"
+	"github.com/cloudwan/gohan/db/dbutil"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/extension"
@@ -110,7 +110,7 @@ func (env *Environment) InitializeEnvironment() error {
 		return fmt.Errorf("Failed to load extensions for '%s': %s", env.testFileName, err)
 	}
 
-	if err = db.InitDBWithSchemas("sqlite3", env.memoryDbConn(), db.DefaultTestInitDBParams()); err != nil {
+	if err = dbutil.InitDBWithSchemas("sqlite3", env.memoryDbConn(), db.DefaultTestInitDBParams()); err != nil {
 		schema.ClearManager()
 		return fmt.Errorf("Failed to init DB: %s", err)
 	}
@@ -154,7 +154,7 @@ func (env *Environment) CheckAllMockCallsMade() error {
 }
 
 func newDBConnection(dbfilename string) (db.DB, error) {
-	connection, err := db.ConnectDB("sqlite3", dbfilename, db.DefaultMaxOpenConn, options.Default())
+	connection, err := dbutil.ConnectDB("sqlite3", dbfilename, db.DefaultMaxOpenConn, options.Default())
 	if err != nil {
 		return nil, err
 	}
@@ -193,8 +193,7 @@ func (env *Environment) addTestingAPI() {
 			if len(call.ArgumentList) > 1 {
 				isolationLevel = transaction.Type(call.Argument(1).String())
 			}
-			txOptions := &transaction.TxOptions{IsolationLevel: isolationLevel}
-			tx, err := env.getTransaction(newTransaction, txOptions)
+			tx, err := env.getTransaction(newTransaction, isolationLevel)
 			if err != nil {
 				gohan_otto.ThrowOttoException(&call, err.Error())
 			}
@@ -202,8 +201,7 @@ func (env *Environment) addTestingAPI() {
 			return transactionValue
 		},
 		"CommitMockTransaction": func(call otto.FunctionCall) otto.Value {
-			txOptions := &transaction.TxOptions{IsolationLevel: transaction.RepeatableRead}
-			tx, err := env.getTransaction(false, txOptions)
+			tx, err := env.getTransaction(false, transaction.RepeatableRead)
 			if err != nil {
 				gohan_otto.ThrowOttoException(&call, err.Error())
 			}
@@ -236,18 +234,18 @@ func (env *Environment) addTestingAPI() {
 	env.mockFunction("gohan_sync_watch")
 }
 
-func (env *Environment) getTransaction(isNew bool, options *transaction.TxOptions) (transaction.Transaction, error) {
+func (env *Environment) getTransaction(isNew bool, isolationLevel transaction.Type) (transaction.Transaction, error) {
 	if !isNew {
 		for _, tx := range env.dbTransactions {
 			if !tx.Closed() {
-				if tx.GetIsolationLevel() == options.IsolationLevel {
+				if tx.GetIsolationLevel() == isolationLevel {
 					return tx, nil
 				}
-				return nil, fmt.Errorf("Requested %s isolation level, got %s", options.IsolationLevel, tx.GetIsolationLevel())
+				return nil, fmt.Errorf("Requested %s isolation level, got %s", isolationLevel, tx.GetIsolationLevel())
 			}
 		}
 	}
-	tx, _ := env.dbConnection.BeginTx(context.Background(), options)
+	tx, _ := env.dbConnection.BeginTx(transaction.IsolationLevel(isolationLevel))
 	env.dbTransactions = append(env.dbTransactions, tx)
 	return tx, nil
 }
