@@ -95,7 +95,7 @@ func (resource *Resource) Values() []interface{} {
 }
 
 //NewResource is a constructor for a resource
-func NewResource(schema *Schema, properties map[string]interface{}) (*Resource, error) {
+func NewResource(schema *Schema, properties map[string]interface{}) *Resource {
 	resource := &Resource{
 		schema:     schema,
 		properties: properties,
@@ -108,7 +108,7 @@ func NewResource(schema *Schema, properties map[string]interface{}) (*Resource, 
 			resource.SetParentID(parentIDStr)
 		}
 	}
-	return resource, nil
+	return resource
 }
 
 //String return string form representation

@@ -45,12 +45,7 @@ func (db *Initializer) List(s *schema.Schema) (list []*schema.Resource, total ui
 	table := db.getTable(s)
 	for _, rawData := range table {
 		data := rawData.(map[string]interface{})
-		resource, errLoad := schema.NewResource(s, data)
-		if errLoad != nil {
-			log.Warning("Can't load %s %s", resource, errLoad)
-			err = errLoad
-			return
-		}
+		resource := schema.NewResource(s, data)
 		list = append(list, resource)
 	}
 	total = uint64(len(list))

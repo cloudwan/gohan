@@ -270,7 +270,7 @@ func (manager *Manager) LoadResource(schemaID string, dataMap map[string]interfa
 	defer manager.mu.RUnlock()
 
 	if schema, ok := manager.schema(schemaID); ok {
-		return NewResource(schema, dataMap)
+		return NewResource(schema, dataMap), nil
 	}
 	return nil, fmt.Errorf("Schema Not Found: %s", schemaID)
 }

@@ -139,7 +139,7 @@ func (schema *Schema) ResourceFromMap(context map[string]interface{}) (goext.Res
 	return resource.Interface(), nil
 }
 
-func (schema *Schema) structToResource(resource interface{}) (*gohan_schema.Resource, error) {
+func (schema *Schema) structToResource(resource interface{}) *gohan_schema.Resource {
 	fieldsMap := schema.env.Util().ResourceToMap(resource)
 	return gohan_schema.NewResource(schema.raw, fieldsMap)
 }
@@ -414,13 +414,8 @@ func (schema *Schema) update(rawResource interface{}, requestContext goext.Conte
 	if !isPointer(rawResource) {
 		return ErrNotPointer
 	}
-	var resourceData *gohan_schema.Resource
-	var err error
 
-	if resourceData, err = schema.structToResource(rawResource); err != nil {
-		return err
-	}
-
+	resourceData := schema.structToResource(rawResource)
 	tx := mustGetOpenTransactionFromContext(requestContext)
 
 	mapFromResource := schema.env.Util().ResourceToMap(rawResource)
@@ -430,13 +425,13 @@ func (schema *Schema) update(rawResource interface{}, requestContext goext.Conte
 		WithSchemaID(schema.ID())
 
 	if triggerEvents {
-		if err = schema.env.HandleEvent(string(goext.PreUpdateTx), contextCopy); err != nil {
+		if err := schema.env.HandleEvent(string(goext.PreUpdateTx), contextCopy); err != nil {
 			return err
 		}
 	}
 
 	mapFromContext := contextGetMapResource(contextCopy)
-	if err = tx.Update(goext.GetContext(requestContext), schema, mapFromContext); err != nil {
+	if err := tx.Update(goext.GetContext(requestContext), schema, mapFromContext); err != nil {
 		return err
 	}
 
@@ -446,7 +441,7 @@ func (schema *Schema) update(rawResource interface{}, requestContext goext.Conte
 	}
 
 	if triggerEvents {
-		if err = schema.env.HandleEvent(string(goext.PostUpdateTx), contextCopy); err != nil {
+		if err := schema.env.HandleEvent(string(goext.PostUpdateTx), contextCopy); err != nil {
 			return err
 		}
 	}

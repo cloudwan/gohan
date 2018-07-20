@@ -196,12 +196,11 @@ Developers should specify a list of schema file in the configuration.
 ```yaml
 schemas:
     - "embed://etc/schema/gohan.json"
-    - "embed://etc/extensions/gohan_extension.yaml"
     - "./example_schema.yaml"
 ```
 
 Developers can specify schemas here.
-Note that we always need gohan.json and gohan_extension.yaml for WebUI and CLI.
+Note that we always need gohan.json for WebUI and CLI.
 
 ## Keystone
 
@@ -360,7 +359,6 @@ You can select extension types you use.
     default: javascript
     use:
     - javascript
-    - go
 ```
 
 - extension timelimit

@@ -16,7 +16,6 @@ gen:
 	@echo -e "$(OK_COLOR)==> Generating files$(NO_COLOR)"
 	go-bindata -pkg util -o util/bindata.go \
 	etc/schema/... \
-	etc/extensions/... \
 	etc/templates/... \
 	public/...
 	go fmt util/bindata.go

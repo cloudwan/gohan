@@ -31,7 +31,6 @@ database:
     drop_on_create: true
 schemas:
     - "embed://etc/schema/gohan.json"
-    - "embed://etc/extensions/gohan_extension.yaml"
     - "./test_worker_extension.yaml"
     - "../etc/example_schema.yaml"
 

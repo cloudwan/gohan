@@ -101,7 +101,7 @@ func handleForeignKeyError(err error, dataMap map[string]interface{}) error {
 		ForeignKeyFailed}
 }
 
-func measureRequestTime(timeStarted time.Time, requestType string, schemaID string) {
+func MeasureRequestTime(timeStarted time.Time, requestType string, schemaID string) {
 	metrics.UpdateTimer(timeStarted, "req.%s.%s", schemaID, requestType)
 }
 
@@ -211,7 +211,7 @@ func ValidateAttachmentsForResource(context middleware.Context, resourceSchema *
 
 //GetResources returns specified resources without calling non in_transaction events
 func GetResources(context middleware.Context, dataStore db.DB, resourceSchema *schema.Schema, filter map[string]interface{}, paginator *pagination.Paginator) error {
-	defer measureRequestTime(time.Now(), "get.resources", resourceSchema.ID)
+	defer MeasureRequestTime(time.Now(), "get.resources", resourceSchema.ID)
 	return resourceTransactionWithContext(
 		context, dataStore,
 		transaction.GetIsolationLevel(resourceSchema, schema.ActionRead),
@@ -223,7 +223,7 @@ func GetResources(context middleware.Context, dataStore db.DB, resourceSchema *s
 
 //GetResourcesInTransaction returns specified resources without calling non in_transaction events
 func GetResourcesInTransaction(context middleware.Context, resourceSchema *schema.Schema, filter map[string]interface{}, paginator *pagination.Paginator) error {
-	defer measureRequestTime(time.Now(), "get.resources.in_tx", resourceSchema.ID)
+	defer MeasureRequestTime(time.Now(), "get.resources.in_tx", resourceSchema.ID)
 	mainTransaction := context["transaction"].(transaction.Transaction)
 	response := map[string]interface{}{}
 
@@ -305,10 +305,10 @@ func parseBool(s string, d bool) bool {
 
 // GetMultipleResources returns all resources specified by the schema and query parameters
 func GetMultipleResources(context middleware.Context, dataStore db.DB, resourceSchema *schema.Schema, queryParameters map[string][]string) error {
-	defer measureRequestTime(time.Now(), "get.resources.multiple", resourceSchema.ID)
+	defer MeasureRequestTime(time.Now(), "get.resources.multiple", resourceSchema.ID)
 	log.Debug("Start get multiple resources!!")
 	auth := context["auth"].(schema.Authorization)
-	policy, err := loadPolicy(context, "read", resourceSchema.GetPluralURL(), auth)
+	policy, err := LoadPolicy(context, "read", resourceSchema.GetPluralURL(), auth)
 	if err != nil {
 		return err
 	}
@@ -378,11 +378,11 @@ func verifyQueryParams(resourceSchema *schema.Schema, queryParameters map[string
 
 // GetSingleResource returns the resource specified by the schema and ID
 func GetSingleResource(context middleware.Context, dataStore db.DB, resourceSchema *schema.Schema, resourceID string) error {
-	defer measureRequestTime(time.Now(), "get.single", resourceSchema.ID)
+	defer MeasureRequestTime(time.Now(), "get.single", resourceSchema.ID)
 
 	context["id"] = resourceID
 	auth := context["auth"].(schema.Authorization)
-	policy, err := loadPolicy(
+	policy, err := LoadPolicy(
 		context,
 		"read",
 		strings.Replace(resourceSchema.GetSingleURL(), ":id", resourceID, 1),
@@ -430,7 +430,7 @@ func GetSingleResource(context middleware.Context, dataStore db.DB, resourceSche
 
 //GetSingleResourceInTransaction get resource in single transaction
 func GetSingleResourceInTransaction(context middleware.Context, resourceSchema *schema.Schema, resourceID string, tenantIDs []string) (err error) {
-	defer measureRequestTime(time.Now(), "get.single.in_tx", resourceSchema.ID)
+	defer MeasureRequestTime(time.Now(), "get.single.in_tx", resourceSchema.ID)
 	var options *transaction.ViewOptions
 	r, ok := context["http_request"].(*http.Request)
 	if ok {
@@ -491,12 +491,12 @@ func CreateOrUpdateResource(
 	resourceSchema *schema.Schema,
 	resourceID string, dataMap map[string]interface{},
 ) (bool, error) {
-	defer measureRequestTime(time.Now(), "create_or_update", resourceSchema.ID)
+	defer MeasureRequestTime(time.Now(), "create_or_update", resourceSchema.ID)
 
 	auth := ctx["auth"].(schema.Authorization)
 
 	//LoadPolicy
-	policy, err := loadPolicy(
+	policy, err := LoadPolicy(
 		ctx,
 		"update",
 		strings.Replace(resourceSchema.GetSingleURL(), ":id", resourceID, 1),
@@ -581,7 +581,7 @@ func CreateResource(
 	resourceSchema *schema.Schema,
 	dataMap map[string]interface{},
 ) error {
-	defer measureRequestTime(time.Now(), "create", resourceSchema.ID)
+	defer MeasureRequestTime(time.Now(), "create", resourceSchema.ID)
 	manager := schema.GetManager()
 	// Load environment
 	environmentManager := extension.GetManager()
@@ -593,7 +593,7 @@ func CreateResource(
 	auth := context["auth"].(schema.Authorization)
 
 	//LoadPolicy
-	policy, err := loadPolicy(context, "create", resourceSchema.GetPluralURL(), auth)
+	policy, err := LoadPolicy(context, "create", resourceSchema.GetPluralURL(), auth)
 	if err != nil {
 		return err
 	}
@@ -673,7 +673,7 @@ func CreateResource(
 
 //CreateResourceInTransaction create db resource model in transaction
 func CreateResourceInTransaction(context middleware.Context, resourceSchema *schema.Schema, resource *schema.Resource) error {
-	defer measureRequestTime(time.Now(), "create.in_tx", resource.Schema().ID)
+	defer MeasureRequestTime(time.Now(), "create.in_tx", resource.Schema().ID)
 	manager := schema.GetManager()
 	mainTransaction := context["transaction"].(transaction.Transaction)
 	environmentManager := extension.GetManager()
@@ -725,7 +725,7 @@ func UpdateResource(
 	resourceSchema *schema.Schema,
 	resourceID string, dataMap map[string]interface{},
 ) error {
-	defer measureRequestTime(time.Now(), "update", resourceSchema.ID)
+	defer MeasureRequestTime(time.Now(), "update", resourceSchema.ID)
 	context["id"] = resourceID
 
 	//load environment
@@ -738,7 +738,7 @@ func UpdateResource(
 	auth := context["auth"].(schema.Authorization)
 
 	//load policy
-	policy, err := loadPolicy(
+	policy, err := LoadPolicy(
 		context,
 		"update",
 		strings.Replace(resourceSchema.GetSingleURL(), ":id", resourceID, 1),
@@ -801,7 +801,7 @@ func UpdateResourceInTransaction(
 	context middleware.Context,
 	resourceSchema *schema.Schema, resourceID string,
 	dataMap map[string]interface{}, tenantIDs []string) error {
-	defer measureRequestTime(time.Now(), "update.in_tx", resourceSchema.ID)
+	defer MeasureRequestTime(time.Now(), "update.in_tx", resourceSchema.ID)
 
 	manager := schema.GetManager()
 	mainTransaction := context["transaction"].(transaction.Transaction)
@@ -893,7 +893,7 @@ func DeleteResource(ctx middleware.Context,
 	resourceSchema *schema.Schema,
 	resourceID string,
 ) error {
-	defer measureRequestTime(time.Now(), "delete", resourceSchema.ID)
+	defer MeasureRequestTime(time.Now(), "delete", resourceSchema.ID)
 	ctx["id"] = resourceID
 	environmentManager := extension.GetManager()
 	environment, ok := environmentManager.GetEnvironment(resourceSchema.ID)
@@ -961,7 +961,7 @@ func fetchResource(resourceID string, resourceSchema *schema.Schema, tx transact
 
 func fetchResourceForAction(action string, auth schema.Authorization, resourceID string, resourceSchema *schema.Schema,
 	tx transaction.Transaction, context middleware.Context) (*schema.Resource, error) {
-	policy, err := loadPolicy(
+	policy, err := LoadPolicy(
 		context,
 		action,
 		strings.Replace(resourceSchema.GetSingleURL(), ":id", resourceID, 1),
@@ -988,7 +988,7 @@ func fetchResourceForAction(action string, auth schema.Authorization, resourceID
 
 //DeleteResourceInTransaction deletes resources in a transaction
 func DeleteResourceInTransaction(context middleware.Context, resourceSchema *schema.Schema, resourceID string) error {
-	defer measureRequestTime(time.Now(), "delete.in_tx", resourceSchema.ID)
+	defer MeasureRequestTime(time.Now(), "delete.in_tx", resourceSchema.ID)
 	mainTransaction := context["transaction"].(transaction.Transaction)
 	environmentManager := extension.GetManager()
 	environment, ok := environmentManager.GetEnvironment(resourceSchema.ID)
@@ -1044,10 +1044,10 @@ func DeleteResourceInTransaction(context middleware.Context, resourceSchema *sch
 }
 
 // ActionResource runs custom action on resource
-func ActionResource(context middleware.Context, dataStore db.DB, identityService middleware.IdentityService,
-	resourceSchema *schema.Schema, action schema.Action, resourceID string, data interface{},
+func ActionResource(context middleware.Context, resourceSchema *schema.Schema,
+	action schema.Action, resourceID string, data interface{},
 ) error {
-	defer measureRequestTime(time.Now(), action.ID, resourceSchema.ID)
+	defer MeasureRequestTime(time.Now(), action.ID, resourceSchema.ID)
 	actionSchema := action.InputSchema
 	context["input"] = data
 	context["id"] = resourceID
@@ -1165,7 +1165,7 @@ func validateAttachmentRelation(
 	return nil
 }
 
-func loadPolicy(context middleware.Context, action, path string, auth schema.Authorization) (*schema.Policy, error) {
+func LoadPolicy(context middleware.Context, action, path string, auth schema.Authorization) (*schema.Policy, error) {
 	manager := schema.GetManager()
 	policy, role := manager.PolicyValidate(action, path, auth)
 	if policy == nil {

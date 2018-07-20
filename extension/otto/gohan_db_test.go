@@ -52,7 +52,6 @@ var _ = Describe("GohanDb", func() {
 		s             *schema.Schema
 		ok            bool
 		fakeResources []map[string]interface{}
-		err           error
 		r0, r1        *schema.Resource
 		mockCtrl      *gomock.Controller
 		ctx           context.Context
@@ -72,11 +71,8 @@ var _ = Describe("GohanDb", func() {
 			{"tenant_id": "t1", "test_string": "str1", "test_bool": true},
 		}
 
-		r0, err = schema.NewResource(s, fakeResources[0])
-		Expect(err).ToNot(HaveOccurred())
-		r1, err = schema.NewResource(s, fakeResources[1])
-		Expect(err).ToNot(HaveOccurred())
-
+		r0 = schema.NewResource(s, fakeResources[0])
+		r1 = schema.NewResource(s, fakeResources[1])
 	})
 
 	AfterEach(func() {

@@ -1114,7 +1114,7 @@ var _ = Describe("Server package test", func() {
 			if err != nil {
 				Fail(err.Error())
 			}
-			net1, err := schema.NewResource(networkSchema, map[string]interface{}{
+			net1 := schema.NewResource(networkSchema, map[string]interface{}{
 				"id":                "resync-test-net1",
 				"route_targets":     []string{"123", "345"},
 				"name":              "test-net1-name",
@@ -1124,7 +1124,7 @@ var _ = Describe("Server package test", func() {
 				"tenant_id":         "tenant1",
 			})
 
-			net2, err := schema.NewResource(networkSchema, map[string]interface{}{
+			net2 := schema.NewResource(networkSchema, map[string]interface{}{
 				"id":                "resync-test-net2",
 				"route_targets":     []string{},
 				"name":              "test-net2-name",
@@ -1134,7 +1134,7 @@ var _ = Describe("Server package test", func() {
 				"tenant_id":         "tenant2",
 			})
 
-			subnet1, err := schema.NewResource(subnetSchema, map[string]interface{}{
+			subnet1 := schema.NewResource(subnetSchema, map[string]interface{}{
 				"id":          "test-subnet1-id",
 				"name":        "test-subnet1-name",
 				"description": "",

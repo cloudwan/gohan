@@ -122,7 +122,7 @@ func (tl *transactionEventLogger) logEvent(ctx context.Context, eventType string
 	if err != nil {
 		return fmt.Errorf("Error during event resource deserialisation: %s", err.Error())
 	}
-	eventResource, err := schema.NewResource(eventSchema, map[string]interface{}{
+	eventResource := schema.NewResource(eventSchema, map[string]interface{}{
 		"type":          eventType,
 		"path":          resource.Path(),
 		"version":       version,

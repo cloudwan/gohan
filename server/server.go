@@ -78,6 +78,7 @@ type Server struct {
 func (server *Server) mapRoutes() {
 	config := util.GetConfig()
 	schemaManager := schema.GetManager()
+	mapSchemaRoute(server.martini, schemaManager)
 	MapNamespacesRoutes(server.martini)
 	MapRouteBySchemas(server, server.db)
 
@@ -229,12 +230,9 @@ func NewServer(configFile string) (*Server, error) {
 		port = "9091"
 	}
 
-	setupEditor(server)
-
 	server.extensions = config.GetStringList("extension/use", []string{
 		"goext",
 		"javascript",
-		"go",
 	})
 	schema.DefaultExtension = config.GetString("extension/default", "javascript")
 

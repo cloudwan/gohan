@@ -20,7 +20,6 @@ database:
 
 schemas:
     - "embed://etc/schema/gohan.json"
-    - "embed://etc/extensions/gohan_extension.yaml"
     - "./example_schema.yaml"
 
 editable_schema: ./example_schema.yaml
@@ -81,10 +80,6 @@ logging:
         level: DEBUG
 
 extension:
-  default: go
-  use:
-  - go
-
   # default time limit in secs for running extension
   timelimit: 10
 

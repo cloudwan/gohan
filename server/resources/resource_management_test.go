@@ -139,11 +139,9 @@ var _ = Describe("Resource manager", func() {
 					if currentSchema.IsAbstract() {
 						continue
 					}
-					trimmedSchema, err := server.GetSchema(currentSchema, auth)
-					Expect(err).NotTo(HaveOccurred())
+					trimmedSchema := server.TrimmedResource(currentSchema, auth)
 					rawSchema := currentSchema.JSON()
-					fullSchema, err := schema.NewResource(currentSchema, rawSchema)
-					Expect(err).ToNot(HaveOccurred())
+					fullSchema := schema.NewResource(currentSchema, rawSchema)
 					Expect(trimmedSchema).To(util.MatchAsJSON(fullSchema))
 				}
 			})
@@ -159,12 +157,10 @@ var _ = Describe("Resource manager", func() {
 				schemaSchema, ok := manager.Schema("schema")
 				Expect(ok).To(BeTrue())
 				By("The schema being equal to the full schema")
-				trimmedSchema, err := server.GetSchema(currentSchema, auth)
-				Expect(err).NotTo(HaveOccurred())
+				trimmedSchema := server.TrimmedResource(currentSchema, auth)
 				Expect(trimmedSchema).NotTo(BeNil())
 				rawSchema := schemaSchema.JSON()
-				fullSchema, err := schema.NewResource(currentSchema, rawSchema)
-				Expect(err).ToNot(HaveOccurred())
+				fullSchema := schema.NewResource(currentSchema, rawSchema)
 				Expect(trimmedSchema).To(util.MatchAsJSON(fullSchema))
 			})
 
@@ -172,8 +168,7 @@ var _ = Describe("Resource manager", func() {
 				By("Fetching the schema")
 				networkSchema, ok := manager.Schema("network")
 				Expect(ok).To(BeTrue())
-				trimmedSchema, err := server.GetSchema(networkSchema, auth)
-				Expect(err).NotTo(HaveOccurred())
+				trimmedSchema := server.TrimmedResource(networkSchema, auth)
 				Expect(trimmedSchema).NotTo(BeNil())
 				theSchema, ok := trimmedSchema.Get("schema").(map[string]interface{})
 				Expect(ok).To(BeTrue())
@@ -208,8 +203,7 @@ var _ = Describe("Resource manager", func() {
 				By("Not fetching the schema")
 				testSchema, ok := manager.Schema("admin_only")
 				Expect(ok).To(BeTrue())
-				trimmedSchema, err := server.GetSchema(testSchema, auth)
-				Expect(err).NotTo(HaveOccurred())
+				trimmedSchema := server.TrimmedResource(testSchema, auth)
 				Expect(trimmedSchema).To(BeNil())
 			})
 		})
@@ -1730,7 +1724,7 @@ var _ = Describe("Resource manager", func() {
 
 			It("Should run the extension", func() {
 				err := resources.ActionResource(
-					context, testDB, fakeIdentity, currentSchema, fakeAction, resourceID1,
+					context, currentSchema, fakeAction, resourceID1,
 					map[string]interface{}{"test_string": "Steloj ne estas en ordo."})
 				Expect(err).To(HaveOccurred())
 				extErr, ok := err.(extension.Error)
@@ -1743,7 +1737,7 @@ var _ = Describe("Resource manager", func() {
 			Context("Without input shcema", func() {
 				It("Should run the extension", func() {
 					err := resources.ActionResource(
-						context, testDB, fakeIdentity, currentSchema, fakeActionWithoutInput, resourceID1,
+						context, currentSchema, fakeActionWithoutInput, resourceID1,
 						map[string]interface{}{"test_string": "Steloj ne estas en ordo."})
 					Expect(err).To(HaveOccurred())
 					extErr, ok := err.(extension.Error)
