@@ -17,11 +17,13 @@ package db_test
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"time"
 
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/dbutil"
+	"github.com/cloudwan/gohan/db/initializer"
 	"github.com/cloudwan/gohan/db/mocks"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/transaction"
@@ -378,6 +380,92 @@ var _ = Describe("Database operation test", func() {
 		})
 	})
 
+	Context("Converting", func() {
+		var (
+			source *initializer.Initializer
+			outDB  db.DB
+		)
+
+		BeforeEach(func() {
+			Expect(manager.LoadSchemaFromFile("test_data/conv_in.yaml")).To(Succeed())
+
+			var err error
+			source, err = initializer.NewInitializer("test_data/conv_in.yaml")
+			Expect(err).ToNot(HaveOccurred())
+
+			dbutil.InitDBWithSchemas("sqlite3", "test_data/conv_out.db", db.DefaultTestInitDBParams())
+			outDB, err = dbutil.ConnectDB("sqlite3", "test_data/conv_out.db", db.DefaultMaxOpenConn, options.Default())
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(dbutil.CopyDBResources(source, outDB, true)).To(Succeed())
+		})
+
+		AfterEach(func() {
+			outDB.Close()
+			os.Remove("test_data/conv_out.db")
+		})
+
+		It("Should do it properly", func() {
+			verifyTx, err := outDB.BeginTx()
+			Expect(err).ToNot(HaveOccurred())
+			defer verifyTx.Close()
+
+			for _, s := range manager.OrderedSchemas() {
+				if s.Metadata["type"] == "metaschema" {
+					continue
+				}
+				resources, _, err := source.List(s)
+				Expect(err).ToNot(HaveOccurred())
+				for _, inResource := range resources {
+					outResource, err := verifyTx.Fetch(ctx, s, transaction.Filter{"id": inResource.ID()}, nil)
+					Expect(err).ToNot(HaveOccurred())
+
+					// SQL returns different types than JSON/YAML Database
+					// So we need to move it back again so that DeepEqual would work correctly
+					bytesOut, err := json.MarshalIndent(outResource, "", "    ")
+					Expect(err).NotTo(HaveOccurred())
+
+					bytesIn, err := json.MarshalIndent(inResource, "", "    ")
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(bytesIn).To(Equal(bytesOut))
+				}
+			}
+		})
+
+		It("Should not override existing rows", func() {
+			subnetSchema, _ := manager.Schema("subnet")
+
+			// Update some data
+			tx, err := outDB.BeginTx()
+			Expect(err).ToNot(HaveOccurred())
+			list, _, err := tx.List(ctx, subnetSchema, map[string]interface{}{
+				"name": "subnetRedA",
+			}, nil, nil)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(list).To(HaveLen(1))
+			subnet := list[0]
+			subnet.Data()["description"] = "Updated description"
+			err = tx.Update(ctx, subnet)
+			Expect(err).ToNot(HaveOccurred())
+			tx.Commit()
+			tx.Close()
+
+			Expect(dbutil.CopyDBResources(source, outDB, false)).To(Succeed())
+			// check description of subnetRedA
+			tx, err = outDB.BeginTx()
+			Expect(err).ToNot(HaveOccurred())
+			list, _, err = tx.List(ctx, subnetSchema, map[string]interface{}{
+				"name": "subnetRedA",
+			}, nil, nil)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(list).To(HaveLen(1))
+			subnet = list[0]
+			Expect(subnet.Data()["description"]).To(Equal("Updated description"))
+			tx.Close()
+		})
+	})
+
 	Context("Transaction retry after a deadlock", func() {
 		var (
 			firstConn  db.DB
@@ -391,7 +479,7 @@ var _ = Describe("Database operation test", func() {
 
 		const (
 			deadlockDbSchema  = "test_data/test_schema.yaml"
-			deadlockDbInitial = "test_data/test_initial.sqlite"
+			deadlockDbInitial = "test_data/test_initial.yaml"
 			deadlockDbName    = "test_data/deadlock_db.db"
 			deadlockDbType    = "sqlite3"
 		)
@@ -404,8 +492,7 @@ var _ = Describe("Database operation test", func() {
 			Expect(err).ToNot(HaveOccurred())
 			secondConn, err = dbutil.ConnectDB(deadlockDbType, deadlockDbName, db.DefaultMaxOpenConn, connOpts)
 			Expect(err).ToNot(HaveOccurred())
-			initDB, err := dbutil.ConnectDB(deadlockDbType, deadlockDbInitial, db.DefaultMaxOpenConn, options.Default())
-			defer initDB.Close()
+			initDB, err := initializer.NewInitializer(deadlockDbInitial)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(dbutil.CopyDBResources(initDB, firstConn, false)).To(Succeed())
 		})

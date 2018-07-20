@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/cloudwan/gohan/db"
+	"github.com/cloudwan/gohan/db/initializer"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/sql"
 	"github.com/cloudwan/gohan/db/transaction"
@@ -45,7 +46,7 @@ func ConnectDB(dbType, conn string, maxOpenConn int, opt options.Options) (db.DB
 }
 
 //CopyDBResources copies resources from input database to output database
-func CopyDBResources(input, output db.DB, overrideExisting bool) error {
+func CopyDBResources(input *initializer.Initializer, output db.DB, overrideExisting bool) error {
 	schemaManager := schema.GetManager()
 	schemas := schemaManager.OrderedSchemas()
 
@@ -55,45 +56,36 @@ func CopyDBResources(input, output db.DB, overrideExisting bool) error {
 
 	ctx := context.TODO() //pass from outside?
 
-	if errInputTx := db.WithinTx(input, func(inputTx transaction.Transaction) error {
-		if errorOutputTx := db.WithinTx(output, func(outputTx transaction.Transaction) error {
-			for _, s := range schemas {
-				if s.IsAbstract() {
-					continue
-				}
-				log.Info("Populating resources for schema %s", s.ID)
-				resources, _, err := inputTx.List(ctx, s, nil, nil, nil)
-				if err != nil {
-					return err
-				}
+	return db.WithinTx(output, func(outputTx transaction.Transaction) error {
+		for _, schema := range schemas {
+			if schema.IsAbstract() {
+				continue
+			}
+			log.Info("Populating resources for schema %s", schema.ID)
+			resources, _, err := input.List(schema)
+			if err != nil {
+				return err
+			}
 
-				for _, resource := range resources {
-					log.Info("Creating resource %s", resource.ID())
-					destResource, _ := outputTx.Fetch(ctx, s, transaction.IDFilter(resource.ID()), nil)
-					if destResource == nil {
-						resource.PopulateDefaults()
-						err := outputTx.Create(ctx, resource)
-						if err != nil {
-							return err
-						}
-					} else if overrideExisting {
-						err := outputTx.Update(ctx, resource)
-						if err != nil {
-							return err
-						}
+			for _, resource := range resources {
+				log.Info("Creating resource %s", resource.ID())
+				destResource, _ := outputTx.Fetch(ctx, schema, transaction.IDFilter(resource.ID()), nil)
+				if destResource == nil {
+					resource.PopulateDefaults()
+					err := outputTx.Create(ctx, resource)
+					if err != nil {
+						return err
+					}
+				} else if overrideExisting {
+					err := outputTx.Update(ctx, resource)
+					if err != nil {
+						return err
 					}
 				}
 			}
-			return nil
-		}); errorOutputTx != nil {
-			return errorOutputTx
 		}
 		return nil
-	}); errInputTx != nil {
-		return errInputTx
-	}
-
-	return nil
+	})
 }
 
 // CreateFromConfig creates db connection from config

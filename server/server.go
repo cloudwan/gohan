@@ -34,8 +34,8 @@ import (
 	"github.com/braintree/manners"
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/dbutil"
+	"github.com/cloudwan/gohan/db/initializer"
 	"github.com/cloudwan/gohan/db/migration"
-	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/job"
@@ -297,14 +297,13 @@ func NewServer(configFile string) (*Server, error) {
 		initialDataList := config.GetList("database/initial_data", nil)
 		for _, initialData := range initialDataList {
 			initialDataConfig := initialData.(map[string]interface{})
-			inType := initialDataConfig["type"].(string)
-			inConnection := initialDataConfig["connection"].(string)
-			log.Info("Importing data from %s ...", inConnection)
-			inDB, err := dbutil.ConnectDB(inType, inConnection, db.DefaultMaxOpenConn, options.Default())
+			filePath := initialDataConfig["connection"].(string)
+			log.Info("Importing data from %s ...", filePath)
+			source, err := initializer.NewInitializer(filePath)
 			if err != nil {
 				log.Fatal(err)
 			}
-			dbutil.CopyDBResources(inDB, server.db, false)
+			dbutil.CopyDBResources(source, server.db, false)
 		}
 	}
 
