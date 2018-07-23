@@ -456,7 +456,7 @@ metrics:
 
 - sync
 
-  Sync type. The default is `etcd3`, which means the etcd API version 3.
+  Sync type. The default is `etcdv3`, which means the etcd API version 3.
 
 - etcd
 
