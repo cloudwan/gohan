@@ -28,3 +28,4 @@ Documentation
 - [JavaScript Extension](docs/js_extension.md)
 - [Gohan Script Extension](docs/gohan_extension.md)
 - [CLI](docs/cli.md)
+- [Legacy features](docs/legacy.md)

@@ -1,9 +1,0 @@
-test_suite:
-  tests:
-  - name: Command test
-    test:
-    - command: ls command_test.yaml
-      args:
-        chdir: "{{ __dir__ }}"
-      register: output
-    - assert: expect=True actual="{{ \"command_test.yaml\" in output }}"

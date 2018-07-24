@@ -46,10 +46,8 @@ func (t *Transaction) Create(ctx context.Context, s goext.ISchema, resource map[
 	if err := ctx.Err(); err != nil {
 		return ctx.Err()
 	}
-	res, err := schema.NewResource(t.findRawSchema(s.ID()), resource)
-	if err != nil {
-		return err
-	}
+	res := schema.NewResource(t.findRawSchema(s.ID()), resource)
+
 	// use context.Background to avoid cancellation mid-query for all Queries/Exec
 	// ESI-16552 context cancellation tends to break next Begin
 	// It doesn't work in mysql driver anyway https://github.com/go-sql-driver/mysql/issues/731
@@ -61,10 +59,7 @@ func (t *Transaction) Update(ctx context.Context, s goext.ISchema, resource map[
 	if err := ctx.Err(); err != nil {
 		return ctx.Err()
 	}
-	res, err := schema.NewResource(t.findRawSchema(s.ID()), resource)
-	if err != nil {
-		return err
-	}
+	res := schema.NewResource(t.findRawSchema(s.ID()), resource)
 	return t.tx.Update(context.Background(), res)
 }
 
@@ -96,10 +91,7 @@ func (t *Transaction) StateUpdate(ctx context.Context, s goext.ISchema, resource
 	if err := ctx.Err(); err != nil {
 		return ctx.Err()
 	}
-	res, err := schema.NewResource(t.findRawSchema(s.ID()), resource)
-	if err != nil {
-		return err
-	}
+	res := schema.NewResource(t.findRawSchema(s.ID()), resource)
 	return t.tx.StateUpdate(context.Background(), res, mapGoExtResourceState(resourceState))
 }
 

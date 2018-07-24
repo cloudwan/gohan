@@ -26,12 +26,8 @@ import (
 	"github.com/cloudwan/gohan/cli/client"
 	"github.com/cloudwan/gohan/converter/app"
 	"github.com/cloudwan/gohan/db"
-	db_options "github.com/cloudwan/gohan/db/options"
-	"github.com/cloudwan/gohan/extension/framework"
-	"github.com/cloudwan/gohan/extension/gohanscript"
-	// Import gohan extension autogen lib
 	"github.com/cloudwan/gohan/db/dbutil"
-	_ "github.com/cloudwan/gohan/extension/gohanscript/autogen"
+	"github.com/cloudwan/gohan/extension/framework"
 	logger "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/server"
@@ -63,14 +59,11 @@ func Run(name, usage string) {
 		getGohanClientCommand(),
 		getValidateCommand(),
 		getInitDbCommand(),
-		getConvertCommand(),
 		getServerCommand(),
 		getTestExtensionsCommand(),
 		getMigrateCommand(),
 		getResyncCommand(),
 		getTemplateCommand(),
-		getRunCommand(),
-		getTestCommand(),
 		getOpenAPICommand(),
 		getMarkdownCommand(),
 		getDotCommand(),
@@ -252,65 +245,6 @@ Useful for development purposes.`,
 				util.ExitFatal(err)
 			}
 			fmt.Println("DB is initialized")
-		},
-	}
-}
-
-func getConvertCommand() cli.Command {
-	return cli.Command{
-		Name:      "convert",
-		ShortName: "conv",
-		Usage:     "Convert DB",
-		Description: `
-Gohan convert can be used to migrate Gohan resources between different types of databases.
-
-Setting meta-schema option will additionally convert meta-schema table with schema resources.
-Useful for development purposes.`,
-		Flags: []cli.Flag{
-			cli.StringFlag{Name: "in-type, it", Value: "", Usage: "Input db type (yaml, json, sqlite3, mysql)"},
-			cli.StringFlag{Name: "in, i", Value: "", Usage: "Input db connection spec (or filename)"},
-			cli.StringFlag{Name: "out-type, ot", Value: "", Usage: "Output db type (yaml, json, sqlite3, mysql)"},
-			cli.StringFlag{Name: "out, o", Value: "", Usage: "Output db connection spec (or filename)"},
-			cli.StringFlag{Name: "schema, s", Value: "", Usage: "Schema file"},
-			cli.StringFlag{Name: "meta-schema, m", Value: "embed://etc/schema/gohan.json", Usage: "Meta-schema file (optional)"},
-		},
-		Action: func(c *cli.Context) {
-			inType, in := c.String("in-type"), c.String("in")
-			if inType == "" || in == "" {
-				util.ExitFatal("Need to provide input database specification")
-			}
-			outType, out := c.String("out-type"), c.String("out")
-			if outType == "" || out == "" {
-				util.ExitFatal("Need to provide output database specification")
-			}
-
-			schemaFile := c.String("schema")
-			if schemaFile == "" {
-				util.ExitFatal("Need to provide schema file")
-			}
-			metaSchemaFile := c.String("meta-schema")
-
-			schemaManager := schema.GetManager()
-			err := schemaManager.LoadSchemasFromFiles(schemaFile, metaSchemaFile)
-			if err != nil {
-				util.ExitFatal("Error loading schema:", err)
-			}
-
-			inDB, err := dbutil.ConnectDB(inType, in, db.DefaultMaxOpenConn, db_options.Default())
-			if err != nil {
-				util.ExitFatal(err)
-			}
-			outDB, err := dbutil.ConnectDB(outType, out, db.DefaultMaxOpenConn, db_options.Default())
-			if err != nil {
-				util.ExitFatal(err)
-			}
-
-			err = dbutil.CopyDBResources(inDB, outDB, true)
-			if err != nil {
-				util.ExitFatal(err)
-			}
-
-			fmt.Println("Conversion complete")
 		},
 	}
 }
@@ -512,64 +446,6 @@ ARGUMENTS:
 				fmt.Printf("%+v\n", err)
 				os.Exit(1)
 			}
-		},
-	}
-}
-
-func getRunCommand() cli.Command {
-	return cli.Command{
-		Name:      "run",
-		ShortName: "run",
-		Usage:     "Run Gohan script Code",
-		Description: `
-Run gohan script code.`,
-		Flags: []cli.Flag{
-			cli.StringFlag{Name: "config-file,c", Value: defaultConfigFile, Usage: "config file path"},
-			cli.StringFlag{Name: "args,a", Value: "", Usage: "arguments"},
-		},
-		Action: func(c *cli.Context) {
-			src := c.Args()[0]
-			vm := gohanscript.NewVM()
-
-			args := []interface{}{}
-			flags := map[string]interface{}{}
-			for _, arg := range c.Args()[1:] {
-				if strings.Contains(arg, "=") {
-					kv := strings.Split(arg, "=")
-					flags[kv[0]] = kv[1]
-				} else {
-					args = append(args, arg)
-				}
-			}
-			vm.Context.Set("args", args)
-			vm.Context.Set("flags", flags)
-			configFile := c.String("config-file")
-			loadConfig(configFile)
-			_, err := vm.RunFile(src)
-			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
-				return
-			}
-		},
-	}
-}
-
-func getTestCommand() cli.Command {
-	return cli.Command{
-		Name:      "test",
-		ShortName: "test",
-		Usage:     "Run Gohan script Test",
-		Description: `
-Run gohan script yaml code.`,
-		Flags: []cli.Flag{
-			cli.StringFlag{Name: "config-file,c", Value: defaultConfigFile, Usage: "config file path"},
-		},
-		Action: func(c *cli.Context) {
-			dir := c.Args()[0]
-			configFile := c.String("config-file")
-			loadConfig(configFile)
-			gohanscript.RunTests(dir)
 		},
 	}
 }

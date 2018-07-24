@@ -196,12 +196,11 @@ Developers should specify a list of schema file in the configuration.
 ```yaml
 schemas:
     - "embed://etc/schema/gohan.json"
-    - "embed://etc/extensions/gohan_extension.yaml"
     - "./example_schema.yaml"
 ```
 
 Developers can specify schemas here.
-Note that we always need gohan.json and gohan_extension.yaml for WebUI and CLI.
+Note that we always need gohan.json for WebUI and CLI.
 
 ## Keystone
 
@@ -360,8 +359,6 @@ You can select extension types you use.
     default: javascript
     use:
     - javascript
-    - gohanscript
-    - go
 ```
 
 - extension timelimit
@@ -459,8 +456,7 @@ metrics:
 
 - sync
 
-  Sync type. The default is `etcd`, which means the etcd API version 2.
-  `etcdv3` is available for etcd API version 3.
+  Sync type. The default is `etcdv3`, which means the etcd API version 3.
 
 - etcd
 
@@ -494,34 +490,6 @@ a sample configuration.
 ```
 
 WARNING: The value of watched etcd keys must be a JSON dictionary.
-
-- amqp
-
-  You can listen to notification event from OpenStack components using
-  AMQP. You need to specify listen to queues and events.
-
-  You can also run extension for amqp based event specifying path for
-  amqp://{{event_type}}.
-
-```yaml
-  amqp:
-      connection: amqp://guest:guest@172.16.25.130:5672/
-      queues:
-        - notifications.info
-        - notifications.error
-      events:
-        - orchestration.stack
-```
-
-- snmp
-
- You can listen to snmp trap, and execute extension for that trap.
- An extension path should be snmp://
-
-```yaml
-  snmp:
-    address: "localhost:8888"
-```
 
 - cron
 

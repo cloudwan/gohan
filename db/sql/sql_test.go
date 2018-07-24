@@ -24,6 +24,7 @@ import (
 
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/dbutil"
+	"github.com/cloudwan/gohan/db/initializer"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/pagination"
 	. "github.com/cloudwan/gohan/db/sql"
@@ -66,10 +67,11 @@ var _ = Describe("Sql", func() {
 		Expect(manager.LoadSchemasFromFiles(
 			"../../etc/schema/gohan.json", "../../tests/test_abstract_schema.yaml", "../../tests/test_schema.yaml")).To(Succeed())
 		dbutil.InitDBWithSchemas(dbType, conn, db.DefaultTestInitDBParams())
-		// Insert fixture data
-		fixtureDB, err := dbutil.ConnectDB("json", testFixtures, db.DefaultMaxOpenConn, options.Default())
+
+		source, err := initializer.NewInitializer(testFixtures)
 		Expect(err).ToNot(HaveOccurred())
-		dbutil.CopyDBResources(fixtureDB, dbc, true)
+
+		Expect(dbutil.CopyDBResources(source, dbc, true)).To(Succeed())
 
 		tx, err = dbc.BeginTx()
 		Expect(err).ToNot(HaveOccurred())

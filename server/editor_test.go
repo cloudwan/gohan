@@ -41,10 +41,7 @@ func TestGetSchema(t *testing.T) {
 		t.Error("Could not find schema")
 	}
 
-	r, err := GetSchema(s, a)
-	if err != nil {
-		t.Fatal("Unexpected error", err)
-	}
+	r := TrimmedResource(s, a)
 
 	if !resourceMatches(r, "test-fixtures/editor_member.json") {
 		t.Fatal("Unexpected resource")

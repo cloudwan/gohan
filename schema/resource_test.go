@@ -46,8 +46,7 @@ var _ = Describe("Resources", func() {
 			"tenant_id":         "red",
 			"providor_networks": map[string]interface{}{"segmentation_id": 10, "segmentation_type": "vlan"},
 		}
-		networkRed, err := NewResource(networkSchema, networkRedObj)
-		Expect(err).ToNot(HaveOccurred())
+		networkRed := NewResource(networkSchema, networkRedObj)
 		_, ok := networkRed.Data()["route_targets"]
 		Expect(ok).To(BeFalse(), "networkRed should not contain route_targets")
 
@@ -73,8 +72,7 @@ var _ = Describe("Resources", func() {
 				},
 			},
 		}
-		networkRed, err := NewResource(networkSchema, networkRedObj)
-		Expect(err).ToNot(HaveOccurred())
+		networkRed := NewResource(networkSchema, networkRedObj)
 		Expect(networkRed.PopulateDefaults()).To(Succeed())
 		expectedConfig := map[string]interface{}{
 			"default_vlan": map[string]interface{}{
@@ -104,8 +102,7 @@ var _ = Describe("Resources", func() {
 				"default_vlan": map[string]interface{}{},
 			},
 		}
-		networkRed, err := NewResource(networkSchema, networkRedObj)
-		Expect(err).ToNot(HaveOccurred())
+		networkRed := NewResource(networkSchema, networkRedObj)
 		Expect(networkRed.PopulateDefaults()).To(Succeed())
 		expectedConfig := map[string]interface{}{
 			"default_vlan": map[string]interface{}{
@@ -133,8 +130,7 @@ var _ = Describe("Resources", func() {
 			"route_targets":     []interface{}{},
 			"config":            map[string]interface{}{},
 		}
-		networkRed, err := NewResource(networkSchema, networkRedObj)
-		Expect(err).ToNot(HaveOccurred())
+		networkRed := NewResource(networkSchema, networkRedObj)
 		Expect(networkRed.PopulateDefaults()).To(Succeed())
 		expectedConfig := map[string]interface{}{
 			"empty_vlan": map[string]interface{}{},
@@ -158,8 +154,7 @@ var _ = Describe("Resources", func() {
 			"route_targets":     []interface{}{},
 			"config":            map[string]interface{}{},
 		}
-		networkRed, err := NewResource(networkSchema, networkRedObj)
-		Expect(err).ToNot(HaveOccurred())
+		networkRed := NewResource(networkSchema, networkRedObj)
 		Expect(networkRed.PopulateDefaults()).To(Succeed())
 		expectedProvidorNetworks := map[string]interface{}{}
 		actualProvidorNetworks, ok := networkRed.Data()["providor_networks"]
@@ -182,8 +177,7 @@ var _ = Describe("Resources", func() {
 				},
 			},
 		}
-		networkRed, err := NewResource(networkSchema, networkRedObj)
-		Expect(err).ToNot(HaveOccurred())
+		networkRed := NewResource(networkSchema, networkRedObj)
 		Expect(networkRed.PopulateDefaults()).To(Succeed())
 		expectedConfig := map[string]interface{}{
 			"empty_vlan": map[string]interface{}{},

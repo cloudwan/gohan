@@ -1,7 +1,0 @@
-vars:
-  number: 1
-tasks:
-- debug: msg="Should be called"
-  when: number == 1
-- debug: msg="Should not be called"
-  when: number == 0

@@ -1,7 +1,0 @@
-extensions:
-- id: cron
-  path: cron://cron_job_sample
-  code: |
-      tasks:
-          - debug: msg="cron job executed"
-schemas: []

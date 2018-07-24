@@ -5,7 +5,7 @@ Extensions has properties:
 
 - id identity of the code
 - code contents of a code
-- code_type javascript, goext, go and Gohan script (DSL) are supported
+- code_type javascript and goext are supported
 - URL placement of code. Currently, file://, http:// and https:// schemes are supported
 - path resource path to execute code
 
@@ -18,19 +18,15 @@ Example Code
     path: /v2.0/.*
 ```
 
-Gohan supports four types of extensions:
-- gohanscript
+Gohan supports two types of extensions:
 - javascript
-- golang (as a callback, built-in)
 - golang (as a plugin, loadable at runtime) 
 
 Comparison of different types of extensions:
 
 | Name | type-id | language | execution performance | loadable at runtime |
 | --- | --- | --- | --- | --- |
-| gohanscript | gohanscript | custom | interpreted | yes |
 | javascript | javascript | javascript | interpreted | yes |
-| golang (callback) | go | golang | native | no |
 | golang (plugin) | goext | golang | native | yes |
 
 ## Event
@@ -195,7 +191,7 @@ Comparison of different types of extensions:
 
 ### notification
 
-  executed when you receive amqp/snmp/cron notification
+  executed when you receive a cron notification
 
 # Context
 
@@ -215,30 +211,3 @@ Each context contains following items:
 - identity_service - middleware.IdentityService - identity service
 - service_auth - schema.Authorization - Autorization object
 - openstack_client - *gophercloud.ServiceClient - OpenStack client
-
-# Go extension (callback)
-
-You can implement Gohan extension by native go.
-You can use "go" for code_type and specify your callback id in code.
-Also, you can register go struct & call it from javascript.
-
-```yaml
-  extensions:
-  - code: exampleapp_callback
-    code_type: go
-    id: example
-    path: .*
-```
-
-```go
-  //Register go callback
-  extension.RegisterGoCallback("exampleapp_callback",
-  	func(event string, context map[string]interface{}) error {
-  		fmt.Printf("callback on %s : %v", event, context)
-  		return nil
-  })
- ```
-
-We have exampleapp with comments in exampleapp directory.
-You can also, import github.com/cloudwan/server module and
-have your own RunServer method to have whole custom route written in go.

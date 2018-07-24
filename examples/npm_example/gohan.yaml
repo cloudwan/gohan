@@ -17,7 +17,6 @@ database:
 
 schemas:
     - "embed://etc/schema/gohan.json"
-    - "embed://etc/extensions/gohan_extension.yaml"
     - "example_schema.yaml"
 
 editable_schema: ./example_schema.yaml
@@ -63,9 +62,7 @@ logging:
         level: INFO
 
 extension:
-  default: gohanscript
+  default: javascript
   use:
-  - gohanscript
   - javascript
-  - go
   npm_path: .

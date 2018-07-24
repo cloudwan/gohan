@@ -13,7 +13,6 @@ database:
 # schema path
 schemas:
     - "embed://etc/schema/gohan.json"
-    - "embed://etc/extensions/gohan_extension.yaml"
     - "example_schema.yaml"
 
 editable_schema: ./example_schema.yaml

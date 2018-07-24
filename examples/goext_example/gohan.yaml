@@ -14,7 +14,6 @@ database:
 # schema path
 schemas:
     - "embed://etc/schema/gohan.json"
-    - "embed://etc/extensions/gohan_extension.yaml"
     - "./todo/entry.yaml"
     - "./todo/link.yaml"
 

@@ -1,3 +1,0 @@
-database:
-    type: "sqlite3"
-    connection: "./test.db"

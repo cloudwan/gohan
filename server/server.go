@@ -34,8 +34,8 @@ import (
 	"github.com/braintree/manners"
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/dbutil"
+	"github.com/cloudwan/gohan/db/initializer"
 	"github.com/cloudwan/gohan/db/migration"
-	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/job"
@@ -78,6 +78,7 @@ type Server struct {
 func (server *Server) mapRoutes() {
 	config := util.GetConfig()
 	schemaManager := schema.GetManager()
+	mapSchemaRoute(server.martini, schemaManager)
 	MapNamespacesRoutes(server.martini)
 	MapRouteBySchemas(server, server.db)
 
@@ -177,9 +178,6 @@ func (server *Server) connectDB() error {
 func (server *Server) getDatabaseConfig() (string, string, db.InitDBParams) {
 	config := util.GetConfig()
 	databaseType := config.GetString("database/type", "sqlite3")
-	if databaseType == "json" || databaseType == "yaml" {
-		log.Fatal("json or yaml isn't supported as main db backend")
-	}
 	databaseConnection := config.GetString("database/connection", "")
 	if databaseConnection == "" {
 		log.Fatal("no database connection specified in the configuration file.")
@@ -232,13 +230,9 @@ func NewServer(configFile string) (*Server, error) {
 		port = "9091"
 	}
 
-	setupEditor(server)
-
 	server.extensions = config.GetStringList("extension/use", []string{
 		"goext",
 		"javascript",
-		"gohanscript",
-		"go",
 	})
 	schema.DefaultExtension = config.GetString("extension/default", "javascript")
 
@@ -301,14 +295,13 @@ func NewServer(configFile string) (*Server, error) {
 		initialDataList := config.GetList("database/initial_data", nil)
 		for _, initialData := range initialDataList {
 			initialDataConfig := initialData.(map[string]interface{})
-			inType := initialDataConfig["type"].(string)
-			inConnection := initialDataConfig["connection"].(string)
-			log.Info("Importing data from %s ...", inConnection)
-			inDB, err := dbutil.ConnectDB(inType, inConnection, db.DefaultMaxOpenConn, options.Default())
+			filePath := initialDataConfig["connection"].(string)
+			log.Info("Importing data from %s ...", filePath)
+			source, err := initializer.NewInitializer(filePath)
 			if err != nil {
 				log.Fatal(err)
 			}
-			dbutil.CopyDBResources(inDB, server.db, false)
+			dbutil.CopyDBResources(source, server.db, false)
 		}
 	}
 
@@ -459,8 +452,6 @@ func (server *Server) Router() http.Handler {
 func (server *Server) Stop() {
 	server.running = false
 	server.masterCtxCancel()
-	stopAMQPProcess(server)
-	stopSNMPProcess(server)
 	stopCRONProcess(server)
 	manners.Close()
 	server.queue.Stop()
@@ -528,16 +519,10 @@ func RunServer(configFile string) {
 		go syncWatcher.Run(server.masterCtx)
 
 	}
-	startAMQPProcess(server)
-	startSNMPProcess(server)
 	startCRONProcess(server)
 	metrics.StartMetricsProcess()
 	err = server.Start()
 	if err != nil {
 		log.Fatal(err)
 	}
-}
-
-func startAMQPNotificationProcess(server *Server) {
-
 }

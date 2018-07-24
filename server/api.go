@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/extension"
@@ -403,8 +404,7 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 			context["catalog"] = auth.Catalog()
 			context["auth"] = auth
 
-			if err := resources.ActionResource(
-				context, dataStore, identityService, s, action, id, input); err != nil {
+			if err := resources.ActionResource(context, s, action, id, input); err != nil {
 				handleError(w, err)
 				return
 			}
@@ -460,6 +460,81 @@ func MapRouteBySchemas(server *Server, dataStore db.DB) {
 	for _, s := range schemaManager.Schemas() {
 		MapRouteBySchema(server, dataStore, s)
 	}
+}
+
+func mapSchemaRoute(route martini.Router, manager *schema.Manager) {
+	metaschema, hasMetaschema := manager.Schema("schema")
+	if !hasMetaschema {
+		panic("The metaschema is missing. Check if gohan.json is loaded")
+	}
+	singleURL := metaschema.GetSingleURL()
+	pluralURL := metaschema.GetPluralURL()
+	singleURLWithParents := metaschema.GetSingleURLWithParents()
+	pluralURLWithParents := metaschema.GetPluralURLWithParents()
+
+	log.Debug("Registering the Schema handler on %s and %s", singleURL, pluralURL)
+
+	getSingle := func(w http.ResponseWriter, params martini.Params, auth schema.Authorization) {
+		defer resources.MeasureRequestTime(time.Now(), "get.single", metaschema.ID)
+
+		addJSONContentTypeHeader(w)
+		id := params["id"]
+
+		if _, err := resources.LoadPolicy(middleware.Context{}, "read", strings.Replace(singleURL, ":id", id, 1), auth); err != nil {
+			handleError(w, err)
+			return
+		}
+
+		fullSchema, hasSchema := manager.Schema(id)
+		if !hasSchema {
+			handleError(w, resources.NewResourceError(nil, fmt.Sprintf("Schema %s not found", id), resources.NotFound))
+			return
+		}
+
+		trimmedResource := TrimmedResource(fullSchema, auth)
+		rawData := trimmedResource.Data()
+		rawData["url"] = fullSchema.URL
+
+		response := map[string]interface{}{
+			"schema": rawData,
+		}
+		routes.ServeJson(w, response)
+
+	}
+
+	route.Get(singleURL, getSingle)
+	route.Get(singleURLWithParents, getSingle)
+
+	getPlural := func(w http.ResponseWriter, auth schema.Authorization) {
+		defer resources.MeasureRequestTime(time.Now(), "get.resources.multiple", metaschema.ID)
+		addJSONContentTypeHeader(w)
+
+		if _, err := resources.LoadPolicy(middleware.Context{}, "read", pluralURL, auth); err != nil {
+			handleError(w, err)
+			return
+		}
+
+		list := []interface{}{}
+		total := 0
+		for _, fullSchema := range manager.OrderedSchemas() {
+			trimmedResource := TrimmedResource(fullSchema, auth)
+			if trimmedResource != nil {
+				rawData := trimmedResource.Data()
+				rawData["url"] = fullSchema.URL
+				list = append(list, rawData)
+				total = total + 1
+			}
+		}
+
+		w.Header().Add("X-Total-Count", fmt.Sprint(total))
+		response := map[string]interface{}{
+			"schemas": list,
+		}
+		routes.ServeJson(w, response)
+	}
+
+	route.Get(pluralURL, getPlural)
+	route.Get(pluralURLWithParents, getPlural)
 }
 
 // MapNamespacesRoutes maps routes for all namespaces

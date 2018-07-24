@@ -1,8 +1,0 @@
-# background execution example
-tasks:
-- background:
-  - sleep: 1000
-  - debug: msg="called 2"
-- debug: msg="called 1"
-- sleep: 2000
-- debug: msg="called 3"

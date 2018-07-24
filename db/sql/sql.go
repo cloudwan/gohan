@@ -974,12 +974,8 @@ func (tx *Transaction) decodeRows(s *schema.Schema, rows *sqlx.Rows, list []*sch
 		data := map[string]interface{}{}
 		rows.MapScan(data)
 
-		var resource *schema.Resource
 		resourceData := tx.decode(s, s.GetDbTableName(), skipNil, recursive, data)
-		resource, err := schema.NewResource(s, resourceData)
-		if err != nil {
-			return nil, fmt.Errorf("Failed to decode rows")
-		}
+		resource := schema.NewResource(s, resourceData)
 		list = append(list, resource)
 	}
 
