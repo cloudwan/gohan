@@ -109,17 +109,19 @@ func (watcher *SyncWatcher) Run(ctx context.Context) error {
 			case err := <-watchErr:
 				return err
 			case <-ctx.Done():
-				<-watchErr
-				return nil
+				return <-watchErr
 			case <-lost:
 				watchCancel()
-				<-watchErr
+				err := <-watchErr
+				if err != nil {
+					return fmt.Errorf("lock is lost: %s", err)
+				}
 				return fmt.Errorf("lock is lost")
 			}
 		}()
 
 		if err != nil {
-			log.Error("process watch intrupted: %s", err)
+			log.Error("process watch interrupted: %s", err)
 		}
 
 		select {
@@ -168,12 +170,16 @@ func (watcher *SyncWatcher) processWatchLoop(events <-chan *gohan_sync.Event) er
 			// remove detected process from list
 			if pos > -1 {
 				processList = append((processList)[:pos], (processList)[pos+1:]...)
+			} else {
+				log.Warning("unknown process was deleted from watch list: `%s`", event.Key)
 			}
 		default:
 			// add detected process from list
 			if pos == -1 {
 				processList = append(processList, event.Key)
 				sort.Sort(sort.StringSlice(processList))
+			} else {
+				log.Warning("process `%s` is already on the list", event.Key)
 			}
 		}
 
@@ -187,7 +193,7 @@ func (watcher *SyncWatcher) processWatchLoop(events <-chan *gohan_sync.Event) er
 		}
 
 		if myPosition >= 0 && len(processList) > 0 {
-			log.Debug("Current cluster consists of following processes: %s, my poistion: %d", processList, myPosition)
+			log.Debug("Current cluster consists of following processes: %s, my position: %d", processList, myPosition)
 
 			var cctx context.Context
 			cctx, previousCancel = context.WithCancel(context.Background())
@@ -198,14 +204,14 @@ func (watcher *SyncWatcher) processWatchLoop(events <-chan *gohan_sync.Event) er
 				watcher.runSyncWatches(cctx, len(processList), myPosition)
 			}()
 		} else {
-			log.Error("Current cluster consists of following processes: %s, my poistion not found: %d", processList, myPosition)
+			log.Error("Current cluster consists of following processes: %s, my position not found: %d", processList, myPosition)
 		}
 	}
 
 	return nil
 }
 
-// runSyncWatches starts goroutines to watch changes on the sync and run extesions for them.
+// runSyncWatches starts goroutines to watch changes on the sync and run extensions for them.
 // This method block until the context ctx is canceled and returns once all the goroutines are closed.
 func (watcher *SyncWatcher) runSyncWatches(ctx context.Context, size int, position int) {
 	var wg sync.WaitGroup
@@ -214,7 +220,7 @@ func (watcher *SyncWatcher) runSyncWatches(ctx context.Context, size int, positi
 	for idx, path := range watcher.watchKeys {
 		wg.Add(1)
 		prio := (position - (idx % size) + size) % size
-		log.Debug("SyncWatch Priority of `%s`: `%d`", watcher.watchKeys, prio)
+		log.Debug("(SyncWatch) Priority of `%s`: `%d`", path, prio)
 
 		go func(ctx context.Context, idx int, path string, prio int) {
 			defer wg.Done()
@@ -227,8 +233,14 @@ func (watcher *SyncWatcher) runSyncWatches(ctx context.Context, size int, positi
 
 			for {
 				err := watcher.processSyncWatch(ctx, path)
-				if err != nil && err != context.Canceled && err != errLockFailed {
-					log.Error("SyncWatch on `%s` aborted, retrying...: %s", path, err)
+
+				switch err {
+				case errLockFailed:
+					log.Warning("(SyncWatcher) failed to acquire lock, retrying...")
+				case context.Canceled:
+					// Do nothing, normal shutdown
+				default:
+					log.Error("(SyncWatcher) on `%s` aborted, retrying...: %s", path, err)
 				}
 
 				select {
@@ -276,11 +288,15 @@ func (watcher *SyncWatcher) processSyncWatch(ctx context.Context, path string) e
 
 	select {
 	case <-ctx.Done():
-		<-watchErr
+		if err := <-watchErr; err != nil {
+			log.Error("(SyncWatcher) error after done: %s", err)
+		}
 		return ctx.Err()
 	case <-lost:
 		watchCancel()
-		<-watchErr
+		if err := <-watchErr; err != nil {
+			log.Error("(SyncWatcher) error after lost lock: %s", err)
+		}
 		return fmt.Errorf("lock for path `%s` is lost", path)
 	case err := <-watchErr:
 		return err
@@ -301,20 +317,24 @@ func (watcher *SyncWatcher) watchExtensionHandler(response *gohan_sync.Event) {
 
 // fetchStoredRevision returns the revision number stored in the sync backend for a path.
 // When it's a new in the backend, returns sync.RevisionCurrent.
-func (watcher *SyncWatcher) fetchStoredRevision(path string) int64 { // TODO error?
+func (watcher *SyncWatcher) fetchStoredRevision(path string) int64 {
 	fromRevision := int64(gohan_sync.RevisionCurrent)
 	lastSeen, err := watcher.sync.Fetch(SyncWatchRevisionPrefix + path)
 	if err == nil {
 		inStore, err := strconv.ParseInt(lastSeen.Value, 10, 64)
 		if err == nil {
-			log.Info("Using last seen revision `%d` for watching path `%s`", inStore, path)
+			log.Info("(SyncWatcher) Using last seen revision `%d` for watching path `%s`", inStore, path)
 			fromRevision = inStore
+		} else {
+			log.Warning("(SyncWatcher) Revision `%s` is not a valid int64 number, using the current one, which is %d (%s)", lastSeen.Value, fromRevision, err)
 		}
+	} else {
+		log.Warning("(SyncWatcher) Failed to fetch last seen revision number, using the current one, which is %d: (%s)", fromRevision, err)
 	}
 	return fromRevision
 }
 
-// storeRevision puts a reivision number for a path to the sync backend.
+// storeRevision puts a revision number for a path to the sync backend.
 func (watcher *SyncWatcher) storeRevision(path string, revision int64) error {
 	err := watcher.sync.Update(SyncWatchRevisionPrefix+path, strconv.FormatInt(revision, 10))
 	if err != nil {
@@ -339,7 +359,7 @@ func (watcher *SyncWatcher) runExtensionOnSync(response *gohan_sync.Event, env e
 		"trace_id": util.NewTraceID(),
 	}
 	if err := env.HandleEvent("notification", context); err != nil {
-		log.Warning(fmt.Sprintf("extension error: %s", err))
+		log.Warning(fmt.Sprintf("(SyncWatcher) extension error: %s", err))
 		return
 	}
 	return

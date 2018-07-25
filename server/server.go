@@ -37,7 +37,6 @@ import (
 	"github.com/cloudwan/gohan/db/initializer"
 	"github.com/cloudwan/gohan/db/migration"
 	"github.com/cloudwan/gohan/db/transaction"
-	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/job"
 	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/metrics"
@@ -503,21 +502,12 @@ func RunServer(configFile string) {
 		syncWriter := NewSyncWriter(server.sync, server.db)
 		go syncWriter.Run(server.masterCtx)
 
-		config := util.GetConfig()
-		keys := config.GetStringList("watch/keys", []string{})
-		events := config.GetStringList("watch/events", []string{})
-		extensions := map[string]extension.Environment{}
-		for _, event := range events {
-			path := "sync://" + event
-			env, err := server.NewEnvironmentForPath("sync."+event, path)
-			if err != nil {
-				log.Fatal(err.Error())
+		syncWatcher := NewSyncWatcherFromServer(server)
+		go func(masterCtx context.Context) {
+			if err := syncWatcher.Run(masterCtx); err != nil {
+				log.Error("An error occurred during SyncWatcher shutdown: %s", err)
 			}
-			extensions[event] = env
-		}
-		syncWatcher := NewSyncWatcher(server.sync, keys, events, extensions)
-		go syncWatcher.Run(server.masterCtx)
-
+		}(server.masterCtx)
 	}
 	startCRONProcess(server)
 	metrics.StartMetricsProcess()
