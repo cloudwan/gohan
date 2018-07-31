@@ -107,7 +107,6 @@ func makeConditionFilter(filterType conditionFilterType) *conditionFilter {
 //Policy describes policy configuration for APIs
 type Policy struct {
 	ID, Description, Principal, Action, Effect string
-	RawData                                    interface{}
 	resource                                   *resourceFilter
 	tenantID                                   *regexp.Regexp
 	tenantName                                 *regexp.Regexp
@@ -238,7 +237,6 @@ func NewPolicy(raw interface{}) (*Policy, error) {
 	policy.Principal, _ = typeData["principal"].(string)
 	policy.Action, _ = typeData["action"].(string)
 	policy.Effect, _ = typeData["effect"].(string)
-	policy.RawData = raw
 	resourceData, _ := typeData["resource"].(map[string]interface{})
 	resource := &resourceFilter{}
 	policy.resource = resource

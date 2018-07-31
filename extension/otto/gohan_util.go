@@ -218,16 +218,6 @@ func init() {
 				value, _ := vm.ToValue(schema.URL)
 				return value
 			},
-			"gohan_policies": func(call otto.FunctionCall) otto.Value {
-				VerifyCallArguments(&call, "gohan_policies", 0)
-				manager := schema.GetManager()
-				response := []interface{}{}
-				for _, policy := range manager.Policies() {
-					response = append(response, policy.RawData)
-				}
-				value, _ := vm.ToValue(response)
-				return value
-			},
 			"gohan_uuid": func(call otto.FunctionCall) otto.Value {
 				value, _ := vm.ToValue(uuid.NewV4().String())
 				return value

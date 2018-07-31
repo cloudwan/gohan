@@ -73,16 +73,6 @@ func init() {
 				value, _ := vm.ToValue(schema.URL)
 				return value
 			},
-			"gohan_policies": func(call otto.FunctionCall) otto.Value {
-				VerifyCallArguments(&call, "gohan_policies", 0)
-				manager := schema.GetManager()
-				response := []interface{}{}
-				for _, policy := range manager.Policies() {
-					response = append(response, policy.RawData)
-				}
-				value, _ := vm.ToValue(response)
-				return value
-			},
 			"gohan_trigger_event": func(call otto.FunctionCall) otto.Value {
 				VerifyCallArguments(&call, "gohan_trigger_event", 2)
 
