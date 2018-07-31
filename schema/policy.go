@@ -304,6 +304,26 @@ func NewPolicy(raw interface{}) (*Policy, error) {
 	return policy, nil
 }
 
+func BuildDefaultPolicy(schema *Schema, property *Property) *Policy {
+	policy, err := NewPolicy(
+		map[string]interface{}{
+			"action":            ActionAttach,
+			"effect":            "allow",
+			"id":                fmt.Sprintf("default_%s_to_%s_attach_policy", schema.ID, property.ID),
+			"principal":         "Member",
+			"relation_property": property.ID,
+			"target_condition":  []interface{}{conditionIsOwner},
+			"resource": map[string]interface{}{
+				"path": schema.GetPluralURL(),
+			}})
+
+	if err != nil {
+		panic(err)
+	}
+
+	return policy
+}
+
 func (p *Policy) GetCurrentResourceCondition() *ResourceCondition {
 	return p.currentResourceCondition
 }

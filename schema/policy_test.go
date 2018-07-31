@@ -221,6 +221,45 @@ var _ = Describe("Policies", func() {
 					"\"target_condition\" is required in an attach policy",
 				),
 			)
+
+			Context("default attach policy", func() {
+				var (
+					expected *Policy
+					schema   *Schema
+					property *Property
+				)
+
+				BeforeEach(func() {
+					rawExpected := map[string]interface{}{
+						"action":            "__attach__",
+						"effect":            "allow",
+						"id":                "default_schema_to_relation_field_id_attach_policy",
+						"principal":         "Member",
+						"relation_property": "relation_field_id",
+						"target_condition":  []interface{}{"is_owner"},
+						"resource": map[string]interface{}{
+							"path": "/v1.0/schemas",
+						},
+					}
+					var err error
+					expected, err = NewPolicy(rawExpected)
+					Expect(err).NotTo(HaveOccurred())
+
+					schema = &Schema{
+						ID:  "schema",
+						URL: "/v1.0/schemas",
+					}
+
+					property = &Property{
+						ID: "relation_field_id",
+					}
+				})
+
+				It("should generate default policy", func() {
+					actual := BuildDefaultPolicy(schema, property)
+					Expect(expected).To(Equal(actual))
+				})
+			})
 		})
 	})
 
