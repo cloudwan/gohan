@@ -27,8 +27,8 @@ profiling:
 
 logging:
   stderr:
-    enabled: false
-    level: ERROR
+    enabled: true
+    level: DEBUG
 
 watch:
   keys:

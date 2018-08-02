@@ -989,6 +989,18 @@ schemas:
         - "null"
         unique: false
         description: A property that can attach to 'attach_target' iff it has the same owner
+      attach_with_default_policy_id:
+        permission:
+        - create
+        - update
+        relation: attach_target
+        relation_property: attach_with_default_policy
+        title: Default policy attach target ID
+        type:
+        - string
+        - "null"
+        unique: false
+        description: A property that can attach to 'attach_target' with the default policy
       not_a_relation:
         permission:
         - create

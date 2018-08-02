@@ -1171,17 +1171,18 @@ var _ = Describe("Server package test", func() {
 	})
 
 	Describe("Attach policy tests", func() {
-		It("should validate create/update of resource through attach policies", func() {
-			getResourceURL := func(schemaID, id string) string {
-				s, _ := schema.GetManager().Schema(schemaID)
-				return baseURL + s.URL + "/" + id
-			}
+		getResourceURL := func(schemaID, id string) string {
+			s, _ := schema.GetManager().Schema(schemaID)
+			return baseURL + s.URL + "/" + id
+		}
 
-			attachTargetOfMember := map[string]interface{}{
-				"id":            "target_member",
-				"accessibility": "owner_only",
-				"block_flag":    false,
-			}
+		attachTargetOfMember := map[string]interface{}{
+			"id":            "target_member",
+			"accessibility": "owner_only",
+			"block_flag":    false,
+		}
+
+		FContext("should validate create/update of resource through attach policies", func() {
 			attachTargetOfPowerUser := map[string]interface{}{
 				"id":            "target_power_user",
 				"accessibility": "everybody",
@@ -1192,119 +1193,130 @@ var _ = Describe("Server package test", func() {
 				"accessibility": "everybody",
 				"block_flag":    true,
 			}
-			testURL("POST", attachTargetPluralURL, memberTokenID, attachTargetOfMember, http.StatusCreated)
-			testURL("POST", attachTargetPluralURL, powerUserTokenID, attachTargetOfPowerUser, http.StatusCreated)
-			testURL("POST", attachTargetPluralURL, powerUserTokenID, attachTargetBlocked, http.StatusCreated)
 
-			// Member creates attacher and attaches to their resource
-			// Should pass, because the target is owned by the member
-			attacherOfMember := map[string]interface{}{
-				"id": "attacher_member",
-				"attach_if_accessible_id": attachTargetOfMember["id"],
-			}
-			testURL("POST", attacherPluralURL, memberTokenID, attacherOfMember, http.StatusCreated)
+			BeforeEach(func() {
+				testURL("POST", attachTargetPluralURL, memberTokenID, attachTargetOfMember, http.StatusCreated)
+				testURL("POST", attachTargetPluralURL, powerUserTokenID, attachTargetOfPowerUser, http.StatusCreated)
+				testURL("POST", attachTargetPluralURL, powerUserTokenID, attachTargetBlocked, http.StatusCreated)
 
-			// Member updates his resource to attach to power user's attach target
-			// Should pass, because the target is accessible to everyone
-			attacherOfMemberUpdate := map[string]interface{}{
-				"attach_if_accessible_id": attachTargetOfPowerUser["id"],
-			}
-			testURL("PUT", getResourceURL("attacher", "attacher_member"), memberTokenID, attacherOfMemberUpdate, http.StatusOK)
+				// Member creates attacher and attaches to their resource
+				// Should pass, because the target is owned by the member
+				attacherOfMember := map[string]interface{}{
+					"id": "attacher_member",
+					"attach_if_accessible_id": attachTargetOfMember["id"],
+				}
+				testURL("POST", attacherPluralURL, memberTokenID, attacherOfMember, http.StatusCreated)
 
-			// Member tries to attach power user's attach target via attach_if_same_owner_id
-			// Should fail, because it is not theirs resource
-			attacherOfMemberUpdate = map[string]interface{}{
-				"attach_if_same_owner_id": attachTargetOfPowerUser["id"],
-			}
-			testURL("PUT", getResourceURL("attacher", "attacher_member"), memberTokenID, attacherOfMemberUpdate, http.StatusBadRequest)
+				// Power user tries to create attacher and attach it to member's attach target
+				// Should fail, because member's attach target is not accessible to the power user
+				attacherOfPowerUser := map[string]interface{}{
+					"id": "attacher_power_user",
+					"attach_if_accessible_id": attachTargetOfMember["id"],
+				}
+				testURL("POST", attacherPluralURL, powerUserTokenID, attacherOfPowerUser, http.StatusBadRequest)
 
-			// Power user tries to create attacher and attach it to member's attach target
-			// Should fail, because member's attach target is not accessible to the power user
-			attacherOfPowerUser := map[string]interface{}{
-				"id": "attacher_power_user",
-				"attach_if_accessible_id": attachTargetOfMember["id"],
-			}
-			testURL("POST", attacherPluralURL, powerUserTokenID, attacherOfPowerUser, http.StatusBadRequest)
+				// Power user creates attacher and attaches it to power user's attach target
+				// Should succeed, because they are the target's owner"
+				attacherOfPowerUser = map[string]interface{}{
+					"id": "attacher_power_user",
+					"attach_if_accessible_id": attachTargetOfPowerUser["id"],
+				}
+				testURL("POST", attacherPluralURL, powerUserTokenID, attacherOfPowerUser, http.StatusCreated)
+			})
 
-			// Power user creates attacher and attaches it to power user's attach target
-			// Should succeed, because they are the target's owner
-			attacherOfPowerUser = map[string]interface{}{
-				"id": "attacher_power_user",
-				"attach_if_accessible_id": attachTargetOfPowerUser["id"],
-			}
-			testURL("POST", attacherPluralURL, powerUserTokenID, attacherOfPowerUser, http.StatusCreated)
+			It("Member updates his resource to attach to power user's attach target - Should pass, because the target is accessible to everyone", func() {
+				attacherOfMemberUpdate := map[string]interface{}{
+					"attach_if_accessible_id": attachTargetOfPowerUser["id"],
+				}
+				testURL("PUT", getResourceURL("attacher", "attacher_member"), memberTokenID, attacherOfMemberUpdate, http.StatusOK)
+			})
 
-			// Power user tries to attach existing resource to member's target, but should fail
-			attacherOfPowerUserUpdate := map[string]interface{}{
-				"attach_if_accessible_id": attachTargetOfMember["id"],
-			}
-			dataBeforeUpdate := testURL("GET", getResourceURL("attacher", "attacher_power_user"), powerUserTokenID, nil, http.StatusOK)
-			testURL("PUT", getResourceURL("attacher", "attacher_power_user"), powerUserTokenID, attacherOfPowerUserUpdate, http.StatusBadRequest)
-			dataAfterUpdate := testURL("GET", getResourceURL("attacher", "attacher_power_user"), powerUserTokenID, nil, http.StatusOK)
-			Expect(dataAfterUpdate).To(Equal(dataBeforeUpdate))
+			It("Member tries to attach power user's attach target via attach_if_same_owner_id - Should fail, because it is not theirs resource", func() {
+				attacherOfMemberUpdate := map[string]interface{}{
+					"attach_if_same_owner_id": attachTargetOfPowerUser["id"],
+				}
+				testURL("PUT", getResourceURL("attacher", "attacher_member"), memberTokenID, attacherOfMemberUpdate, http.StatusBadRequest)
+			})
 
-			// Power user tries to attach to target_blocked
-			// They fail, because a deny policy was defined for this case
-			attacherOfPowerUserUpdate = map[string]interface{}{
-				"attach_if_accessible_id": attachTargetBlocked["id"],
-			}
-			dataBeforeUpdate = dataAfterUpdate
-			testURL("PUT", getResourceURL("attacher", "attacher_power_user"), powerUserTokenID, attacherOfPowerUserUpdate, http.StatusBadRequest)
-			dataAfterUpdate = testURL("GET", getResourceURL("attacher", "attacher_power_user"), powerUserTokenID, nil, http.StatusOK)
-			Expect(dataAfterUpdate).To(Equal(dataBeforeUpdate))
+			FIt("Should allow owner access through default policy", func() {
+				attacherOfMemberUpdate := map[string]interface{}{
+					"attach_with_default_policy_id": attachTargetOfPowerUser["id"],
+				}
+				testURL("PUT", getResourceURL("attacher", "attacher_member"), powerUserTokenID, attacherOfMemberUpdate, http.StatusOK)
+			})
+
+			It("Should provide tenant isolation through default policy", func() {
+				attacherOfMemberUpdate := map[string]interface{}{
+					"attach_with_default_policy_id": attachTargetOfPowerUser["id"],
+				}
+				testURL("PUT", getResourceURL("attacher", "attacher_member"), memberTokenID, attacherOfMemberUpdate, http.StatusBadRequest)
+			})
+
+			It("Power user tries to attach existing resource to member's target, but should fail", func() {
+				attacherOfPowerUserUpdate := map[string]interface{}{
+					"attach_if_accessible_id": attachTargetOfMember["id"],
+				}
+				dataBeforeUpdate := testURL("GET", getResourceURL("attacher", "attacher_power_user"), powerUserTokenID, nil, http.StatusOK)
+				testURL("PUT", getResourceURL("attacher", "attacher_power_user"), powerUserTokenID, attacherOfPowerUserUpdate, http.StatusBadRequest)
+				dataAfterUpdate := testURL("GET", getResourceURL("attacher", "attacher_power_user"), powerUserTokenID, nil, http.StatusOK)
+				Expect(dataAfterUpdate).To(Equal(dataBeforeUpdate))
+
+				// Power user tries to attach to target_blocked
+				// They fail, because a deny policy was defined for this case
+				attacherOfPowerUserUpdate = map[string]interface{}{
+					"attach_if_accessible_id": attachTargetBlocked["id"],
+				}
+				dataBeforeUpdate = dataAfterUpdate
+				testURL("PUT", getResourceURL("attacher", "attacher_power_user"), powerUserTokenID, attacherOfPowerUserUpdate, http.StatusBadRequest)
+				dataAfterUpdate = testURL("GET", getResourceURL("attacher", "attacher_power_user"), powerUserTokenID, nil, http.StatusOK)
+				Expect(dataAfterUpdate).To(Equal(dataBeforeUpdate))
+			})
 		})
 
-		It("should validate create/update of resource through attach policies with wildcards", func() {
-			getResourceURL := func(schemaID, id string) string {
-				s, _ := schema.GetManager().Schema(schemaID)
-				return baseURL + s.URL + "/" + id
-			}
-
-			attachTargetOfMember := map[string]interface{}{
-				"id":            "target_member",
-				"accessibility": "owner_only",
-				"block_flag":    false,
-			}
+		Context("should validate create/update of resource through attach policies with wildcards", func() {
 			attachTargetOfPowerUser := map[string]interface{}{
 				"id":            "target_power_user",
 				"accessibility": "owner_only",
 				"block_flag":    false,
 			}
-			testURL("POST", attachTargetPluralURL, memberTokenID, attachTargetOfMember, http.StatusCreated)
-			testURL("POST", attachTargetPluralURL, powerUserTokenID, attachTargetOfPowerUser, http.StatusCreated)
 
-			// Member tries to create attachment to power user's resource
-			// Should fail
-			attacherWildcardOfMember := map[string]interface{}{
-				"id":          "wildcard_attacher_member",
-				"attach_a_id": attachTargetOfPowerUser["id"],
-			}
-			testURL("POST", attacherWildcardPluralURL, memberTokenID, attacherWildcardOfMember, http.StatusBadRequest)
+			BeforeEach(func() {
+				testURL("POST", attachTargetPluralURL, memberTokenID, attachTargetOfMember, http.StatusCreated)
+				testURL("POST", attachTargetPluralURL, powerUserTokenID, attachTargetOfPowerUser, http.StatusCreated)
 
-			// Member tries to create attachment to their resource
-			// Should succeed
-			attacherWildcardOfMember = map[string]interface{}{
-				"id":          "wildcard_attacher_member",
-				"attach_a_id": attachTargetOfMember["id"],
-			}
-			testURL("POST", attacherWildcardPluralURL, memberTokenID, attacherWildcardOfMember, http.StatusCreated)
+				// Member tries to create attachment to power user's resource
+				// Should fail
+				attacherWildcardOfMember := map[string]interface{}{
+					"id":          "wildcard_attacher_member",
+					"attach_a_id": attachTargetOfPowerUser["id"],
+				}
+				testURL("POST", attacherWildcardPluralURL, memberTokenID, attacherWildcardOfMember, http.StatusBadRequest)
 
-			// Member tries to update other field to create attachment to power user's resoruce
-			// Should fail
-			attacherWildcardOfMemberUpdate := map[string]interface{}{
-				"attach_b_id": attachTargetOfPowerUser["id"],
-			}
-			dataBeforeUpdate := testURL("GET", getResourceURL("wildcard_attacher", "wildcard_attacher_member"), memberTokenID, nil, http.StatusOK)
-			testURL("PUT", getResourceURL("wildcard_attacher", "attacher_power_user"), memberTokenID, attacherWildcardOfMemberUpdate, http.StatusBadRequest)
-			dataAfterUpdate := testURL("GET", getResourceURL("wildcard_attacher", "wildcard_attacher_member"), memberTokenID, nil, http.StatusOK)
-			Expect(dataAfterUpdate).To(Equal(dataBeforeUpdate))
+				// Member tries to create attachment to their resource
+				// Should succeed
+				attacherWildcardOfMember = map[string]interface{}{
+					"id":          "wildcard_attacher_member",
+					"attach_a_id": attachTargetOfMember["id"],
+				}
+				testURL("POST", attacherWildcardPluralURL, memberTokenID, attacherWildcardOfMember, http.StatusCreated)
+			})
 
-			// Member tries to update other field to create attachment to their resource
-			// Should succeed
-			attacherWildcardOfMemberUpdate = map[string]interface{}{
-				"attach_b_id": attachTargetOfMember["id"],
-			}
-			testURL("PUT", getResourceURL("wildcard_attacher", "wildcard_attacher_member"), memberTokenID, attacherWildcardOfMemberUpdate, http.StatusOK)
+			It("Member tries to update other field to create attachment to power user's resoruce - Should fail", func() {
+				attacherWildcardOfMemberUpdate := map[string]interface{}{
+					"attach_b_id": attachTargetOfPowerUser["id"],
+				}
+				dataBeforeUpdate := testURL("GET", getResourceURL("wildcard_attacher", "wildcard_attacher_member"), memberTokenID, nil, http.StatusOK)
+				testURL("PUT", getResourceURL("wildcard_attacher", "attacher_power_user"), memberTokenID, attacherWildcardOfMemberUpdate, http.StatusBadRequest)
+				dataAfterUpdate := testURL("GET", getResourceURL("wildcard_attacher", "wildcard_attacher_member"), memberTokenID, nil, http.StatusOK)
+				Expect(dataAfterUpdate).To(Equal(dataBeforeUpdate))
+			})
+
+			It("Member tries to update other field to create attachment to their resource - Should succeed", func() {
+				attacherWildcardOfMemberUpdate := map[string]interface{}{
+					"attach_b_id": attachTargetOfMember["id"],
+				}
+				testURL("PUT", getResourceURL("wildcard_attacher", "wildcard_attacher_member"), memberTokenID, attacherWildcardOfMemberUpdate, http.StatusOK)
+			})
 		})
 	})
 
