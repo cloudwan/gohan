@@ -168,7 +168,7 @@ func (testRunner *TestRunner) runSingle(t ginkgo.GinkgoTestingT, reporter *Repor
 	// load schemas
 	for _, schemaPath := range schemas {
 		if err = manager.LoadSchemaFromFile(path + "/" + schemaPath); err != nil {
-			return fmt.Errorf("failed to load schema: %s", err)
+			return fmt.Errorf("failed to load schema %s: %s", schemaPath, err)
 		}
 	}
 
