@@ -436,7 +436,7 @@ func (schema *Schema) GetPropertyByID(id string) (*Property, error) {
 			return &p, nil
 		}
 	}
-	return nil, fmt.Errorf("Property with ID %s not found", id)
+	return nil, fmt.Errorf("Property with ID %s not found in schema %s", id, schema.ID)
 }
 
 //StateVersioning whether resources created from this schema should track state and config versions
