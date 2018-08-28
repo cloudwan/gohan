@@ -214,7 +214,7 @@ func (env *Environment) addTestingAPI() {
 			return policyValue
 		},
 		"MockAuthorization": func(call otto.FunctionCall) otto.Value {
-			authorizationValue, _ := call.Otto.ToValue(schema.NewAuthorization("", "", "", []string{}, []*schema.Catalog{}))
+			authorizationValue, _ := call.Otto.ToValue(schema.NewAuthorizationBuilder().BuildScopedToTenant())
 			return authorizationValue
 		},
 	}

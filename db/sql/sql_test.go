@@ -129,7 +129,7 @@ var _ = Describe("Sql", func() {
 		Context("Without fields", func() {
 			It("Returns all colums", func() {
 				cols := MakeColumns(s, s.GetDbTableName(), nil, false)
-				Expect(cols).To(HaveLen(6))
+				Expect(cols).To(HaveLen(7))
 			})
 		})
 
@@ -145,6 +145,7 @@ var _ = Describe("Sql", func() {
 		type testRow struct {
 			ID          string  `json:"id"`
 			TenantID    string  `json:"tenant_id"`
+			DomainID    string  `json:"domain_id"`
 			TestString  string  `json:"test_string"`
 			TestNumber  float64 `json:"test_number"`
 			TestInteger int     `json:"test_integer"`
@@ -182,6 +183,7 @@ var _ = Describe("Sql", func() {
 					Expect(r.Data()).To(Equal(map[string]interface{}{
 						"id":           expected[i].ID,
 						"tenant_id":    expected[i].TenantID,
+						"domain_id":    expected[i].DomainID,
 						"test_string":  expected[i].TestString,
 						"test_number":  expected[i].TestNumber,
 						"test_integer": expected[i].TestInteger,
@@ -206,6 +208,7 @@ var _ = Describe("Sql", func() {
 					Expect(r.Data()).To(Equal(map[string]interface{}{
 						"id":           expected[i].ID,
 						"tenant_id":    expected[i].TenantID,
+						"domain_id":    expected[i].DomainID,
 						"test_string":  expected[i].TestString,
 						"test_number":  expected[i].TestNumber,
 						"test_integer": expected[i].TestInteger,
@@ -229,6 +232,7 @@ var _ = Describe("Sql", func() {
 				Expect(results[0].Data()).To(Equal(map[string]interface{}{
 					"id":           expected[1].ID,
 					"tenant_id":    expected[1].TenantID,
+					"domain_id":    expected[1].DomainID,
 					"test_string":  expected[1].TestString,
 					"test_number":  expected[1].TestNumber,
 					"test_integer": expected[1].TestInteger,
@@ -256,18 +260,19 @@ var _ = Describe("Sql", func() {
 		})
 
 		Context("Index on multiple columns", func() {
-			It("Should create unique index on tenant_id and id", func() {
+			It("Should create unique index on tenant_id, domain_id and id", func() {
 				_, indices := sqlConn.GenTableDef(test, false)
-				Expect(indices).To(HaveLen(2))
-				Expect(indices[1]).To(ContainSubstring("CREATE UNIQUE INDEX unique_id_and_tenant_id ON `tests`(`id`,`tenant_id`);"))
+				Expect(indices).To(HaveLen(3))
+				Expect(indices[2]).To(ContainSubstring("CREATE UNIQUE INDEX unique_id_and_tenant_id_and_domain_id ON `tests`(`id`,`tenant_id`,`domain_id`);"))
 			})
 		})
 
 		Context("Index in schema", func() {
 			It("Should create index, if schema property should be indexed", func() {
 				_, indices := sqlConn.GenTableDef(test, false)
-				Expect(indices).To(HaveLen(2))
+				Expect(indices).To(HaveLen(3))
 				Expect(indices[0]).To(ContainSubstring("CREATE INDEX tests_tenant_id_idx ON `tests`(`tenant_id`);"))
+				Expect(indices[1]).To(ContainSubstring("CREATE INDEX tests_domain_id_idx ON `tests`(`domain_id`);"))
 			})
 		})
 

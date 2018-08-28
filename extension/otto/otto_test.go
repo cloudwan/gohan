@@ -645,7 +645,10 @@ var _ = Describe("Otto extension manager", func() {
 		)
 
 		BeforeEach(func() {
-			adminAuth = schema.NewAuthorization(adminTenantID, "admin", adminTokenID, []string{"admin"}, nil)
+			adminAuth = schema.NewAuthorizationBuilder().
+				WithTenant(schema.Tenant{ID: adminTenantID, Name: "admin"}).
+				WithRoleIDs("admin").
+				BuildScopedToTenant()
 			auth = adminAuth
 
 			context = makeContext()
@@ -691,9 +694,6 @@ var _ = Describe("Otto extension manager", func() {
 			context["policy"] = policy
 			context["role"] = role
 			context["tenant_id"] = auth.TenantID()
-			context["tenant_name"] = auth.TenantName()
-			context["auth_token"] = auth.AuthToken()
-			context["catalog"] = auth.Catalog()
 			context["auth"] = auth
 			context["identity_service"] = &middleware.FakeIdentity{}
 
@@ -1528,9 +1528,6 @@ var _ = Describe("Otto extension manager", func() {
 					createSubnetContext["policy"] = curPolicy
 					createSubnetContext["role"] = curRole
 					createSubnetContext["tenant_id"] = auth.TenantID()
-					createSubnetContext["tenant_name"] = auth.TenantName()
-					createSubnetContext["auth_token"] = auth.AuthToken()
-					createSubnetContext["catalog"] = auth.Catalog()
 					createSubnetContext["auth"] = auth
 					createSubnetContext["identity_service"] = &middleware.FakeIdentity{}
 
@@ -1540,9 +1537,6 @@ var _ = Describe("Otto extension manager", func() {
 					readSubnetContext["policy"] = curPolicy
 					readSubnetContext["role"] = curRole
 					readSubnetContext["tenant_id"] = auth.TenantID()
-					readSubnetContext["tenant_name"] = auth.TenantName()
-					readSubnetContext["auth_token"] = auth.AuthToken()
-					readSubnetContext["catalog"] = auth.Catalog()
 					readSubnetContext["auth"] = auth
 					readSubnetContext["identity_service"] = &middleware.FakeIdentity{}
 
@@ -1572,9 +1566,6 @@ var _ = Describe("Otto extension manager", func() {
 					createNetworkContext["policy"] = curPolicy
 					createNetworkContext["role"] = curRole
 					createNetworkContext["tenant_id"] = auth.TenantID()
-					createNetworkContext["tenant_name"] = auth.TenantName()
-					createNetworkContext["auth_token"] = auth.AuthToken()
-					createNetworkContext["catalog"] = auth.Catalog()
 					createNetworkContext["auth"] = auth
 					createNetworkContext["identity_service"] = &middleware.FakeIdentity{}
 				})

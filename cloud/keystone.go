@@ -26,6 +26,7 @@ import (
 	v3tokens "github.com/gophercloud/gophercloud/openstack/identity/v3/tokens"
 	"github.com/gophercloud/gophercloud/pagination"
 
+	"errors"
 	"github.com/cloudwan/gohan/schema"
 )
 
@@ -160,7 +161,7 @@ func (client *keystoneV3Client) VerifyToken(token string) (schema.Authorization,
 		return nil, fmt.Errorf("Error during verifying token: %s", tokenResult.Err.Error())
 	}
 	_, err := tokenResult.ExtractToken()
-	body, ok := tokenResult.Body.(map[string]interface{})
+	_, ok := tokenResult.Body.(map[string]interface{})
 	// tricky gophercloud behavior.
 	// If system token doesn't need reauth, err is set when token is invalid
 	// If system token needed reauth and user token is invalid, err wont be propagated neither by return nor Err field,
@@ -169,41 +170,57 @@ func (client *keystoneV3Client) VerifyToken(token string) (schema.Authorization,
 		return nil, fmt.Errorf("Invalid token")
 	}
 
-	tokenBody, ok := body["token"]
-	if !ok {
-		return nil, fmt.Errorf("no token property in body %s", body)
+	// Get roles
+	roles, err := tokenResult.ExtractRoles()
+	if err != nil {
+		return nil, err
 	}
-	tokenMap := tokenBody.(map[string]interface{})
-	roles := tokenMap["roles"]
 	roleIDs := []string{}
-	for _, roleBody := range roles.([]interface{}) {
-		roleIDs = append(roleIDs, roleBody.(map[string]interface{})["name"].(string))
+	for _, r := range roles {
+		roleIDs = append(roleIDs, r.Name)
 	}
-	projectObj, ok := tokenMap["project"]
-	if !ok {
-		return nil, fmt.Errorf("Token is unscoped")
+
+	// Get project/tenant
+	project, err := tokenResult.ExtractProject()
+	if err != nil {
+		return nil, err
 	}
-	project := projectObj.(map[string]interface{})
-	tenantID := project["id"].(string)
-	tenantName := project["name"].(string)
-	catalogList, ok := tokenMap["catalog"].([]interface{})
-	catalogObj := []*schema.Catalog{}
-	if ok {
-		for _, rawCatalog := range catalogList {
-			catalog := rawCatalog.(map[string]interface{})
-			endPoints := []*schema.Endpoint{}
-			rawEndpoints, ok := catalog["endpoints"].([]interface{})
-			if ok {
-				for _, rawEndpoint := range rawEndpoints {
-					endpoint := rawEndpoint.(map[string]interface{})
-					endPoints = append(endPoints,
-						schema.NewEndpoint(endpoint["url"].(string), endpoint["region"].(string), endpoint["interface"].(string)))
-				}
-			}
-			catalogObj = append(catalogObj, schema.NewCatalog(catalog["name"].(string), catalog["type"].(string), endPoints))
+	if project != nil {
+		tenant := schema.Tenant{
+			ID:   project.ID,
+			Name: project.Name,
 		}
+		domain := schema.Domain{
+			ID:   project.Domain.ID,
+			Name: project.Domain.Name,
+		}
+		builder := schema.NewAuthorizationBuilder().
+			WithTenant(tenant).
+			WithDomain(domain).
+			WithRoleIDs(roleIDs...)
+
+		if isTokenScopedToAdminProject(&tokenResult) {
+			return builder.BuildAdmin(), nil
+		}
+		return builder.BuildScopedToTenant(), nil
+	} else {
+		dom, err := extractDomain(&tokenResult)
+		if err != nil {
+			return nil, err
+		}
+		if dom == nil {
+			return nil, errors.New("Token is unscoped")
+		}
+		domain := schema.Domain{
+			ID:   dom.ID,
+			Name: dom.Name,
+		}
+		auth := schema.NewAuthorizationBuilder().
+			WithDomain(domain).
+			WithRoleIDs(roleIDs...).
+			BuildScopedToDomain()
+		return auth, nil
 	}
-	return schema.NewAuthorization(tenantID, tenantName, token, roleIDs, catalogObj), nil
 }
 
 // GetTenantID maps the given v3.0 project ID to the projects's name
@@ -244,6 +261,22 @@ func (client *keystoneV3Client) GetClient() *gophercloud.ServiceClient {
 	return client.client
 }
 
+func extractDomain(result *v3tokens.GetResult) (*v3tokens.Domain, error) {
+	var s struct {
+		Domain *v3tokens.Domain `json:"domain"`
+	}
+	err := result.ExtractInto(&s)
+	return s.Domain, err
+}
+
+func isTokenScopedToAdminProject(result *v3tokens.GetResult) bool {
+	var s struct {
+		IsAdminProject bool `json:"is_admin_project"`
+	}
+	err := result.ExtractInto(&s)
+	return (err == nil) && s.IsAdminProject
+}
+
 //VerifyToken verifies keystone v2.0 token
 func (client *keystoneV2Client) VerifyToken(token string) (schema.Authorization, error) {
 	tokenResult, err := verifyV2Token(client.client, token)
@@ -266,34 +299,12 @@ func (client *keystoneV2Client) VerifyToken(token string) (schema.Authorization,
 	tenant := tenantObj.(map[string]interface{})
 	tenantID := tenant["id"].(string)
 	tenantName := tenant["name"].(string)
-	catalogList := tokenBodyMap["serviceCatalog"].([]interface{})
-	catalogObj := []*schema.Catalog{}
-	for _, rawCatalog := range catalogList {
-		catalog := rawCatalog.(map[string]interface{})
-		endPoints := []*schema.Endpoint{}
-		rawEndpoints := catalog["endpoints"].([]interface{})
-		for _, rawEndpoint := range rawEndpoints {
-			endpoint := rawEndpoint.(map[string]interface{})
-			region := endpoint["region"].(string)
-			adminURL, ok := endpoint["adminURL"].(string)
-			if ok {
-				endPoints = append(endPoints,
-					schema.NewEndpoint(adminURL, region, "admin"))
-			}
-			internalURL, ok := endpoint["internalURL"].(string)
-			if ok {
-				endPoints = append(endPoints,
-					schema.NewEndpoint(internalURL, region, "internal"))
-			}
-			publicURL, ok := endpoint["publicURL"].(string)
-			if ok {
-				endPoints = append(endPoints,
-					schema.NewEndpoint(publicURL, region, "public"))
-			}
-		}
-		catalogObj = append(catalogObj, schema.NewCatalog(catalog["name"].(string), catalog["type"].(string), endPoints))
-	}
-	return schema.NewAuthorization(tenantID, tenantName, token, roleIDs, catalogObj), nil
+	auth := schema.NewAuthorizationBuilder().
+		WithKeystoneV2Compatibility().
+		WithTenant(schema.Tenant{ID: tenantID, Name: tenantName}).
+		WithRoleIDs(roleIDs...).
+		BuildScopedToTenant()
+	return auth, nil
 }
 
 // GetTenantID maps the given v2.0 project name to the tenant's id

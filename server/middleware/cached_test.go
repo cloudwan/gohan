@@ -29,10 +29,14 @@ var _ = ginkgo.Describe("Cached identity service", func() {
 		mockedIdentityService = NewMockIdentityService(ctrl)
 		cachedIdentityService = NewCachedIdentityService(mockedIdentityService, time.Second)
 		serviceClient = &gophercloud.ServiceClient{ProviderClient: &gophercloud.ProviderClient{TokenID: token}}
-		tenantID = "tenant-id"
-		tenantName = "tenant-name"
+		tenant := schema.Tenant{
+			ID:   "tenant-id",
+			Name: "tenant-name",
+		}
 		token = "token"
-		auth = schema.NewAuthorization(tenantID, tenantName, token, []string{}, []*schema.Catalog{})
+		auth = schema.NewAuthorizationBuilder().
+			WithTenant(tenant).
+			BuildScopedToTenant()
 	})
 
 	ginkgo.AfterEach(func() {

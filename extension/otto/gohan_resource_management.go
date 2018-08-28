@@ -89,8 +89,12 @@ func init() {
 				if err != nil {
 					tenantIDs = nil
 				}
+				domainIDs, err := GetStringList(call.Argument(4))
+				if err != nil {
+					domainIDs = nil
+				}
 
-				resource, err := GohanModelFetch(context, schemaID, resourceID, tenantIDs)
+				resource, err := GohanModelFetch(context, schemaID, resourceID, tenantIDs, domainIDs)
 				if err != nil {
 					handleChainError(env, &call, err)
 				}
@@ -143,8 +147,12 @@ func init() {
 				if err != nil {
 					tenantIDs = nil
 				}
+				domainIDs, err := GetStringList(call.Argument(5))
+				if err != nil {
+					domainIDs = nil
+				}
 
-				resource, err := GohanModelUpdate(context, schemaID, resourceID, dataMap, tenantIDs)
+				resource, err := GohanModelUpdate(context, schemaID, resourceID, dataMap, tenantIDs, domainIDs)
 				if err != nil {
 					handleChainError(env, &call, err)
 				}
@@ -235,7 +243,7 @@ func GohanModelList(context map[string]interface{}, schemaID string,
 
 //GohanModelFetch fetch gohan resource and running extensions
 func GohanModelFetch(context map[string]interface{}, schemaID string, resourceID string,
-	tenantIDs []string) (interface{}, error) {
+	tenantIDs []string, domainIDs []string) (interface{}, error) {
 
 	currentSchema, err := getSchema(schemaID)
 	if err != nil {
@@ -246,7 +254,7 @@ func GohanModelFetch(context map[string]interface{}, schemaID string, resourceID
 	context["context"] = context_pkg.Background()
 
 	if err := resources.GetSingleResourceInTransaction(
-		context, currentSchema, resourceID, tenantIDs); err != nil {
+		context, currentSchema, resourceID, tenantIDs, domainIDs); err != nil {
 		return nil, err
 	}
 	response, ok := context["response"].(map[string]interface{})
@@ -286,7 +294,7 @@ func GohanModelCreate(context map[string]interface{}, schemaID string,
 }
 
 //GohanModelUpdate updates gohan resource and running extensions
-func GohanModelUpdate(context map[string]interface{}, schemaID string, resourceID string, dataMap map[string]interface{}, tenantIDs []string) (interface{}, error) {
+func GohanModelUpdate(context map[string]interface{}, schemaID string, resourceID string, dataMap map[string]interface{}, tenantIDs []string, domainIDs []string) (interface{}, error) {
 
 	currentSchema, err := getSchema(schemaID)
 	if err != nil {
@@ -296,7 +304,7 @@ func GohanModelUpdate(context map[string]interface{}, schemaID string, resourceI
 	context["path"] = currentSchema.GetPluralURL()
 	context["context"] = context_pkg.Background()
 
-	err = resources.UpdateResourceInTransaction(context, currentSchema, resourceID, dataMap, tenantIDs)
+	err = resources.UpdateResourceInTransaction(context, currentSchema, resourceID, dataMap, tenantIDs, domainIDs)
 	if err != nil {
 		return nil, err
 	}

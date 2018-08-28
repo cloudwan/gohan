@@ -199,11 +199,17 @@ func (*FakeIdentity) VerifyToken(tokenID string) (schema.Authorization, error) {
 	}
 
 	access, _ := rawToken.(map[string]interface{})["access"].(map[string]interface{})
-	tenantID := access["token"].(token).Tenant.ID
-	tenantName := access["token"].(token).Tenant.Name
+	tenant := schema.Tenant{
+		ID:   access["token"].(token).Tenant.ID,
+		Name: access["token"].(token).Tenant.Name,
+	}
 	role := access["user"].(map[string]interface{})["roles"].([]role)[0].Name
-
-	return schema.NewAuthorization(tenantID, tenantName, tokenID, []string{role}, nil), nil
+	auth := schema.NewAuthorizationBuilder().
+		WithKeystoneV2Compatibility().
+		WithTenant(tenant).
+		WithRoleIDs(role).
+		BuildScopedToTenant()
+	return auth, nil
 }
 
 // GetTenantID maps the given tenant name to the tenant's ID

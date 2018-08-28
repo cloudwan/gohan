@@ -191,13 +191,6 @@ func (watcher *StateWatcher) StateUpdate(event *gohan_sync.Event) error {
 			context := map[string]interface{}{}
 
 			if haveEnvironment {
-				serviceAuthorization, err := watcher.identity.GetServiceAuthorization()
-				if err != nil {
-					return err
-				}
-
-				context["catalog"] = serviceAuthorization.Catalog()
-				context["auth_token"] = serviceAuthorization.AuthToken()
 				context["resource"] = curResource.Data()
 				context["schema"] = curSchema
 				context["state"] = event.Data

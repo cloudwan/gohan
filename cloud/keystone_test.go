@@ -35,6 +35,18 @@ var _ = Describe("Keystone client", func() {
 		tenantName = "admin"
 	)
 
+	setupV2Client := func() {
+		var err error
+		client, err = NewKeystoneV2Client(server.URL()+"/v2.0", username, password, tenantName)
+		Expect(err).ToNot(HaveOccurred())
+	}
+
+	setupV3Client := func() {
+		var err error
+		client, err = NewKeystoneV3Client(server.URL()+"/v3", username, password, domainName, tenantName)
+		Expect(err).ToNot(HaveOccurred())
+	}
+
 	BeforeEach(func() {
 		server = ghttp.NewServer()
 	})
@@ -70,7 +82,7 @@ var _ = Describe("Keystone client", func() {
 				server.AppendHandlers(
 					ghttp.RespondWithJSONEncoded(200, getV2TokensResponse()),
 				)
-				client, _ = NewKeystoneV2Client(server.URL()+"/v2.0", username, password, tenantName)
+				setupV2Client()
 			})
 
 			It("Should map Tenant Name to Tenant ID successfully", func() {
@@ -123,9 +135,9 @@ var _ = Describe("Keystone client", func() {
 		Context("Keystone v3", func() {
 			BeforeEach(func() {
 				server.AppendHandlers(
-					ghttp.RespondWithJSONEncoded(201, getV3TokensResponse()),
+					ghttp.RespondWithJSONEncoded(201, getV3TokensScopedToTenantResponse()),
 				)
-				client, _ = NewKeystoneV3Client(server.URL()+"/v3", username, password, domainName, tenantName)
+				setupV3Client()
 			})
 
 			It("Should map Tenant Name to Tenant ID successfully", func() {
@@ -214,7 +226,7 @@ var _ = Describe("Keystone client", func() {
 						ghttp.RespondWithJSONEncoded(401, getV3Unauthorized()),
 						ghttp.CombineHandlers(
 							ghttp.VerifyJSONRepresenting(serviceTokenRequest),
-							ghttp.RespondWithJSONEncoded(201, getV3TokensResponse(), http.Header{"X-Subject-Token": {newServiceToken}}),
+							ghttp.RespondWithJSONEncoded(201, getV3TokensScopedToTenantResponse(), http.Header{"X-Subject-Token": {newServiceToken}}),
 						),
 					)
 				})
@@ -241,15 +253,68 @@ var _ = Describe("Keystone client", func() {
 								"X-Auth-Token":    {newServiceToken},
 								"X-Subject-Token": {validUserToken},
 							}),
-							ghttp.RespondWithJSONEncoded(200, getV3TokensResponse()),
+							ghttp.RespondWithJSONEncoded(200, getV3TokensScopedToTenantResponse()),
 						),
 					)
 					auth, err := client.VerifyToken(validUserToken)
 					Expect(err).To(BeNil())
 					Expect(auth.TenantID()).To(Equal("acme-id"))
 					Expect(auth.TenantName()).To(Equal("acme"))
+					Expect(auth.DomainID()).To(Equal("domain-id"))
+					Expect(auth.DomainName()).To(Equal("domain"))
 					Expect(auth.Roles()).To(Equal([]*schema.Role{{"member"}}))
 				})
+			})
+		})
+	})
+
+	Context("Token scope", func() {
+		var token = "token"
+
+		Describe("Keystone v3", func() {
+			It("Should read tokens with tenant scope", func() {
+				server.AppendHandlers(
+					ghttp.RespondWithJSONEncoded(201, getV3TokensScopedToTenantResponse()),
+					ghttp.RespondWithJSONEncoded(200, getV3TokensScopedToTenantResponse()),
+				)
+				setupV3Client()
+				auth, err := client.VerifyToken(token)
+				Expect(err).To(BeNil())
+				Expect(auth.TenantID()).To(Equal("acme-id"))
+				Expect(auth.TenantName()).To(Equal("acme"))
+				Expect(auth.DomainID()).To(Equal("domain-id"))
+				Expect(auth.DomainName()).To(Equal("domain"))
+				Expect(auth.IsAdmin()).To(BeFalse())
+			})
+
+			It("Should read tokens with domain scope", func() {
+				server.AppendHandlers(
+					ghttp.RespondWithJSONEncoded(201, getV3TokensScopedToDomainResponse()),
+					ghttp.RespondWithJSONEncoded(200, getV3TokensScopedToDomainResponse()),
+				)
+				setupV3Client()
+				auth, err := client.VerifyToken(token)
+				Expect(err).To(BeNil())
+				Expect(auth.TenantID()).To(Equal(""))
+				Expect(auth.TenantName()).To(Equal(""))
+				Expect(auth.DomainID()).To(Equal("domain-id"))
+				Expect(auth.DomainName()).To(Equal("domain"))
+				Expect(auth.IsAdmin()).To(BeFalse())
+			})
+
+			It("Should read tokens scoped to admin project", func() {
+				server.AppendHandlers(
+					ghttp.RespondWithJSONEncoded(201, getV3TokensAdminResponse()),
+					ghttp.RespondWithJSONEncoded(200, getV3TokensAdminResponse()),
+				)
+				setupV3Client()
+				auth, err := client.VerifyToken(token)
+				Expect(err).To(BeNil())
+				Expect(auth.TenantID()).To(Equal("admin-project-id"))
+				Expect(auth.TenantName()).To(Equal("admin-project"))
+				Expect(auth.DomainID()).To(Equal("default"))
+				Expect(auth.DomainName()).To(Equal("default"))
+				Expect(auth.IsAdmin()).To(BeTrue())
 			})
 		})
 	})

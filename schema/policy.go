@@ -20,6 +20,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/cloudwan/gohan/extension/goext/filter"
 	"github.com/cloudwan/gohan/util"
 	"github.com/pkg/errors"
 )
@@ -48,34 +49,52 @@ const (
 	globalRegexp = ".*"
 
 	onlyOneOfTenantIDTenantNameError = "Only one of [tenant_id, tenant_name] should be specified"
+
+	adminRole = "admin"
 )
 
 // AllActions are all possible actions
 var AllActions = []string{ActionCreate, ActionRead, ActionUpdate, ActionDelete}
 
-func newTenant(tenantID, tenantName string) tenant {
+var adminPolicy = func() *Policy {
+	policy, err := NewPolicy(map[string]interface{}{
+		"action": "*",
+		"effect": "allow",
+		"id": "admin_statement",
+		"principal": "admin",
+		"resource": map[string]interface{}{
+			"path": ".*",
+		},
+	})
+	if err != nil {
+		panic(errors.Errorf("Failed to create the admin policy: %v", err))
+	}
+	return policy
+}()
+
+func newTenantMatcher(tenantID, tenantName string) tenantMatcher {
 	tenantIDRegexp, _ := getRegexp(tenantID)
 	tenantNameRegexp, _ := getRegexp(tenantName)
-	return tenant{ID: tenantIDRegexp, Name: tenantNameRegexp}
+	return tenantMatcher{ID: tenantIDRegexp, Name: tenantNameRegexp}
 }
 
-// Tenant ...
-type tenant struct {
+// tenantMatcher matches given tenant
+type tenantMatcher struct {
 	ID   *regexp.Regexp
 	Name *regexp.Regexp
 }
 
-func (t *tenant) equal(t2 tenant) bool {
+func (t *tenantMatcher) equal(t2 tenantMatcher) bool {
 	idMatch := t.ID.MatchString(t2.ID.String()) || t2.ID.MatchString(t.ID.String())
 	nameMatch := t.Name.MatchString(t2.Name.String()) || t2.Name.MatchString(t.Name.String())
 	return idMatch && nameMatch
 }
 
-func (t *tenant) notEqual(t2 tenant) bool {
+func (t *tenantMatcher) notEqual(t2 tenantMatcher) bool {
 	return !t.equal(t2)
 }
 
-func (t tenant) String() string {
+func (t tenantMatcher) String() string {
 	return fmt.Sprintf("%s (%s)", t.Name.String(), t.ID.String())
 }
 
@@ -125,7 +144,7 @@ type AttachInfo struct {
 
 type ResourceCondition struct {
 	Condition                     []interface{}
-	actionTenantFilter            map[string][]tenant
+	actionTenantFilter            map[string][]tenantMatcher
 	actionPropertyConditionFilter map[string][]map[string]interface{}
 	actionFilter                  *conditionFilter
 	requireOwner                  bool
@@ -141,87 +160,246 @@ type resourceFilter struct {
 type Authorization interface {
 	TenantID() string
 	TenantName() string
-	AuthToken() string
+	DomainID() string
+	DomainName() string
 	Roles() []*Role
-	Catalog() []*Catalog
+	IsAdmin() bool
+	getResourceFilters(schema *Schema) []map[string]interface{}
+	checkAccessToResource(cond *ResourceCondition, action string, resource map[string]interface{}) error
+	getTenantAndDomainFilters(cond *ResourceCondition, action string) (tenantFilter []string, domainFilter []string)
 }
 
-//BaseAuthorization is base struct for Authorization
-type BaseAuthorization struct {
-	tenantID   string
-	tenantName string
-	authToken  string
-	roles      []*Role
-	catalog    []*Catalog
+type TenantScopedAuthorization struct {
+	DomainScopedAuthorization
+	tenant Tenant
 }
 
-//NewAuthorization is a constructor for auth info
-func NewAuthorization(tenantID, tenantName, authToken string, roleIDs []string, catalog []*Catalog) Authorization {
+type DomainScopedAuthorization struct {
+	domain Domain
+	roles  []*Role
+}
+
+// AdminScopedAuthorization represents authorization for the admin,
+// i.e. an authorization scoped to an admin project
+type AdminAuthorization struct {
+	TenantScopedAuthorization
+}
+
+type AuthorizationBuilder struct {
+	authViaKeystoneV2 bool
+	tenant            Tenant
+	domain            Domain
+	roles             []*Role
+}
+
+func NewAuthorizationBuilder() *AuthorizationBuilder {
+	return &AuthorizationBuilder{
+		domain: DefaultDomain,
+		roles:  []*Role{},
+	}
+}
+
+func (ab *AuthorizationBuilder) WithKeystoneV2Compatibility() *AuthorizationBuilder {
+	ab.authViaKeystoneV2 = true
+	return ab
+}
+
+func (ab *AuthorizationBuilder) WithTenant(tenant Tenant) *AuthorizationBuilder {
+	ab.tenant = tenant
+	return ab
+}
+
+func (ab *AuthorizationBuilder) WithDomain(domain Domain) *AuthorizationBuilder {
+	ab.domain = domain
+	return ab
+}
+
+func (ab *AuthorizationBuilder) WithRoleIDs(roleIDs ...string) *AuthorizationBuilder {
 	roles := []*Role{}
-	for _, roleID := range roleIDs {
-		roles = append(roles, &Role{Name: roleID})
+	for _, id := range roleIDs {
+		roles = append(roles, &Role{Name: id})
 	}
-	return &BaseAuthorization{
-		tenantID:   tenantID,
-		roles:      roles,
-		tenantName: tenantName,
-		authToken:  authToken,
-		catalog:    catalog,
+	ab.roles = roles
+	return ab
+}
+
+func (ab *AuthorizationBuilder) BuildScopedToTenant() Authorization {
+	if ab.authViaKeystoneV2 {
+		// When using Keystone V2, user is an admin if they have an admin role in the current project
+		for _, role := range ab.roles {
+			if role.Name == adminRole {
+				return ab.BuildAdmin()
+			}
+		}
+	}
+
+	return &TenantScopedAuthorization{
+		tenant: ab.tenant,
+		DomainScopedAuthorization: DomainScopedAuthorization{
+			domain: ab.domain,
+			roles:  ab.roles,
+		},
 	}
 }
 
-//Roles returns authorized roles
-func (auth *BaseAuthorization) Roles() []*Role {
+func (ab *AuthorizationBuilder) BuildScopedToDomain() Authorization {
+	return &DomainScopedAuthorization{
+		domain: ab.domain,
+		roles:  ab.roles,
+	}
+}
+
+func (ab *AuthorizationBuilder) BuildAdmin() Authorization {
+	return &AdminAuthorization{
+		TenantScopedAuthorization: TenantScopedAuthorization{
+			tenant: ab.tenant,
+			DomainScopedAuthorization: DomainScopedAuthorization{
+				domain: ab.domain,
+				roles:  ab.roles,
+			},
+		},
+	}
+}
+
+// TenantScopedAuthorization
+
+func (auth *TenantScopedAuthorization) TenantID() string {
+	return auth.tenant.ID
+}
+
+func (auth *TenantScopedAuthorization) TenantName() string {
+	return auth.tenant.Name
+}
+
+func (auth *TenantScopedAuthorization) getResourceFilters(schema *Schema) []map[string]interface{} {
+	tenantFilter := getFilterByPropertyIfPresent(schema, "tenant_id", auth.TenantID())
+	domainFilter := getFilterByPropertyIfPresent(schema, "domain_id", auth.DomainID())
+	return makeAndFilters(append(tenantFilter, domainFilter...))
+}
+
+func (auth *TenantScopedAuthorization) checkAccessToResource(cond *ResourceCondition, action string, resource map[string]interface{}) error {
+	if err := checkTenantAccess(cond, action, auth.tenant, resource); err != nil {
+		return err
+	}
+
+	return checkDomainAccess(auth.domain, resource)
+}
+
+func (auth *TenantScopedAuthorization) getTenantAndDomainFilters(cond *ResourceCondition, action string) (tenantFilter []string, domainFilter []string) {
+	for _, t := range cond.actionTenantFilter[action] {
+		tenantFilter = append(tenantFilter, t.ID.String())
+	}
+	tenantFilter = append(tenantFilter, auth.TenantID())
+	domainFilter = []string{auth.DomainID()}
+	return
+}
+
+// DomainScopedAuthorization
+
+func (auth *DomainScopedAuthorization) TenantID() string {
+	return ""
+}
+
+func (auth *DomainScopedAuthorization) TenantName() string {
+	return ""
+}
+
+func (auth *DomainScopedAuthorization) DomainID() string {
+	return auth.domain.ID
+}
+
+func (auth *DomainScopedAuthorization) DomainName() string {
+	return auth.domain.Name
+}
+
+func (auth *DomainScopedAuthorization) Roles() []*Role {
 	return auth.roles
 }
 
-//TenantID returns authorized tenant
-func (auth *BaseAuthorization) TenantID() string {
-	return auth.tenantID
+func (auth *DomainScopedAuthorization) IsAdmin() bool {
+	return false
 }
 
-//TenantName returns authorized tenant name
-func (auth *BaseAuthorization) TenantName() string {
-	return auth.tenantName
+func (auth *DomainScopedAuthorization) getResourceFilters(schema *Schema) []map[string]interface{} {
+	return getFilterByPropertyIfPresent(schema, "domain_id", auth.DomainID())
 }
 
-//AuthToken returns X_AUTH_TOKEN
-func (auth *BaseAuthorization) AuthToken() string {
-	return auth.authToken
+func (auth *DomainScopedAuthorization) checkAccessToResource(cond *ResourceCondition, action string, resource map[string]interface{}) error {
+	return checkDomainAccess(auth.domain, resource)
 }
 
-//Catalog returns service catalog
-func (auth *BaseAuthorization) Catalog() []*Catalog {
-	return auth.catalog
+func (auth *DomainScopedAuthorization) getTenantAndDomainFilters(cond *ResourceCondition, action string) (tenantFilter []string, domainFilter []string) {
+	domainFilter = []string{auth.DomainID()}
+	return
+}
+
+// AdminScopedAuthorization
+
+func (auth *AdminAuthorization) IsAdmin() bool {
+	return true
+}
+
+func (auth *AdminAuthorization) getResourceFilters(schema *Schema) []map[string]interface{} {
+	return []map[string]interface{}{}
+}
+
+func (auth *AdminAuthorization) checkAccessToResource(cond *ResourceCondition, action string, resource map[string]interface{}) error {
+	return nil
+}
+
+func (auth *AdminAuthorization) getTenantAndDomainFilters(cond *ResourceCondition, action string) (tenantFilter []string, domainFilter []string) {
+	return
+}
+
+func getFilterByPropertyIfPresent(schema *Schema, propertyName string, propertyValue interface{}) []map[string]interface{} {
+	if _, err := schema.GetPropertyByID(propertyName); err == nil {
+		return []map[string]interface{}{
+			filter.Eq(propertyName, propertyValue),
+		}
+	}
+	return nil
+}
+
+func checkTenantAccess(cond *ResourceCondition, action string, tenant Tenant, resource map[string]interface{}) error {
+	ownerID, _ := resource["tenant_id"].(string)
+	ownerName, _ := resource["tenant_name"].(string)
+	owner := newTenantMatcher(ownerID, ownerName)
+	caller := newTenantMatcher(tenant.ID, tenant.Name)
+
+	if caller.notEqual(owner) && !cond.isTenantAllowed(action, owner, caller) {
+		return errors.New("Operating on resources from other tenant is prohibited")
+	}
+
+	return nil
+}
+
+func checkDomainAccess(domain Domain, resource map[string]interface{}) error {
+	resourceDomainID, setsDomain := resource["domain_id"].(string)
+	if setsDomain && domain.ID != resourceDomainID {
+		return errors.New("Operating on resources from other domain is prohibited")
+	}
+
+	return nil
+}
+
+type Tenant struct {
+	ID   string
+	Name string
+}
+
+type Domain struct {
+	ID   string
+	Name string
+}
+
+var DefaultDomain = Domain{
+	ID:   "default",
+	Name: "Default",
 }
 
 //Role describes user role
 type Role struct {
 	Name string
-}
-
-//Endpoint represents Endpoint information
-type Endpoint struct {
-	URL       string
-	Region    string
-	Interface string
-}
-
-//NewEndpoint initializes Endpoint
-func NewEndpoint(url, region, iface string) *Endpoint {
-	return &Endpoint{URL: url, Region: region, Interface: iface}
-}
-
-//Catalog represents service catalog info
-type Catalog struct {
-	Name      string
-	Type      string
-	Endpoints []*Endpoint
-}
-
-//NewCatalog initializes Catalog
-func NewCatalog(name, catalogType string, endPoints []*Endpoint) *Catalog {
-	return &Catalog{Name: name, Type: catalogType, Endpoints: endPoints}
 }
 
 //Match checks if this role is for this principal
@@ -333,7 +511,7 @@ func getStringSliceFromRawSlice(data []interface{}) []string {
 
 func NewResourceCondition(rawCondition []interface{}, policyID string) (*ResourceCondition, error) {
 	p := &ResourceCondition{Condition: rawCondition}
-	p.actionTenantFilter = map[string][]tenant{}
+	p.actionTenantFilter = map[string][]tenantMatcher{}
 	p.actionPropertyConditionFilter = map[string][]map[string]interface{}{}
 	for _, condition := range p.Condition {
 		switch condition.(type) {
@@ -370,7 +548,7 @@ func NewResourceCondition(rawCondition []interface{}, policyID string) (*Resourc
 					}
 
 					for _, action := range actions {
-						p.addTenantToFilter(action, tenant{ID: tenantID, Name: tenantName})
+						p.addTenantToFilter(action, tenantMatcher{ID: tenantID, Name: tenantName})
 					}
 				case conditionProperty:
 					actions := AllActions
@@ -410,8 +588,8 @@ func NewResourceCondition(rawCondition []interface{}, policyID string) (*Resourc
 	return p, nil
 }
 
-// addTenantToFilter adds tenant to filter for given action
-func (p *ResourceCondition) addTenantToFilter(action string, tenant tenant) {
+// addTenantToFilter adds tenantMatcher to filter for given action
+func (p *ResourceCondition) addTenantToFilter(action string, tenant tenantMatcher) {
 	p.actionTenantFilter[action] = append(p.actionTenantFilter[action], tenant)
 }
 
@@ -493,13 +671,8 @@ func (p *Policy) FilterSchema(
 func (p *Policy) Check(action string, authorization Authorization, data map[string]interface{}) error {
 	currCond := p.GetCurrentResourceCondition()
 	if currCond.RequireOwner() {
-		ownerID, _ := data["tenant_id"].(string)
-		ownerName, _ := data["tenant_name"].(string)
-		owner := newTenant(ownerID, ownerName)
-		caller := newTenant(authorization.TenantID(), authorization.TenantName())
-
-		if caller.notEqual(owner) && !currCond.isTenantAllowed(action, owner, caller) {
-			return fmt.Errorf("Tenant '%s' is prohibited from operating on resources of tenant '%s'", caller, owner)
+		if err := authorization.checkAccessToResource(currCond, action, data); err != nil {
+			return err
 		}
 	}
 
@@ -572,27 +745,22 @@ FilterLoop:
 	return nil
 }
 
-// GetTenantIDFilter returns tenants filter for the action performed by the tenant
-func (p *ResourceCondition) GetTenantIDFilter(action string, tenantID string) []string {
+func (p *ResourceCondition) GetTenantAndDomainFilters(action string, auth Authorization) (tenantFilter []string, domainFilter []string) {
 	if !p.requireOwner {
-		return nil
+		return nil, nil
 	}
-	result := []string{}
-	for _, t := range p.actionTenantFilter[action] {
-		result = append(result, t.ID.String())
-	}
-	return append(result, tenantID)
+	return auth.getTenantAndDomainFilters(p, action)
 }
 
-// getTenantFilter returns tenants filter for the action performed by the tenant
-func (p *ResourceCondition) getTenantFilter(action string, tenant tenant) []tenant {
+// getTenantFilter returns tenants filter for the action performed by the tenantMatcher
+func (p *ResourceCondition) getTenantFilter(action string, tenant tenantMatcher) []tenantMatcher {
 	if !p.requireOwner {
 		return nil
 	}
 	return append(p.actionTenantFilter[action], tenant)
 }
 
-func (p *ResourceCondition) isTenantAllowed(action string, owner, tenant tenant) bool {
+func (p *ResourceCondition) isTenantAllowed(action string, owner, tenant tenantMatcher) bool {
 	for _, allowedTenant := range p.getTenantFilter(action, tenant) {
 		if owner.equal(allowedTenant) {
 			return true
@@ -651,8 +819,8 @@ func precomputeCondition(
 }
 
 // Adds custom filters based on this policy to the `filters` map
-func (policy *ResourceCondition) AddCustomFilters(filters map[string]interface{}, tenantId string) {
-	addCustomFilters(filters, tenantId, policy.actionFilter)
+func (policy *ResourceCondition) AddCustomFilters(schema *Schema, filters map[string]interface{}, auth Authorization) {
+	addCustomFilters(schema, filters, auth, policy.actionFilter)
 }
 
 func (policy *Policy) GetResourcePathRegexp() *regexp.Regexp {
@@ -671,25 +839,25 @@ func (policy *Policy) GetOtherResourceCondition() *ResourceCondition {
 	return policy.otherResourceCondition
 }
 
-func addCustomFilters(f map[string]interface{}, tenantId string, conditionFilters *conditionFilter) {
+func addCustomFilters(schema *Schema, f map[string]interface{}, auth Authorization, conditionFilters *conditionFilter) {
 	if conditionFilters == nil {
 		return
 	}
 	filters := make([]map[string]interface{}, 0)
 	if conditionFilters.isOwner {
-		filters = append(filters, map[string]interface{}{"property": "tenant_id", "type": "eq", "value": tenantId})
+		filters = append(filters, auth.getResourceFilters(schema)...)
 	}
 	for _, match := range conditionFilters.matches {
 		filters = append(filters, match)
 	}
 	if conditionFilters.andFilters != nil {
 		andFilter := map[string]interface{}{}
-		addCustomFilters(andFilter, tenantId, conditionFilters.andFilters)
+		addCustomFilters(schema, andFilter, auth, conditionFilters.andFilters)
 		filters = append(filters, andFilter)
 	}
 	if conditionFilters.orFilters != nil {
 		orFilter := map[string]interface{}{}
-		addCustomFilters(orFilter, tenantId, conditionFilters.orFilters)
+		addCustomFilters(schema, orFilter, auth, conditionFilters.orFilters)
 		filters = append(filters, orFilter)
 	}
 	if conditionFilters.filterType == orFilter {
@@ -701,6 +869,9 @@ func addCustomFilters(f map[string]interface{}, tenantId string, conditionFilter
 
 //PolicyValidate validates api request using policy validation
 func PolicyValidate(action, path string, auth Authorization, policies []*Policy) (foundPolicy *Policy, foundRole *Role) {
+	if auth.IsAdmin() {
+		policies = append([]*Policy{adminPolicy}, policies...)
+	}
 	for _, policy := range policies {
 		if role := policy.match(action, path, auth); role != nil {
 			if policy.IsDeny() {
@@ -729,4 +900,13 @@ func getRegexp(input string) (*regexp.Regexp, error) {
 		input = globalRegexp
 	}
 	return regexp.Compile(input)
+}
+
+func makeAndFilters(filters []map[string]interface{}) []map[string]interface{} {
+	if len(filters) <= 1 {
+		return filters
+	}
+	return []map[string]interface{}{
+		filter.And(filters...),
+	}
 }

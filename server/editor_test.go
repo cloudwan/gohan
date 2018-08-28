@@ -35,7 +35,10 @@ func TestGetSchema(t *testing.T) {
 		t.Error(err)
 	}
 
-	a := schema.NewAuthorization("member", "member", "member", []string{"Member"}, nil)
+	a := schema.NewAuthorizationBuilder().
+		WithTenant(schema.Tenant{ID: "member", Name: "member"}).
+		WithRoleIDs("Member").
+		BuildScopedToTenant()
 	s, ok := manager.Schema("member_resource")
 	if !ok {
 		t.Error("Could not find schema")

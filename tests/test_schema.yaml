@@ -636,10 +636,11 @@ schemas:
   prefix: /v2.0
   schema:
     indexes:
-      unique_id_and_tenant_id:
+      unique_id_and_tenant_id_and_domain_id:
         columns:
         - id
         - tenant_id
+        - domain_id
         type: "unique"
     properties:
       id:
@@ -654,6 +655,14 @@ schemas:
         permission:
         - create
         title: TenantID
+        type: string
+        unique: false
+        indexed: true
+      domain_id:
+        description: Domain ID
+        permission:
+        - create
+        title: DomainID
         type: string
         unique: false
         indexed: true
@@ -705,6 +714,7 @@ schemas:
     propertiesOrder:
     - id
     - tenant_id
+    - domain_id
     type: object
   singular: test
   title: Test

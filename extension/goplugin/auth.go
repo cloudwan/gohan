@@ -18,21 +18,16 @@ package goplugin
 import (
 	"github.com/cloudwan/gohan/extension/goext"
 	"github.com/cloudwan/gohan/schema"
+	"errors"
 )
 
 // Auth is an implementation of IAuth
 type Auth struct{}
 
 func (a *Auth) HasRole(context goext.Context, principal string) bool {
-	roleRaw, ok := context["role"]
-	if !ok {
-		log.Warning("HasRole: missing 'role' field in context")
-		return false
-	}
-
-	role, ok := roleRaw.(*schema.Role)
-	if !ok {
-		log.Warning("HasRole: invalid type of 'role' field in context")
+	role, err := getRoleFromContext(context)
+	if err != nil {
+		log.Warning("HasRole: %s", err.Error())
 		return false
 	}
 
@@ -40,15 +35,9 @@ func (a *Auth) HasRole(context goext.Context, principal string) bool {
 }
 
 func (a *Auth) GetTenantName(context goext.Context) string {
-	authRaw, ok := context["auth"]
-	if !ok {
-		log.Warning("GetTenantName: missing 'auth' field in context")
-		return ""
-	}
-
-	auth, ok := authRaw.(schema.Authorization)
-	if !ok {
-		log.Warning("GetTenantName: invalid type of 'auth' field in context")
+	auth, err := getAuthFromContext(context)
+	if err != nil {
+		log.Warning("GetTenantName: %s", err.Error())
 		return ""
 	}
 
@@ -57,5 +46,41 @@ func (a *Auth) GetTenantName(context goext.Context) string {
 
 // IsAdmin returns true if user had admin role
 func (a *Auth) IsAdmin(context goext.Context) bool {
-	return a.HasRole(context, "admin")
+	auth, err := getAuthFromContext(context)
+	if err != nil {
+		log.Warning("IsAdmin: %s", err.Error())
+		return false
+	}
+
+	return auth.IsAdmin()
+}
+
+func getRoleFromContext(context goext.Context) (*schema.Role, error) {
+	roleRaw, ok := context["role"]
+	if !ok {
+		log.Warning("missing 'role' field in context")
+		return nil, errors.New("missing 'role' field in context")
+	}
+
+	role, ok := roleRaw.(*schema.Role)
+	if !ok {
+		log.Warning("invalid type of 'role' field in context")
+		return nil, errors.New("invalid type of 'role' field in context")
+	}
+
+	return role, nil
+}
+
+func getAuthFromContext(context goext.Context) (schema.Authorization, error) {
+	authRaw, ok := context["auth"]
+	if !ok {
+		return nil, errors.New("missing 'auth' field in context")
+	}
+
+	auth, ok := authRaw.(schema.Authorization)
+	if !ok {
+		return nil, errors.New("invalid type of 'auth' field in context")
+	}
+
+	return auth, nil
 }
