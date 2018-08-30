@@ -31,5 +31,8 @@ if ls $dir/*.go &> /dev/null; then
 fi
 done
 
+echo '####################'
+cat profile.cov
+echo '####################'
 go tool cover -func profile.cov
 kill $ETCD_PID
