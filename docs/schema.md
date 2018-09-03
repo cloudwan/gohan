@@ -251,8 +251,8 @@ Following properties are extended from JSON schema v4.
 type string is for defining a string.
 You can use following parameters for a string.
 
-- minLength  max length of string
-- maxLength  min length of string
+- minLength  min length of string
+- maxLength  max length of string
 - pattern    regexp pattern for this string
 - relation  (extended spec by Gohan)  define resource relation
 - relationColumn (extended spec by Gohan) define which column relation references (default: "id")
