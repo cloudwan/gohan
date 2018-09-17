@@ -312,7 +312,11 @@ func NewServer(configFile string) (*Server, error) {
 		m.Use(middleware.Authentication())
 	} else {
 		m.MapTo(&middleware.NoIdentityService{}, (*middleware.IdentityService)(nil))
-		m.Map(schema.NewAuthorization("admin", "admin", "admin_token", []string{"admin"}, nil))
+		auth := schema.NewAuthorizationBuilder().
+			WithTenant(schema.Tenant{ID: "admin", Name: "admin"}).
+			WithRoleIDs("admin").
+			BuildAdmin()
+		m.Map(auth)
 	}
 
 	if err != nil {

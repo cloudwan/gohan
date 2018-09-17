@@ -37,6 +37,17 @@ import (
 
 const webuiPATH = "/webui/"
 
+var (
+	adminTenant = schema.Tenant{
+		ID:   "admin",
+		Name: "admin",
+	}
+	nobodyTenant = schema.Tenant{
+		ID:   "nobody",
+		Name: "nobody",
+	}
+)
+
 type responseHijacker struct {
 	martini.ResponseWriter
 	Response *bytes.Buffer
@@ -206,12 +217,20 @@ func (i *NoIdentityService) GetTenantName(string) (string, error) {
 
 //VerifyToken returns always authorization for admin
 func (i *NoIdentityService) VerifyToken(string) (schema.Authorization, error) {
-	return schema.NewAuthorization("admin", "admin", "admin_token", []string{"admin"}, nil), nil
+	auth := schema.NewAuthorizationBuilder().
+		WithTenant(adminTenant).
+		WithRoleIDs("admin").
+		BuildAdmin()
+	return auth, nil
 }
 
 //GetServiceAuthorization returns always authorization for admin
 func (i *NoIdentityService) GetServiceAuthorization() (schema.Authorization, error) {
-	return schema.NewAuthorization("admin", "admin", "admin_token", []string{"admin"}, nil), nil
+	auth := schema.NewAuthorizationBuilder().
+		WithTenant(adminTenant).
+		WithRoleIDs("admin").
+		BuildAdmin()
+	return auth, nil
 }
 
 //GetClient returns always nil
@@ -235,12 +254,20 @@ func (i *NobodyIdentityService) GetTenantName(string) (string, error) {
 
 //VerifyToken returns always authorization for nobody
 func (i *NobodyIdentityService) VerifyToken(string) (schema.Authorization, error) {
-	return schema.NewAuthorization("nobody", "nobody", "nobody_token", []string{"Nobody"}, nil), nil
+	auth := schema.NewAuthorizationBuilder().
+		WithTenant(nobodyTenant).
+		WithRoleIDs("Nobody").
+		BuildScopedToTenant()
+	return auth, nil
 }
 
 //GetServiceAuthorization returns always authorization for nobody
 func (i *NobodyIdentityService) GetServiceAuthorization() (schema.Authorization, error) {
-	return schema.NewAuthorization("nobody", "nobody", "nobody_token", []string{"Nobody"}, nil), nil
+	auth := schema.NewAuthorizationBuilder().
+		WithTenant(nobodyTenant).
+		WithRoleIDs("Nobody").
+		BuildScopedToTenant()
+	return auth, nil
 }
 
 //GetClient returns always nil
@@ -355,9 +382,6 @@ func Tracing() martini.Handler {
 func Authorization(action string) martini.Handler {
 	return func(res http.ResponseWriter, req *http.Request, auth schema.Authorization, context Context) {
 		context["tenant_id"] = auth.TenantID()
-		context["tenant_name"] = auth.TenantName()
-		context["auth_token"] = auth.AuthToken()
-		context["catalog"] = auth.Catalog()
 		context["auth"] = auth
 	}
 }

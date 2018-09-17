@@ -312,13 +312,14 @@ func GetMultipleResources(context middleware.Context, dataStore db.DB, resourceS
 	if err != nil {
 		return err
 	}
-	filter := FilterFromQueryParameter(resourceSchema, queryParameters)
+
 	currCond := policy.GetCurrentResourceCondition()
-	if currCond.RequireOwner() {
-		filter["tenant_id"] = currCond.GetTenantIDFilter(schema.ActionRead, auth.TenantID())
-	}
+
+	filter := FilterFromQueryParameter(resourceSchema, queryParameters)
+	extendFilterByTenantAndDomain(resourceSchema, filter, schema.ActionRead, currCond, auth)
 	filter = policy.RemoveHiddenProperty(filter)
-	currCond.AddCustomFilters(filter, auth.TenantID())
+	currCond.AddCustomFilters(resourceSchema, filter, auth)
+
 	paginator, err := pagination.FromURLQuery(resourceSchema, queryParameters)
 	if err != nil {
 		return ResourceError{err, err.Error(), WrongQuery}
@@ -412,7 +413,8 @@ func GetSingleResource(context middleware.Context, dataStore db.DB, resourceSche
 		transaction.GetIsolationLevel(resourceSchema, schema.ActionRead),
 		func() error {
 			currCond := policy.GetCurrentResourceCondition()
-			return GetSingleResourceInTransaction(context, resourceSchema, resourceID, currCond.GetTenantIDFilter(schema.ActionRead, auth.TenantID()))
+			tenantIDs, domainIDs := currCond.GetTenantAndDomainFilters(schema.ActionRead, auth)
+			return GetSingleResourceInTransaction(context, resourceSchema, resourceID, tenantIDs, domainIDs)
 		},
 	); err != nil {
 		return err
@@ -429,7 +431,7 @@ func GetSingleResource(context middleware.Context, dataStore db.DB, resourceSche
 }
 
 //GetSingleResourceInTransaction get resource in single transaction
-func GetSingleResourceInTransaction(context middleware.Context, resourceSchema *schema.Schema, resourceID string, tenantIDs []string) (err error) {
+func GetSingleResourceInTransaction(context middleware.Context, resourceSchema *schema.Schema, resourceID string, tenantIDs []string, domainIDs []string) (err error) {
 	defer MeasureRequestTime(time.Now(), "get.single.in_tx", resourceSchema.ID)
 	var options *transaction.ViewOptions
 	r, ok := context["http_request"].(*http.Request)
@@ -453,14 +455,17 @@ func GetSingleResourceInTransaction(context middleware.Context, resourceSchema *
 		return fmt.Errorf("extension returned invalid JSON: %v", rawResponse)
 	}
 	filter := transaction.IDFilter(resourceID)
-	if tenantIDs != nil {
+	if _, err := resourceSchema.GetPropertyByID("tenant_id"); err == nil && tenantIDs != nil {
 		filter["tenant_id"] = tenantIDs
+	}
+	if _, err := resourceSchema.GetPropertyByID("domain_id"); err == nil && domainIDs != nil {
+		filter["domain_id"] = domainIDs
 	}
 
 	auth := context["auth"].(schema.Authorization)
 	policy := context["policy"].(*schema.Policy)
 	currCond := policy.GetCurrentResourceCondition()
-	currCond.AddCustomFilters(filter, auth.TenantID())
+	currCond.AddCustomFilters(resourceSchema, filter, auth)
 
 	object, err := mainTransaction.Fetch(mustGetContext(context), resourceSchema, filter, options)
 	if object == nil {
@@ -509,7 +514,7 @@ func CreateOrUpdateResource(
 	var exists bool
 
 	if preTxErr := db.WithinTx(dataStore, func(preTransaction transaction.Transaction) error {
-		exists, err = checkIfResourceExistsForTenant(mustGetContext(ctx), auth.TenantID(), resourceID, resourceSchema, policy, preTransaction)
+		exists, err = checkIfResourceExistsForTenant(mustGetContext(ctx), auth, resourceID, resourceSchema, policy, preTransaction)
 		if err != nil {
 			return err
 		}
@@ -544,7 +549,7 @@ func CreateOrUpdateResource(
 
 func checkIfResourceExistsForTenant(
 	context context.Context,
-	tenantID,
+	auth schema.Authorization,
 	resourceID string,
 	resourceSchema *schema.Schema,
 	policy *schema.Policy,
@@ -553,11 +558,8 @@ func checkIfResourceExistsForTenant(
 	filter := transaction.IDFilter(resourceID)
 
 	currCond := policy.GetCurrentResourceCondition()
-	tenantIDs := currCond.GetTenantIDFilter(schema.ActionUpdate, tenantID)
-	if tenantIDs != nil {
-		filter["tenant_id"] = tenantIDs
-	}
-	currCond.AddCustomFilters(filter, tenantID)
+	extendFilterByTenantAndDomain(resourceSchema, filter, schema.ActionUpdate, currCond, auth)
+	currCond.AddCustomFilters(resourceSchema, filter, auth)
 
 	return checkIfResourceExists(context, filter, resourceSchema, preTransaction)
 }
@@ -600,14 +602,25 @@ func CreateResource(
 
 	_, err = resourceSchema.GetPropertyByID("tenant_id")
 	if _, ok := dataMap["tenant_id"]; err == nil && !ok {
-		dataMap["tenant_id"] = context["tenant_id"]
+		tenantID := auth.TenantID()
+		if tenantID == "" {
+			err := errors.New("A non-empty tenant_id should be provided in the request")
+			return ResourceError{err, err.Error(), WrongData}
+		}
+		dataMap["tenant_id"] = auth.TenantID()
 	}
 
 	if tenantID, ok := dataMap["tenant_id"]; ok && tenantID != nil {
-		dataMap["tenant_name"], err = identityService.GetTenantName(tenantID.(string))
-		if err != nil {
-			return ResourceError{err, err.Error(), Unauthorized}
-		}
+		dataMap["tenant_name"] = auth.TenantName()
+	}
+
+	_, err = resourceSchema.GetPropertyByID("domain_id")
+	if _, ok := dataMap["domain_id"]; err == nil && !ok {
+		dataMap["domain_id"] = auth.DomainID()
+	}
+
+	if domainID, ok := dataMap["domain_id"]; ok && domainID != nil {
+		dataMap["domain_name"] = auth.DomainName()
 	}
 
 	//Apply policy for api input
@@ -616,6 +629,7 @@ func CreateResource(
 		return ResourceError{err, err.Error(), Unauthorized}
 	}
 	delete(dataMap, "tenant_name")
+	delete(dataMap, "domain_name")
 
 	// apply property filter
 	currCond := policy.GetCurrentResourceCondition()
@@ -750,15 +764,16 @@ func UpdateResource(
 
 	//fillup default values
 	if tenantID, ok := dataMap["tenant_id"]; ok && tenantID != nil {
-		dataMap["tenant_name"], err = identityService.GetTenantName(tenantID.(string))
-		if err != nil {
-			return ResourceError{err, err.Error(), Unauthorized}
-		}
+		dataMap["tenant_name"] = auth.TenantName()
+	}
+	if domainID, ok := dataMap["domain_id"]; ok && domainID != nil {
+		dataMap["domain_name"] = auth.DomainName()
 	}
 
 	//check policy
 	err = policy.Check(schema.ActionUpdate, auth, dataMap)
 	delete(dataMap, "tenant_name")
+	delete(dataMap, "domain_name")
 	if err != nil {
 		return ResourceError{err, err.Error(), Unauthorized}
 	}
@@ -780,7 +795,8 @@ func UpdateResource(
 		transaction.GetIsolationLevel(resourceSchema, schema.ActionUpdate),
 		func() error {
 			currCond := policy.GetCurrentResourceCondition()
-			return UpdateResourceInTransaction(context, resourceSchema, resourceID, dataMap, currCond.GetTenantIDFilter(schema.ActionUpdate, auth.TenantID()))
+			tenantIDs, domainIDs := currCond.GetTenantAndDomainFilters(schema.ActionRead, auth)
+			return UpdateResourceInTransaction(context, resourceSchema, resourceID, dataMap, tenantIDs, domainIDs)
 		},
 	); err != nil {
 		return err
@@ -800,7 +816,8 @@ func UpdateResource(
 func UpdateResourceInTransaction(
 	context middleware.Context,
 	resourceSchema *schema.Schema, resourceID string,
-	dataMap map[string]interface{}, tenantIDs []string) error {
+	dataMap map[string]interface{},
+	tenantIDs []string, domainIDs []string) error {
 	defer MeasureRequestTime(time.Now(), "update.in_tx", resourceSchema.ID)
 
 	manager := schema.GetManager()
@@ -811,8 +828,11 @@ func UpdateResourceInTransaction(
 		return fmt.Errorf("No environment for schema")
 	}
 	filter := transaction.IDFilter(resourceID)
-	if tenantIDs != nil {
+	if _, err := resourceSchema.GetPropertyByID("tenant_id"); err == nil && tenantIDs != nil {
 		filter["tenant_id"] = tenantIDs
+	}
+	if _, err := resourceSchema.GetPropertyByID("domain_id"); err == nil && domainIDs != nil {
+		filter["domain_id"] = domainIDs
 	}
 
 	var resource *schema.Resource
@@ -971,12 +991,9 @@ func fetchResourceForAction(action string, auth schema.Authorization, resourceID
 		return nil, err
 	}
 	currCond := policy.GetCurrentResourceCondition()
-	tenantIDs := currCond.GetTenantIDFilter(action, auth.TenantID())
 	filter := transaction.IDFilter(resourceID)
-	if tenantIDs != nil {
-		filter["tenant_id"] = tenantIDs
-	}
-	currCond.AddCustomFilters(filter, auth.TenantID())
+	extendFilterByTenantAndDomain(resourceSchema, filter, action, currCond, auth)
+	currCond.AddCustomFilters(resourceSchema, filter, auth)
 	resource, err := tx.Fetch(mustGetContext(context), resourceSchema, filter, nil)
 	if err != nil {
 		return nil, err
@@ -999,11 +1016,8 @@ func DeleteResourceInTransaction(context middleware.Context, resourceSchema *sch
 	auth := context["auth"].(schema.Authorization)
 	policy := context["policy"].(*schema.Policy)
 	currCond := policy.GetCurrentResourceCondition()
-	tenantIDs := currCond.GetTenantIDFilter(schema.ActionDelete, auth.TenantID())
 	filter := transaction.IDFilter(resourceID)
-	if tenantIDs != nil {
-		filter["tenant_id"] = tenantIDs
-	}
+	extendFilterByTenantAndDomain(resourceSchema, filter, schema.ActionDelete, currCond, auth)
 
 	var resource *schema.Resource
 	var err error
@@ -1114,6 +1128,20 @@ func errorBadRequest(schemaId, resourceId string) error {
 	return goext.NewErrorBadRequest(relatedResourceNotFoundErr(schemaId, resourceId))
 }
 
+func extendFilterByTenantAndDomain(
+	schema *schema.Schema,
+	filter transaction.Filter, action string,
+	rc *schema.ResourceCondition, auth schema.Authorization,
+) {
+	tenantFilter, domainFilter := rc.GetTenantAndDomainFilters(action, auth)
+	if _, err := schema.GetPropertyByID("tenant_id"); err == nil && len(tenantFilter) > 0 {
+		filter["tenant_id"] = tenantFilter
+	}
+	if _, err := schema.GetPropertyByID("domain_id"); err == nil && len(domainFilter) > 0 {
+		filter["domain_id"] = domainFilter
+	}
+}
+
 func validateAttachmentRelation(
 	context middleware.Context,
 	policy *schema.Policy,
@@ -1134,12 +1162,9 @@ func validateAttachmentRelation(
 	}
 
 	otherCond := policy.GetOtherResourceCondition()
-	tenants := otherCond.GetTenantIDFilter(schema.ActionRead, auth.TenantID())
 	filter := transaction.IDFilter(relatedResourceID)
-	if tenants != nil {
-		filter["tenant_id"] = tenants
-	}
-	otherCond.AddCustomFilters(filter, auth.TenantID())
+	extendFilterByTenantAndDomain(relatedSchema, filter, schema.ActionRead, otherCond, auth)
+	otherCond.AddCustomFilters(relatedSchema, filter, auth)
 
 	options := &transaction.ViewOptions{}
 

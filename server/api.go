@@ -400,8 +400,6 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 			context["policy"] = policy
 			context["role"] = role
 			context["tenant_id"] = auth.TenantID()
-			context["auth_token"] = auth.AuthToken()
-			context["catalog"] = auth.Catalog()
 			context["auth"] = auth
 
 			if err := resources.ActionResource(context, s, action, id, input); err != nil {

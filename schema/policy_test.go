@@ -16,11 +16,14 @@
 package schema
 
 import (
-	"fmt"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+)
+
+const (
+	tenantProhibitedError = "Operating on resources from other tenant is prohibited"
+	domainProhibitedError = "Operating on resources from other domain is prohibited"
 )
 
 var _ = Describe("Policies", func() {
@@ -32,6 +35,7 @@ var _ = Describe("Policies", func() {
 			adminTenantID      = "12345678aaaaaaaaaaaa123456789012"
 			demoTenantID       = "12345678bbbbbbbbbbbb123456789012"
 			adminAuth          Authorization
+			legacyAdminAuth    Authorization
 			memberAuth         Authorization
 		)
 
@@ -40,21 +44,36 @@ var _ = Describe("Policies", func() {
 			Expect(manager.LoadSchemaFromFile(abstractSchemaPath)).To(Succeed())
 			Expect(manager.LoadSchemaFromFile(schemaPath)).To(Succeed())
 
-			adminAuth = NewAuthorization(adminTenantID, "admin", "fake_token", []string{"admin"}, nil)
-			memberAuth = NewAuthorization(demoTenantID, "demo", "fake_token", []string{"Member"}, nil)
+			adminAuth = NewAuthorizationBuilder().
+				WithTenant(Tenant{ID: adminTenantID, Name: "admin"}).
+				WithRoleIDs("admin").
+				BuildAdmin()
+			legacyAdminAuth = NewAuthorizationBuilder().
+				WithKeystoneV2Compatibility().
+				WithTenant(Tenant{ID: adminTenantID, Name: "admin"}).
+				WithRoleIDs("admin").
+				BuildScopedToTenant()
+			memberAuth = NewAuthorizationBuilder().
+				WithTenant(Tenant{ID: demoTenantID, Name: "demo"}).
+				WithRoleIDs("Member").
+				BuildScopedToTenant()
 		})
 
 		AfterEach(func() {
 			ClearManager()
 		})
 
-		It("creates network as admin", func() {
-			adminPolicy, role := manager.PolicyValidate("create", "/v2.0/networks", adminAuth)
-			Expect(adminPolicy).NotTo(BeNil())
-			Expect(role.Match("admin")).To(BeTrue())
-			currCond := adminPolicy.GetCurrentResourceCondition()
-			Expect(currCond.RequireOwner()).To(BeFalse(), "Admin should not require ownership")
-		})
+		DescribeTable("creates network as admin",
+			func(auth *Authorization) {
+				adminPolicy, role := manager.PolicyValidate("create", "/v2.0/networks", *auth)
+				Expect(adminPolicy).NotTo(BeNil())
+				Expect(role.Match("admin")).To(BeTrue())
+				currCond := adminPolicy.GetCurrentResourceCondition()
+				Expect(currCond.RequireOwner()).To(BeFalse(), "Admin should not require ownership")
+			},
+			Entry("Keystone V2 admin", &adminAuth),
+			Entry("Keystone V3 admin", &legacyAdminAuth),
+		)
 
 		It("creates network as member", func() {
 			memberPolicy, role := manager.PolicyValidate("create", "/v2.0/networks", memberAuth)
@@ -79,9 +98,16 @@ var _ = Describe("Policies", func() {
 
 	Describe("Creation", func() {
 		var (
-			manager    *Manager
-			testPolicy map[string]interface{}
+			manager      *Manager
+			testPolicy   map[string]interface{}
+			someTenantID = "acf5662bbff44060b93ac3db3c25a590"
+			xyzAuth      Authorization
 		)
+
+		getTenantIDFilter := func(rc *ResourceCondition, action string, auth Authorization) []string {
+			tenantIDs, _ := rc.GetTenantAndDomainFilters(action, auth)
+			return tenantIDs
+		}
 
 		BeforeEach(func() {
 			manager = GetManager()
@@ -94,6 +120,12 @@ var _ = Describe("Policies", func() {
 					"path": ".*",
 				},
 			}
+
+			tenant := Tenant{ID: "xyz", Name: "xyz"}
+			xyzAuth = NewAuthorizationBuilder().
+				WithTenant(tenant).
+				WithRoleIDs("Member").
+				BuildScopedToTenant()
 		})
 
 		It("should return error on both types of properties", func() {
@@ -134,12 +166,12 @@ var _ = Describe("Policies", func() {
 				"is_owner",
 				map[string]interface{}{
 					"action":    "read",
-					"tenant_id": "acf5662bbff44060b93ac3db3c25a590",
+					"tenant_id": someTenantID,
 					"type":      "belongs_to",
 				},
 				map[string]interface{}{
 					"action":    "update",
-					"tenant_id": "acf5662bbff44060b93ac3db3c25a590",
+					"tenant_id": someTenantID,
 					"type":      "belongs_to",
 				},
 			}
@@ -147,10 +179,10 @@ var _ = Describe("Policies", func() {
 			Expect(err).NotTo(HaveOccurred())
 			currCond := policy.GetCurrentResourceCondition()
 			Expect(currCond.RequireOwner()).To(BeTrue())
-			Expect(currCond.GetTenantIDFilter("create", "xyz")).To(ConsistOf("xyz"))
-			Expect(currCond.GetTenantIDFilter("read", "xyz")).To(ConsistOf("xyz", "acf5662bbff44060b93ac3db3c25a590"))
-			Expect(currCond.GetTenantIDFilter("update", "xyz")).To(ConsistOf("xyz", "acf5662bbff44060b93ac3db3c25a590"))
-			Expect(currCond.GetTenantIDFilter("delete", "xyz")).To(ConsistOf("xyz"))
+			Expect(getTenantIDFilter(currCond, "create", xyzAuth)).To(ConsistOf("xyz"))
+			Expect(getTenantIDFilter(currCond, "read", xyzAuth)).To(ConsistOf("xyz", someTenantID))
+			Expect(getTenantIDFilter(currCond, "update", xyzAuth)).To(ConsistOf("xyz", someTenantID))
+			Expect(getTenantIDFilter(currCond, "delete", xyzAuth)).To(ConsistOf("xyz"))
 		})
 
 		It("tests glob action", func() {
@@ -158,7 +190,7 @@ var _ = Describe("Policies", func() {
 				"is_owner",
 				map[string]interface{}{
 					"action":    "*",
-					"tenant_id": "acf5662bbff44060b93ac3db3c25a590",
+					"tenant_id": someTenantID,
 					"type":      "belongs_to",
 				},
 			}
@@ -166,10 +198,10 @@ var _ = Describe("Policies", func() {
 			Expect(err).NotTo(HaveOccurred())
 			currCond := policy.GetCurrentResourceCondition()
 			Expect(currCond.RequireOwner()).To(BeTrue())
-			Expect(currCond.GetTenantIDFilter("create", "xyz")).To(ConsistOf("xyz", "acf5662bbff44060b93ac3db3c25a590"))
-			Expect(currCond.GetTenantIDFilter("read", "xyz")).To(ConsistOf("xyz", "acf5662bbff44060b93ac3db3c25a590"))
-			Expect(currCond.GetTenantIDFilter("update", "xyz")).To(ConsistOf("xyz", "acf5662bbff44060b93ac3db3c25a590"))
-			Expect(currCond.GetTenantIDFilter("delete", "xyz")).To(ConsistOf("xyz", "acf5662bbff44060b93ac3db3c25a590"))
+			Expect(getTenantIDFilter(currCond, "create", xyzAuth)).To(ConsistOf("xyz", someTenantID))
+			Expect(getTenantIDFilter(currCond, "read", xyzAuth)).To(ConsistOf("xyz", someTenantID))
+			Expect(getTenantIDFilter(currCond, "update", xyzAuth)).To(ConsistOf("xyz", someTenantID))
+			Expect(getTenantIDFilter(currCond, "delete", xyzAuth)).To(ConsistOf("xyz", someTenantID))
 		})
 
 		Describe("'__attach__' policy", func() {
@@ -227,19 +259,19 @@ var _ = Describe("Policies", func() {
 	Describe("Tenants", func() {
 		Describe("Creation", func() {
 			It("should create tenant successfully", func() {
-				tenant := newTenant("tenantID", "tenantName")
+				tenant := newTenantMatcher("tenantID", "tenantName")
 				Expect(tenant.ID.String()).To(Equal("tenantID"))
 				Expect(tenant.Name.String()).To(Equal("tenantName"))
 			})
 
 			It("should create tenant with empty id successfully", func() {
-				tenant := newTenant("", "tenantName")
+				tenant := newTenantMatcher("", "tenantName")
 				Expect(tenant.ID.String()).To(Equal(".*"))
 				Expect(tenant.Name.String()).To(Equal("tenantName"))
 			})
 
 			It("should create tenant with empty name successfully", func() {
-				tenant := newTenant("tenantID", "")
+				tenant := newTenantMatcher("tenantID", "")
 				Expect(tenant.ID.String()).To(Equal("tenantID"))
 				Expect(tenant.Name.String()).To(Equal(".*"))
 			})
@@ -247,14 +279,14 @@ var _ = Describe("Policies", func() {
 
 		Describe("Comparing", func() {
 			It("should compare same tenants successfully", func() {
-				tenant := newTenant("tenantID", "tenantName")
+				tenant := newTenantMatcher("tenantID", "tenantName")
 				Expect(tenant.equal(tenant)).To(BeTrue())
 				Expect(tenant.notEqual(tenant)).To(BeFalse())
 			})
 
 			It("should compare different tenants successfully", func() {
-				tenant1 := newTenant("tenantID1", "tenantName1")
-				tenant2 := newTenant("tenantID2", "tenantName2")
+				tenant1 := newTenantMatcher("tenantID1", "tenantName1")
+				tenant2 := newTenantMatcher("tenantID2", "tenantName2")
 				Expect(tenant1.equal(tenant2)).To(BeFalse())
 				Expect(tenant1.notEqual(tenant2)).To(BeTrue())
 				Expect(tenant2.equal(tenant1)).To(BeFalse())
@@ -262,14 +294,14 @@ var _ = Describe("Policies", func() {
 			})
 
 			It("should compare same tenants with id only successfully", func() {
-				tenant := newTenant("tenantID", "")
+				tenant := newTenantMatcher("tenantID", "")
 				Expect(tenant.equal(tenant)).To(BeTrue())
 				Expect(tenant.notEqual(tenant)).To(BeFalse())
 			})
 
 			It("should compare different tenants with id only successfully", func() {
-				tenant1 := newTenant("tenantID1", "")
-				tenant2 := newTenant("tenantID2", "")
+				tenant1 := newTenantMatcher("tenantID1", "")
+				tenant2 := newTenantMatcher("tenantID2", "")
 				Expect(tenant1.equal(tenant2)).To(BeFalse())
 				Expect(tenant1.notEqual(tenant2)).To(BeTrue())
 				Expect(tenant2.equal(tenant1)).To(BeFalse())
@@ -277,14 +309,14 @@ var _ = Describe("Policies", func() {
 			})
 
 			It("should compare same tenants with name only successfully", func() {
-				tenant := newTenant("", "tenantName")
+				tenant := newTenantMatcher("", "tenantName")
 				Expect(tenant.equal(tenant)).To(BeTrue())
 				Expect(tenant.notEqual(tenant)).To(BeFalse())
 			})
 
 			It("should compare different tenants with name only successfully", func() {
-				tenant1 := newTenant("", "tenantName1")
-				tenant2 := newTenant("", "tenantName2")
+				tenant1 := newTenantMatcher("", "tenantName1")
+				tenant2 := newTenantMatcher("", "tenantName2")
 				Expect(tenant1.equal(tenant2)).To(BeFalse())
 				Expect(tenant1.notEqual(tenant2)).To(BeTrue())
 				Expect(tenant2.equal(tenant1)).To(BeFalse())
@@ -292,8 +324,8 @@ var _ = Describe("Policies", func() {
 			})
 
 			It("should compare tenant with both values to id only", func() {
-				tenant1 := newTenant("tenantID", "tenantName")
-				tenant2 := newTenant("tenantID", "")
+				tenant1 := newTenantMatcher("tenantID", "tenantName")
+				tenant2 := newTenantMatcher("tenantID", "")
 				Expect(tenant1.equal(tenant2)).To(BeTrue())
 				Expect(tenant1.notEqual(tenant2)).To(BeFalse())
 				Expect(tenant2.equal(tenant1)).To(BeTrue())
@@ -301,8 +333,8 @@ var _ = Describe("Policies", func() {
 			})
 
 			It("should compare tenant with both values to name only", func() {
-				tenant1 := newTenant("tenantID", "tenantName")
-				tenant2 := newTenant("", "tenantName")
+				tenant1 := newTenantMatcher("tenantID", "tenantName")
+				tenant2 := newTenantMatcher("", "tenantName")
 				Expect(tenant1.equal(tenant2)).To(BeTrue())
 				Expect(tenant1.notEqual(tenant2)).To(BeFalse())
 				Expect(tenant2.equal(tenant1)).To(BeTrue())
@@ -315,7 +347,8 @@ var _ = Describe("Policies", func() {
 		var manager *Manager
 		var testPolicy map[string]interface{}
 		var policy *Policy
-		var authorization BaseAuthorization
+		var authorizationBuilder *AuthorizationBuilder
+		var authorization Authorization
 		var data map[string]interface{}
 
 		BeforeEach(func() {
@@ -329,13 +362,16 @@ var _ = Describe("Policies", func() {
 					"path": ".*",
 				},
 			}
-			authorization = BaseAuthorization{
-				tenantID:   "userID",
-				tenantName: "userName",
-				authToken:  "token",
-				roles:      []*Role{},
-				catalog:    []*Catalog{},
-			}
+			authorizationBuilder = NewAuthorizationBuilder().
+				WithTenant(Tenant{
+					ID:   "userID",
+					Name: "userName",
+				}).
+				WithDomain(Domain{
+					ID:   "domainID",
+					Name: "domainName",
+				})
+			authorization = authorizationBuilder.BuildScopedToTenant()
 		})
 
 		Describe("Actions on own resources", func() {
@@ -345,36 +381,53 @@ var _ = Describe("Policies", func() {
 				data = map[string]interface{}{
 					"tenant_id":   "userID",
 					"tenant_name": "userName",
+					"domain_id":   "domainID",
+					"domain_name": "domainName",
 				}
 			})
 
 			It("should pass check", func() {
-				err := policy.Check("create", &authorization, data)
+				err := policy.Check("create", authorization, data)
 				Expect(err).ToNot(HaveOccurred())
 			})
 
 			It("should not pass check - not an owner", func() {
-				authorization.tenantID = "notOwnerID"
-				authorization.tenantName = "notOwnerName"
-				err := policy.Check("create", &authorization, data)
-				Expect(err).To(MatchError(getProhibitedError("notOwnerName (notOwnerID)", "userName (userID)")))
+				authorization = authorizationBuilder.
+					WithTenant(Tenant{
+						ID:   "notOwnerID",
+						Name: "notOwnerName",
+					}).
+					BuildScopedToTenant()
+				err := policy.Check("create", authorization, data)
+				Expect(err).To(MatchError(tenantProhibitedError))
+			})
+
+			It("should not pass check - different domain", func() {
+				authorization = authorizationBuilder.
+					WithDomain(Domain{
+						ID:   "otherDomainID",
+						Name: "otherDomainName",
+					}).
+					BuildScopedToDomain()
+				err := policy.Check("create", authorization, data)
+				Expect(err).To(MatchError(domainProhibitedError))
 			})
 
 			Describe("Effect property", func() {
 				BeforeEach(func() {
 					policy.Action = "*"
-					authorization.roles = []*Role{{"admin"}}
+					authorization = authorizationBuilder.WithRoleIDs("admin").BuildAdmin()
 				})
 				It("should allow access be default", func() {
 					policy.Effect = ""
-					receivedPolicy, role := PolicyValidate("create", "/abc", &authorization, []*Policy{policy})
-					Expect(receivedPolicy).To(Equal(policy))
+					receivedPolicy, role := PolicyValidate("create", "/abc", authorization, []*Policy{policy})
+					Expect(receivedPolicy.ID).To(Equal("admin_statement"))
 					Expect(role).To(Equal(&Role{"admin"}))
 				})
 
 				It("should deny access", func() {
 					policy.Effect = "deny"
-					policy, role := PolicyValidate("create", "/abc", &authorization, []*Policy{policy})
+					policy, role := PolicyValidate("create", "/abc", authorization, []*Policy{policy})
 					Expect(policy).To(BeNil())
 					Expect(role).To(BeNil())
 				})
@@ -398,7 +451,7 @@ var _ = Describe("Policies", func() {
 					},
 				}
 				policy, _ = NewPolicy(testPolicy)
-				err := policy.Check("create", &authorization, data)
+				err := policy.Check("create", authorization, data)
 				Expect(err).ToNot(HaveOccurred())
 			})
 
@@ -411,7 +464,7 @@ var _ = Describe("Policies", func() {
 					},
 				}
 				policy, _ = NewPolicy(testPolicy)
-				err := policy.Check("create", &authorization, data)
+				err := policy.Check("create", authorization, data)
 				Expect(err).ToNot(HaveOccurred())
 			})
 		})
@@ -505,7 +558,24 @@ var _ = Describe("Policies", func() {
 		})
 
 		Describe("Custom filter", func() {
+			var testAuth Authorization
+
+			getSchema := func(name string) *Schema {
+				schema, ok := manager.Schema(name)
+				Expect(ok).To(BeTrue())
+				return schema
+			}
+
+			BeforeEach(func() {
+				tenant := Tenant{ID: "test", Name: "test"}
+				testAuth = NewAuthorizationBuilder().
+					WithTenant(tenant).
+					WithRoleIDs("Member").
+					BuildScopedToTenant()
+			})
+
 			It("should work with string condition based on conjunction property", func() {
+				schema := getSchema("test")
 				testPolicy["condition"] = []interface{}{
 					map[string]interface{}{
 						"and": []interface{}{
@@ -532,7 +602,7 @@ var _ = Describe("Policies", func() {
 				Expect(err).ToNot(HaveOccurred())
 				filter := map[string]interface{}{}
 				currCond := policy.GetCurrentResourceCondition()
-				currCond.AddCustomFilters(filter, "test")
+				currCond.AddCustomFilters(schema, filter, testAuth)
 				expected := map[string]interface{}{
 					"__and__": []map[string]interface{}{
 						{
@@ -550,6 +620,7 @@ var _ = Describe("Policies", func() {
 				Expect(filter).To(Equal(expected))
 			})
 			It("should work with string condition based on disjunction property", func() {
+				schema := getSchema("test")
 				testPolicy["condition"] = []interface{}{
 					map[string]interface{}{
 						"or": []interface{}{
@@ -576,7 +647,7 @@ var _ = Describe("Policies", func() {
 				Expect(err).ToNot(HaveOccurred())
 				filter := map[string]interface{}{}
 				currCond := policy.GetCurrentResourceCondition()
-				currCond.AddCustomFilters(filter, "test")
+				currCond.AddCustomFilters(schema, filter, testAuth)
 				expected := map[string]interface{}{
 					"__or__": []map[string]interface{}{
 						{
@@ -594,6 +665,7 @@ var _ = Describe("Policies", func() {
 				Expect(filter).To(Equal(expected))
 			})
 			It("should work with string condition based on is_owner, con/disjunction property", func() {
+				schema := getSchema("test")
 				testPolicy["condition"] = []interface{}{
 					map[string]interface{}{
 						"or": []interface{}{
@@ -631,9 +703,8 @@ var _ = Describe("Policies", func() {
 				policy, err = NewPolicy(testPolicy)
 				Expect(err).ToNot(HaveOccurred())
 				filter := map[string]interface{}{}
-				tenantID := "test"
 				currCond := policy.GetCurrentResourceCondition()
-				currCond.AddCustomFilters(filter, tenantID)
+				currCond.AddCustomFilters(schema, filter, testAuth)
 				expected := map[string]interface{}{
 					"__or__": []map[string]interface{}{
 						{
@@ -649,9 +720,18 @@ var _ = Describe("Policies", func() {
 						{
 							"__and__": []map[string]interface{}{
 								{
-									"property": "tenant_id",
-									"type":     "eq",
-									"value":    tenantID,
+									"__and__": []map[string]interface{}{
+										{
+											"property": "tenant_id",
+											"type":     "eq",
+											"value":    testAuth.TenantID(),
+										},
+										{
+											"property": "domain_id",
+											"type":     "eq",
+											"value":    testAuth.DomainID(),
+										},
+									},
 								},
 								{
 									"property": "state",
@@ -664,10 +744,45 @@ var _ = Describe("Policies", func() {
 				}
 				Expect(filter).To(Equal(expected))
 			})
+			It("Should, in case of is_owner, filter by domain_id only when the field is defined in the schema", func() {
+				schema := getSchema("network")
+				testPolicy["condition"] = []interface{}{
+					map[string]interface{}{
+						"or": []interface{}{
+							"is_owner",
+							map[string]interface{}{
+								"match": map[string]interface{}{
+									"property": "status",
+									"type":     "eq",
+									"value":    "ACTIVE",
+								},
+							},
+						},
+					},
+				}
+
+				var err error
+				policy, err = NewPolicy(testPolicy)
+				Expect(err).ToNot(HaveOccurred())
+				filter := map[string]interface{}{}
+				currCond := policy.GetCurrentResourceCondition()
+				currCond.AddCustomFilters(schema, filter, testAuth)
+				expected := map[string]interface{}{
+					"__or__": []map[string]interface{}{
+						{
+							"property": "tenant_id",
+							"type":     "eq",
+							"value":    testAuth.TenantID(),
+						},
+						{
+							"property": "status",
+							"type":     "eq",
+							"value":    "ACTIVE",
+						},
+					},
+				}
+				Expect(filter).To(Equal(expected))
+			})
 		})
 	})
 })
-
-func getProhibitedError(caller, owner string) string {
-	return fmt.Sprintf("Tenant '%s' is prohibited from operating on resources of tenant '%s'", caller, owner)
-}

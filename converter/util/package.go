@@ -16,8 +16,8 @@
 package util
 
 import (
-	"fmt"
 	"bytes"
+	"fmt"
 )
 
 // CollectData creates string representing go file
