@@ -441,6 +441,24 @@ policies:
   resource:
     path: /v2.0/wildcard_attacher.*
 
+- action: '*'
+  condition:
+  - is_owner
+  effect: allow
+  id: read_master
+  principal: Member
+  resource:
+    path: /v2.0/default_policy_master.*
+
+- action: '*'
+  condition:
+  - is_owner
+  effect: allow
+  id: create_slave
+  principal: Member
+  resource:
+    path: /v2.0/default_policy_slave.*
+
 schemas:
 - description: Network
   id: network
@@ -1105,5 +1123,69 @@ schemas:
       - accessibility
       - block_flag
   title: Target of attach
+
+- description: Default policy - slave schema
+  id: default_policy_slave
+  singular: default_policy_slave
+  plural: default_policy_slaves
+  prefix: /v2.0
+  schema:
+    properties:
+      id:
+        description: ID
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: true
+      tenant_id:
+        description: Tenant ID
+        permission:
+        - create
+        title: TenantID
+        type: string
+        unique: false
+      is_public:
+        description: Public
+        permission:
+        - create
+        title: Public
+        type: boolean
+        default: false
+  title: Slave resource
+
+- description: Default policy - master schema
+  id: default_policy_master
+  singular: default_policy_master
+  plural: default_policy_masters
+  prefix: /v2.0
+  schema:
+    properties:
+      id:
+        description: ID
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: true
+      slave_resource_id:
+        permission:
+        - create
+        - update
+        relation: default_policy_slave
+        title: Slave resource
+        type:
+        - string
+        - "null"
+        unique: false
+        description: A property that can attach to this schema with a default policy
+      tenant_id:
+        description: Tenant ID
+        permission:
+        - create
+        title: TenantID
+        type: string
+        unique: false
+  title: Master resource
 
 subnets: []

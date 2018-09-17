@@ -224,16 +224,16 @@ var _ = Describe("Policies", func() {
 
 			Context("default attach policy", func() {
 				var (
-					expected *Policy
-					schema   *Schema
-					property *Property
+					expected              *Policy
+					schema, relatedSchema *Schema
+					property              *Property
 				)
 
 				BeforeEach(func() {
 					rawExpected := map[string]interface{}{
 						"action":            "__attach__",
 						"effect":            "allow",
-						"id":                "default_schema_to_relation_field_id_attach_policy",
+						"id":                "default_schema_to_relation_field_id_basic_attach_policy",
 						"principal":         "Member",
 						"relation_property": "relation_field_id",
 						"target_condition":  []interface{}{"is_owner"},
@@ -250,13 +250,18 @@ var _ = Describe("Policies", func() {
 						URL: "/v1.0/schemas",
 					}
 
+					relatedSchema = &Schema{
+						ID:  "relatedSchema",
+						URL: "/v1.0/related_schemas",
+					}
+
 					property = &Property{
 						ID: "relation_field_id",
 					}
 				})
 
 				It("should generate default policy", func() {
-					actual := BuildDefaultPolicy(schema, property)
+					actual := BuildDefaultPolicy(schema, relatedSchema, property)
 					Expect(expected).To(Equal(actual))
 				})
 			})

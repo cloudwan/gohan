@@ -333,6 +333,35 @@ func (manager *Manager) LoadSchemasFromFiles(filePaths ...string) error {
 			return err
 		}
 	}
+
+	for _, schema := range manager.schemas {
+		for _, property := range schema.Properties {
+			if property.Relation == "" {
+				continue
+			}
+
+			hasAttach := false
+			for _, policy := range manager.policies {
+				if policy == nil || policy.resource == nil || policy.resource.Path == nil {
+					continue
+				}
+				if policy.Action == ActionAttach && policy.resource.Path.MatchString(schema.URL) && policy.GetRelationPropertyName() == property.ID {
+					hasAttach = true
+					break
+				}
+			}
+
+			if !hasAttach {
+				log.Info("building default __attach__ policy for %s.%s", schema.ID, property.ID)
+				relatedSchema, ok := manager.schema(property.Relation)
+				if !ok {
+					panic(fmt.Sprintf("schema %s not found", property.Relation))
+				}
+				manager.policies = append(manager.policies, BuildDefaultPolicy(schema, relatedSchema, &property))
+			}
+		}
+	}
+
 	return nil
 }
 

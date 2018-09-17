@@ -304,15 +304,50 @@ func NewPolicy(raw interface{}) (*Policy, error) {
 	return policy, nil
 }
 
-func BuildDefaultPolicy(schema *Schema, property *Property) *Policy {
+func BuildDefaultPolicy(schema, relatedSchema *Schema, property *Property) *Policy {
+	if !hasPublicCondition(relatedSchema) {
+		policy, err := NewPolicy(
+			map[string]interface{}{
+				"action":            ActionAttach,
+				"effect":            "allow",
+				"id":                fmt.Sprintf("default_%s_to_%s_basic_attach_policy", schema.ID, property.ID),
+				"principal":         "Member",
+				"relation_property": property.ID,
+				"target_condition":  []interface{}{conditionIsOwner},
+				"resource": map[string]interface{}{
+					"path": schema.GetPluralURL(),
+				}})
+
+		if err != nil {
+			panic(err)
+		}
+		return policy
+	}
+
+	publicPolicyId := fmt.Sprintf("default_%s_to_%s_public_attach_policy", schema.ID, property.ID)
+	condition := []interface{}{
+		map[string]interface{}{
+			"or": []interface{}{
+				conditionIsOwner,
+				map[string]interface{}{
+					"match": map[string]interface{}{
+						"property": "is_public",
+						"type":     "eq",
+						"value":    true,
+					},
+				},
+			},
+		},
+	}
+
 	policy, err := NewPolicy(
 		map[string]interface{}{
 			"action":            ActionAttach,
 			"effect":            "allow",
-			"id":                fmt.Sprintf("default_%s_to_%s_attach_policy", schema.ID, property.ID),
+			"id":                publicPolicyId,
 			"principal":         "Member",
 			"relation_property": property.ID,
-			"target_condition":  []interface{}{conditionIsOwner},
+			"target_condition":  condition,
 			"resource": map[string]interface{}{
 				"path": schema.GetPluralURL(),
 			}})
@@ -322,6 +357,16 @@ func BuildDefaultPolicy(schema *Schema, property *Property) *Policy {
 	}
 
 	return policy
+}
+
+func hasPublicCondition(s *Schema) bool {
+	for _, property := range s.Properties {
+		if property.ID == "is_public" {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (p *Policy) GetCurrentResourceCondition() *ResourceCondition {

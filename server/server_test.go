@@ -446,7 +446,7 @@ var _ = Describe("Server package test", func() {
 			Expect(result).To(HaveKeyWithValue("network", networkExpected))
 
 			result = testURL("GET", baseURL+"/_all", memberTokenID, nil, http.StatusOK)
-			Expect(result).To(HaveLen(9))
+			Expect(result).To(HaveLen(11))
 			Expect(result).To(HaveKeyWithValue("networks", []interface{}{networkExpected}))
 			Expect(result).To(HaveKey("schemas"))
 			Expect(result).To(HaveKey("tests"))
@@ -1170,6 +1170,65 @@ var _ = Describe("Server package test", func() {
 		})
 	})
 
+	Describe("Default policy", func() {
+		const (
+			masterUrl = baseURL + "/v2.0/default_policy_masters"
+			slaveUrl  = baseURL + "/v2.0/default_policy_slaves"
+		)
+
+		powerUserMaster := map[string]interface{}{
+			"id": "power_user_master_id",
+		}
+		powerUserSlave := map[string]interface{}{
+			"id": "power_user_slave_id",
+		}
+
+		memberUserMaster := map[string]interface{}{
+			"id": "member_user_master_id",
+		}
+		publicMemberUserSlave := map[string]interface{}{
+			"id":        "member_user_slave_id",
+			"is_public": true,
+		}
+
+		getResourceURL := func(schemaID, id string) string {
+			s, _ := schema.GetManager().Schema(schemaID)
+			return baseURL + s.URL + "/" + id
+		}
+
+		BeforeEach(func() {
+			testURL("POST", masterUrl, powerUserTokenID, powerUserMaster, http.StatusCreated)
+			testURL("POST", slaveUrl, powerUserTokenID, powerUserSlave, http.StatusCreated)
+
+			testURL("POST", masterUrl, memberTokenID, memberUserMaster, http.StatusCreated)
+			testURL("POST", slaveUrl, memberTokenID, publicMemberUserSlave, http.StatusCreated)
+		})
+
+		It("Should allow owner access through default policy", func() {
+			masterUpdate := map[string]interface{}{
+				"slave_resource_id": powerUserSlave["id"],
+			}
+
+			testURL("PUT", getResourceURL("default_policy_master", "power_user_master_id"), powerUserTokenID, masterUpdate, http.StatusOK)
+		})
+
+		It("Should provide tenant isolation through default policy", func() {
+			masterUpdate := map[string]interface{}{
+				"slave_resource_id": powerUserSlave["id"],
+			}
+
+			testURL("PUT", getResourceURL("default_policy_master", "member_user_master_id"), memberTokenID, masterUpdate, http.StatusBadRequest)
+		})
+
+		It("Should allow access to public fields", func() {
+			masterUpdate := map[string]interface{}{
+				"slave_resource_id": publicMemberUserSlave["id"],
+			}
+
+			testURL("PUT", getResourceURL("default_policy_master", "power_user_master_id"), powerUserTokenID, masterUpdate, http.StatusOK)
+		})
+	})
+
 	Describe("Attach policy tests", func() {
 		getResourceURL := func(schemaID, id string) string {
 			s, _ := schema.GetManager().Schema(schemaID)
@@ -1182,7 +1241,7 @@ var _ = Describe("Server package test", func() {
 			"block_flag":    false,
 		}
 
-		FContext("should validate create/update of resource through attach policies", func() {
+		Context("should validate create/update of resource through attach policies", func() {
 			attachTargetOfPowerUser := map[string]interface{}{
 				"id":            "target_power_user",
 				"accessibility": "everybody",
@@ -1238,19 +1297,19 @@ var _ = Describe("Server package test", func() {
 				testURL("PUT", getResourceURL("attacher", "attacher_member"), memberTokenID, attacherOfMemberUpdate, http.StatusBadRequest)
 			})
 
-			FIt("Should allow owner access through default policy", func() {
-				attacherOfMemberUpdate := map[string]interface{}{
-					"attach_with_default_policy_id": attachTargetOfPowerUser["id"],
-				}
-				testURL("PUT", getResourceURL("attacher", "attacher_member"), powerUserTokenID, attacherOfMemberUpdate, http.StatusOK)
-			})
-
-			It("Should provide tenant isolation through default policy", func() {
-				attacherOfMemberUpdate := map[string]interface{}{
-					"attach_with_default_policy_id": attachTargetOfPowerUser["id"],
-				}
-				testURL("PUT", getResourceURL("attacher", "attacher_member"), memberTokenID, attacherOfMemberUpdate, http.StatusBadRequest)
-			})
+			//PIt("Should allow owner access through default policy", func() {
+			//	attacherOfMemberUpdate := map[string]interface{}{
+			//		"attach_with_default_policy_id": attachTargetOfPowerUser["id"],
+			//	}
+			//	testURL("PUT", getResourceURL("attacher", "attacher_member"), powerUserTokenID, attacherOfMemberUpdate, http.StatusOK)
+			//})
+			//
+			//PIt("Should provide tenant isolation through default policy", func() {
+			//	attacherOfMemberUpdate := map[string]interface{}{
+			//		"attach_with_default_policy_id": attachTargetOfPowerUser["id"],
+			//	}
+			//	testURL("PUT", getResourceURL("attacher", "attacher_member"), memberTokenID, attacherOfMemberUpdate, http.StatusBadRequest)
+			//})
 
 			It("Power user tries to attach existing resource to member's target, but should fail", func() {
 				attacherOfPowerUserUpdate := map[string]interface{}{
