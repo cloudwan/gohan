@@ -309,6 +309,10 @@ func BuildDefaultPolicy(schema, relatedSchema *Schema, property *Property) []*Po
 		return nil
 	}
 
+	if isTenantSchema(relatedSchema) {
+		return nil
+	}
+
 	if !hasPublicCondition(relatedSchema) {
 		policy, err := NewPolicy(
 			map[string]interface{}{
@@ -361,6 +365,10 @@ func BuildDefaultPolicy(schema, relatedSchema *Schema, property *Property) []*Po
 	}
 
 	return []*Policy{policy}
+}
+
+func isTenantSchema(s *Schema) bool {
+	return s.ID == "tenant"
 }
 
 func hasTenant(s *Schema) bool {
