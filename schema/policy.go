@@ -304,7 +304,11 @@ func NewPolicy(raw interface{}) (*Policy, error) {
 	return policy, nil
 }
 
-func BuildDefaultPolicy(schema, relatedSchema *Schema, property *Property) *Policy {
+func BuildDefaultPolicy(schema, relatedSchema *Schema, property *Property) []*Policy {
+	if !hasTenant(relatedSchema) {
+		return nil
+	}
+
 	if !hasPublicCondition(relatedSchema) {
 		policy, err := NewPolicy(
 			map[string]interface{}{
@@ -321,7 +325,7 @@ func BuildDefaultPolicy(schema, relatedSchema *Schema, property *Property) *Poli
 		if err != nil {
 			panic(err)
 		}
-		return policy
+		return []*Policy{policy}
 	}
 
 	publicPolicyId := fmt.Sprintf("default_%s_to_%s_public_attach_policy", schema.ID, property.ID)
@@ -356,7 +360,17 @@ func BuildDefaultPolicy(schema, relatedSchema *Schema, property *Property) *Poli
 		panic(err)
 	}
 
-	return policy
+	return []*Policy{policy}
+}
+
+func hasTenant(s *Schema) bool {
+	for _, property := range s.Properties {
+		if property.ID == "tenant_id" {
+			return true
+		}
+	}
+
+	return false
 }
 
 func hasPublicCondition(s *Schema) bool {

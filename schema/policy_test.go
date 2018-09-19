@@ -251,8 +251,9 @@ var _ = Describe("Policies", func() {
 					}
 
 					relatedSchema = &Schema{
-						ID:  "relatedSchema",
-						URL: "/v1.0/related_schemas",
+						ID:         "relatedSchema",
+						URL:        "/v1.0/related_schemas",
+						Properties: []Property{{ID: "tenant_id"}},
 					}
 
 					property = &Property{
@@ -262,7 +263,7 @@ var _ = Describe("Policies", func() {
 
 				It("should generate default policy", func() {
 					actual := BuildDefaultPolicy(schema, relatedSchema, property)
-					Expect(expected).To(Equal(actual))
+					Expect(expected).To(Equal(actual[0]))
 				})
 			})
 		})

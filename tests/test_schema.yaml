@@ -459,6 +459,15 @@ policies:
   resource:
     path: /v2.0/default_policy_slave.*
 
+- action: '*'
+  condition:
+  - is_owner
+  effect: allow
+  id: create_no_tenant_slave
+  principal: Member
+  resource:
+    path: /v2.0/no_tenant_default_policy_slave.*
+
 schemas:
 - description: Network
   id: network
@@ -1154,6 +1163,22 @@ schemas:
         default: false
   title: Slave resource
 
+- description: Default policy - slave schema without tenant
+  id: no_tenant_default_policy_slave
+  singular: no_tenant_default_policy_slave
+  plural: no_tenant_default_policy_slaves
+  prefix: /v2.0
+  schema:
+    properties:
+      id:
+        description: ID
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: true
+  title: Slave resource without tenant
+
 - description: Default policy - master schema
   id: default_policy_master
   singular: default_policy_master
@@ -1179,6 +1204,17 @@ schemas:
         - "null"
         unique: false
         description: A property that can attach to this schema with a default policy
+      no_tenant_slave_resource_id:
+        permission:
+        - create
+        - update
+        relation: no_tenant_default_policy_slave
+        title: Non-tenant slave resource
+        type:
+        - string
+        - "null"
+        unique: false
+        description: A non-tenant owned property that can attach to this schema with a default policy
       tenant_id:
         description: Tenant ID
         permission:

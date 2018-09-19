@@ -446,7 +446,7 @@ var _ = Describe("Server package test", func() {
 			Expect(result).To(HaveKeyWithValue("network", networkExpected))
 
 			result = testURL("GET", baseURL+"/_all", memberTokenID, nil, http.StatusOK)
-			Expect(result).To(HaveLen(11))
+			Expect(result).To(HaveLen(12))
 			Expect(result).To(HaveKeyWithValue("networks", []interface{}{networkExpected}))
 			Expect(result).To(HaveKey("schemas"))
 			Expect(result).To(HaveKey("tests"))
@@ -1172,8 +1172,9 @@ var _ = Describe("Server package test", func() {
 
 	Describe("Default policy", func() {
 		const (
-			masterUrl = baseURL + "/v2.0/default_policy_masters"
-			slaveUrl  = baseURL + "/v2.0/default_policy_slaves"
+			masterUrl        = baseURL + "/v2.0/default_policy_masters"
+			slaveUrl         = baseURL + "/v2.0/default_policy_slaves"
+			noTenantSlaveUrl = baseURL + "/v2.0/no_tenant_default_policy_slaves"
 		)
 
 		powerUserMaster := map[string]interface{}{
@@ -1191,6 +1192,10 @@ var _ = Describe("Server package test", func() {
 			"is_public": true,
 		}
 
+		noTenantResource := map[string]interface{}{
+			"id": "no_tenant_resource_id",
+		}
+
 		getResourceURL := func(schemaID, id string) string {
 			s, _ := schema.GetManager().Schema(schemaID)
 			return baseURL + s.URL + "/" + id
@@ -1202,6 +1207,8 @@ var _ = Describe("Server package test", func() {
 
 			testURL("POST", masterUrl, memberTokenID, memberUserMaster, http.StatusCreated)
 			testURL("POST", slaveUrl, memberTokenID, publicMemberUserSlave, http.StatusCreated)
+
+			testURL("POST", noTenantSlaveUrl, memberTokenID, noTenantResource, http.StatusCreated)
 		})
 
 		It("Should allow owner access through default policy", func() {
@@ -1223,6 +1230,14 @@ var _ = Describe("Server package test", func() {
 		It("Should allow access to public fields", func() {
 			masterUpdate := map[string]interface{}{
 				"slave_resource_id": publicMemberUserSlave["id"],
+			}
+
+			testURL("PUT", getResourceURL("default_policy_master", "power_user_master_id"), powerUserTokenID, masterUpdate, http.StatusOK)
+		})
+
+		It("Should allow access to non-tenant resources", func() {
+			masterUpdate := map[string]interface{}{
+				"no_tenant_slave_resource_id": noTenantResource["id"],
 			}
 
 			testURL("PUT", getResourceURL("default_policy_master", "power_user_master_id"), powerUserTokenID, masterUpdate, http.StatusOK)

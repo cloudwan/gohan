@@ -357,7 +357,7 @@ func (manager *Manager) LoadSchemasFromFiles(filePaths ...string) error {
 				if !ok {
 					panic(fmt.Sprintf("schema %s not found", property.Relation))
 				}
-				manager.policies = append(manager.policies, BuildDefaultPolicy(schema, relatedSchema, &property))
+				manager.policies = append(manager.policies, BuildDefaultPolicy(schema, relatedSchema, &property)...)
 			}
 		}
 	}
