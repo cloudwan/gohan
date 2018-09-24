@@ -29,3 +29,15 @@ func Or(filters ...FilterElem) FilterElem {
 		"__or__": filters,
 	}
 }
+
+func True() FilterElem {
+	return FilterElem{
+		"__bool__": true,
+	}
+}
+
+func False() FilterElem {
+	return FilterElem{
+		"__bool__": false,
+	}
+}

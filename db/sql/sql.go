@@ -1159,6 +1159,7 @@ func (tx *Transaction) GetIsolationLevel() transaction.Type {
 const (
 	OrCondition  = "__or__"
 	AndCondition = "__and__"
+	BoolCondition = "__bool__"
 )
 
 func AddFilterToQuery(s *schema.Schema, q sq.SelectBuilder, filter map[string]interface{}, join bool) (sq.SelectBuilder, error) {
@@ -1179,6 +1180,13 @@ func AddFilterToQuery(s *schema.Schema, q sq.SelectBuilder, filter map[string]in
 				return q, err
 			}
 			q = q.Where(andFilter)
+			continue
+		} else if b, ok := filter[BoolCondition]; ok {
+			if b.(bool) {
+				q = q.Where("(1=1)")
+			} else {
+				q = q.Where("(1=0)")
+			}
 			continue
 		}
 		property, err := s.GetPropertyByID(key)
@@ -1231,6 +1239,12 @@ func addToFilter(s *schema.Schema, q sq.SelectBuilder, filter interface{}, join 
 				return nil, err
 			}
 			sqlizer = append(sqlizer, res)
+		} else if b, ok := filter[BoolCondition]; ok {
+			if b.(bool) {
+				sqlizer = append(sqlizer, sq.Expr("(1=1)"))
+			} else {
+				sqlizer = append(sqlizer, sq.Expr("(1=0)"))
+			}
 		} else {
 			key := filter["property"].(string)
 			property, err := s.GetPropertyByID(key)

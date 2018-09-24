@@ -164,7 +164,7 @@ type Authorization interface {
 	DomainName() string
 	Roles() []*Role
 	IsAdmin() bool
-	getResourceFilters(schema *Schema) []map[string]interface{}
+	getResourceFilters(schema *Schema) map[string]interface{}
 	checkAccessToResource(cond *ResourceCondition, action string, resource map[string]interface{}) error
 	getTenantAndDomainFilters(cond *ResourceCondition, action string) (tenantFilter []string, domainFilter []string)
 }
@@ -271,10 +271,10 @@ func (auth *TenantScopedAuthorization) TenantName() string {
 	return auth.tenant.Name
 }
 
-func (auth *TenantScopedAuthorization) getResourceFilters(schema *Schema) []map[string]interface{} {
+func (auth *TenantScopedAuthorization) getResourceFilters(schema *Schema) map[string]interface{} {
 	tenantFilter := getFilterByPropertyIfPresent(schema, "tenant_id", auth.TenantID())
 	domainFilter := getFilterByPropertyIfPresent(schema, "domain_id", auth.DomainID())
-	return makeAndFilters(append(tenantFilter, domainFilter...))
+	return maybeEmptyAndFilter(append(tenantFilter, domainFilter...)...)
 }
 
 func (auth *TenantScopedAuthorization) checkAccessToResource(cond *ResourceCondition, action string, resource map[string]interface{}) error {
@@ -320,8 +320,8 @@ func (auth *DomainScopedAuthorization) IsAdmin() bool {
 	return false
 }
 
-func (auth *DomainScopedAuthorization) getResourceFilters(schema *Schema) []map[string]interface{} {
-	return getFilterByPropertyIfPresent(schema, "domain_id", auth.DomainID())
+func (auth *DomainScopedAuthorization) getResourceFilters(schema *Schema) map[string]interface{} {
+	return maybeEmptyAndFilter(getFilterByPropertyIfPresent(schema, "domain_id", auth.DomainID())...)
 }
 
 func (auth *DomainScopedAuthorization) checkAccessToResource(cond *ResourceCondition, action string, resource map[string]interface{}) error {
@@ -339,8 +339,8 @@ func (auth *AdminAuthorization) IsAdmin() bool {
 	return true
 }
 
-func (auth *AdminAuthorization) getResourceFilters(schema *Schema) []map[string]interface{} {
-	return []map[string]interface{}{}
+func (auth *AdminAuthorization) getResourceFilters(schema *Schema) map[string]interface{} {
+	return filter.True()
 }
 
 func (auth *AdminAuthorization) checkAccessToResource(cond *ResourceCondition, action string, resource map[string]interface{}) error {
@@ -845,7 +845,7 @@ func addCustomFilters(schema *Schema, f map[string]interface{}, auth Authorizati
 	}
 	filters := make([]map[string]interface{}, 0)
 	if conditionFilters.isOwner {
-		filters = append(filters, auth.getResourceFilters(schema)...)
+		filters = append(filters, auth.getResourceFilters(schema))
 	}
 	for _, match := range conditionFilters.matches {
 		filters = append(filters, match)
@@ -902,11 +902,12 @@ func getRegexp(input string) (*regexp.Regexp, error) {
 	return regexp.Compile(input)
 }
 
-func makeAndFilters(filters []map[string]interface{}) []map[string]interface{} {
-	if len(filters) <= 1 {
-		return filters
+func maybeEmptyAndFilter(filters... map[string]interface{}) map[string]interface{} {
+	if len(filters) == 0 {
+		return filter.True()
 	}
-	return []map[string]interface{}{
-		filter.And(filters...),
+	if len(filters) == 1 {
+		return filters[0]
 	}
+	return filter.And(filters...)
 }

@@ -686,6 +686,59 @@ var _ = Describe("Sql", func() {
 					"((1=1))",
 				),
 			)
+
+			DescribeTable("should handle constant bool conditions",
+				func(filter map[string]interface{}, expected interface{}) {
+					res, err := AddFilterToQuery(testSchema, query, filter, false)
+
+					Expect(err).ToNot(HaveOccurred())
+					resSql, param, err := res.ToSql()
+					Expect(err).ToNot(HaveOccurred())
+
+					expectedQuery = expectedQuery.Where(expected)
+					expectedSql, expectedParam, _ := expectedQuery.ToSql()
+					Expect(resSql).To(Equal(expectedSql))
+					Expect(param).To(Equal(expectedParam))
+				},
+				Entry("always true, in condition root",
+					map[string]interface{}{"__bool__": true},
+					"(1=1)",
+				),
+				Entry("always false, in condition root",
+					map[string]interface{}{"__bool__": false},
+					"(1=0)",
+				),
+				Entry("always true, in compound condition",
+					map[string]interface{}{
+						"__or__": []map[string]interface{}{
+							{
+								"__bool__": true,
+							},
+							{
+								"property": "test_string",
+								"type":     "neq",
+								"value":    "123",
+							},
+						},
+					},
+					squirrel.Or{squirrel.Expr("(1=1)"), squirrel.NotEq{"`test_string`": "123"}},
+				),
+				Entry("always false, in compound condition",
+					map[string]interface{}{
+						"__or__": []map[string]interface{}{
+							{
+								"__bool__": false,
+							},
+							{
+								"property": "test_string",
+								"type":     "neq",
+								"value":    "123",
+							},
+						},
+					},
+					squirrel.Or{squirrel.Expr("(1=0)"), squirrel.NotEq{"`test_string`": "123"}},
+				),
+			)
 		})
 	})
 })
