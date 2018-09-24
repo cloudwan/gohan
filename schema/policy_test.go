@@ -783,6 +783,50 @@ var _ = Describe("Policies", func() {
 				}
 				Expect(filter).To(Equal(expected))
 			})
+
+			It("Should create a correct filter in case of admin token and a compound condition with is_owner", func() {
+				tenant := Tenant{ID: "test", Name: "test"}
+				testAuth = NewAuthorizationBuilder().
+					WithTenant(tenant).
+					WithRoleIDs("admin").
+					BuildAdmin()
+
+				schema := getSchema("network")
+				testPolicy["condition"] = []interface{}{
+					map[string]interface{}{
+						"or": []interface{}{
+							"is_owner",
+							map[string]interface{}{
+								"match": map[string]interface{}{
+									"property": "status",
+									"type":     "eq",
+									"value":    "ACTIVE",
+								},
+							},
+						},
+					},
+				}
+
+				var err error
+				policy, err = NewPolicy(testPolicy)
+				Expect(err).ToNot(HaveOccurred())
+				filter := map[string]interface{}{}
+				currCond := policy.GetCurrentResourceCondition()
+				currCond.AddCustomFilters(schema, filter, testAuth)
+				expected := map[string]interface{}{
+					"__or__": []map[string]interface{}{
+						{
+							"__bool__": true,
+						},
+						{
+							"property": "status",
+							"type":     "eq",
+							"value":    "ACTIVE",
+						},
+					},
+				}
+				Expect(filter).To(Equal(expected))
+			})
 		})
 	})
 })
