@@ -43,6 +43,7 @@ var (
 		"policy":    true,
 		"extension": true,
 		"namespace": true,
+		"version":   true,
 	}
 )
 

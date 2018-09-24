@@ -814,6 +814,45 @@
             },
             "singular": "namespace",
             "title": "Gohan Namespace"
+        },
+        {
+            "description": "The version metaschema",
+            "id": "version",
+            "metadata": {
+                "type": "metaschema"
+            },
+            "singular": "version",
+            "plural": "version",
+            "prefix": "/gohan/v0.1",
+            "schema": {
+                "properties": {
+                    "core": {
+                        "description": "Version of Gohan (git commit id)",
+                        "permission": [],
+                        "title": "Core version",
+                        "type": "string"
+                    },
+                    "app": {
+                        "description": "Version of the application",
+                        "permission": [],
+                        "title": "Application version",
+                        "type": "string"
+                    },
+                    "id": {
+                        "description": "Should never be used, just for framework compatibility",
+                        "permission": [],
+                        "title": "ID",
+                        "type": "string",
+                        "unique": true
+                    }
+                },
+                "propertiesOrder": [
+                    "core",
+                    "app"
+                ],
+                "type": "object"
+            },
+            "title": "Gohan Version"
         }
     ]
 }
