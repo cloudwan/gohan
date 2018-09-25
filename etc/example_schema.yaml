@@ -120,6 +120,8 @@ policies:
   effect: allow
   id: policy1
   principal: Member
+  scope:
+  - tenant
   resource:
     path: /gohan/v0.1/schemas*
 # Allow to read pets
@@ -127,6 +129,8 @@ policies:
   effect: allow
   id: policy2
   principal: Member
+  scope:
+  - tenant
   resource:
     path: /v1.0/store/pets
 # Allow to read orders
@@ -134,6 +138,8 @@ policies:
   effect: allow
   id: policy3
   principal: Member
+  scope:
+  - tenant
   condition:
   - is_owner
   resource:
@@ -143,6 +149,8 @@ policies:
   effect: allow
   id: policy4
   principal: Member
+  scope:
+  - tenant
   resource:
     path: /v1.0/store/orders
   condition:
@@ -150,6 +158,16 @@ policies:
     action: create
     match:
       status: placed
+# Allow all actions for admin
+- action: '*'
+  effect: allow
+  id: policy5
+  principal: admin
+  scope:
+  - admin
+  - domain
+  resource:
+    path: .*
 extensions:
 - id: order
   path: /v1.0/store/orders

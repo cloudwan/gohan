@@ -56,22 +56,6 @@ const (
 // AllActions are all possible actions
 var AllActions = []string{ActionCreate, ActionRead, ActionUpdate, ActionDelete}
 
-var adminPolicy = func() *Policy {
-	policy, err := NewPolicy(map[string]interface{}{
-		"action": "*",
-		"effect": "allow",
-		"id": "admin_statement",
-		"principal": "admin",
-		"resource": map[string]interface{}{
-			"path": ".*",
-		},
-	})
-	if err != nil {
-		panic(errors.Errorf("Failed to create the admin policy: %v", err))
-	}
-	return policy
-}()
-
 func newTenantMatcher(tenantID, tenantName string) tenantMatcher {
 	tenantIDRegexp, _ := getRegexp(tenantID)
 	tenantNameRegexp, _ := getRegexp(tenantName)
@@ -123,6 +107,20 @@ func makeConditionFilter(filterType conditionFilterType) *conditionFilter {
 	}
 }
 
+type tokenType string
+
+const (
+	tenantScope tokenType = "tenant"
+	domainScope           = "domain"
+	adminScope            = "admin"
+)
+
+var allTokenTypes = []tokenType{
+	tenantScope,
+	domainScope,
+	adminScope,
+}
+
 //Policy describes policy configuration for APIs
 type Policy struct {
 	ID, Description, Principal, Action, Effect string
@@ -130,6 +128,7 @@ type Policy struct {
 	resource                                   *resourceFilter
 	tenantID                                   *regexp.Regexp
 	tenantName                                 *regexp.Regexp
+	tokenScope                                 []tokenType
 	currentResourceCondition                   *ResourceCondition
 	relationPropertyName                       string
 	otherResourceCondition                     *ResourceCondition
@@ -167,6 +166,7 @@ type Authorization interface {
 	getResourceFilters(schema *Schema) map[string]interface{}
 	checkAccessToResource(cond *ResourceCondition, action string, resource map[string]interface{}) error
 	getTenantAndDomainFilters(cond *ResourceCondition, action string) (tenantFilter []string, domainFilter []string)
+	checkTokenScope(scopes []tokenType) bool
 }
 
 type TenantScopedAuthorization struct {
@@ -294,6 +294,10 @@ func (auth *TenantScopedAuthorization) getTenantAndDomainFilters(cond *ResourceC
 	return
 }
 
+func (auth *TenantScopedAuthorization) checkTokenScope(scopes []tokenType) bool {
+	return containsTokenType(scopes, tenantScope)
+}
+
 // DomainScopedAuthorization
 
 func (auth *DomainScopedAuthorization) TenantID() string {
@@ -333,6 +337,10 @@ func (auth *DomainScopedAuthorization) getTenantAndDomainFilters(cond *ResourceC
 	return
 }
 
+func (auth *DomainScopedAuthorization) checkTokenScope(scopes []tokenType) bool {
+	return containsTokenType(scopes, domainScope)
+}
+
 // AdminScopedAuthorization
 
 func (auth *AdminAuthorization) IsAdmin() bool {
@@ -349,6 +357,19 @@ func (auth *AdminAuthorization) checkAccessToResource(cond *ResourceCondition, a
 
 func (auth *AdminAuthorization) getTenantAndDomainFilters(cond *ResourceCondition, action string) (tenantFilter []string, domainFilter []string) {
 	return
+}
+
+func (auth *AdminAuthorization) checkTokenScope(scopes []tokenType) bool {
+	return containsTokenType(scopes, adminScope)
+}
+
+func containsTokenType(scope []tokenType, desiredScope tokenType) bool {
+	for _, s := range scope {
+		if s == desiredScope {
+			return true
+		}
+	}
+	return false
 }
 
 func getFilterByPropertyIfPresent(schema *Schema, propertyName string, propertyValue interface{}) []map[string]interface{} {
@@ -411,77 +432,134 @@ func (r *Role) Match(principal string) bool {
 func NewPolicy(raw interface{}) (*Policy, error) {
 	typeData := raw.(map[string](interface{}))
 	policy := &Policy{}
+
+	for _, parse := range []func(map[string]interface{}) error{
+		policy.parseBasicProperties,
+		policy.parseResourceFilter,
+		policy.parseTenant,
+		policy.parseTokenScope,
+		policy.parseActionAttach,
+	} {
+		if err := parse(typeData); err != nil {
+			return nil, err
+		}
+	}
+
+	return policy, nil
+}
+
+func (policy *Policy) parseBasicProperties(typeData map[string]interface{}) error {
 	policy.ID, _ = typeData["id"].(string)
 	policy.Description, _ = typeData["description"].(string)
 	policy.Principal, _ = typeData["principal"].(string)
 	policy.Action, _ = typeData["action"].(string)
 	policy.Effect, _ = typeData["effect"].(string)
-	policy.RawData = raw
-	resourceData, _ := typeData["resource"].(map[string]interface{})
-	resource := &resourceFilter{}
-	policy.resource = resource
-	path, _ := resourceData["path"].(string)
-	match, err := regexp.Compile(path)
-	if err != nil {
-		return nil, err
-	}
-	resource.Path = match
+	policy.RawData = typeData
+	return nil
+}
 
+func (policy *Policy) parseTenant(typeData map[string]interface{}) error {
 	rawTenantID, _ := typeData["tenant_id"].(string)
 	tenantID, err := getRegexp(rawTenantID)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	policy.tenantID = tenantID
 
 	rawTenantName, _ := typeData["tenant_name"].(string)
 	tenantName, err := getRegexp(rawTenantName)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	policy.tenantName = tenantName
 
 	if tenantName.String() != globalRegexp && tenantID.String() != globalRegexp {
-		return nil, fmt.Errorf(onlyOneOfTenantIDTenantNameError)
+		return fmt.Errorf(onlyOneOfTenantIDTenantNameError)
 	}
+
+	return nil
+}
+
+func (policy *Policy) parseTokenScope(typeData map[string]interface{}) error {
+	if scopeRaw, ok := typeData["scope"]; ok {
+		var types []interface{}
+		if scope, ok := scopeRaw.([]interface{}); ok {
+			types = scope
+		} else {
+			return errors.New("\"scope\" should be a list of strings")
+		}
+
+		for i, rawTp := range types {
+			tp, ok := rawTp.(string)
+			if !ok {
+				return errors.Errorf("Token type at position %d in scope list should be a string", i)
+			}
+
+			if !containsTokenType(allTokenTypes, tokenType(tp)) {
+				return errors.Errorf("Unknown token type in \"scope\" property at position %d: \"%s\"", i, tp)
+			}
+			policy.tokenScope = append(policy.tokenScope, tokenType(tp))
+		}
+	} else {
+		policy.tokenScope = allTokenTypes
+	}
+
+	return nil
+}
+
+func (policy *Policy) parseResourceFilter(typeData map[string]interface{}) error {
+	resourceData, _ := typeData["resource"].(map[string]interface{})
+	resource := &resourceFilter{}
+	policy.resource = resource
+	path, _ := resourceData["path"].(string)
+	match, err := regexp.Compile(path)
+	if err != nil {
+		return err
+	}
+	resource.Path = match
 
 	filterFactory := FilterFactory{}
 	if resource.PropertiesFilter, err = filterFactory.CreateFilterFromProperties(
 		getStringSliceFromMap(resourceData, "properties"),
 		getStringSliceFromMap(resourceData, "blacklistProperties"),
 	); err != nil {
-		return nil, err
+		return err
 	}
 
+	return nil
+}
+
+func (policy *Policy) parseActionAttach(typeData map[string]interface{}) error {
+	var err error
 	if policy.Action == ActionAttach {
 		// source_relation_property is required
 		relationProperty, hasSource := typeData["relation_property"].(string)
 		if !hasSource {
-			return nil, errors.New("\"relation_property\" is required in an attach policy")
+			return errors.New("\"relation_property\" is required in an attach policy")
 		}
 
 		// target_condition is required
 		rawTargetCondition, hasTarget := typeData["target_condition"].([]interface{})
 		if !hasTarget {
-			return nil, errors.New("\"target_condition\" is required in an attach policy")
+			return errors.New("\"target_condition\" is required in an attach policy")
 		}
 
 		policy.currentResourceCondition = &ResourceCondition{}
 		policy.relationPropertyName = relationProperty
 		policy.otherResourceCondition, err = NewResourceCondition(rawTargetCondition, policy.ID)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	} else {
 		rawCondition, _ := typeData["condition"].([]interface{})
 		condition, err := NewResourceCondition(rawCondition, policy.ID)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		policy.currentResourceCondition = condition
 	}
 
-	return policy, nil
+	return nil
 }
 
 func (p *Policy) GetCurrentResourceCondition() *ResourceCondition {
@@ -611,6 +689,7 @@ func (p *Policy) match(action, path string, auth Authorization) *Role {
 	} else if p.Action != "*" && action != p.Action {
 		return nil
 	}
+
 	if !p.resource.Path.MatchString(path) {
 		return nil
 	}
@@ -620,6 +699,10 @@ func (p *Policy) match(action, path string, auth Authorization) *Role {
 	}
 
 	if !p.tenantName.MatchString(auth.TenantName()) {
+		return nil
+	}
+
+	if !auth.checkTokenScope(p.tokenScope) {
 		return nil
 	}
 
@@ -869,9 +952,6 @@ func addCustomFilters(schema *Schema, f map[string]interface{}, auth Authorizati
 
 //PolicyValidate validates api request using policy validation
 func PolicyValidate(action, path string, auth Authorization, policies []*Policy) (foundPolicy *Policy, foundRole *Role) {
-	if auth.IsAdmin() {
-		policies = append([]*Policy{adminPolicy}, policies...)
-	}
 	for _, policy := range policies {
 		if role := policy.match(action, path, auth); role != nil {
 			if policy.IsDeny() {
@@ -902,7 +982,7 @@ func getRegexp(input string) (*regexp.Regexp, error) {
 	return regexp.Compile(input)
 }
 
-func maybeEmptyAndFilter(filters... map[string]interface{}) map[string]interface{} {
+func maybeEmptyAndFilter(filters ...map[string]interface{}) map[string]interface{} {
 	if len(filters) == 0 {
 		return filter.True()
 	}

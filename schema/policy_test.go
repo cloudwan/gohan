@@ -112,7 +112,7 @@ var _ = Describe("Policies", func() {
 		BeforeEach(func() {
 			manager = GetManager()
 			testPolicy = map[string]interface{}{
-				"action":    '*',
+				"action":    "*",
 				"effect":    "allow",
 				"id":        "policy1",
 				"principal": "admin",
@@ -354,9 +354,9 @@ var _ = Describe("Policies", func() {
 		BeforeEach(func() {
 			manager = GetManager()
 			testPolicy = map[string]interface{}{
-				"action":    '*',
+				"action":    "*",
 				"effect":    "allow",
-				"id":        "policy1",
+				"id":        "testPolicy",
 				"principal": "admin",
 				"resource": map[string]interface{}{
 					"path": ".*",
@@ -418,10 +418,10 @@ var _ = Describe("Policies", func() {
 					policy.Action = "*"
 					authorization = authorizationBuilder.WithRoleIDs("admin").BuildAdmin()
 				})
-				It("should allow access be default", func() {
+				It("should allow access by default", func() {
 					policy.Effect = ""
 					receivedPolicy, role := PolicyValidate("create", "/abc", authorization, []*Policy{policy})
-					Expect(receivedPolicy.ID).To(Equal("admin_statement"))
+					Expect(receivedPolicy).To(Equal(policy))
 					Expect(role).To(Equal(&Role{"admin"}))
 				})
 
@@ -466,6 +466,107 @@ var _ = Describe("Policies", func() {
 				policy, _ = NewPolicy(testPolicy)
 				err := policy.Check("create", authorization, data)
 				Expect(err).ToNot(HaveOccurred())
+			})
+		})
+
+		Context("scope property", func() {
+			var regularUserAuth, domainOwnerAuth, adminAuth Authorization
+			var policy *Policy
+
+			BeforeEach(func() {
+				authorizationBuilder = authorizationBuilder.WithRoleIDs(testPolicy["principal"].(string))
+				regularUserAuth = authorizationBuilder.BuildScopedToTenant()
+				domainOwnerAuth = authorizationBuilder.BuildScopedToDomain()
+				adminAuth = authorizationBuilder.BuildAdmin()
+			})
+
+			givenPolicyWithScope := func(scope interface{}) {
+				testPolicy["scope"] = scope
+			}
+
+			givenPolicyWithNoScope := func() {
+				delete(testPolicy, "scope")
+			}
+
+			thenCreationShouldFail := func(msg string) {
+				_, err := NewPolicy(testPolicy)
+				Expect(err).ToNot(BeNil())
+				Expect(err.Error()).To(Equal(msg))
+			}
+
+			whenPolicyIsCreated := func() {
+				var err error
+				policy, err = NewPolicy(testPolicy)
+				Expect(err).To(BeNil())
+			}
+
+			thenTokenShouldMatch := func(auth Authorization) {
+				p, _ := PolicyValidate("create", "/v2.0/networks", auth, []*Policy{policy})
+				Expect(p).To(Equal(policy))
+			}
+
+			thenTokenShouldNotMatch := func(auth Authorization) {
+				p, _ := PolicyValidate("create", "/v2.0/networks", auth, []*Policy{policy})
+				Expect(p).To(BeNil())
+			}
+
+			DescribeTable("should fail to create when invalid value type is provided",
+				func(scope interface{}) {
+					givenPolicyWithScope(scope)
+					thenCreationShouldFail("\"scope\" should be a list of strings")
+				},
+				Entry("dictionary", map[string]interface{}{}),
+				Entry("string", "admin"),
+			)
+
+			It("should fail to create when non-string is provided in scope list", func() {
+				givenPolicyWithScope([]interface{}{"admin", 123})
+				thenCreationShouldFail("Token type at position 1 in scope list should be a string")
+			})
+
+			It("should fail to create when invalid token type is provided", func() {
+				givenPolicyWithScope([]interface{}{"flower"})
+				thenCreationShouldFail("Unknown token type in \"scope\" property at position 0: \"flower\"")
+			})
+
+			It("should match on all users when no scope is provided", func() {
+				givenPolicyWithNoScope()
+				whenPolicyIsCreated()
+				thenTokenShouldMatch(regularUserAuth)
+				thenTokenShouldMatch(domainOwnerAuth)
+				thenTokenShouldMatch(adminAuth)
+			})
+
+			It("should match on only tenant-scoped tokens when scope is tenant", func() {
+				givenPolicyWithScope([]interface{}{"tenant"})
+				whenPolicyIsCreated()
+				thenTokenShouldMatch(regularUserAuth)
+				thenTokenShouldNotMatch(domainOwnerAuth)
+				thenTokenShouldNotMatch(adminAuth)
+			})
+
+			It("should match on only domain-scoped tokens when scope is domain", func() {
+				givenPolicyWithScope([]interface{}{"domain"})
+				whenPolicyIsCreated()
+				thenTokenShouldNotMatch(regularUserAuth)
+				thenTokenShouldMatch(domainOwnerAuth)
+				thenTokenShouldNotMatch(adminAuth)
+			})
+
+			It("should match on only tokens scoped to admin tenant when scope is admin", func() {
+				givenPolicyWithScope([]interface{}{"admin"})
+				whenPolicyIsCreated()
+				thenTokenShouldNotMatch(regularUserAuth)
+				thenTokenShouldNotMatch(domainOwnerAuth)
+				thenTokenShouldMatch(adminAuth)
+			})
+
+			It("should match on all tokens types from the scope, when scope is a list of strings", func() {
+				givenPolicyWithScope([]interface{}{"tenant", "admin"})
+				whenPolicyIsCreated()
+				thenTokenShouldMatch(regularUserAuth)
+				thenTokenShouldMatch(adminAuth)
+				thenTokenShouldNotMatch(domainOwnerAuth)
 			})
 		})
 
