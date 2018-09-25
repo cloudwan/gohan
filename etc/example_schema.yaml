@@ -150,6 +150,13 @@ policies:
     action: create
     match:
       status: placed
+# Allow all actions for admin
+- action: '*'
+  effect: allow
+  id: policy5
+  principal: admin
+  resource:
+    path: .*
 extensions:
 - id: order
   path: /v1.0/store/orders

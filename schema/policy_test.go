@@ -204,6 +204,34 @@ var _ = Describe("Policies", func() {
 			Expect(getTenantIDFilter(currCond, "delete", xyzAuth)).To(ConsistOf("xyz", someTenantID))
 		})
 
+		Describe("is_domain_owner property", func() {
+			It("should set to doNotCareAboutDomainOwner when is_domain_owner is missing", func() {
+				delete(testPolicy, "is_domain_owner")
+				policy, err := NewPolicy(testPolicy)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(policy.domainOwnerCondition).To(Equal(doNotCareAboutDomainOwner))
+			})
+
+			It("should set to requireDomainOwner when is_domain_owner is true", func() {
+				testPolicy["is_domain_owner"] = true
+				policy, err := NewPolicy(testPolicy)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(policy.domainOwnerCondition).To(Equal(requireDomainOwner))
+			})
+
+			It("should set to requireDomainOwner when is_domain_owner is false", func() {
+				testPolicy["is_domain_owner"] = false
+				policy, err := NewPolicy(testPolicy)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(policy.domainOwnerCondition).To(Equal(requireNotDomainOwner))
+			})
+
+			It("should not accept is_domain_owner of invalid type", func() {
+				testPolicy["is_domain_owner"] = "foo"
+				Expect(func() { NewPolicy(testPolicy) }).To(Panic())
+			})
+		})
+
 		Describe("'__attach__' policy", func() {
 			var (
 				abstractSchemaPath = "../tests/test_abstract_schema.yaml"
@@ -356,7 +384,7 @@ var _ = Describe("Policies", func() {
 			testPolicy = map[string]interface{}{
 				"action":    '*',
 				"effect":    "allow",
-				"id":        "policy1",
+				"id":        "testPolicy",
 				"principal": "admin",
 				"resource": map[string]interface{}{
 					"path": ".*",
@@ -418,10 +446,10 @@ var _ = Describe("Policies", func() {
 					policy.Action = "*"
 					authorization = authorizationBuilder.WithRoleIDs("admin").BuildAdmin()
 				})
-				It("should allow access be default", func() {
+				It("should allow access by default", func() {
 					policy.Effect = ""
 					receivedPolicy, role := PolicyValidate("create", "/abc", authorization, []*Policy{policy})
-					Expect(receivedPolicy.ID).To(Equal("admin_statement"))
+					Expect(receivedPolicy).To(Equal(policy))
 					Expect(role).To(Equal(&Role{"admin"}))
 				})
 
@@ -467,6 +495,49 @@ var _ = Describe("Policies", func() {
 				err := policy.Check("create", authorization, data)
 				Expect(err).ToNot(HaveOccurred())
 			})
+		})
+
+		Context("is_domain_owner property", func() {
+			var doNotCarePolicy, requireOwnerPolicy, requireNotOwnerPolicy *Policy
+			var regularUserAuth, domainOwnerAuth, adminAuth Authorization
+
+			BeforeEach(func() {
+				testPolicy["action"] = "create"
+				delete(testPolicy, "is_domain_owner")
+				doNotCarePolicy, _ = NewPolicy(testPolicy)
+				testPolicy["is_domain_owner"] = true
+				requireOwnerPolicy, _ = NewPolicy(testPolicy)
+				testPolicy["is_domain_owner"] = false
+				requireNotOwnerPolicy, _ = NewPolicy(testPolicy)
+
+				authorizationBuilder = authorizationBuilder.WithRoleIDs(testPolicy["principal"].(string))
+				regularUserAuth = authorizationBuilder.BuildScopedToTenant()
+				domainOwnerAuth = authorizationBuilder.BuildScopedToDomain()
+				adminAuth = authorizationBuilder.BuildAdmin()
+			})
+
+			DescribeTable("authorization check passes",
+				func(policy **Policy, auth *Authorization) {
+					p, _ := PolicyValidate("create", "/v2.0/networks", *auth, []*Policy{*policy})
+					Expect(p).To(Equal(*policy))
+				},
+				Entry("doNotCareAboutDomainOwner allows tenant-scoped", &doNotCarePolicy, &regularUserAuth),
+				Entry("doNotCareAboutDomainOwner allows domain-scoped", &doNotCarePolicy, &domainOwnerAuth),
+				Entry("doNotCareAboutDomainOwner allows admin", &doNotCarePolicy, &adminAuth),
+				Entry("requireDomainOwner allows domain-scoped", &requireOwnerPolicy, &domainOwnerAuth),
+				Entry("requireNotDomainOwner allows tenant-scoped", &requireNotOwnerPolicy, &regularUserAuth),
+				Entry("requireNotDomainOwner allows admin", &requireNotOwnerPolicy, &adminAuth),
+			)
+
+			DescribeTable("authorization check fails",
+				func(policy **Policy, auth *Authorization) {
+					p, _ := PolicyValidate("create", "/v2.0/networks", *auth, []*Policy{*policy})
+					Expect(p).To(BeNil())
+				},
+				Entry("requireDomainOwner disallows tenant-scoped", &requireOwnerPolicy, &regularUserAuth),
+				Entry("requireDomainOwner disallows admin", &requireOwnerPolicy, &adminAuth),
+				Entry("requireNotDomainOwner disallows domain-scoped", &requireNotOwnerPolicy, &domainOwnerAuth),
+			)
 		})
 
 		Describe("Property based condition", func() {

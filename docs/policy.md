@@ -13,6 +13,10 @@ A policy has following properties.
   you can specify target resource using "path" and "properties"
 - condition : additional condition (see below)
 - tenant_id : regexp matching the tenant, defaults to ``.*``
+- is_domain_owner: type of the token's scope.
+  - When not set, policy matches on both tenant- and domain-scoped tokens
+  - When set to true, policy matches only on domain-scoped tokens
+  - When set to false, policy matches only on tenant-scoped tokens
 
 ## Conditions
 
