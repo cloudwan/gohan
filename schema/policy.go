@@ -56,22 +56,6 @@ const (
 // AllActions are all possible actions
 var AllActions = []string{ActionCreate, ActionRead, ActionUpdate, ActionDelete}
 
-var adminPolicy = func() *Policy {
-	policy, err := NewPolicy(map[string]interface{}{
-		"action": "*",
-		"effect": "allow",
-		"id": "admin_statement",
-		"principal": "admin",
-		"resource": map[string]interface{}{
-			"path": ".*",
-		},
-	})
-	if err != nil {
-		panic(errors.Errorf("Failed to create the admin policy: %v", err))
-	}
-	return policy
-}()
-
 func newTenantMatcher(tenantID, tenantName string) tenantMatcher {
 	tenantIDRegexp, _ := getRegexp(tenantID)
 	tenantNameRegexp, _ := getRegexp(tenantName)
@@ -123,6 +107,13 @@ func makeConditionFilter(filterType conditionFilterType) *conditionFilter {
 	}
 }
 
+type domainOwnerCondition int
+const (
+	doNotCareAboutDomainOwner domainOwnerCondition = iota
+	requireDomainOwner
+	requireNotDomainOwner
+)
+
 //Policy describes policy configuration for APIs
 type Policy struct {
 	ID, Description, Principal, Action, Effect string
@@ -130,6 +121,7 @@ type Policy struct {
 	resource                                   *resourceFilter
 	tenantID                                   *regexp.Regexp
 	tenantName                                 *regexp.Regexp
+	domainOwnerCondition                       domainOwnerCondition
 	currentResourceCondition                   *ResourceCondition
 	relationPropertyName                       string
 	otherResourceCondition                     *ResourceCondition
@@ -167,6 +159,7 @@ type Authorization interface {
 	getResourceFilters(schema *Schema) map[string]interface{}
 	checkAccessToResource(cond *ResourceCondition, action string, resource map[string]interface{}) error
 	getTenantAndDomainFilters(cond *ResourceCondition, action string) (tenantFilter []string, domainFilter []string)
+	isDomainScoped() bool
 }
 
 type TenantScopedAuthorization struct {
@@ -294,6 +287,10 @@ func (auth *TenantScopedAuthorization) getTenantAndDomainFilters(cond *ResourceC
 	return
 }
 
+func (auth *TenantScopedAuthorization) isDomainScoped() bool {
+	return false
+}
+
 // DomainScopedAuthorization
 
 func (auth *DomainScopedAuthorization) TenantID() string {
@@ -331,6 +328,10 @@ func (auth *DomainScopedAuthorization) checkAccessToResource(cond *ResourceCondi
 func (auth *DomainScopedAuthorization) getTenantAndDomainFilters(cond *ResourceCondition, action string) (tenantFilter []string, domainFilter []string) {
 	domainFilter = []string{auth.DomainID()}
 	return
+}
+
+func (auth *DomainScopedAuthorization) isDomainScoped() bool {
+	return true
 }
 
 // AdminScopedAuthorization
@@ -443,6 +444,20 @@ func NewPolicy(raw interface{}) (*Policy, error) {
 
 	if tenantName.String() != globalRegexp && tenantID.String() != globalRegexp {
 		return nil, fmt.Errorf(onlyOneOfTenantIDTenantNameError)
+	}
+
+	if isDomainOwnerRaw, ok := typeData["is_domain_owner"]; ok {
+		if isDomainOwner, ok := isDomainOwnerRaw.(bool); ok {
+			if isDomainOwner {
+				policy.domainOwnerCondition = requireDomainOwner
+			} else {
+				policy.domainOwnerCondition = requireNotDomainOwner
+			}
+		} else {
+			panic("\"is_domain_owner\" should be boolean, or be omitted in policy")
+		}
+	} else {
+		policy.domainOwnerCondition = doNotCareAboutDomainOwner
 	}
 
 	filterFactory := FilterFactory{}
@@ -620,6 +635,12 @@ func (p *Policy) match(action, path string, auth Authorization) *Role {
 	}
 
 	if !p.tenantName.MatchString(auth.TenantName()) {
+		return nil
+	}
+
+	if p.domainOwnerCondition == requireDomainOwner && !auth.isDomainScoped() {
+		return nil
+	} else if p.domainOwnerCondition == requireNotDomainOwner && auth.isDomainScoped() {
 		return nil
 	}
 
@@ -869,9 +890,6 @@ func addCustomFilters(schema *Schema, f map[string]interface{}, auth Authorizati
 
 //PolicyValidate validates api request using policy validation
 func PolicyValidate(action, path string, auth Authorization, policies []*Policy) (foundPolicy *Policy, foundRole *Role) {
-	if auth.IsAdmin() {
-		policies = append([]*Policy{adminPolicy}, policies...)
-	}
 	for _, policy := range policies {
 		if role := policy.match(action, path, auth); role != nil {
 			if policy.IsDeny() {
