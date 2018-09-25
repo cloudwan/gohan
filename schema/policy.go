@@ -412,40 +412,55 @@ func (r *Role) Match(principal string) bool {
 func NewPolicy(raw interface{}) (*Policy, error) {
 	typeData := raw.(map[string](interface{}))
 	policy := &Policy{}
+
+	for _, parse := range []func(map[string]interface{}) error {
+		policy.parseBasicProperties,
+		policy.parseResourceFilter,
+		policy.parseTenant,
+		policy.parseDomainOwner,
+		policy.parseActionAttach,
+	} {
+		if err := parse(typeData); err != nil {
+			return nil, err
+		}
+	}
+
+	return policy, nil
+}
+
+func (policy *Policy) parseBasicProperties(typeData map[string]interface{}) error {
 	policy.ID, _ = typeData["id"].(string)
 	policy.Description, _ = typeData["description"].(string)
 	policy.Principal, _ = typeData["principal"].(string)
 	policy.Action, _ = typeData["action"].(string)
 	policy.Effect, _ = typeData["effect"].(string)
-	policy.RawData = raw
-	resourceData, _ := typeData["resource"].(map[string]interface{})
-	resource := &resourceFilter{}
-	policy.resource = resource
-	path, _ := resourceData["path"].(string)
-	match, err := regexp.Compile(path)
-	if err != nil {
-		return nil, err
-	}
-	resource.Path = match
+	policy.RawData = typeData
+	return nil
+}
 
+func (policy *Policy) parseTenant(typeData map[string]interface{}) error {
 	rawTenantID, _ := typeData["tenant_id"].(string)
 	tenantID, err := getRegexp(rawTenantID)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	policy.tenantID = tenantID
 
 	rawTenantName, _ := typeData["tenant_name"].(string)
 	tenantName, err := getRegexp(rawTenantName)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	policy.tenantName = tenantName
 
 	if tenantName.String() != globalRegexp && tenantID.String() != globalRegexp {
-		return nil, fmt.Errorf(onlyOneOfTenantIDTenantNameError)
+		return fmt.Errorf(onlyOneOfTenantIDTenantNameError)
 	}
 
+	return nil
+}
+
+func (policy *Policy) parseDomainOwner(typeData map[string]interface{}) error {
 	if isDomainOwnerRaw, ok := typeData["is_domain_owner"]; ok {
 		if isDomainOwner, ok := isDomainOwnerRaw.(bool); ok {
 			if isDomainOwner {
@@ -460,43 +475,62 @@ func NewPolicy(raw interface{}) (*Policy, error) {
 		policy.domainOwnerCondition = doNotCareAboutDomainOwner
 	}
 
+	return nil
+}
+
+func (policy *Policy) parseResourceFilter(typeData map[string]interface{}) error {
+	resourceData, _ := typeData["resource"].(map[string]interface{})
+	resource := &resourceFilter{}
+	policy.resource = resource
+	path, _ := resourceData["path"].(string)
+	match, err := regexp.Compile(path)
+	if err != nil {
+		return err
+	}
+	resource.Path = match
+
 	filterFactory := FilterFactory{}
 	if resource.PropertiesFilter, err = filterFactory.CreateFilterFromProperties(
 		getStringSliceFromMap(resourceData, "properties"),
 		getStringSliceFromMap(resourceData, "blacklistProperties"),
 	); err != nil {
-		return nil, err
+		return err
 	}
 
+	return nil
+}
+
+func (policy *Policy) parseActionAttach(typeData map[string]interface{}) error {
+	var err error
 	if policy.Action == ActionAttach {
 		// source_relation_property is required
 		relationProperty, hasSource := typeData["relation_property"].(string)
 		if !hasSource {
-			return nil, errors.New("\"relation_property\" is required in an attach policy")
+			return errors.New("\"relation_property\" is required in an attach policy")
 		}
 
 		// target_condition is required
 		rawTargetCondition, hasTarget := typeData["target_condition"].([]interface{})
 		if !hasTarget {
-			return nil, errors.New("\"target_condition\" is required in an attach policy")
+			return errors.New("\"target_condition\" is required in an attach policy")
 		}
 
 		policy.currentResourceCondition = &ResourceCondition{}
 		policy.relationPropertyName = relationProperty
 		policy.otherResourceCondition, err = NewResourceCondition(rawTargetCondition, policy.ID)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	} else {
 		rawCondition, _ := typeData["condition"].([]interface{})
 		condition, err := NewResourceCondition(rawCondition, policy.ID)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		policy.currentResourceCondition = condition
 	}
 
-	return policy, nil
+	return nil
 }
 
 func (p *Policy) GetCurrentResourceCondition() *ResourceCondition {
