@@ -45,7 +45,7 @@ class GohanClientTestCases(BashCompletionTest):
     def test_1(self):
         self.run_complete("client p", "policy pet")
     def test_2(self):
-        self.run_complete("client ", "namespace event extension policy schema pet order")
+        self.run_complete("client ", "version namespace event extension policy schema pet order")
     def test_3(self):
         self.run_complete("client pet","pet")
     def test_4(self):

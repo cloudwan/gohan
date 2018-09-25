@@ -30,6 +30,8 @@ import (
 	"github.com/cloudwan/gohan/server/middleware"
 	"github.com/cloudwan/gohan/server/resources"
 	"github.com/cloudwan/gohan/sync"
+	"github.com/cloudwan/gohan/util"
+	"github.com/cloudwan/gohan/version"
 	"github.com/drone/routes"
 	"github.com/go-martini/martini"
 	"github.com/mohae/deepcopy"
@@ -458,6 +460,32 @@ func MapRouteBySchemas(server *Server, dataStore db.DB) {
 	for _, s := range schemaManager.Schemas() {
 		MapRouteBySchema(server, dataStore, s)
 	}
+}
+
+func mapVersionRoute(route martini.Router, manager *schema.Manager) {
+	versionSchema, hasSchema := manager.Schema("version")
+	if !hasSchema {
+		panic("The 'version' schema is missing. Check if gohan.json is loaded")
+	}
+	url := versionSchema.GetPluralURL()
+	urlWithParents := versionSchema.GetPluralURLWithParents()
+
+	log.Debug("Registering the version handler on %s", url)
+
+	get := func(w http.ResponseWriter, params martini.Params, auth schema.Authorization) {
+		defer resources.MeasureRequestTime(time.Now(), "get", versionSchema.ID)
+
+		addJSONContentTypeHeader(w)
+		response := map[string]interface{}{
+			"version": version.Build.Version,
+			"app":     util.GetConfig().GetString("version/app", "<unknown>"),
+		}
+		routes.ServeJson(w, response)
+
+	}
+
+	route.Get(url, get)
+	route.Get(urlWithParents, get)
 }
 
 func mapSchemaRoute(route martini.Router, manager *schema.Manager) {

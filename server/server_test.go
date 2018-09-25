@@ -38,6 +38,7 @@ import (
 	"github.com/cloudwan/gohan/sync"
 	sync_util "github.com/cloudwan/gohan/sync/util"
 	"github.com/cloudwan/gohan/util"
+	"github.com/cloudwan/gohan/version"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -50,6 +51,7 @@ var (
 const (
 	baseURL                   = "http://localhost:19090"
 	schemaURL                 = baseURL + "/gohan/v0.1/schemas"
+	versionURL                = baseURL + "/gohan/v0.1/version"
 	networkPluralURL          = baseURL + "/v2.0/networks"
 	subnetPluralURL           = baseURL + "/v2.0/subnets"
 	serverPluralURL           = baseURL + "/v2.0/servers"
@@ -1320,6 +1322,48 @@ var _ = Describe("Server package test", func() {
 			jsonData, _ := json.Marshal(responder)
 			expectedMessage := fmt.Sprintf("Related resource does not exist. Please check your request: %s", string(jsonData))
 			testURLErrorMessage("POST", responderPluralURL, adminTokenID, responder, http.StatusBadRequest, expectedMessage)
+		})
+	})
+
+	Describe("Version API", func() {
+		const (
+			expectedGohanVersion = "test-expected-gohan-version"
+		)
+		var (
+			originalGohanVersion string
+		)
+		BeforeEach(func() {
+			originalGohanVersion = version.Build.Version
+			version.Build.Version = expectedGohanVersion
+		})
+
+		AfterEach(func() {
+			version.Build.Version = originalGohanVersion
+		})
+
+		It("should return Gohan version", func() {
+			response := testURL("GET", versionURL, adminTokenID, nil, http.StatusOK)
+			Expect(response).To(HaveKeyWithValue("version", expectedGohanVersion))
+		})
+
+		It("should return application version", func() {
+			appVersion := util.GetConfig().GetString("version/app", "default-version")
+			response := testURL("GET", versionURL, adminTokenID, nil, http.StatusOK)
+			Expect(response).To(HaveKeyWithValue("app", appVersion))
+		})
+
+		It("should not return unexpected keys", func() {
+			response := testURL("GET", versionURL, adminTokenID, nil, http.StatusOK)
+			Expect(response).To(HaveLen(2))
+		})
+
+		It("should be allowed for members", func() {
+			response := testURL("GET", versionURL, memberTokenID, nil, http.StatusOK)
+			Expect(response).To(HaveKeyWithValue("version", expectedGohanVersion))
+		})
+
+		It("should require autorization token", func() {
+			testURL("GET", versionURL, "", nil, http.StatusUnauthorized)
 		})
 	})
 })

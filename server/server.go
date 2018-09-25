@@ -78,6 +78,7 @@ func (server *Server) mapRoutes() {
 	config := util.GetConfig()
 	schemaManager := schema.GetManager()
 	mapSchemaRoute(server.martini, schemaManager)
+	mapVersionRoute(server.martini, schemaManager)
 	MapNamespacesRoutes(server.martini)
 	MapRouteBySchemas(server, server.db)
 

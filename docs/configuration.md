@@ -520,6 +520,18 @@ WARNING: The value of watched etcd keys must be a JSON dictionary.
    editable_schema: ./example_schema.yaml
 ```
 
+- Version API
+  
+  Gohan provides a REST API to retrieve current server and application version on 
+  http://gohan.address/gohan/v0.1/version. The server version in specified when building Gohan 
+  using -X main.buildVersion=version flag, the application version is a free-form text specified
+  in this config file.
+   
+```yaml
+   version:
+     app: 1.2.3-rc4
+```
+
 ## Graceful Shutdown and Restart
 
 Gohan supports graceful shutdown and restart.
