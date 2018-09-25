@@ -159,7 +159,7 @@ type Authorization interface {
 	getResourceFilters(schema *Schema) map[string]interface{}
 	checkAccessToResource(cond *ResourceCondition, action string, resource map[string]interface{}) error
 	getTenantAndDomainFilters(cond *ResourceCondition, action string) (tenantFilter []string, domainFilter []string)
-	isDomainScoped() bool
+	checkDomainOwnerCondition(condition domainOwnerCondition) bool
 }
 
 type TenantScopedAuthorization struct {
@@ -287,8 +287,8 @@ func (auth *TenantScopedAuthorization) getTenantAndDomainFilters(cond *ResourceC
 	return
 }
 
-func (auth *TenantScopedAuthorization) isDomainScoped() bool {
-	return false
+func (auth *TenantScopedAuthorization) checkDomainOwnerCondition(cond domainOwnerCondition) bool {
+	return (cond == doNotCareAboutDomainOwner) || (cond == requireNotDomainOwner)
 }
 
 // DomainScopedAuthorization
@@ -330,8 +330,8 @@ func (auth *DomainScopedAuthorization) getTenantAndDomainFilters(cond *ResourceC
 	return
 }
 
-func (auth *DomainScopedAuthorization) isDomainScoped() bool {
-	return true
+func (auth *DomainScopedAuthorization) checkDomainOwnerCondition(cond domainOwnerCondition) bool {
+	return (cond == doNotCareAboutDomainOwner) || (cond == requireDomainOwner)
 }
 
 // AdminScopedAuthorization
@@ -638,9 +638,7 @@ func (p *Policy) match(action, path string, auth Authorization) *Role {
 		return nil
 	}
 
-	if p.domainOwnerCondition == requireDomainOwner && !auth.isDomainScoped() {
-		return nil
-	} else if p.domainOwnerCondition == requireNotDomainOwner && auth.isDomainScoped() {
+	if !auth.checkDomainOwnerCondition(p.domainOwnerCondition) {
 		return nil
 	}
 
