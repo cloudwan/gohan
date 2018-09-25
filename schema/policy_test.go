@@ -219,7 +219,7 @@ var _ = Describe("Policies", func() {
 				Expect(policy.domainOwnerCondition).To(Equal(requireDomainOwner))
 			})
 
-			It("should set to requireDomainOwner when is_domain_owner is true", func() {
+			It("should set to requireDomainOwner when is_domain_owner is false", func() {
 				testPolicy["is_domain_owner"] = false
 				policy, err := NewPolicy(testPolicy)
 				Expect(err).NotTo(HaveOccurred())
@@ -384,7 +384,7 @@ var _ = Describe("Policies", func() {
 			testPolicy = map[string]interface{}{
 				"action":    '*',
 				"effect":    "allow",
-				"id":        "policy1",
+				"id":        "testPolicy",
 				"principal": "admin",
 				"resource": map[string]interface{}{
 					"path": ".*",
@@ -446,10 +446,10 @@ var _ = Describe("Policies", func() {
 					policy.Action = "*"
 					authorization = authorizationBuilder.WithRoleIDs("admin").BuildAdmin()
 				})
-				It("should allow access be default", func() {
+				It("should allow access by default", func() {
 					policy.Effect = ""
 					receivedPolicy, role := PolicyValidate("create", "/abc", authorization, []*Policy{policy})
-					Expect(receivedPolicy.ID).To(Equal("policy1"))
+					Expect(receivedPolicy).To(Equal(policy))
 					Expect(role).To(Equal(&Role{"admin"}))
 				})
 
