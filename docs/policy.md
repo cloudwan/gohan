@@ -13,6 +13,10 @@ A policy has following properties.
   you can specify target resource using "path" and "properties"
 - condition : additional condition (see below)
 - tenant_id : regexp matching the tenant, defaults to ``.*``
+- scope: type of the token's scope. Must be a list of strings. If not provided, the policy matches on all token types. Possible values are:
+  - "tenant" - matches tokens scoped to tenant,
+  - "domain" - matches tokens scoped to domain,
+  - "admin" - matches tokens scoped to admin project.
 
 ## Conditions
 
@@ -34,6 +38,18 @@ Example policy
     effect: allow
     id: admin_statement
     principal: admin
+    scope:
+    - admin
+    resource:
+      path: .*
+  - action: '*'
+    condition:
+    - is_owner
+    effect: allow
+    id: admin_domain_statement
+    principal: admin
+    scope:
+    - domain
     resource:
       path: .*
   - action: 'read'
