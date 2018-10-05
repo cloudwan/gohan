@@ -1252,6 +1252,66 @@ var _ = Describe("Resource manager", func() {
 				Expect(ok).To(BeTrue())
 			})
 		})
+
+		Describe("When tenant_id is blacklisted", func() {
+			BeforeEach(func() {
+				schemaID = "blacklisted_tenant_id"
+			})
+
+			Context("A member", func() {
+				BeforeEach(func() {
+					auth = memberAuth
+				})
+
+				It("Should create own resource when tenant_id isn't provided and not fill it in",
+					func() {
+						err := resources.CreateResource(
+							context, testDB, fakeIdentity, currentSchema, map[string]interface{}{
+								"id":        memberResourceID,
+								"domain_id": domainAID,
+							})
+
+						Expect(err).NotTo(HaveOccurred())
+
+						result := context["response"].(map[string]interface{})
+						resource, ok := result[schemaID]
+						Expect(ok).To(BeTrue())
+						Expect(resource).To(HaveKeyWithValue("id", memberResourceID))
+						Expect(resource).To(HaveKeyWithValue("domain_id", domainAID))
+						Expect(resource).NotTo(HaveKeyWithValue("tenant_id", auth.TenantID()))
+					})
+
+				It("Should not create resource when blacklisted tenant_id is provided", func() {
+					err := resources.CreateResource(
+						context, testDB, fakeIdentity, currentSchema, map[string]interface{}{
+							"id":        memberResourceID,
+							"tenant_id": memberTenantID,
+							"domain_id": domainAID,
+						})
+
+					Expect(err).To(HaveOccurred())
+
+					resErr, ok := err.(resources.ResourceError)
+					Expect(ok).To(BeTrue())
+					Expect(resErr.Problem).To(Equal(resources.Unauthorized))
+				})
+
+				It("Should create and update same resource when tenant_id is not provided", func() {
+					err := resources.CreateResource(
+						context, testDB, fakeIdentity, currentSchema, map[string]interface{}{
+							"id":        memberResourceID,
+							"domain_id": domainAID,
+						})
+
+					Expect(err).NotTo(HaveOccurred())
+
+					err = resources.UpdateResource(context, testDB, fakeIdentity, currentSchema,
+						memberResourceID, map[string]interface{}{})
+
+					Expect(err).NotTo(HaveOccurred())
+				})
+			})
+		})
 	})
 
 	Describe("Updating a resource", func() {

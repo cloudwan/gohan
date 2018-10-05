@@ -439,6 +439,12 @@ func (schema *Schema) GetPropertyByID(id string) (*Property, error) {
 	return nil, fmt.Errorf("Property with ID %s not found in schema %s", id, schema.ID)
 }
 
+// HasPropertyID checks if given property is in schema
+func (schema *Schema) HasPropertyID(id string) bool {
+	_, err := schema.GetPropertyByID(id)
+	return err == nil
+}
+
 //StateVersioning whether resources created from this schema should track state and config versions
 func (schema *Schema) StateVersioning() bool {
 	statefulRaw, ok := schema.Metadata["state_versioning"]

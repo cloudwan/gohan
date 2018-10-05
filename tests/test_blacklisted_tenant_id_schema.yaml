@@ -1,0 +1,69 @@
+schemas:
+- id: blacklisted_tenant_id
+  description: Test Blacklisted/Hidden tenant_id
+  singular: blacklisted_tenant_id
+  plural: blacklisted_tenant_ids
+  prefix: /v2.0
+  schema:
+    properties:
+      id:
+        description: ID
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: true
+      myprop:
+        description: Custom Property
+        permission:
+        - create
+        - update
+        title: MyProp
+        type: string
+      tenant_id:
+        description: Tenant ID
+        permission:
+        - create
+        - update
+        title: TenantID
+        type: string
+        unique: false
+        indexed: true
+      domain_id:
+        description: Domain ID
+        permission:
+        - create
+        - update
+        title: DomainID
+        type: string
+        unique: false
+        indexed: true
+    propertiesOrder:
+    - id
+    - myprop
+    - tenant_id
+    - domain_id
+    type: object
+  title: Test blacklisted tenant_id
+
+policies:
+- action: create
+  effect: allow
+  id: blacklisted_tenant_id_create_member
+  principal: Member
+  condition:
+  - is_owner
+  resource:
+    path: /v2.0/blacklisted_tenant_id.*
+    blacklistProperties:
+    - tenant_id
+- action: update
+  effect: allow
+  id: blacklisted_tenant_id_update_member
+  principal: Member
+  condition:
+  - is_owner
+  resource:
+    path: /v2.0/blacklisted_tenant_id.*
+    blacklistProperties:
+    - tenant_id
