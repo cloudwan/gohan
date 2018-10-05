@@ -1011,6 +1011,10 @@ var _ = Describe("Resource manager", func() {
 
 		Describe("When there are no resources in the database", func() {
 			Context("As an admin", func() {
+				BeforeEach(func() {
+					auth = adminAuth
+				})
+
 				It("Should create own resource", func() {
 					err := resources.CreateResource(
 						context, testDB, fakeIdentity, currentSchema, adminResourceData)
@@ -1042,13 +1046,16 @@ var _ = Describe("Resource manager", func() {
 
 				It("Should fill in the tenant_id", func() {
 					err := resources.CreateResource(
-						context, testDB, fakeIdentity, currentSchema, map[string]interface{}{"id": adminResourceID, "domain_id": domainAID})
+						context, testDB, fakeIdentity, currentSchema, map[string]interface{}{
+							"id":        adminResourceID,
+							"domain_id": domainAID,
+						})
 					result := context["response"].(map[string]interface{})
 					Expect(err).NotTo(HaveOccurred())
 					theResource, ok := result[schemaID]
 					Expect(ok).To(BeTrue())
 					Expect(theResource).To(HaveKeyWithValue("domain_id", domainAID))
-					Expect(theResource).To(HaveKeyWithValue("tenant_id", adminTenantID))
+					Expect(theResource).To(HaveKeyWithValue("tenant_id", auth.TenantID()))
 					Expect(theResource).To(HaveKeyWithValue("id", adminResourceID))
 				})
 
@@ -1059,7 +1066,7 @@ var _ = Describe("Resource manager", func() {
 					Expect(err).NotTo(HaveOccurred())
 					theResource, ok := result[schemaID]
 					Expect(ok).To(BeTrue())
-					Expect(theResource).To(HaveKeyWithValue("domain_id", schema.DefaultDomain.ID))
+					Expect(theResource).To(HaveKeyWithValue("domain_id", auth.DomainID()))
 					Expect(theResource).To(HaveKeyWithValue("tenant_id", adminTenantID))
 					Expect(theResource).To(HaveKeyWithValue("id", adminResourceID))
 				})
@@ -1071,8 +1078,8 @@ var _ = Describe("Resource manager", func() {
 					result := context["response"].(map[string]interface{})
 					theResource, ok := result[schemaID]
 					Expect(ok).To(BeTrue())
-					Expect(theResource).To(HaveKeyWithValue("domain_id", schema.DefaultDomain.ID))
-					Expect(theResource).To(HaveKeyWithValue("tenant_id", adminTenantID))
+					Expect(theResource).To(HaveKeyWithValue("domain_id", auth.DomainID()))
+					Expect(theResource).To(HaveKeyWithValue("tenant_id", auth.TenantID()))
 					Expect(theResource).To(HaveKey("id"))
 				})
 
