@@ -1270,22 +1270,47 @@ var _ = Describe("Resource manager", func() {
 					auth = memberAuth
 				})
 
-				It("Should create own resource when tenant_id isn't provided and not fill it in",
+				unpackResponseFrom := func(context middleware.Context) map[string]interface{} {
+					result := context["response"].(map[string]interface{})
+					response, ok := result[schemaID]
+					Expect(ok).To(BeTrue())
+					return response.(map[string]interface{})
+				}
+
+				It("Should create own resource when tenant_id isn't provided and fill it in DB",
 					func() {
 						err := resources.CreateResource(
 							context, testDB, fakeIdentity, currentSchema, map[string]interface{}{
 								"id":        memberResourceID,
 								"domain_id": domainAID,
 							})
-
 						Expect(err).NotTo(HaveOccurred())
 
-						result := context["response"].(map[string]interface{})
-						resource, ok := result[schemaID]
-						Expect(ok).To(BeTrue())
-						Expect(resource).To(HaveKeyWithValue("id", memberResourceID))
-						Expect(resource).To(HaveKeyWithValue("domain_id", domainAID))
-						Expect(resource).NotTo(HaveKeyWithValue("tenant_id", auth.TenantID()))
+						delete(context, "response")
+						delete(context, "resource")
+
+						err = resources.GetSingleResource(context, testDB, currentSchema,
+							memberResourceID)
+						Expect(err).NotTo(HaveOccurred())
+
+						response := unpackResponseFrom(context)
+						Expect(response).To(HaveKeyWithValue("tenant_id", auth.TenantID()))
+					})
+
+				It("Should create own resource when tenant_id isn't provided "+
+					"and response should not contain it",
+					func() {
+						err := resources.CreateResource(
+							context, testDB, fakeIdentity, currentSchema, map[string]interface{}{
+								"id":        memberResourceID,
+								"domain_id": domainAID,
+							})
+						Expect(err).NotTo(HaveOccurred())
+
+						response := unpackResponseFrom(context)
+						Expect(response).To(HaveKeyWithValue("id", memberResourceID))
+						Expect(response).To(HaveKeyWithValue("domain_id", domainAID))
+						Expect(response).NotTo(HaveKey("tenant_id"))
 					})
 
 				It("Should not create resource when blacklisted tenant_id is provided", func() {

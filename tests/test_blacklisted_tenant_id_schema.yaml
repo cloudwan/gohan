@@ -67,3 +67,11 @@ policies:
     path: /v2.0/blacklisted_tenant_id.*
     blacklistProperties:
     - tenant_id
+- action: read
+  effect: allow
+  id: blacklisted_tenant_id_read_member
+  principal: Member
+  condition:
+  - is_owner
+  resource:
+    path: /v2.0/blacklisted_tenant_id.*
