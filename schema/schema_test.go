@@ -108,6 +108,41 @@ var _ = Describe("Schema", func() {
 		})
 	})
 
+	Describe("Properties access", func() {
+		var manager *Manager
+		var schema *Schema
+
+		BeforeEach(func() {
+			manager = GetManager()
+			Expect(manager.LoadSchemasFromFiles(
+				"../tests/test_schema_property_order.yaml")).To(Succeed())
+
+			s, ok := manager.Schema("school")
+			Expect(ok).To(BeTrue())
+			schema = s
+		})
+
+		It("should access properties", func() {
+			property, err := schema.GetPropertyByID("best_in_town")
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(property.ID).To(Equal("best_in_town"))
+		})
+
+		It("should err on access of undefined properties", func() {
+			_, err := schema.GetPropertyByID("unknown")
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("should check property existence", func() {
+			Expect(schema.HasPropertyID("patron")).To(BeTrue())
+			Expect(schema.HasPropertyID("best_in_town")).To(BeTrue())
+
+			Expect(schema.HasPropertyID("unknown")).To(BeFalse())
+			Expect(schema.HasPropertyID("some_property_not_in_schema")).To(BeFalse())
+		})
+	})
+
 	Describe("Properties order", func() {
 		var manager *Manager
 

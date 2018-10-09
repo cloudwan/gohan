@@ -600,34 +600,28 @@ func CreateResource(
 		return err
 	}
 
-	_, err = resourceSchema.GetPropertyByID("tenant_id")
-	if _, ok := dataMap["tenant_id"]; err == nil && !ok {
-		tenantID := auth.TenantID()
-		if tenantID == "" {
-			err := errors.New("A non-empty tenant_id should be provided in the request")
-			return ResourceError{err, err.Error(), WrongData}
-		}
-		dataMap["tenant_id"] = auth.TenantID()
+	authDataMap, err := buildAuthDataMap(resourceSchema, auth, dataMap)
+	if err != nil {
+		return ResourceError{err, err.Error(), WrongData}
 	}
 
-	if tenantID, ok := dataMap["tenant_id"]; ok && tenantID != nil {
-		dataMap["tenant_name"] = auth.TenantName()
-	}
-
-	_, err = resourceSchema.GetPropertyByID("domain_id")
-	if _, ok := dataMap["domain_id"]; err == nil && !ok {
-		dataMap["domain_id"] = auth.DomainID()
-	}
-
-	if domainID, ok := dataMap["domain_id"]; ok && domainID != nil {
-		dataMap["domain_name"] = auth.DomainName()
-	}
-
-	//Apply policy for api input
-	err = policy.Check(schema.ActionCreate, auth, dataMap)
+	err = policy.CheckAccess(schema.ActionCreate, auth, authDataMap)
 	if err != nil {
 		return ResourceError{err, err.Error(), Unauthorized}
 	}
+
+	err = policy.CheckPropertiesFilter(dataMap)
+	if err != nil {
+		return ResourceError{err, err.Error(), Unauthorized}
+	}
+
+	if tenantID, ok := authDataMap["tenant_id"]; ok {
+		dataMap["tenant_id"] = tenantID
+	}
+	if domainID, ok := authDataMap["domain_id"]; ok {
+		dataMap["domain_id"] = domainID
+	}
+
 	delete(dataMap, "tenant_name")
 	delete(dataMap, "domain_name")
 
@@ -683,6 +677,40 @@ func CreateResource(
 		return ResourceError{err, "", Unauthorized}
 	}
 	return nil
+}
+
+func buildAuthDataMap(resourceSchema *schema.Schema, auth schema.Authorization,
+	dataMap map[string]interface{}) (map[string]interface{}, error) {
+
+	authMap := map[string]interface{}{}
+
+	tenantID, provided := dataMap["tenant_id"]
+	expected := resourceSchema.HasPropertyID("tenant_id")
+	if provided || expected {
+		if !provided {
+			tenantID = auth.TenantID()
+			if tenantID == "" {
+				err := errors.New("A non-empty tenant_id should be provided in the request")
+				return nil, err
+			}
+		}
+
+		authMap["tenant_id"] = tenantID
+		authMap["tenant_name"] = auth.TenantName()
+	}
+
+	domainID, provided := dataMap["domain_id"]
+	expected = resourceSchema.HasPropertyID("domain_id")
+	if provided || expected {
+		if !provided {
+			domainID = auth.DomainID()
+		}
+
+		authMap["domain_id"] = domainID
+		authMap["domain_name"] = auth.DomainName()
+	}
+
+	return authMap, nil
 }
 
 //CreateResourceInTransaction create db resource model in transaction

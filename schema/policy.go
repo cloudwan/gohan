@@ -750,8 +750,24 @@ func (p *Policy) FilterSchema(
 		filter.RemoveHiddenKeysFromSlice(required)
 }
 
-//Checks if user is authorized to perform given action
-func (p *Policy) Check(action string, authorization Authorization, data map[string]interface{}) error {
+// Checks if user is authorized to perform given action and to access given properties
+func (p *Policy) Check(action string, authorization Authorization, data map[string]interface{},
+) error {
+	if err := p.CheckAccess(action, authorization, data); err != nil {
+		return err
+	}
+
+	if err := p.CheckPropertiesFilter(data); data != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Checks if user is authorized to perform given action
+func (p *Policy) CheckAccess(action string, authorization Authorization,
+	data map[string]interface{}) error {
+
 	currCond := p.GetCurrentResourceCondition()
 	if currCond.RequireOwner() {
 		if err := authorization.checkAccessToResource(currCond, action, data); err != nil {
@@ -759,6 +775,11 @@ func (p *Policy) Check(action string, authorization Authorization, data map[stri
 		}
 	}
 
+	return nil
+}
+
+// Checks if any given properties are prohibited
+func (p *Policy) CheckPropertiesFilter(data map[string]interface{}) error {
 	for key := range data {
 		if key == "tenant_name" {
 			continue

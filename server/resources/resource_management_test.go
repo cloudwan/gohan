@@ -1011,6 +1011,10 @@ var _ = Describe("Resource manager", func() {
 
 		Describe("When there are no resources in the database", func() {
 			Context("As an admin", func() {
+				BeforeEach(func() {
+					auth = adminAuth
+				})
+
 				It("Should create own resource", func() {
 					err := resources.CreateResource(
 						context, testDB, fakeIdentity, currentSchema, adminResourceData)
@@ -1042,13 +1046,16 @@ var _ = Describe("Resource manager", func() {
 
 				It("Should fill in the tenant_id", func() {
 					err := resources.CreateResource(
-						context, testDB, fakeIdentity, currentSchema, map[string]interface{}{"id": adminResourceID, "domain_id": domainAID})
+						context, testDB, fakeIdentity, currentSchema, map[string]interface{}{
+							"id":        adminResourceID,
+							"domain_id": domainAID,
+						})
 					result := context["response"].(map[string]interface{})
 					Expect(err).NotTo(HaveOccurred())
 					theResource, ok := result[schemaID]
 					Expect(ok).To(BeTrue())
 					Expect(theResource).To(HaveKeyWithValue("domain_id", domainAID))
-					Expect(theResource).To(HaveKeyWithValue("tenant_id", adminTenantID))
+					Expect(theResource).To(HaveKeyWithValue("tenant_id", auth.TenantID()))
 					Expect(theResource).To(HaveKeyWithValue("id", adminResourceID))
 				})
 
@@ -1059,7 +1066,7 @@ var _ = Describe("Resource manager", func() {
 					Expect(err).NotTo(HaveOccurred())
 					theResource, ok := result[schemaID]
 					Expect(ok).To(BeTrue())
-					Expect(theResource).To(HaveKeyWithValue("domain_id", schema.DefaultDomain.ID))
+					Expect(theResource).To(HaveKeyWithValue("domain_id", auth.DomainID()))
 					Expect(theResource).To(HaveKeyWithValue("tenant_id", adminTenantID))
 					Expect(theResource).To(HaveKeyWithValue("id", adminResourceID))
 				})
@@ -1071,8 +1078,8 @@ var _ = Describe("Resource manager", func() {
 					result := context["response"].(map[string]interface{})
 					theResource, ok := result[schemaID]
 					Expect(ok).To(BeTrue())
-					Expect(theResource).To(HaveKeyWithValue("domain_id", schema.DefaultDomain.ID))
-					Expect(theResource).To(HaveKeyWithValue("tenant_id", adminTenantID))
+					Expect(theResource).To(HaveKeyWithValue("domain_id", auth.DomainID()))
+					Expect(theResource).To(HaveKeyWithValue("tenant_id", auth.TenantID()))
 					Expect(theResource).To(HaveKey("id"))
 				})
 
@@ -1250,6 +1257,91 @@ var _ = Describe("Resource manager", func() {
 				Expect(err).To(HaveOccurred())
 				_, ok := err.(resources.ResourceError)
 				Expect(ok).To(BeTrue())
+			})
+		})
+
+		Describe("When tenant_id is blacklisted", func() {
+			BeforeEach(func() {
+				schemaID = "blacklisted_tenant_id"
+			})
+
+			Context("A member", func() {
+				BeforeEach(func() {
+					auth = memberAuth
+				})
+
+				unpackResponseFrom := func(context middleware.Context) map[string]interface{} {
+					result := context["response"].(map[string]interface{})
+					response, ok := result[schemaID]
+					Expect(ok).To(BeTrue())
+					return response.(map[string]interface{})
+				}
+
+				It("Should create own resource when tenant_id isn't provided and fill it in DB",
+					func() {
+						err := resources.CreateResource(
+							context, testDB, fakeIdentity, currentSchema, map[string]interface{}{
+								"id":        memberResourceID,
+								"domain_id": domainAID,
+							})
+						Expect(err).NotTo(HaveOccurred())
+
+						delete(context, "response")
+						delete(context, "resource")
+
+						err = resources.GetSingleResource(context, testDB, currentSchema,
+							memberResourceID)
+						Expect(err).NotTo(HaveOccurred())
+
+						response := unpackResponseFrom(context)
+						Expect(response).To(HaveKeyWithValue("tenant_id", auth.TenantID()))
+					})
+
+				It("Should create own resource when tenant_id isn't provided "+
+					"and response should not contain it",
+					func() {
+						err := resources.CreateResource(
+							context, testDB, fakeIdentity, currentSchema, map[string]interface{}{
+								"id":        memberResourceID,
+								"domain_id": domainAID,
+							})
+						Expect(err).NotTo(HaveOccurred())
+
+						response := unpackResponseFrom(context)
+						Expect(response).To(HaveKeyWithValue("id", memberResourceID))
+						Expect(response).To(HaveKeyWithValue("domain_id", domainAID))
+						Expect(response).NotTo(HaveKey("tenant_id"))
+					})
+
+				It("Should not create resource when blacklisted tenant_id is provided", func() {
+					err := resources.CreateResource(
+						context, testDB, fakeIdentity, currentSchema, map[string]interface{}{
+							"id":        memberResourceID,
+							"tenant_id": memberTenantID,
+							"domain_id": domainAID,
+						})
+
+					Expect(err).To(HaveOccurred())
+
+					resErr, ok := err.(resources.ResourceError)
+					Expect(ok).To(BeTrue())
+					Expect(resErr.Problem).To(Equal(resources.Unauthorized))
+				})
+
+				It("Should create and update same resource when tenant_id is not provided", func() {
+					err := resources.CreateResource(
+						context, testDB, fakeIdentity, currentSchema, map[string]interface{}{
+							"id":        memberResourceID,
+							"domain_id": domainAID,
+						})
+
+					Expect(err).NotTo(HaveOccurred())
+
+					err = resources.UpdateResource(context, testDB, fakeIdentity, currentSchema,
+						memberResourceID, map[string]interface{}{})
+
+					Expect(err).NotTo(HaveOccurred())
+				})
 			})
 		})
 	})
