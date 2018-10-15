@@ -181,6 +181,7 @@ func doTemplate(c *cli.Context) {
 		}
 	}
 	schemas := manager.OrderedSchemas()
+	schemasMap := manager.Schemas()
 
 	if err != nil {
 		util.ExitFatal(err)
@@ -191,20 +192,26 @@ func doTemplate(c *cli.Context) {
 		util.ExitFatal(err)
 		return
 	}
+
+	scopes := []schema.Scope{}
+	for _, tokenType := range c.StringSlice("scopes") {
+		scopes = append(scopes, schema.Scope(tokenType))
+	}
+
 	policies := manager.Policies()
 	policy := c.String("policy")
 	title := c.String("title")
 	version := c.String("version")
 	description := c.String("description")
 	outputPath := c.String("output-path")
-	schemasWithPolicy := filterSchemasForPolicy(policy, policies, schemas)
+	schemasWithPolicy := filterSchemasForPolicy(policy, scopes, policies, schemas)
 	convertCustomActionOutput(schemasWithPolicy)
 	if c.IsSet("split-by-resource-group") {
-		applyTemplateForEachResourceGroup(schemasWithPolicy, tpl, version, description, outputPath)
+		applyTemplateForEachResourceGroup(schemasWithPolicy, schemasMap, tpl, version, description, outputPath)
 	} else if c.IsSet("split-by-resource") {
-		applyTemplateForEachResource(schemasWithPolicy, tpl, outputPath)
+		applyTemplateForEachResource(schemasWithPolicy, schemasMap, tpl, outputPath)
 	} else {
-		applyTemplateForAll(schemasWithPolicy, tpl, title, version, description, outputPath)
+		applyTemplateForAll(schemasWithPolicy, schemasMap, tpl, title, version, description, outputPath)
 	}
 }
 
@@ -221,8 +228,8 @@ func convertCustomActionOutput(schemas []*SchemaWithPolicy) {
 	}
 }
 
-func applyTemplateForAll(schemas []*SchemaWithPolicy, tpl *pongo2.Template, title, version, description, outputPath string) {
-	output, err := tpl.Execute(pongo2.Context{"schemas": schemas, "title": title, "version": version, "description": description})
+func applyTemplateForAll(schemas []*SchemaWithPolicy, schemasMap schema.Map, tpl *pongo2.Template, title, version, description, outputPath string) {
+	output, err := tpl.Execute(pongo2.Context{"schemas": schemas, "schemasMap": schemasMap, "title": title, "version": version, "description": description})
 	if err != nil {
 		util.ExitFatal(err)
 		return
@@ -234,10 +241,10 @@ func applyTemplateForAll(schemas []*SchemaWithPolicy, tpl *pongo2.Template, titl
 	}
 }
 
-func applyTemplateForEachResourceGroup(schemas []*SchemaWithPolicy, tpl *pongo2.Template, version, description, outputPath string) {
+func applyTemplateForEachResourceGroup(schemas []*SchemaWithPolicy, schemasMap schema.Map, tpl *pongo2.Template, version, description, outputPath string) {
 	for _, resourceGroup := range getAllResourceGroupsFromSchemas(schemas) {
 		resourceSchemas := filerSchemasByResourceGroup(resourceGroup, schemas)
-		output, err := tpl.Execute(pongo2.Context{"schemas": resourceSchemas, "title": resourceGroup, "version": version, "description": description})
+		output, err := tpl.Execute(pongo2.Context{"schemas": resourceSchemas, "schemasMap": schemasMap, "title": resourceGroup, "version": version, "description": description})
 		if err != nil {
 			util.ExitFatal(err)
 			return
@@ -247,13 +254,13 @@ func applyTemplateForEachResourceGroup(schemas []*SchemaWithPolicy, tpl *pongo2.
 	}
 }
 
-func applyTemplateForEachResource(schemas []*SchemaWithPolicy, tpl *pongo2.Template, outputPath string) {
+func applyTemplateForEachResource(schemas []*SchemaWithPolicy, schemasMap schema.Map, tpl *pongo2.Template, outputPath string) {
 	for _, schemaWithPolicy := range schemas {
 		schema := schemaWithPolicy.Schema
 		if schema.Metadata["type"] == "metaschema" || schema.Type == "abstract" {
 			continue
 		}
-		output, err := tpl.Execute(pongo2.Context{"schema": schemaWithPolicy})
+		output, err := tpl.Execute(pongo2.Context{"schema": schemaWithPolicy, "schemasMap": schemasMap})
 		if err != nil {
 			util.ExitFatal(err)
 			return
@@ -286,7 +293,7 @@ func filerSchemasByResourceGroup(resource string, schemas []*SchemaWithPolicy) [
 	return filteredSchemas
 }
 
-func filterSchemasForPolicy(principal string, policies []*schema.Policy, schemas []*schema.Schema) []*SchemaWithPolicy {
+func filterSchemasForPolicy(principal string, scopes []schema.Scope, policies []*schema.Policy, schemas []*schema.Schema) []*SchemaWithPolicy {
 	var schemasWithPolicy []*SchemaWithPolicy
 	allPoliciesNames := []string{"create", "read", "update", "delete"}
 	if principal == "" {
@@ -295,9 +302,9 @@ func filterSchemasForPolicy(principal string, policies []*schema.Policy, schemas
 		}
 		return schemasWithPolicy
 	}
-	matchedPolicies := filterPolicies(principal, policies)
+	matchedPolicies := filterPolicies(principal, scopes, policies)
 	principalNobody := "Nobody"
-	nobodyPolicies := filterPolicies(principalNobody, policies)
+	nobodyPolicies := filterPolicies(principalNobody, scopes, policies)
 	if principal == principalNobody {
 		nobodyPolicies = nil
 	}
@@ -363,15 +370,40 @@ func isMatchingPolicy(action schema.Action, policy *schema.Policy) bool {
 	return action.ID == policy.Action || policy.Action == "*" || (policy.Action == "read" && action.Method == "GET") || (policy.Action == "update" && action.Method == "POST")
 }
 
-func filterPolicies(principal string, policies []*schema.Policy) []*schema.Policy {
+func policyMatchesPrincipal(policy *schema.Policy, principal string) bool {
+	return policy.Principal == principal
+}
+
+func policyMatchesScopes(policy *schema.Policy, scopes []schema.Scope) bool {
+	for _, scope := range scopes {
+		if policy.HasScope(scope) {
+			return true
+		}
+	}
+	return false
+}
+
+func policyMatches(policy *schema.Policy, principal string, scopes []schema.Scope) bool {
+	if !policyMatchesPrincipal(policy, principal) {
+		return false
+	}
+	if !policyMatchesScopes(policy, scopes) {
+		return false
+	}
+	return true
+}
+
+func filterPolicies(principal string, scopes []schema.Scope, policies []*schema.Policy) []*schema.Policy {
 	var matchedPolicies []*schema.Policy
 	for _, policy := range policies {
-		if policy.Principal == principal {
+		if policyMatches(policy, principal, scopes) {
 			matchedPolicies = append(matchedPolicies, policy)
 		}
 	}
 	return matchedPolicies
 }
+
+var defaultScope = cli.StringSlice{string(schema.TenantScope), string(schema.DomainScope), string(schema.AdminScope)}
 
 func getTemplateCommand() cli.Command {
 	return cli.Command{
@@ -386,6 +418,7 @@ func getTemplateCommand() cli.Command {
 			cli.StringFlag{Name: "split-by-resource", Value: "", Usage: "Split output file for each resources"},
 			cli.StringFlag{Name: "output-path", Value: "__resource__.json", Usage: "Output Path. You can use __resource__ as a resource name"},
 			cli.StringFlag{Name: "policy", Value: "", Usage: "Policy"},
+			cli.StringSliceFlag{Name: "scope", Value: &defaultScope, Usage: "Scope"},
 		},
 		Action: doTemplate,
 	}
@@ -402,6 +435,7 @@ func getOpenAPICommand() cli.Command {
 			cli.StringFlag{Name: "template, t", Value: "embed://etc/templates/openapi.tmpl", Usage: "Template File"},
 			cli.StringFlag{Name: "split-by-resource-group", Value: "", Usage: "Group by resource"},
 			cli.StringFlag{Name: "policy", Value: "admin", Usage: "Policy"},
+			cli.StringSliceFlag{Name: "scope", Value: &defaultScope, Usage: "Scope"},
 			cli.StringFlag{Name: "version", Value: "0.1", Usage: "API version"},
 			cli.StringFlag{Name: "title", Value: "gohan API", Usage: "API title"},
 			cli.StringFlag{Name: "description", Value: "", Usage: "API description"},
@@ -421,6 +455,7 @@ func getMarkdownCommand() cli.Command {
 			cli.StringFlag{Name: "template, t", Value: "embed://etc/templates/markdown.tmpl", Usage: "Template File"},
 			cli.StringFlag{Name: "split-by-resource-group", Value: "", Usage: "Group by resource"},
 			cli.StringFlag{Name: "policy", Value: "admin", Usage: "Policy"},
+			cli.StringSliceFlag{Name: "scope", Value: &defaultScope, Usage: "Scope"},
 		},
 		Action: doTemplate,
 	}
@@ -437,6 +472,7 @@ func getDotCommand() cli.Command {
 			cli.StringFlag{Name: "template, t", Value: "embed://etc/templates/dot.tmpl", Usage: "Template File"},
 			cli.StringFlag{Name: "split-by-resource-group", Value: "", Usage: "Group by resource"},
 			cli.StringFlag{Name: "policy", Value: "admin", Usage: "Policy"},
+			cli.StringSliceFlag{Name: "scope", Value: &defaultScope, Usage: "Scope"},
 		},
 		Action: doTemplate,
 	}
