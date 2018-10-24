@@ -93,9 +93,9 @@ func (reporter *Reporter) SpecSuiteDidEnd(summary *types.SuiteSummary) {
 // Prepare prepares a next test suite to run and zeroes its results
 func (reporter *Reporter) Prepare(description string) {
 	reporter.suites = append(reporter.suites, types.SuiteSummary{
-		SuiteDescription: description,
-		SuiteSucceeded:   true,
-		SuiteID:          "undefined",
+		SuiteDescription:                   description,
+		SuiteSucceeded:                     true,
+		SuiteID:                            "undefined",
 		NumberOfSpecsBeforeParallelization: 0,
 		NumberOfTotalSpecs:                 0,
 		NumberOfSpecsThatWillBeRun:         0,
@@ -114,7 +114,7 @@ func (reporter *Reporter) Report() {
 	fmt.Println("Failures:")
 	fmt.Println()
 
-	steno := stenographer.New(true, true)
+	steno := stenographer.New(true, true, os.Stdout)
 
 	for _, spec := range reporter.specs {
 		steno.AnnounceCapturedOutput(spec.CapturedOutput)

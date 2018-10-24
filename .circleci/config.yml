@@ -3,16 +3,16 @@ version: 2
 jobs:
   build:
     docker:
-      - image: circleci/golang:1.9
-    working_directory: /go/src/github.com/cloudwan/gohan
+      - image: circleci/golang:1.11
+    working_directory: /tmp/go/github.com/cloudwan/gohan
     steps:
       - checkout
       - run: go version
       - run: make deps gen lint build
   test:
     docker:
-      - image: circleci/golang:1.9
-    working_directory: /go/src/github.com/cloudwan/gohan
+      - image: circleci/golang:1.11
+    working_directory: /tmp/go/github.com/cloudwan/gohan
     steps:
       - checkout
       - run: curl -L https://github.com/coreos/etcd/releases/download/v3.1.7/etcd-v3.1.7-linux-amd64.tar.gz -o etcd-v3.1.7-linux-amd64.tar.gz

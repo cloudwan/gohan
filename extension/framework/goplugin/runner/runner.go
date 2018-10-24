@@ -243,7 +243,6 @@ func (testRunner *TestRunner) runSingle(t ginkgo.GinkgoTestingT, reporter *Repor
 
 	// run test
 	ginkgo.RunSpecsWithCustomReporters(t, fileName, []ginkgo.Reporter{reporter})
-	ginkgo.Reset()
 
 	// stop env
 	env.Stop()
