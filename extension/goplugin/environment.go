@@ -92,7 +92,7 @@ type IEnvironment interface {
 	RegisterRawType(name goext.SchemaID, typeValue interface{})
 	RegisterType(name goext.SchemaID, typeValue interface{})
 
-	dispatchSchemaEvent(prioritizedSchemaHandlers PrioritizedSchemaHandlers, sch Schema, event string, context map[string]interface{}) error
+	dispatchSchemaEvent(prioritizedSchemaHandlers PrioritizedSchemaHandlers, sch goext.ISchema, event string, context map[string]interface{}) error
 	getSchemaHandlers(event string) (SchemaPrioritizedSchemaHandlers, bool)
 	getHandlers(event string) (PrioritizedHandlers, bool)
 	getRawType(schemaID goext.SchemaID) (reflect.Type, bool)
@@ -329,13 +329,13 @@ func (env *Environment) LoadExtensionsForPath(extensions []*schema.Extension, ti
 	return nil
 }
 
-func (env *Environment) dispatchSchemaEvent(prioritizedSchemaHandlers PrioritizedSchemaHandlers, sch Schema, event string, context map[string]interface{}) error {
+func (env *Environment) dispatchSchemaEvent(prioritizedSchemaHandlers PrioritizedSchemaHandlers, sch goext.ISchema, event string, context map[string]interface{}) error {
 	return dispatchSchemaEventForEnv(env, prioritizedSchemaHandlers, sch, event, context)
 }
 
-func dispatchSchemaEventForEnv(env IEnvironment, prioritizedSchemaHandlers PrioritizedSchemaHandlers, sch Schema, event string, context map[string]interface{}) error {
-	env.Logger().Debugf("Starting event: %s, schema: %s", event, sch.raw.ID)
-	defer env.Logger().Debugf("Finished event: %s, schema: %s", event, sch.raw.ID)
+func dispatchSchemaEventForEnv(env IEnvironment, prioritizedSchemaHandlers PrioritizedSchemaHandlers, sch goext.ISchema, event string, context map[string]interface{}) error {
+	env.Logger().Debugf("Starting event: %s, schema: %s", event, sch.ID())
+	defer env.Logger().Debugf("Finished event: %s, schema: %s", event, sch.ID())
 	var resource goext.Resource
 	var err error
 	if ctxResource, ok := context["resource"]; ok {
@@ -452,8 +452,7 @@ func handleEventForEnv(env IEnvironment, event string, requestContext map[string
 			requestContext["schema_id"] = schemaID
 			if prioritizedSchemaHandlers, ok := schemaPrioritizedSchemaHandlers[schemaID]; ok {
 				if iSchema := env.Schemas().Find(schemaID); iSchema != nil {
-					sch := iSchema.(*Schema)
-					if err := env.dispatchSchemaEvent(prioritizedSchemaHandlers, *sch, event, requestContext); err != nil {
+					if err := env.dispatchSchemaEvent(prioritizedSchemaHandlers, iSchema, event, requestContext); err != nil {
 						return err
 					}
 				}
@@ -462,8 +461,7 @@ func handleEventForEnv(env IEnvironment, event string, requestContext map[string
 			// all
 			for schemaID, prioritizedSchemaHandlers := range schemaPrioritizedSchemaHandlers {
 				if iSchema := env.Schemas().Find(schemaID); iSchema != nil {
-					sch := iSchema.(*Schema)
-					if err := env.dispatchSchemaEvent(prioritizedSchemaHandlers, *sch, event, requestContext); err != nil {
+					if err := env.dispatchSchemaEvent(prioritizedSchemaHandlers, iSchema, event, requestContext); err != nil {
 						return err
 					}
 				} else {
