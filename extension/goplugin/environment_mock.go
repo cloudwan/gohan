@@ -198,7 +198,7 @@ func (mockEnv *MockIEnvironment) getHandlers(event string) (PrioritizedHandlers,
 	return mockEnv.env.getHandlers(event)
 }
 
-func (mockEnv *MockIEnvironment) dispatchSchemaEvent(prioritizedSchemaHandlers PrioritizedSchemaHandlers, sch Schema, event string, context map[string]interface{}) error {
+func (mockEnv *MockIEnvironment) dispatchSchemaEvent(prioritizedSchemaHandlers PrioritizedSchemaHandlers, sch goext.ISchema, event string, context map[string]interface{}) error {
 	return dispatchSchemaEventForEnv(mockEnv, prioritizedSchemaHandlers, sch, event, context)
 }
 
