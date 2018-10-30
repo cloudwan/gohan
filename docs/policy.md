@@ -23,6 +23,7 @@ A policy has following properties.
 Gohan supports several types of conditions
 
 - `is_owner` - Gohan will enforce access privileges for the resources specified in the policy. By default access to resources of all other tenants would be blocked.
+- `is_domain_owner` - Gohan will allow access only to resources from the same domain.
 
 - belongs_to - Gohan will apply the policy if the user tries to access resources belonging to the tenant specified in condition (see the example below). The condition has no effect if the access privileges are not enforced by specifying the `is_owner` condition. The full condition looks like:
 
@@ -156,6 +157,7 @@ Please note that unlike `type: property`, described above, these conditions affe
 Those conditions may include:
 
 - `is_owner` - restricts access only to the owner of the resource
+- `is_domain_owner` - restricts access only to resources from the same domain as current user
 - `and` - list of conditions that all have to be met
 - `or` - list of conditions from which at least one have to be met
 - `match` - dictionary to match

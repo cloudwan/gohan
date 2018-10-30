@@ -198,6 +198,14 @@ policies:
     path: /v2.0/test.*
 - action: '*'
   condition:
+  - is_domain_owner
+  effect: allow
+  id: member_statement_domain_owner_test
+  principal: Member
+  resource:
+    path: /v2.0/domain_owner_test.*
+- action: '*'
+  condition:
   - is_owner
   effect: allow
   id: member_statement_test
@@ -636,7 +644,7 @@ schemas:
   prefix: /v2.0
   schema:
     indexes:
-      unique_id_and_tenant_id_and_domain_id:
+      test_unique_id_and_tenant_id_and_domain_id:
         columns:
         - id
         - tenant_id
@@ -718,6 +726,96 @@ schemas:
     type: object
   singular: test
   title: Test
+- description: is_domain_owner test
+  id: domain_owner_test
+  metadata:
+    state_versioning: true
+  plural: domain_owner_tests
+  prefix: /v2.0
+  schema:
+    indexes:
+      domain_owner_test_unique_id_and_tenant_id_and_domain_id:
+        columns:
+        - id
+        - tenant_id
+        - domain_id
+        type: "unique"
+    properties:
+      id:
+        description: ID
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: true
+      tenant_id:
+        description: Tenant ID
+        permission:
+        - create
+        title: TenantID
+        type: string
+        unique: false
+        indexed: true
+      domain_id:
+        description: Domain ID
+        permission:
+        - create
+        title: DomainID
+        type: string
+        unique: false
+        indexed: true
+      test_string:
+        default: ""
+        description: Test string
+        permission:
+        - create
+        - update
+        title: Test string
+        type:
+        - string
+        - "null"
+        unique: false
+        maxLength: 40
+      test_number:
+        default: 0.5
+        description: Test number
+        permission:
+        - create
+        - update
+        title: Test number
+        type:
+        - number
+        - "null"
+        unique: false
+      test_integer:
+        default: 0
+        description: Test integer
+        permission:
+        - create
+        - update
+        title: Test integer
+        type:
+        - integer
+        - "null"
+        unique: false
+      test_bool:
+        default: false
+        description: Test boolean
+        permission:
+        - create
+        - update
+        title: Test boolean
+        type:
+        - boolean
+        - "null"
+        unique: false
+    propertiesOrder:
+    - id
+    - tenant_id
+    - domain_id
+    type: object
+  singular: domain_owner_test
+  title: is_domain_owner test
 - description: Nil Test
   id: nil_test
   plural: Nil Tests
