@@ -263,7 +263,7 @@ var _ = Describe("Sql", func() {
 			It("Should create unique index on tenant_id, domain_id and id", func() {
 				_, indices := sqlConn.GenTableDef(test, false)
 				Expect(indices).To(HaveLen(3))
-				Expect(indices[2]).To(ContainSubstring("CREATE UNIQUE INDEX unique_id_and_tenant_id_and_domain_id ON `tests`(`id`,`tenant_id`,`domain_id`);"))
+				Expect(indices[2]).To(ContainSubstring("CREATE UNIQUE INDEX test_unique_id_and_tenant_id_and_domain_id ON `tests`(`id`,`tenant_id`,`domain_id`);"))
 			})
 		})
 

@@ -448,7 +448,7 @@ var _ = Describe("Server package test", func() {
 			Expect(result).To(HaveKeyWithValue("network", networkExpected))
 
 			result = testURL("GET", baseURL+"/_all", memberTokenID, nil, http.StatusOK)
-			Expect(result).To(HaveLen(10))
+			Expect(result).To(HaveLen(11))
 			Expect(result).To(HaveKeyWithValue("networks", []interface{}{networkExpected}))
 			Expect(result).To(HaveKey("schemas"))
 			Expect(result).To(HaveKey("tests"))
@@ -456,6 +456,7 @@ var _ = Describe("Server package test", func() {
 			Expect(result).To(HaveKey("wildcard_attachers"))
 			Expect(result).To(HaveKey("attach_targets"))
 			Expect(result).To(HaveKey("blacklisted_tenant_ids"))
+			Expect(result).To(HaveKey("domain_owner_tests"))
 
 			testURL("GET", baseURL+"/v2.0/network/unknownID", memberTokenID, nil, http.StatusNotFound)
 

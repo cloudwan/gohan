@@ -24,19 +24,26 @@ import (
 const (
 	tenantProhibitedError = "Operating on resources from other tenant is prohibited"
 	domainProhibitedError = "Operating on resources from other domain is prohibited"
+
+	abstractSchemaPath = "../tests/test_abstract_schema.yaml"
+	schemaPath         = "../tests/test_schema.yaml"
+	adminTenantID      = "12345678aaaaaaaaaaaa123456789012"
+	demoTenantID       = "12345678bbbbbbbbbbbb123456789012"
 )
 
 var _ = Describe("Policies", func() {
+	BeforeEach(func() {
+		manager := GetManager()
+		Expect(manager.LoadSchemaFromFile(abstractSchemaPath)).To(Succeed())
+		Expect(manager.LoadSchemaFromFile(schemaPath)).To(Succeed())
+	})
+
 	Describe("Policy validation", func() {
 		var (
-			manager            *Manager
-			abstractSchemaPath = "../tests/test_abstract_schema.yaml"
-			schemaPath         = "../tests/test_schema.yaml"
-			adminTenantID      = "12345678aaaaaaaaaaaa123456789012"
-			demoTenantID       = "12345678bbbbbbbbbbbb123456789012"
-			adminAuth          Authorization
-			legacyAdminAuth    Authorization
-			memberAuth         Authorization
+			manager         *Manager
+			adminAuth       Authorization
+			legacyAdminAuth Authorization
+			memberAuth      Authorization
 		)
 
 		BeforeEach(func() {
@@ -431,6 +438,55 @@ var _ = Describe("Policies", func() {
 					Expect(policy).To(BeNil())
 					Expect(role).To(BeNil())
 				})
+			})
+		})
+
+		Describe("Actions on resources from the same domain - is_domain_owner", func() {
+			var (
+				otherDomain = Domain{
+					ID:   "otherID",
+					Name: "otherName",
+				}
+			)
+
+			BeforeEach(func() {
+				testPolicy["condition"] = []interface{}{"is_domain_owner"}
+				policy, _ = NewPolicy(testPolicy)
+				data = map[string]interface{}{
+					"tenant_id":   "userID",
+					"tenant_name": "userName",
+					"domain_id":   "domainID",
+					"domain_name": "domainName",
+				}
+			})
+
+			It("should allow access for a regular user from the same domain", func() {
+				err := policy.Check("create", authorization, data)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should allow access for a user scoped to the same domain", func() {
+				authorization = authorizationBuilder.BuildScopedToDomain()
+				err := policy.Check("create", authorization, data)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should allow access for admin user", func() {
+				authorization = authorizationBuilder.BuildAdmin()
+				err := policy.Check("create", authorization, data)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should not allow access for a regular user from different domain", func() {
+				authorization = authorizationBuilder.WithDomain(otherDomain).BuildScopedToTenant()
+				err := policy.Check("create", authorization, data)
+				Expect(err).To(MatchError(domainProhibitedError))
+			})
+
+			It("should not allow access for a domain-scoped user from different domain", func() {
+				authorization = authorizationBuilder.WithDomain(otherDomain).BuildScopedToDomain()
+				err := policy.Check("create", authorization, data)
+				Expect(err).To(MatchError(domainProhibitedError))
 			})
 		})
 
@@ -892,7 +948,7 @@ var _ = Describe("Policies", func() {
 					WithRoleIDs("admin").
 					BuildAdmin()
 
-				schema := getSchema("network")
+				schema := getSchema("test")
 				testPolicy["condition"] = []interface{}{
 					map[string]interface{}{
 						"or": []interface{}{
@@ -927,6 +983,101 @@ var _ = Describe("Policies", func() {
 					},
 				}
 				Expect(filter).To(Equal(expected))
+			})
+
+			Context("is_domain_owner", func() {
+				BeforeEach(func() {
+					testPolicy["condition"] = []interface{}{
+						map[string]interface{}{
+							"or": []interface{}{
+								"is_domain_owner",
+								map[string]interface{}{
+									"match": map[string]interface{}{
+										"property": "status",
+										"type":     "eq",
+										"value":    "ACTIVE",
+									},
+								},
+							},
+						},
+					}
+				})
+
+				It("Should create a correct filter for is_domain_owner", func() {
+					tenant := Tenant{ID: "test", Name: "test"}
+					testAuth = NewAuthorizationBuilder().
+						WithTenant(tenant).
+						WithRoleIDs("admin").
+						BuildScopedToTenant()
+
+					schema := getSchema("test")
+
+					var err error
+					policy, err = NewPolicy(testPolicy)
+					Expect(err).ToNot(HaveOccurred())
+					filter := map[string]interface{}{}
+					currCond := policy.GetCurrentResourceCondition()
+					currCond.AddCustomFilters(schema, filter, testAuth)
+					expected := map[string]interface{}{
+						"__or__": []map[string]interface{}{
+							{
+								"property": "domain_id",
+								"type":     "eq",
+								"value":    testAuth.DomainID(),
+							},
+							{
+								"property": "status",
+								"type":     "eq",
+								"value":    "ACTIVE",
+							},
+						},
+					}
+					Expect(filter).To(Equal(expected))
+				})
+
+				It("Should omit creating a filter for is_domain_owner when domain_id is missing from schema", func() {
+					tenant := Tenant{ID: "test", Name: "test"}
+					testAuth = NewAuthorizationBuilder().
+						WithTenant(tenant).
+						WithRoleIDs("admin").
+						BuildScopedToTenant()
+
+					schema := getSchema("network")
+					testPolicy["condition"] = []interface{}{
+						map[string]interface{}{
+							"or": []interface{}{
+								"is_domain_owner",
+								map[string]interface{}{
+									"match": map[string]interface{}{
+										"property": "status",
+										"type":     "eq",
+										"value":    "ACTIVE",
+									},
+								},
+							},
+						},
+					}
+
+					var err error
+					policy, err = NewPolicy(testPolicy)
+					Expect(err).ToNot(HaveOccurred())
+					filter := map[string]interface{}{}
+					currCond := policy.GetCurrentResourceCondition()
+					currCond.AddCustomFilters(schema, filter, testAuth)
+					expected := map[string]interface{}{
+						"__or__": []map[string]interface{}{
+							{
+								"__bool__": true,
+							},
+							{
+								"property": "status",
+								"type":     "eq",
+								"value":    "ACTIVE",
+							},
+						},
+					}
+					Expect(filter).To(Equal(expected))
+				})
 			})
 		})
 	})
