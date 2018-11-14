@@ -724,6 +724,10 @@ func CreateResourceInTransaction(context middleware.Context, resourceSchema *sch
 		return fmt.Errorf("No environment for schema")
 	}
 
+	if err := ValidateAttachmentsForResource(context, resourceSchema, resource.Data()); err != nil {
+		return err
+	}
+
 	if err := extension.HandleEvent(context, environment, "pre_create_in_transaction", resourceSchema.ID); err != nil {
 		return err
 	}
@@ -733,9 +737,6 @@ func CreateResourceInTransaction(context middleware.Context, resourceSchema *sch
 		resource, err = manager.LoadResource(resourceSchema.ID, dataMap)
 		if err != nil {
 			return fmt.Errorf("Loading resource failed: %s", err)
-		}
-		if err := ValidateAttachmentsForResource(context, resourceSchema, dataMap); err != nil {
-			return err
 		}
 	}
 	if err := mainTransaction.Create(mustGetContext(context), resource); err != nil {
@@ -881,6 +882,11 @@ func UpdateResourceInTransaction(
 	if err := validate(context, &dataMap, resourceSchema.ValidateOnUpdate); err != nil {
 		return err
 	}
+
+	if err := ValidateAttachmentsForResource(context, resourceSchema, dataMap); err != nil {
+		return err
+	}
+
 	policy := context["policy"].(*schema.Policy)
 	// apply property filter
 	currCond := policy.GetCurrentResourceCondition()
@@ -906,10 +912,6 @@ func UpdateResourceInTransaction(
 	resource, err = manager.LoadResource(resourceSchema.ID, dataMap)
 	if err != nil {
 		return fmt.Errorf("Loading Resource failed: %s", err)
-	}
-
-	if err := ValidateAttachmentsForResource(context, resourceSchema, dataMap); err != nil {
-		return err
 	}
 
 	err = mainTransaction.Update(mustGetContext(context), resource)

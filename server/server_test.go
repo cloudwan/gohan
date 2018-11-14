@@ -1175,12 +1175,12 @@ var _ = Describe("Server package test", func() {
 	})
 
 	Describe("Attach policy tests", func() {
-		It("should validate create/update of resource through attach policies", func() {
-			getResourceURL := func(schemaID, id string) string {
-				s, _ := schema.GetManager().Schema(schemaID)
-				return baseURL + s.URL + "/" + id
-			}
+		getResourceURL := func(schemaID, id string) string {
+			s, _ := schema.GetManager().Schema(schemaID)
+			return baseURL + s.URL + "/" + id
+		}
 
+		It("should validate create/update of resource through attach policies", func() {
 			attachTargetOfMember := map[string]interface{}{
 				"id":            "target_member",
 				"accessibility": "owner_only",
@@ -1259,11 +1259,6 @@ var _ = Describe("Server package test", func() {
 		})
 
 		It("should validate create/update of resource through attach policies with wildcards", func() {
-			getResourceURL := func(schemaID, id string) string {
-				s, _ := schema.GetManager().Schema(schemaID)
-				return baseURL + s.URL + "/" + id
-			}
-
 			attachTargetOfMember := map[string]interface{}{
 				"id":            "target_member",
 				"accessibility": "owner_only",
@@ -1309,6 +1304,37 @@ var _ = Describe("Server package test", func() {
 				"attach_b_id": attachTargetOfMember["id"],
 			}
 			testURL("PUT", getResourceURL("wildcard_attacher", "wildcard_attacher_member"), memberTokenID, attacherWildcardOfMemberUpdate, http.StatusOK)
+		})
+
+		It("should allow for properties that violate attach policy to remain when other properties are updated", func() {
+			attachTargetOfPowerUser := map[string]interface{}{
+				"id":            "target_power_user",
+				"accessibility": "owner_only",
+				"block_flag":    false,
+			}
+			testURL("POST", attachTargetPluralURL, powerUserTokenID, attachTargetOfPowerUser, http.StatusCreated)
+
+			// Create a resource that breaks the attach policy
+			// It can happen when an admin or an extension decides to break tenant isolation
+			attacherOfMember := map[string]interface{}{
+				"id": "attacher_member",
+				"attach_if_accessible_id": attachTargetOfPowerUser["id"],
+				"tenant_id": memberTenantID,
+			}
+			testURL("POST", attacherPluralURL, adminTokenID, attacherOfMember, http.StatusCreated)
+
+			// Update a different field, as the owner of the resource
+			// If we do not touch the attach policy breaking field, it should succeed
+			attacherOfMemberUpdate := map[string]interface{}{
+				"not_a_relation": 42,
+			}
+			testURL("PUT", getResourceURL("attacher", "attacher_member"), memberTokenID, attacherOfMemberUpdate, http.StatusOK)
+
+			response := testURL("GET", getResourceURL("attacher", "attacher_member"), memberTokenID, nil, http.StatusOK)
+			Expect(response).To(HaveKey("attacher"))
+			attacher := response.(map[string]interface{})["attacher"]
+			Expect(attacher).To(HaveKeyWithValue("attach_if_accessible_id", attachTargetOfPowerUser["id"]))
+			Expect(attacher).To(HaveKeyWithValue("not_a_relation", float64(42)))
 		})
 	})
 
