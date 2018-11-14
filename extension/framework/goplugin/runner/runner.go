@@ -21,10 +21,7 @@ import (
 	"plugin"
 	"regexp"
 	"testing"
-
-	"github.com/onsi/ginkgo"
-	"github.com/onsi/gomega"
-	"github.com/twinj/uuid"
+	"time"
 
 	gohan_db "github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/dbutil"
@@ -35,6 +32,10 @@ import (
 	gohan_logger "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/sync/noop"
+	"github.com/cloudwan/gohan/util"
+	"github.com/onsi/ginkgo"
+	"github.com/onsi/gomega"
+	"github.com/twinj/uuid"
 )
 
 const (
@@ -164,6 +165,7 @@ func (testRunner *TestRunner) runSingle(t ginkgo.GinkgoTestingT, reporter *Repor
 	// get state
 	path := filepath.Dir(fileName)
 	manager := schema.GetManager()
+	manager.TimeLimit = time.Duration(util.GetConfig().GetInt("extension/timelimit", 30)) * time.Second
 
 	// load schemas
 	for _, schemaPath := range schemas {
