@@ -103,7 +103,9 @@ func OptionOffset(offset uint64) OptionPaginator {
 
 // MakeContext creates an empty context
 func MakeContext() Context {
-	return make(map[string]interface{})
+	return map[string]interface{}{
+		"context": context.Background(),
+	}
 }
 
 // WithSchemaID appends schema ID to given context
