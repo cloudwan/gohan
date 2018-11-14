@@ -525,6 +525,44 @@ var _ = Describe("Policies", func() {
 			})
 		})
 
+		Describe("Built-in policies in gohan.json", func() {
+			const resourcePath = "/any/path/without/a/custom/policy"
+			var adminAuth, domainAdminAuth, memberAuth Authorization
+
+			BeforeEach(func() {
+				ClearManager()
+				manager = GetManager()
+				Expect(manager.LoadSchemaFromFile("embed://etc/schema/gohan.json")).To(Succeed())
+
+				adminAuth = NewAuthorizationBuilder().
+					WithRoleIDs("admin").
+					WithTenant(Tenant{ID: adminTenantID, Name: "admin"}).
+					BuildAdmin()
+				domainAdminAuth = NewAuthorizationBuilder().
+					WithRoleIDs("admin").
+					WithDomain(Domain{ID: "domainID", Name: "domainName"}).
+					BuildScopedToDomain()
+				memberAuth = NewAuthorizationBuilder().
+					WithRoleIDs("Member").
+					WithTenant(Tenant{ID: demoTenantID, Name: "demo"}).
+					BuildScopedToTenant()
+			})
+
+			It("should allow operations for admin-scoped token", func() {
+				p, _ := manager.PolicyValidate("read", resourcePath, adminAuth)
+				Expect(p).NotTo(BeNil())
+			})
+
+			DescribeTable("Should not allow, by default, operations for non-admin tokens",
+				func(auth *Authorization) {
+					p, _ := manager.PolicyValidate("read", resourcePath, *auth)
+					Expect(p).To(BeNil())
+				},
+				Entry("Domain admin", &domainAdminAuth),
+				Entry("Regular user", &memberAuth),
+			)
+		})
+
 		Context("scope property", func() {
 			var regularUserAuth, domainOwnerAuth, adminAuth Authorization
 			var policy *Policy
