@@ -98,7 +98,7 @@ Developers can make a schema as abstract schema specifying type=abstract. The de
           - create
           - update
           properties:
-            segmentaion_type:
+            segmentation_type:
               enum:
               - vlan
               - vxlan
@@ -355,7 +355,7 @@ eg.
           - create
           - update
           properties:
-            segmentaion_type:
+            segmentation_type:
               enum:
               - vlan
               - vxlan

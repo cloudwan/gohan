@@ -283,23 +283,12 @@ var _ = Describe("Sql", func() {
 			})
 
 			It("Generate foreign key with given column same as relationColumn from property", func() {
-				server.Properties = append(server.Properties, schema.NewProperty(
-					"test",
-					"test",
-					"",
-					"test",
-					"string",
-					"subnet",
-					"cidr",
-					"",
-					"varchar(255)",
-					false,
-					false,
-					false,
-					nil,
-					nil,
-					false,
-				))
+				prop := schema.NewPropertyBuilder("test", "test", "", "test").
+					WithFormat("string").
+					WithRelation("subnet", "cidr", "").
+					WithSQLType("varchar(255)").
+					Build()
+				server.Properties = append(server.Properties, *prop)
 				table, _, err := sqlConn.AlterTableDef(server, false)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(table).To(ContainSubstring("REFERENCES `subnets`(cidr)"))
@@ -326,46 +315,23 @@ var _ = Describe("Sql", func() {
 
 		Context("Properties modifed", func() {
 			It("Generate proper alter table statements", func() {
-				server.Properties = append(server.Properties, schema.NewProperty(
-					"test",
-					"test",
-					"",
-					"test",
-					"string",
-					"",
-					"",
-					"",
-					"varchar(255)",
-					false,
-					false,
-					false,
-					nil,
-					nil,
-					false,
-				))
+				prop := schema.NewPropertyBuilder("test", "test", "", "test").
+					WithFormat("string").
+					WithSQLType("varchar(255)").
+					Build()
+				server.Properties = append(server.Properties, *prop)
 				table, _, err := sqlConn.AlterTableDef(server, true)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(table).To(ContainSubstring("alter table`servers` add (`test` varchar(255) not null);"))
 			})
 
 			It("Create index if property should be indexed", func() {
-				server.Properties = append(server.Properties, schema.NewProperty(
-					"test",
-					"test",
-					"",
-					"test",
-					"string",
-					"",
-					"",
-					"",
-					"varchar(255)",
-					false,
-					false,
-					false,
-					nil,
-					nil,
-					true,
-				))
+				prop := schema.NewPropertyBuilder("test", "test", "", "test").
+					WithFormat("string").
+					WithSQLType("varchar(255)").
+					WithIndexed(true).
+					Build()
+				server.Properties = append(server.Properties, *prop)
 				_, indices, err := sqlConn.AlterTableDef(server, true)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(indices).To(HaveLen(1))

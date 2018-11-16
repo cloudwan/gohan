@@ -15,11 +15,17 @@
 
 package schema
 
+import (
+	"fmt"
+	"github.com/cloudwan/gohan/util"
+)
+
 //Property is a definition of each Property
 type Property struct {
 	ID, Title, Description string
 	Type, Format           string
-	Properties             map[string]interface{}
+	Properties             []Property
+	Items                  *Property
 	Relation               string
 	RelationColumn         string
 	RelationProperty       string
@@ -28,32 +34,84 @@ type Property struct {
 	SQLType                string
 	OnDeleteCascade        bool
 	Default                interface{}
+	DefaultMask            interface{}
 	Indexed                bool
 }
 
-//PropertyMap is a map of Property
-type PropertyMap map[string]Property
+const ItemPropertyID = "[]"
 
-//NewProperty is a constructor for Property type
-func NewProperty(id, title, description, typeID, format, relation, relationColumn, relationProperty, sqlType string, unique, nullable, onDeleteCascade bool, properties map[string]interface{}, defaultValue interface{}, indexed bool) Property {
-	Property := Property{
-		ID:               id,
-		Title:            title,
-		Format:           format,
-		Description:      description,
-		Type:             typeID,
-		Relation:         relation,
-		RelationColumn:   relationColumn,
-		RelationProperty: relationProperty,
-		Unique:           unique,
-		Nullable:         nullable,
-		Default:          defaultValue,
-		Properties:       properties,
-		SQLType:          sqlType,
-		OnDeleteCascade:  onDeleteCascade,
-		Indexed:          indexed,
+type PropertyBuilder struct {
+	property Property
+}
+
+func NewPropertyBuilder(id, title, description, typeID string) *PropertyBuilder {
+	return &PropertyBuilder{
+		property: Property{
+			ID:          id,
+			Title:       title,
+			Description: description,
+			Type:        typeID,
+		},
 	}
-	return Property
+}
+
+func (pb *PropertyBuilder) WithFormat(format string) *PropertyBuilder {
+	pb.property.Format = format
+	return pb
+}
+
+func (pb *PropertyBuilder) WithProperties(properties []Property) *PropertyBuilder {
+	pb.property.Properties = properties
+	return pb
+}
+
+func (pb *PropertyBuilder) WithItems(items *Property) *PropertyBuilder {
+	pb.property.Items = items
+	return pb
+}
+
+func (pb *PropertyBuilder) WithRelation(relation, relationColumn, relationProperty string) *PropertyBuilder {
+	pb.property.Relation = relation
+	pb.property.RelationColumn = relationColumn
+	pb.property.RelationProperty = relationProperty
+	return pb
+}
+
+func (pb *PropertyBuilder) WithUnique(unique bool) *PropertyBuilder {
+	pb.property.Unique = unique
+	return pb
+}
+
+func (pb *PropertyBuilder) WithNullable(nullable bool) *PropertyBuilder {
+	pb.property.Nullable = nullable
+	return pb
+}
+
+func (pb *PropertyBuilder) WithOnDeleteCascade(onDeleteCascade bool) *PropertyBuilder {
+	pb.property.OnDeleteCascade = onDeleteCascade
+	return pb
+}
+
+func (pb *PropertyBuilder) WithIndexed(indexed bool) *PropertyBuilder {
+	pb.property.Indexed = indexed
+	return pb
+}
+
+func (pb *PropertyBuilder) WithSQLType(sqlType string) *PropertyBuilder {
+	pb.property.SQLType = sqlType
+	return pb
+}
+
+func (pb *PropertyBuilder) WithDefaultValue(defaultValue interface{}) *PropertyBuilder {
+	pb.property.Default = defaultValue
+	return pb
+}
+
+func (pb *PropertyBuilder) Build() *Property {
+	retProp := &Property{}
+	*retProp = pb.property
+	retProp.generateDefaultMask()
+	return retProp
 }
 
 //NewPropertyFromObj make Property  from obj
@@ -77,42 +135,104 @@ func NewPropertyFromObj(id string, rawTypeData interface{}, required bool) *Prop
 			}
 		}
 	}
-	format, _ := typeData["format"].(string)
+
+	pb := NewPropertyBuilder(id, title, description, typeID)
+	pb.WithNullable(nullable)
+
+	if format, ok := typeData["format"].(string); ok {
+		pb.WithFormat(format)
+	}
+
 	relation, _ := typeData["relation"].(string)
 	relationColumn, _ := typeData["relation_column"].(string)
 	relationProperty, _ := typeData["relation_property"].(string)
-	unique, _ := typeData["unique"].(bool)
-	cascade, _ := typeData["on_delete_cascade"].(bool)
-	properties, _ := typeData["properties"].(map[string]interface{})
-	defaultValue, _ := typeData["default"]
-	if !required && defaultValue == nil {
-		nullable = true
+	pb.WithRelation(relation, relationColumn, relationProperty)
+
+	if unique, ok := typeData["unique"].(bool); ok {
+		pb.WithUnique(unique)
 	}
-	sqlType, _ := typeData["sql"].(string)
-	indexed, _ := typeData["indexed"].(bool)
-	Property := NewProperty(id, title, description, typeID, format, relation, relationColumn, relationProperty,
-		sqlType, unique, nullable, cascade, properties, defaultValue, indexed)
-	return &Property
+	if cascade, ok := typeData["on_delete_cascade"].(bool); ok {
+		pb.WithOnDeleteCascade(cascade)
+	}
+
+	defaultValue, hasDefaultValue := typeData["default"];
+	if hasDefaultValue {
+		pb.WithDefaultValue(defaultValue)
+	}
+	if !required && defaultValue == nil {
+		pb.WithNullable(true)
+	}
+
+	if sqlType, ok := typeData["sql"].(string); ok {
+		pb.WithSQLType(sqlType)
+	}
+	if indexed, ok := typeData["indexed"].(bool); ok {
+		pb.WithIndexed(indexed)
+	}
+
+	if itemsRaw, hasItems := typeData["items"]; hasItems && typeID == "array" {
+		pb.WithItems(parseItems(itemsRaw))
+	}
+
+	if typeID == "object" {
+		pb.WithProperties(parseSubproperties(typeData))
+	}
+
+	return pb.Build()
 }
 
-func (p *Property) getDefaultMask() interface{} {
-	if p.Default != nil {
-		return p.Default
+func parseItems(itemsRaw interface{}) *Property {
+	switch typedItems := itemsRaw.(type) {
+	case map[string]interface{}:
+		return NewPropertyFromObj(ItemPropertyID, typedItems, true)
+	case []interface{}:
+		// In the case of metaschema, this can be an array: it means that elements of the array
+		// can be of more than one type. The metaschema does not define a regular resource,
+		// so this information would not be used and can be ignored.
+		return nil
+	default:
+		panic(fmt.Sprintf(
+			"Invalid \"items\" type in property: should be a map or an array, but is %T",
+			itemsRaw,
+		))
 	}
-	if p.Type == "object" {
-		var defaultValue map[string]interface{}
-		for innerPropertyID, innerPropertyValue := range p.Properties {
-			prop := NewPropertyFromObj(innerPropertyID, innerPropertyValue, false)
-			innerDefaultMask := prop.getDefaultMask()
-			if innerDefaultMask != nil {
-				if defaultValue == nil {
-					defaultValue = map[string]interface{}{}
-				}
-				defaultValue[innerPropertyID] = innerDefaultMask
-			}
-		}
-		return defaultValue
+}
+
+func parseSubproperties(typeData map[string]interface{}) []Property {
+	required, _ := typeData["required"].([]string)
+	properties, _ := typeData["properties"].(map[string]interface{})
+
+	parsedProperties := []Property{}
+
+	for innerPropertyID, innerPropertyDesc := range properties {
+		isRequired := util.ContainsString(required, innerPropertyID)
+		parsedProperty := NewPropertyFromObj(innerPropertyID, innerPropertyDesc, isRequired)
+		parsedProperties = append(parsedProperties, *parsedProperty)
 	}
 
-	return nil
+	return parsedProperties
+}
+
+func (p *Property) generateDefaultMask() {
+	if p.Default != nil {
+		p.DefaultMask = p.Default
+		return
+	}
+	if p.Type != "object" {
+		p.DefaultMask = nil
+		return
+	}
+
+	var defaultMask map[string]interface{}
+	for _, prop := range p.Properties {
+		prop.generateDefaultMask()
+		if prop.DefaultMask != nil {
+			if defaultMask == nil {
+				defaultMask = map[string]interface{}{}
+			}
+			defaultMask[prop.ID] = prop.DefaultMask
+		}
+	}
+
+	p.DefaultMask = defaultMask
 }

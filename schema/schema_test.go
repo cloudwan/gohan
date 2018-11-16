@@ -143,6 +143,38 @@ var _ = Describe("Schema", func() {
 		})
 	})
 
+	Describe("Nested properties", func() {
+		var manager *Manager
+		var schema *Schema
+
+		BeforeEach(func() {
+			manager = GetManager()
+			Expect(manager.LoadSchemasFromFiles(
+				"../tests/test_abstract_schema.yaml",
+				"../tests/test_schema.yaml",
+			)).To(Succeed())
+
+			s, ok := manager.Schema("nested_attacher")
+			Expect(ok).To(BeTrue())
+			schema = s
+		})
+
+		It("should get all properties in the schema via GetAllPropertiesFullyQualifiedMap", func() {
+			var propertyNames []string
+			for name := range schema.GetAllPropertiesFullyQualifiedMap() {
+				propertyNames = append(propertyNames, name)
+			}
+
+			Expect(propertyNames).To(ConsistOf(
+				"id",
+				"container_object",
+				"container_object.attach_object_id",
+				"container_array",
+				"container_array.[].attach_array_id",
+			))
+		})
+	})
+
 	Describe("Properties order", func() {
 		var manager *Manager
 

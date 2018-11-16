@@ -297,13 +297,16 @@ The syntax is slightly different than in the case of a standard policy:
     - `deny`: policy denies if source and target conditions are true
 - resource: Like in the case of a standard policy, but considers the source resource
 - relation_property: Name of the relation property the policy is applied to.
-  Can be `*`, then it applies to all properties of the source resource
+  Can be `*`, then it applies to all properties of the source resource.
+  Note that nested relations are also supported - for the syntax, see examples.
 - target_condition: Condition for the target resource (for syntax, see the 'Condition' section)
 
 Attach policies are checked during creation/update of the _source_ resource.
 An attach policy is applied only if relation field is non-nil.
 If any of the policies deny access, then modification is forbidden and a 404 response is returned.
 In contrast to standard policies, the fact that no attach policies apply to the resource does not restrict access to the resource.
+
+Attach policies can also support relations defined via properties nested in other properties of array or object type. Some examples can be seen below.
 
 An example:
 
@@ -334,6 +337,42 @@ An example:
         property: block_flag
         type: eq
         value: true
+  resource:
+    path: /v2.0/attacher.*
+# relation_property should contain fully qualified name to the property, if it is nested.
+# The example refers to the field "some_relation", which could be defined in schema like this:
+# properties:
+#   some_object:
+#     type: object
+#     properties:
+#       some_relation:
+#         ...
+- action: '__attach__'
+  id: relation_nested_in_object
+  effect: deny
+  principal: Member
+  relation_property: some_object.some_relation
+  target_condition:
+  - is_owner
+  resource:
+    path: /v2.0/attacher.*
+# Properties nested in arrays are also supported.
+# The example refers to the field "some_relation", which could be defined in schema like this:
+# properties:
+#   some_array:
+#     type: array
+#     items:
+#       type: object
+#       properties:
+#         some_relation:
+#           ...
+- action: '__attach__'
+  id: relation_nested_in_array
+  effect: deny
+  principal: Member
+  relation_property: some_array.[].some_relation
+  target_condition:
+  - is_owner
   resource:
     path: /v2.0/attacher.*
 ```

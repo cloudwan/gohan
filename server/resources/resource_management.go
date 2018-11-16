@@ -1128,21 +1128,18 @@ func validateAttachment(
 	resourceSchema *schema.Schema,
 	dataMap map[string]interface{},
 ) error {
+	log.Debug("Checking tenant isolation policy: %s", policy.ID)
 	relationPropertyName := policy.GetRelationPropertyName()
 	if relationPropertyName == "*" {
-		for i := range resourceSchema.Properties {
-			prop := &resourceSchema.Properties[i]
-			if err := validateAttachmentRelation(context, policy, auth, dataMap, prop); err != nil {
+		for path := range resourceSchema.GetAllPropertiesFullyQualifiedMap() {
+			err := validateAttachmentRelationUnderPath(context, policy, auth, dataMap, resourceSchema, path)
+			if err != nil {
 				return err
 			}
 		}
 		return nil
 	} else {
-		prop, err := resourceSchema.GetPropertyByID(relationPropertyName)
-		if err != nil {
-			return err
-		}
-		return validateAttachmentRelation(context, policy, auth, dataMap, prop)
+		return validateAttachmentRelationUnderPath(context, policy, auth, dataMap, resourceSchema, relationPropertyName)
 	}
 }
 
@@ -1156,6 +1153,112 @@ func errorNotFound(schemaId, resourceId string) error {
 
 func errorBadRequest(schemaId, resourceId string) error {
 	return goext.NewErrorBadRequest(relatedResourceNotFoundErr(schemaId, resourceId))
+}
+
+func validateAttachmentRelationUnderPath(
+	context middleware.Context,
+	policy *schema.Policy,
+	auth schema.Authorization,
+	data interface{},
+	resourceSchema *schema.Schema,
+	path string,
+) error {
+	traversal := newDataTraversal(resourceSchema, data)
+
+	log.Debug("Checking tenant isolation for property %s in schema %s", path, resourceSchema.ID)
+
+	for _, key := range strings.Split(path, ".") {
+		if key == schema.ItemPropertyID {
+			if err := traversal.advanceByItem(); err != nil {
+				return err
+			}
+		} else {
+			if err := traversal.advanceByKey(key); err != nil {
+				return err
+			}
+		}
+	}
+
+	currProp := traversal.getCurrentProperty()
+
+	if currProp == nil {
+		return fmt.Errorf("Property under path %s not found in schema %s", path, resourceSchema.ID)
+	}
+
+	if currProp.Relation == "" {
+		// Not a relation, so skip
+		log.Debug("The property %s is not a relation, skipping tenant isolation check", path)
+		return nil
+	}
+
+	dataSet := traversal.getCurrentDataSet()
+	log.Debug("Will check %d resource IDs", len(dataSet))
+	for _, dataPiece := range dataSet {
+		relatedResourceID, _ := dataPiece.(string)
+		log.Debug("Checking ID %s", relatedResourceID)
+		err := validateAttachmentRelation(context, policy, auth, currProp, relatedResourceID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func validateAttachmentRelation(
+	context middleware.Context,
+	policy *schema.Policy,
+	auth schema.Authorization,
+	property *schema.Property,
+	relatedResourceID string,
+) error {
+	if relatedResourceID == "" {
+		log.Debug("Skipping tenant isolation check because of empty ID")
+		return nil
+	}
+
+	manager := schema.GetManager()
+	relatedSchema, _ := manager.Schema(property.Relation)
+
+	otherCond := policy.GetOtherResourceCondition()
+	filter := transaction.IDFilter(relatedResourceID)
+	extendFilterByTenantAndDomain(relatedSchema, filter, schema.ActionRead, otherCond, auth)
+	otherCond.AddCustomFilters(relatedSchema, filter, auth)
+
+	options := &transaction.ViewOptions{}
+
+	mainTransaction := context["transaction"].(transaction.Transaction)
+	relatedRes, err := mainTransaction.Fetch(mustGetContext(context), relatedSchema, filter, options)
+
+	if err != nil {
+		if policy.IsDeny() {
+			return nil
+		} else {
+			log.Debug(
+				"Tenant isolation failed: ID %s is not visible for tenant %s in domain %s",
+				relatedResourceID, auth.TenantID(), auth.DomainID(),
+			)
+			return errorBadRequest(relatedSchema.ID, relatedResourceID)
+		}
+	}
+
+	err = otherCond.ApplyPropertyConditionFilter(schema.ActionAttach, relatedRes.Data(), nil)
+	if policy.IsDeny() {
+		if err == nil {
+			log.Debug(
+				"Tenant isolation failed: property condition filter rejected ID %s (tenant: %s, domain: %s)",
+				relatedResourceID, auth.TenantID(), auth.DomainID(),
+			)
+			return errorBadRequest(relatedSchema.ID, relatedResourceID)
+		}
+	} else if err != nil {
+		log.Debug(
+			"Tenant isolation failed: property condition filter rejected ID %s (tenant: %s, domain: %s)",
+			relatedResourceID, auth.TenantID(), auth.DomainID(),
+		)
+		return errorNotFound(relatedSchema.ID, relatedResourceID)
+	}
+	return nil
 }
 
 func extendFilterByTenantAndDomain(
@@ -1172,54 +1275,6 @@ func extendFilterByTenantAndDomain(
 	}
 }
 
-func validateAttachmentRelation(
-	context middleware.Context,
-	policy *schema.Policy,
-	auth schema.Authorization,
-	dataMap map[string]interface{},
-	property *schema.Property,
-) error {
-	manager := schema.GetManager()
-	if property.Relation == "" {
-		// Not a relation, so skip
-		return nil
-	}
-
-	relatedSchema, _ := manager.Schema(property.Relation)
-	relatedResourceID, _ := dataMap[property.ID].(string)
-	if relatedResourceID == "" {
-		return nil
-	}
-
-	otherCond := policy.GetOtherResourceCondition()
-	filter := transaction.IDFilter(relatedResourceID)
-	extendFilterByTenantAndDomain(relatedSchema, filter, schema.ActionRead, otherCond, auth)
-	otherCond.AddCustomFilters(relatedSchema, filter, auth)
-
-	options := &transaction.ViewOptions{}
-
-	mainTransaction := context["transaction"].(transaction.Transaction)
-	relatedRes, err := mainTransaction.Fetch(mustGetContext(context), relatedSchema, filter, options)
-
-	if err != nil {
-		if policy.IsDeny() {
-			return nil
-		} else {
-			return errorBadRequest(relatedSchema.ID, relatedResourceID)
-		}
-	}
-
-	err = otherCond.ApplyPropertyConditionFilter(schema.ActionAttach, relatedRes.Data(), nil)
-	if policy.IsDeny() {
-		if err == nil {
-			return errorBadRequest(relatedSchema.ID, relatedResourceID)
-		}
-	} else if err != nil {
-		return errorNotFound(relatedSchema.ID, relatedResourceID)
-	}
-	return nil
-}
-
 func LoadPolicy(context middleware.Context, action, path string, auth schema.Authorization) (*schema.Policy, error) {
 	manager := schema.GetManager()
 	policy, role := manager.PolicyValidate(action, path, auth)
@@ -1231,6 +1286,91 @@ func LoadPolicy(context middleware.Context, action, path string, auth schema.Aut
 	context["attach_policies"] = manager.GetAttachmentPolicies(path, auth)
 	context["role"] = role
 	return policy, nil
+}
+
+type dataTraversal struct {
+	currentProperty *schema.Property
+	currentChildren []schema.Property
+	dataSet         []interface{}
+}
+
+func newDataTraversal(schema *schema.Schema, data interface{}) *dataTraversal {
+	return &dataTraversal{
+		currentProperty: nil,
+		currentChildren: schema.Properties,
+		dataSet:         []interface{}{data},
+	}
+}
+
+func (traversal *dataTraversal) advanceByItem() error {
+	if traversal.currentProperty == nil || traversal.currentProperty.Items == nil {
+		return errors.New("cannot access array: currently situated on non-array property")
+	}
+
+	var newDataSet []interface{}
+	for _, dataPiece := range traversal.dataSet {
+		if dataPiece == nil {
+			continue
+		}
+		switch dataPieceArray := dataPiece.(type) {
+		case []interface{}:
+			newDataSet = append(newDataSet, dataPieceArray...)
+		case []map[string]interface{}:
+			for _, element := range dataPieceArray {
+				newDataSet = append(newDataSet, element)
+			}
+		default:
+			return errors.Errorf("expected []interface{}, []map[string]interface{} or nil while advancing by item, got: %#v", dataPiece)
+		}
+		dataPieceArray, _ := dataPiece.([]interface{})
+		newDataSet = append(newDataSet, dataPieceArray...)
+	}
+
+	traversal.currentProperty = traversal.currentProperty.Items
+	traversal.currentChildren = traversal.currentProperty.Properties
+	traversal.dataSet = newDataSet
+	return nil
+}
+
+func (traversal *dataTraversal) advanceByKey(key string) error {
+	var child *schema.Property
+	for i := range traversal.currentChildren {
+		if traversal.currentChildren[i].ID == key {
+			child = &traversal.currentChildren[i]
+			break
+		}
+	}
+
+	if child == nil {
+		return fmt.Errorf("property of name \"%s\" not found", key)
+	}
+
+	var newDataSet []interface{}
+	for _, dataPiece := range traversal.dataSet {
+		if dataPiece == nil {
+			continue
+		}
+		dataPieceMap, ok := dataPiece.(map[string]interface{})
+		if !ok {
+			return errors.Errorf("expected map[string]interface{} or nil while advancing by key \"%s\", got: %#v", key, dataPiece)
+		}
+		if dataPieceUnderKey, _ := dataPieceMap[key]; dataPieceUnderKey != nil {
+			newDataSet = append(newDataSet, dataPieceUnderKey)
+		}
+	}
+
+	traversal.currentProperty = child
+	traversal.currentChildren = child.Properties
+	traversal.dataSet = newDataSet
+	return nil
+}
+
+func (traversal *dataTraversal) getCurrentProperty() *schema.Property {
+	return traversal.currentProperty
+}
+
+func (traversal *dataTraversal) getCurrentDataSet() []interface{} {
+	return traversal.dataSet
 }
 
 type validateFunction func(interface{}) error
