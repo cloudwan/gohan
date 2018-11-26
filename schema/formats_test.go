@@ -385,4 +385,25 @@ var _ = Describe("format checkers", func() {
 			Entry("", "1.1.1abc"),
 		)
 	})
+
+	Describe("Version constraint format checker", func() {
+		BeforeEach(func() {
+			formatChecker = versionConstraintFormatChecker{}
+		})
+
+		DescribeTable("valid constraints", func(version string) {
+			Expect(formatChecker.IsFormat(version)).To(BeTrue())
+		},
+			Entry("equal", "=1.1.1"),
+			Entry("greater equal", ">=1.1.1-abc"),
+			Entry("less", "<1.1"),
+			Entry("no comparison", "1.1.1"),
+		)
+
+		DescribeTable("invalid constraints", func(version string) {
+			Expect(formatChecker.IsFormat(version)).To(BeFalse())
+		},
+			Entry("not a version", ">abc"),
+		)
+	})
 })

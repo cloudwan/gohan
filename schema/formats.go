@@ -39,6 +39,7 @@ type portFormatChecker struct{}
 type yamlFormatChecker struct{}
 type textFormatChecker struct{}
 type versionFormatChecker struct{}
+type versionConstraintFormatChecker struct{}
 
 func (f macFormatChecker) IsFormat(input string) bool {
 	match, _ := regexp.MatchString(`^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$`, input)
@@ -137,6 +138,11 @@ func (f versionFormatChecker) IsFormat(input string) bool {
 	return err == nil
 }
 
+func (f versionConstraintFormatChecker) IsFormat(input string) bool {
+	_, err := semver.NewConstraint(input)
+	return err == nil
+}
+
 func registerGohanFormats(checkers gojsonschema.FormatCheckerChain) {
 	checkers.Add("mac", macFormatChecker{})
 	checkers.Add("cidr", cidrFormatChecker{})
@@ -151,4 +157,5 @@ func registerGohanFormats(checkers gojsonschema.FormatCheckerChain) {
 	checkers.Add("yaml", yamlFormatChecker{})
 	checkers.Add("text", textFormatChecker{})
 	checkers.Add("version", versionFormatChecker{})
+	checkers.Add("version-constraint", versionConstraintFormatChecker{})
 }
