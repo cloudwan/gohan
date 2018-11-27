@@ -390,10 +390,18 @@ policies:
   condition:
   - is_owner
   effect: allow
-  id: allow_attach_target
+  id: allow_wildcard_attacher
   principal: Member
   resource:
     path: /v2.0/wildcard_attacher.*
+- action: '*'
+  condition:
+  - is_owner
+  effect: allow
+  id: allow_nested_attacher
+  principal: Member
+  resource:
+    path: /v2.0/nested_attacher.*
 - action: '*'
   condition:
   - is_owner
@@ -448,6 +456,24 @@ policies:
   - is_owner
   resource:
     path: /v2.0/wildcard_attacher.*
+- action: '__attach__'
+  id: nested_attachment_object
+  effect: allow
+  principal: Member
+  relation_property: container_object.attach_object_id
+  target_condition:
+  - is_owner
+  resource:
+    path: /v2.0/nested_attacher.*
+- action: '__attach__'
+  id: nested_attachment_array
+  effect: allow
+  principal: Member
+  relation_property: container_array.[].attach_array_id
+  target_condition:
+  - is_owner
+  resource:
+    path: /v2.0/nested_attacher.*
 
 schemas:
 - description: Network
@@ -467,7 +493,7 @@ schemas:
         - create
         - update
         properties:
-          segmentaion_type:
+          segmentation_type:
             enum:
             - vlan
             - vxlan
@@ -1151,6 +1177,34 @@ schemas:
         - "null"
         unique: false
         description: Attach point
+      container_object:
+        description: Container object for attacher
+        permission:
+        - create
+        - update
+        title: Container object
+        type: object
+        properties:
+          attach_object_id:
+            title: Attach target ID
+            relation: attach_target
+            relation_property: attach_object
+            type: string
+      container_array:
+        description: Container array for attacher
+        permission:
+        - create
+        - update
+        title: Container array
+        type: array
+        items:
+          type: object
+          properties:
+            attach_array_id:
+              title: Attach target ID
+              relation: attach_target
+              relation_property: attach_array
+              type: string
       tenant_id:
         description: Tenant ID
         permission:
@@ -1159,6 +1213,49 @@ schemas:
         type: string
         unique: false
   title: Wildcard attacher
+- description: Resource that has a nested properties with attach policies defined for them
+  id: nested_attacher
+  singular: nested_attacher
+  plural: nested_attachers
+  prefix: /v2.0
+  schema:
+    properties:
+      id:
+        description: ID
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: true
+      container_object:
+        description: Container object for attacher
+        permission:
+        - create
+        - update
+        title: Container object
+        type: object
+        properties:
+          attach_object_id:
+            title: Attach through object
+            relation: attach_target
+            relation_property: attach_object
+            type: string
+      container_array:
+        description: Container array for attacher
+        permission:
+        - create
+        - update
+        title: Container array
+        type: array
+        items:
+          type: object
+          properties:
+            attach_array_id:
+              title: Attach through array
+              relation: attach_target
+              relation_property: attach_array
+              type: string
+  title: Nested attacher
 - description: Target of attach
   id: attach_target
   singular: attach_target

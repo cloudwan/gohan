@@ -65,6 +65,7 @@ const (
 	visibilityTestPluralURL   = baseURL + "/v2.0/visible_properties_tests"
 	attacherPluralURL         = baseURL + "/v2.0/attachers"
 	attacherWildcardPluralURL = baseURL + "/v2.0/wildcard_attachers"
+	attacherNestedPluralURL   = baseURL + "/v2.0/nested_attachers"
 	attachTargetPluralURL     = baseURL + "/v2.0/attach_targets"
 )
 
@@ -448,12 +449,13 @@ var _ = Describe("Server package test", func() {
 			Expect(result).To(HaveKeyWithValue("network", networkExpected))
 
 			result = testURL("GET", baseURL+"/_all", memberTokenID, nil, http.StatusOK)
-			Expect(result).To(HaveLen(11))
+			Expect(result).To(HaveLen(12))
 			Expect(result).To(HaveKeyWithValue("networks", []interface{}{networkExpected}))
 			Expect(result).To(HaveKey("schemas"))
 			Expect(result).To(HaveKey("tests"))
 			Expect(result).To(HaveKey("attachers"))
 			Expect(result).To(HaveKey("wildcard_attachers"))
+			Expect(result).To(HaveKey("nested_attachers"))
 			Expect(result).To(HaveKey("attach_targets"))
 			Expect(result).To(HaveKey("blacklisted_tenant_ids"))
 			Expect(result).To(HaveKey("domain_owner_tests"))
@@ -1288,7 +1290,7 @@ var _ = Describe("Server package test", func() {
 			}
 			testURL("POST", attacherWildcardPluralURL, memberTokenID, attacherWildcardOfMember, http.StatusCreated)
 
-			// Member tries to update other field to create attachment to power user's resoruce
+			// Member tries to update other field to create attachment to power user's resource
 			// Should fail
 			attacherWildcardOfMemberUpdate := map[string]interface{}{
 				"attach_b_id": attachTargetOfPowerUser["id"],
@@ -1317,9 +1319,9 @@ var _ = Describe("Server package test", func() {
 			// Create a resource that breaks the attach policy
 			// It can happen when an admin or an extension decides to break tenant isolation
 			attacherOfMember := map[string]interface{}{
-				"id": "attacher_member",
+				"id":                      "attacher_member",
 				"attach_if_accessible_id": attachTargetOfPowerUser["id"],
-				"tenant_id": memberTenantID,
+				"tenant_id":               memberTenantID,
 			}
 			testURL("POST", attacherPluralURL, adminTokenID, attacherOfMember, http.StatusCreated)
 
@@ -1335,6 +1337,98 @@ var _ = Describe("Server package test", func() {
 			attacher := response.(map[string]interface{})["attacher"]
 			Expect(attacher).To(HaveKeyWithValue("attach_if_accessible_id", attachTargetOfPowerUser["id"]))
 			Expect(attacher).To(HaveKeyWithValue("not_a_relation", float64(42)))
+		})
+
+		Describe("Relation property nested in another", func() {
+			const attachTargetMemberID = "attach_target_member_id"
+			var relationInsideAnObject, relationInsideAnArray map[string]interface{}
+
+			BeforeEach(func() {
+				relationInsideAnObject = map[string]interface{}{
+					"container_object": map[string]interface{}{
+						"attach_object_id": attachTargetMemberID,
+					},
+				}
+				relationInsideAnArray = map[string]interface{}{
+					"container_array": []interface{}{
+						map[string]interface{}{
+							"attach_array_id": attachTargetMemberID,
+						},
+					},
+				}
+
+				attachTargetMember := map[string]interface{}{
+					"id":            attachTargetMemberID,
+					"accessibility": "owner_only",
+					"block_flag":    false,
+				}
+				testURL("POST", attachTargetPluralURL, memberTokenID, attachTargetMember, http.StatusCreated)
+			})
+
+			Context("Create action", func() {
+				DescribeTable("Owner should be able to attach",
+					func(url string, data *map[string]interface{}) {
+						testURL("POST", url, memberTokenID, *data, http.StatusCreated)
+					},
+					Entry("Relation inside an object", attacherNestedPluralURL, &relationInsideAnObject),
+					Entry("Relation inside an object via wildcard attacher", attacherWildcardPluralURL, &relationInsideAnObject),
+					Entry("Relation inside an array", attacherNestedPluralURL, &relationInsideAnArray),
+					Entry("Relation inside an array via wildcard attacher", attacherWildcardPluralURL, &relationInsideAnArray),
+				)
+
+				DescribeTable("Other user should not be able to attach",
+					func(url string, data *map[string]interface{}) {
+						testURL("POST", url, powerUserTokenID, *data, http.StatusBadRequest)
+					},
+					Entry("Relation inside an object", attacherNestedPluralURL, &relationInsideAnObject),
+					Entry("Relation inside an object via wildcard attacher", attacherWildcardPluralURL, &relationInsideAnObject),
+					Entry("Relation inside an array", attacherNestedPluralURL, &relationInsideAnArray),
+					Entry("Relation inside an array via wildcard attacher", attacherWildcardPluralURL, &relationInsideAnArray),
+				)
+			})
+
+			Context("Update action", func() {
+				const (
+					attacherNestedID = "attacher_nested_id"
+					attacherWildcardID = "attacher_wildcard_id"
+				)
+				var attacherNestedResourceURL, attacherWildcardResourceURL string
+
+				makeResources := func(tenantID string) {
+					attacherNested := map[string]interface{}{
+						"id": attacherNestedID,
+					}
+					attacherWildcard := map[string]interface{}{
+						"id": attacherWildcardID,
+					}
+					testURL("POST", attacherNestedPluralURL, tenantID, attacherNested, http.StatusCreated)
+					testURL("POST", attacherWildcardPluralURL, tenantID, attacherWildcard, http.StatusCreated)
+					attacherNestedResourceURL = getResourceURL("nested_attacher", attacherNestedID)
+					attacherWildcardResourceURL = getResourceURL("wildcard_attacher", attacherWildcardID)
+				}
+
+				DescribeTable("Owner should be able to attach",
+					func(url *string, data *map[string]interface{}) {
+						makeResources(memberTokenID)
+						testURL("PUT", *url, memberTokenID, *data, http.StatusOK)
+					},
+					Entry("Relation inside an object", &attacherNestedResourceURL, &relationInsideAnObject),
+					Entry("Relation inside an object via wildcard attacher", &attacherWildcardResourceURL, &relationInsideAnObject),
+					Entry("Relation inside an array", &attacherNestedResourceURL, &relationInsideAnArray),
+					Entry("Relation inside an array via wildcard attacher", &attacherWildcardResourceURL, &relationInsideAnArray),
+				)
+
+				DescribeTable("Other user should not be able to attach",
+					func(url *string, data *map[string]interface{}) {
+						makeResources(powerUserTokenID)
+						testURL("PUT", *url, powerUserTokenID, *data, http.StatusBadRequest)
+					},
+					Entry("Relation inside an object", &attacherNestedResourceURL, &relationInsideAnObject),
+					Entry("Relation inside an object via wildcard attacher", &attacherWildcardResourceURL, &relationInsideAnObject),
+					Entry("Relation inside an array", &attacherNestedResourceURL, &relationInsideAnArray),
+					Entry("Relation inside an array via wildcard attacher", &attacherWildcardResourceURL, &relationInsideAnArray),
+				)
+			})
 		})
 	})
 

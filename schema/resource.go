@@ -149,24 +149,22 @@ func updateResourceRecursion(updateData interface{}, sourceData interface{}) int
 	}
 }
 
-func fillObjectDefaults(objectProperty Property, resourceMap, objectMask map[string]interface{}) {
-	for objectPropertyID, objectPropertyIface := range objectProperty.Properties {
-		objectPropertyMap := objectPropertyIface.(map[string]interface{})
-		innerProperty := NewPropertyFromObj(objectPropertyID, objectPropertyMap, false)
-		if objectMaskInnerProperty, ok := objectMask[objectPropertyID]; ok {
-			resourceFilledProperty, resourceFilled := resourceMap[objectPropertyID]
+func fillObjectDefaults(objectProperty Property, resourceMap, defaultValueMaskMap map[string]interface{}) {
+	for _, innerProperty := range objectProperty.Properties {
+		if objectMaskInnerProperty, ok := defaultValueMaskMap[innerProperty.ID]; ok {
+			resourceFilledProperty, resourceFilled := resourceMap[innerProperty.ID]
 			if innerProperty.Type == "object" {
 				innerPropertyMaskMap := objectMaskInnerProperty.(map[string]interface{})
 				if resourceFilled {
-					fillObjectDefaults(*innerProperty, resourceFilledProperty.(map[string]interface{}), innerPropertyMaskMap)
+					fillObjectDefaults(innerProperty, resourceFilledProperty.(map[string]interface{}), innerPropertyMaskMap)
 				} else {
 					if innerPropertyMaskMap != nil && innerProperty.Default != nil {
-						resourceMap[objectPropertyID] = innerPropertyMaskMap
+						resourceMap[innerProperty.ID] = innerPropertyMaskMap
 					}
 				}
 			} else {
 				if !resourceFilled {
-					resourceMap[objectPropertyID] = objectMaskInnerProperty
+					resourceMap[innerProperty.ID] = objectMaskInnerProperty
 				}
 			}
 		}
@@ -176,7 +174,7 @@ func fillObjectDefaults(objectProperty Property, resourceMap, objectMask map[str
 //PopulateDefaults Populates not provided data with defaults
 func (resource *Resource) PopulateDefaults() error {
 	for _, property := range resource.Schema().Properties {
-		defaultValueMask := property.getDefaultMask()
+		defaultValueMask := property.DefaultMask
 		resourceProperty, propertyFilled := resource.properties[property.ID]
 		if defaultValueMask != nil {
 			if property.Type == "object" {
