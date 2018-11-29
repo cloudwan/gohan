@@ -212,6 +212,7 @@ We need to define properties of a resource using following parameters.
 	- "yaml"
 	- "text"
 	- "version"
+	- "version-constraint"
 
 - type
 
