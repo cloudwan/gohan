@@ -406,6 +406,18 @@
                         "unique": false,
                         "format": "version",
                         "default": "1.2.3"
+                    },
+                    "version_constraint": {
+                        "permission": [
+                            "create",
+                            "update"
+                        ],
+                        "title": "version_constraint",
+                        "description": "version_constraint",
+                        "type": "string",
+                        "unique": false,
+                        "format": "version-constraint",
+                        "default": ">1.2.3"
                     }
                 },
                 "propertiesOrder": [
