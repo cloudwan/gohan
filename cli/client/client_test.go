@@ -848,16 +848,17 @@ var _ = Describe("CLI functions", func() {
 						}
 						result := gohanClientCLI.formatOutput(netSchema, rawResult)
 						Expect(result).To(Equal(
-							`+----------+---------+
-| PROPERTY |  VALUE  |
-+----------+---------+
-| CIDR     | cidr    |
-| MAC      | mac     |
-| UUID     | test    |
-| port     | port    |
-| regex    | regex   |
-| version  | version |
-+----------+---------+
+							`+--------------------+---------+
+|      PROPERTY      |  VALUE  |
++--------------------+---------+
+| CIDR               | cidr    |
+| MAC                | mac     |
+| UUID               | test    |
+| port               | port    |
+| regex              | regex   |
+| version            | version |
+| version_constraint | <nil>   |
++--------------------+---------+
 `))
 					})
 
@@ -914,13 +915,13 @@ var _ = Describe("CLI functions", func() {
 						}
 						result := gohanClientCLI.formatOutput(netSchema, rawResult)
 						Expect(result).To(Equal(
-							`+-------+------+-------+-------+--------+----------+
-| CIDR  | MAC  | UUID  | PORT  | REGEX  | VERSION  |
-+-------+------+-------+-------+--------+----------+
-| cidr1 | mac1 | test1 | port1 | regex1 | version1 |
-| cidr2 | mac2 | test2 | port2 | regex2 | version2 |
-| cidr3 | mac3 | test3 | port3 | regex3 | version3 |
-+-------+------+-------+-------+--------+----------+
+							`+-------+------+-------+-------+--------+----------+--------------------+
+| CIDR  | MAC  | UUID  | PORT  | REGEX  | VERSION  | VERSION CONSTRAINT |
++-------+------+-------+-------+--------+----------+--------------------+
+| cidr1 | mac1 | test1 | port1 | regex1 | version1 |                    |
+| cidr2 | mac2 | test2 | port2 | regex2 | version2 |                    |
+| cidr3 | mac3 | test3 | port3 | regex3 | version3 |                    |
++-------+------+-------+-------+--------+----------+--------------------+
 `))
 					})
 
@@ -952,13 +953,13 @@ var _ = Describe("CLI functions", func() {
 						}
 						result := gohanClientCLI.formatOutput(netSchema, rawResult)
 						Expect(result).To(Equal(
-							`+-------+------+-------+-------+--------+---------+
-| CIDR  | MAC  | UUID  | PORT  | REGEX  | VERSION |
-+-------+------+-------+-------+--------+---------+
-| cidr1 | mac1 | test1 | port1 | regex1 |         |
-|       | mac2 |       | port2 |        |         |
-| cidr3 |      | test3 |       | regex3 |         |
-+-------+------+-------+-------+--------+---------+
+							`+-------+------+-------+-------+--------+---------+--------------------+
+| CIDR  | MAC  | UUID  | PORT  | REGEX  | VERSION | VERSION CONSTRAINT |
++-------+------+-------+-------+--------+---------+--------------------+
+| cidr1 | mac1 | test1 | port1 | regex1 |         |                    |
+|       | mac2 |       | port2 |        |         |                    |
+| cidr3 |      | test3 |       | regex3 |         |                    |
++-------+------+-------+-------+--------+---------+--------------------+
 `))
 					})
 

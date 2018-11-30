@@ -17,6 +17,7 @@ package schema
 
 import (
 	"fmt"
+
 	"github.com/cloudwan/gohan/util"
 )
 
@@ -155,7 +156,7 @@ func NewPropertyFromObj(id string, rawTypeData interface{}, required bool) *Prop
 		pb.WithOnDeleteCascade(cascade)
 	}
 
-	defaultValue, hasDefaultValue := typeData["default"];
+	defaultValue, hasDefaultValue := typeData["default"]
 	if hasDefaultValue {
 		pb.WithDefaultValue(defaultValue)
 	}

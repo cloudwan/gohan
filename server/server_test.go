@@ -1319,7 +1319,7 @@ var _ = Describe("Server package test", func() {
 			// Create a resource that breaks the attach policy
 			// It can happen when an admin or an extension decides to break tenant isolation
 			attacherOfMember := map[string]interface{}{
-				"id":                      "attacher_member",
+				"id": "attacher_member",
 				"attach_if_accessible_id": attachTargetOfPowerUser["id"],
 				"tenant_id":               memberTenantID,
 			}
@@ -1389,7 +1389,7 @@ var _ = Describe("Server package test", func() {
 
 			Context("Update action", func() {
 				const (
-					attacherNestedID = "attacher_nested_id"
+					attacherNestedID   = "attacher_nested_id"
 					attacherWildcardID = "attacher_wildcard_id"
 				)
 				var attacherNestedResourceURL, attacherWildcardResourceURL string

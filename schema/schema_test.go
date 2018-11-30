@@ -545,6 +545,14 @@ var _ = Describe("Schema", func() {
 			netMap = map[string]interface{}{"version": "1.2.3"}
 			Expect(netSchema.ValidateOnCreate(netMap)).To(Succeed())
 		})
+
+		It("Version constraint", func() {
+			netMap := map[string]interface{}{"version_constraint": "not-a-constraint"}
+			Expect(netSchema.ValidateOnCreate(netMap)).To(MatchError(getErrorMessage("version_constraint", "version-constraint")))
+
+			netMap = map[string]interface{}{"version_constraint": ">1.2.3"}
+			Expect(netSchema.ValidateOnCreate(netMap)).To(Succeed())
+		})
 	})
 
 	It("should ignore empty schema file", func() {
