@@ -25,6 +25,7 @@ import (
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/extension/goext"
+	"github.com/cloudwan/gohan/healthcheck"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/server/middleware"
 	"github.com/cloudwan/gohan/server/resources"
@@ -206,6 +207,14 @@ func fillInContext(context middleware.Context, db db.DB,
 	context["identity_service"] = identityService
 	context["service_auth"], _ = identityService.GetServiceAuthorization()
 	context["openstack_client"] = identityService.GetClient()
+}
+
+func mustGetSchema(manager *schema.Manager, schemaID string) *schema.Schema {
+	schema, ok := manager.Schema(schemaID)
+	if !ok {
+		panic(fmt.Sprintf("The '%s' schema is missing. Check if gohan.json is loaded", schemaID))
+	}
+	return schema
 }
 
 //MapRouteBySchema setup api route by schema
@@ -461,10 +470,7 @@ func MapRouteBySchemas(server *Server, dataStore db.DB) {
 }
 
 func mapVersionRoute(route martini.Router, manager *schema.Manager) {
-	versionSchema, hasSchema := manager.Schema("version")
-	if !hasSchema {
-		panic("The 'version' schema is missing. Check if gohan.json is loaded")
-	}
+	versionSchema := mustGetSchema(manager, "version")
 	url := versionSchema.GetPluralURL()
 	urlWithParents := versionSchema.GetPluralURLWithParents()
 
@@ -487,10 +493,8 @@ func mapVersionRoute(route martini.Router, manager *schema.Manager) {
 }
 
 func mapSchemaRoute(route martini.Router, manager *schema.Manager) {
-	metaschema, hasMetaschema := manager.Schema("schema")
-	if !hasMetaschema {
-		panic("The metaschema is missing. Check if gohan.json is loaded")
-	}
+	metaschema := mustGetSchema(manager, "schema")
+
 	singleURL := metaschema.GetSingleURL()
 	pluralURL := metaschema.GetPluralURL()
 	singleURLWithParents := metaschema.GetSingleURLWithParents()
@@ -631,4 +635,25 @@ func mapChildNamespaceRoute(route martini.Router, namespace *schema.Namespace) {
 			routes.ServeJson(w, map[string][]schema.NamespaceResource{"resources": resources})
 		},
 	)
+}
+
+func mapHealthcheckRoute(route martini.Router, manager *schema.Manager, healthcheck *healthcheck.Healthcheck) {
+	healthcheckSchema := mustGetSchema(manager, "healthcheck")
+	url := healthcheckSchema.GetPluralURL()
+
+	log.Debug("Registering the healthcheck handler on %s", url)
+
+	get := func(w http.ResponseWriter, params martini.Params, auth schema.Authorization) {
+		defer resources.MeasureRequestTime(time.Now(), "get", healthcheckSchema.ID)
+
+		if err := healthcheck.IsHealthy(); err == nil {
+			w.WriteHeader(http.StatusOK)
+		} else {
+			log.Error("healthcheck error: %s", err.Error())
+			w.WriteHeader(http.StatusServiceUnavailable)
+		}
+
+	}
+
+	route.Get(url, get)
 }

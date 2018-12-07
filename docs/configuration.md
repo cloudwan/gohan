@@ -501,6 +501,12 @@ WARNING: The value of watched etcd keys must be a JSON dictionary.
         timing: "*/5 * * * * *"
 ```
 
+- healthcheck
+  
+  Gohan allows to determine whether database and etcd are up and running or not.
+  You can do this on http://gohan.address/gohan/v0.1/healthcheck. 
+  HTTP code 200 means server is running, whereas code 503 indicates something is wrong. 
+
 - schema editor
 
   You can use a Gohan server as a schema editor if you specify editable_schema YAML file.

@@ -31,14 +31,18 @@ import (
 
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/dbutil"
+	"github.com/cloudwan/gohan/db/mocks"
+	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
 	srv "github.com/cloudwan/gohan/server"
 	"github.com/cloudwan/gohan/server/middleware"
 	"github.com/cloudwan/gohan/sync"
+	"github.com/cloudwan/gohan/sync/mocks"
 	sync_util "github.com/cloudwan/gohan/sync/util"
 	"github.com/cloudwan/gohan/util"
 	"github.com/cloudwan/gohan/version"
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -50,6 +54,7 @@ var (
 
 const (
 	baseURL                            = "http://localhost:19090"
+	healthcheckURL                     = baseURL + "/gohan/v0.1/healthcheck"
 	schemaURL                          = baseURL + "/gohan/v0.1/schemas"
 	versionURL                         = baseURL + "/gohan/v0.1/version"
 	networkPluralURL                   = baseURL + "/v2.0/networks"
@@ -1531,6 +1536,53 @@ var _ = Describe("Server package test", func() {
 		It("should require autorization token", func() {
 			testURL("GET", versionURL, "", nil, http.StatusUnauthorized)
 		})
+	})
+
+	Context("Healthcheck", func() {
+		var (
+			db   db.DB
+			sync sync.Sync
+		)
+
+		BeforeEach(func() {
+			db = server.Healthcheck.DataStore
+			sync = server.Healthcheck.Etcd
+		})
+
+		AfterEach(func() {
+			server.Healthcheck.DataStore = db
+			server.Healthcheck.Etcd = sync
+		})
+
+		dbDown := func() {
+			controller := gomock.NewController(GinkgoT())
+			mockDB := mock_db.NewMockDB(controller)
+			opts := options.Options{RetryTxCount: 3, RetryTxInterval: 0}
+			server.Healthcheck.DataStore = mockDB
+			mockDB.EXPECT().Options().Return(opts)
+			mockDB.EXPECT().BeginTx().Return(nil, errors.New("db closed"))
+		}
+
+		syncDown := func() {
+			controller := gomock.NewController(GinkgoT())
+			mockSync := mock_sync.NewMockSync(controller)
+			server.Healthcheck.Etcd = mockSync
+			mockSync.EXPECT().Fetch("/gohan").Return(nil, errors.New("etcd is down"))
+		}
+
+		systemHealthy := func() {}
+
+		DescribeTable("returns",
+			func(mock func(), token string, expectedStatus int) {
+				mock()
+				testURL("GET", healthcheckURL, token, nil, expectedStatus)
+			},
+			Entry("200 for members", systemHealthy, memberTokenID, http.StatusOK),
+			Entry("401 for nonmembers", systemHealthy, "", http.StatusUnauthorized),
+			Entry("401 for nonmembers on DB down", dbDown, "", http.StatusUnauthorized),
+			Entry("401 for nonmembers on sync down", syncDown, "", http.StatusUnauthorized),
+			Entry("503 for members on DB down", dbDown, memberTokenID, http.StatusServiceUnavailable),
+			Entry("503 for members on sync down", syncDown, memberTokenID, http.StatusServiceUnavailable))
 	})
 })
 

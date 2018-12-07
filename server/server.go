@@ -37,6 +37,7 @@ import (
 	"github.com/cloudwan/gohan/db/initializer"
 	"github.com/cloudwan/gohan/db/migration"
 	"github.com/cloudwan/gohan/db/transaction"
+	"github.com/cloudwan/gohan/healthcheck"
 	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/metrics"
 	"github.com/cloudwan/gohan/schema"
@@ -67,6 +68,7 @@ type Server struct {
 	martini          *martini.ClassicMartini
 	extensions       []string
 	keystoneIdentity middleware.IdentityService
+	Healthcheck      *healthcheck.Healthcheck
 
 	masterCtx       context.Context
 	masterCtxCancel context.CancelFunc
@@ -75,6 +77,7 @@ type Server struct {
 func (server *Server) mapRoutes() {
 	config := util.GetConfig()
 	schemaManager := schema.GetManager()
+	mapHealthcheckRoute(server.martini, schemaManager, server.Healthcheck)
 	mapSchemaRoute(server.martini, schemaManager)
 	mapVersionRoute(server.martini, schemaManager)
 	MapNamespacesRoutes(server.martini)
@@ -398,6 +401,8 @@ func NewServer(configFile string) (*Server, error) {
 			SkipLogging: true,
 		}))
 	}
+	etcdKey := config.GetString("healthcheck/etcd_key", "/gohan")
+	server.Healthcheck = healthcheck.NewHealthcheck(server.db, server.sync, etcdKey)
 	server.mapRoutes()
 
 	return server, nil

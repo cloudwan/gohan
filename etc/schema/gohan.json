@@ -865,6 +865,22 @@
                 "type": "object"
             },
             "title": "Gohan Version"
+        },
+        {
+            "description": "The healthcheck metaschema",
+            "id": "healthcheck",
+            "metadata": {
+                "type": "metaschema"
+            },
+            "singular": "healthcheck",
+            "plural": "healthcheck",
+            "prefix": "/gohan/v0.1",
+            "schema": {
+                "properties": {},
+                "type": "object"
+            },
+            "title": "Database status",
+            "type": "abstract"
         }
     ]
 }

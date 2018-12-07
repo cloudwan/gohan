@@ -88,3 +88,6 @@ extension:
   - path: /v1.0/store/orders
     event: pre_*
     timelimit: 1
+
+healthcheck:
+  etcd_key: "/gohan"
