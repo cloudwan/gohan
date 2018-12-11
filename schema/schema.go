@@ -455,9 +455,9 @@ func (schema *Schema) GetAllPropertiesFullyQualifiedMap() map[string]*Property {
 		for i := range properties {
 			prop := &properties[i]
 			currPrefix := prefix
-			allProperties[currPrefix+prop.ID] = prop
 
 			for prop != nil {
+				allProperties[currPrefix+prop.ID] = prop
 				currPrefix += prop.ID + "."
 				gather(currPrefix, prop.Properties)
 

@@ -110,18 +110,18 @@ func makeConditionFilter(filterType conditionFilterType) *conditionFilter {
 	}
 }
 
-type tokenType string
+type Scope string
 
 const (
-	tenantScope tokenType = "tenant"
-	domainScope           = "domain"
-	adminScope            = "admin"
+	TenantScope Scope = "tenant"
+	DomainScope       = "domain"
+	AdminScope        = "admin"
 )
 
-var allTokenTypes = []tokenType{
-	tenantScope,
-	domainScope,
-	adminScope,
+var AllTokenTypes = []Scope{
+	TenantScope,
+	DomainScope,
+	AdminScope,
 }
 
 //Policy describes policy configuration for APIs
@@ -131,7 +131,7 @@ type Policy struct {
 	resource                                   *resourceFilter
 	tenantID                                   *regexp.Regexp
 	tenantName                                 *regexp.Regexp
-	tokenScope                                 []tokenType
+	tokenScope                                 []Scope
 	currentResourceCondition                   *ResourceCondition
 	relationPropertyName                       string
 	otherResourceCondition                     *ResourceCondition
@@ -171,7 +171,7 @@ type Authorization interface {
 	getTenantCustomFilter(schema *Schema) []filter.FilterElem
 	checkAccessToResource(cond *ResourceCondition, action string, resource map[string]interface{}) error
 	getTenantAndDomainFilters(cond *ResourceCondition, action string) (tenantFilter []string, domainFilter []string)
-	checkTokenScope(scopes []tokenType) bool
+	checkTokenScope(scopes []Scope) bool
 }
 
 type TenantScopedAuthorization struct {
@@ -304,8 +304,8 @@ func (auth *TenantScopedAuthorization) getTenantAndDomainFilters(cond *ResourceC
 	return
 }
 
-func (auth *TenantScopedAuthorization) checkTokenScope(scopes []tokenType) bool {
-	return containsTokenType(scopes, tenantScope)
+func (auth *TenantScopedAuthorization) checkTokenScope(scopes []Scope) bool {
+	return containsScope(scopes, TenantScope)
 }
 
 // DomainScopedAuthorization
@@ -354,8 +354,8 @@ func (auth *DomainScopedAuthorization) getTenantAndDomainFilters(cond *ResourceC
 	return
 }
 
-func (auth *DomainScopedAuthorization) checkTokenScope(scopes []tokenType) bool {
-	return containsTokenType(scopes, domainScope)
+func (auth *DomainScopedAuthorization) checkTokenScope(scopes []Scope) bool {
+	return containsScope(scopes, DomainScope)
 }
 
 // AdminScopedAuthorization
@@ -380,11 +380,11 @@ func (auth *AdminAuthorization) getTenantAndDomainFilters(cond *ResourceConditio
 	return
 }
 
-func (auth *AdminAuthorization) checkTokenScope(scopes []tokenType) bool {
-	return containsTokenType(scopes, adminScope)
+func (auth *AdminAuthorization) checkTokenScope(scopes []Scope) bool {
+	return containsScope(scopes, AdminScope)
 }
 
-func containsTokenType(scope []tokenType, desiredScope tokenType) bool {
+func containsScope(scope []Scope, desiredScope Scope) bool {
 	for _, s := range scope {
 		if s == desiredScope {
 			return true
@@ -516,13 +516,13 @@ func (policy *Policy) parseTokenScope(typeData map[string]interface{}) error {
 				return errors.Errorf("Token type at position %d in scope list should be a string", i)
 			}
 
-			if !containsTokenType(allTokenTypes, tokenType(tp)) {
+			if !containsScope(AllTokenTypes, Scope(tp)) {
 				return errors.Errorf("Unknown token type in \"scope\" property at position %d: \"%s\"", i, tp)
 			}
-			policy.tokenScope = append(policy.tokenScope, tokenType(tp))
+			policy.tokenScope = append(policy.tokenScope, Scope(tp))
 		}
 	} else {
-		policy.tokenScope = allTokenTypes
+		policy.tokenScope = AllTokenTypes
 	}
 
 	return nil
@@ -581,6 +581,10 @@ func (policy *Policy) parseActionAttachOrCondition(typeData map[string]interface
 	}
 
 	return nil
+}
+
+func (p *Policy) HasScope(tokenType Scope) bool {
+	return containsScope(p.tokenScope, tokenType)
 }
 
 func (p *Policy) GetCurrentResourceCondition() *ResourceCondition {

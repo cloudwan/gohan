@@ -170,6 +170,7 @@ var _ = Describe("Schema", func() {
 				"container_object",
 				"container_object.attach_object_id",
 				"container_array",
+				"container_array.[]",
 				"container_array.[].attach_array_id",
 			))
 		})

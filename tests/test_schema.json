@@ -6,6 +6,7 @@
             "effect": "allow",
             "id": "admin_statement",
             "principal": "admin",
+            "scope": ["admin"],
             "resource": {
                 "path": ".*"
             }
@@ -18,6 +19,7 @@
             "effect": "allow",
             "id": "member_statement",
             "principal": "Member",
+            "scope": ["tenant"],
             "resource": {
                 "path": "/v2.0/network/[^/]+/?$",
                 "properties": [
@@ -35,6 +37,7 @@
             "effect": "allow",
             "id": "member_statement2",
             "principal": "Member",
+            "scope": ["tenant"],
             "resource": {
                 "path": "/v2.0/networks/?$",
                 "properties": [
@@ -52,8 +55,27 @@
             "effect": "allow",
             "id": "member_statement3",
             "principal": "Member",
+            "scope": ["tenant"],
             "resource": {
                 "path": "/v2.0/nets/?$",
+                "properties": [
+                    "id",
+                    "description",
+                    "name"
+                ]
+            }
+        },
+        {
+            "action": "read",
+            "condition": [
+                "is_owner"
+            ],
+            "effect": "allow",
+            "id": "domain_admin_statement",
+            "principal": "admin",
+            "scope": ["domain"],
+            "resource": {
+                "path": "/v2.0/network/:network/subnets",
                 "properties": [
                     "id",
                     "description",
