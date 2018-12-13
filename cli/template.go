@@ -16,6 +16,20 @@ import (
 	"github.com/vattle/sqlboiler/strmangle"
 )
 
+const (
+	configFileFlagName           = "config-file"
+	templateFlagName             = "template"
+	templateFlagWithShortName    = "template, t"
+	splitByResourceFlagName      = "split-by-resource"
+	splitByResourceGroupFlagName = "split-by-resource-group"
+	policyFlagName               = "policy"
+	scopeFlagName                = "scope"
+	outputPathFlagName           = "output-path"
+	versionFlagName              = "version"
+	titleFlagName                = "title"
+	descriptionFlagName          = "description"
+)
+
 func deleteGohanExtendedProperties(node map[string]interface{}) {
 	extendedProperties := [...]string{"unique", "permission", "relation",
 		"relation_property", "view", "detail_view", "propertiesOrder",
@@ -153,9 +167,9 @@ type SchemaWithPolicy struct {
 }
 
 func doTemplate(c *cli.Context) {
-	template := c.String("template")
+	template := c.String(templateFlagName)
 	manager := schema.GetManager()
-	configFile := c.String("config-file")
+	configFile := c.String(configFileFlagName)
 	config := util.GetConfig()
 	err := config.ReadConfig(configFile)
 	if err != nil {
@@ -194,21 +208,21 @@ func doTemplate(c *cli.Context) {
 	}
 
 	scopes := []schema.Scope{}
-	for _, tokenType := range c.StringSlice("scopes") {
-		scopes = append(scopes, schema.Scope(tokenType))
+	for _, scope := range c.StringSlice(scopeFlagName) {
+		scopes = append(scopes, schema.Scope(scope))
 	}
 
 	policies := manager.Policies()
-	policy := c.String("policy")
-	title := c.String("title")
-	version := c.String("version")
-	description := c.String("description")
-	outputPath := c.String("output-path")
+	policy := c.String(policyFlagName)
+	title := c.String(titleFlagName)
+	version := c.String(versionFlagName)
+	description := c.String(descriptionFlagName)
+	outputPath := c.String(outputPathFlagName)
 	schemasWithPolicy := filterSchemasForPolicy(policy, scopes, policies, schemas)
 	convertCustomActionOutput(schemasWithPolicy)
-	if c.IsSet("split-by-resource-group") {
+	if c.IsSet(splitByResourceGroupFlagName) {
 		applyTemplateForEachResourceGroup(schemasWithPolicy, schemasMap, tpl, version, description, outputPath)
-	} else if c.IsSet("split-by-resource") {
+	} else if c.IsSet(splitByResourceFlagName) {
 		applyTemplateForEachResource(schemasWithPolicy, schemasMap, tpl, outputPath)
 	} else {
 		applyTemplateForAll(schemasWithPolicy, schemasMap, tpl, title, version, description, outputPath)
@@ -412,13 +426,13 @@ func getTemplateCommand() cli.Command {
 		Usage:       "Convert gohan schema using pongo2 template",
 		Description: "Convert gohan schema using pongo2 template",
 		Flags: []cli.Flag{
-			cli.StringFlag{Name: "config-file", Value: "gohan.yaml", Usage: "Server config File"},
-			cli.StringFlag{Name: "template, t", Value: "", Usage: "Template File"},
-			cli.StringFlag{Name: "split-by-resource-group", Value: "", Usage: "Split output file for each resource groups"},
-			cli.StringFlag{Name: "split-by-resource", Value: "", Usage: "Split output file for each resources"},
-			cli.StringFlag{Name: "output-path", Value: "__resource__.json", Usage: "Output Path. You can use __resource__ as a resource name"},
-			cli.StringFlag{Name: "policy", Value: "", Usage: "Policy"},
-			cli.StringSliceFlag{Name: "scope", Value: &defaultScope, Usage: "Scope"},
+			cli.StringFlag{Name: configFileFlagName, Value: "gohan.yaml", Usage: "Server config File"},
+			cli.StringFlag{Name: templateFlagWithShortName, Value: "", Usage: "Template File"},
+			cli.StringFlag{Name: splitByResourceGroupFlagName, Value: "", Usage: "Split output file for each resource groups"},
+			cli.StringFlag{Name: splitByResourceFlagName, Value: "", Usage: "Split output file for each resources"},
+			cli.StringFlag{Name: outputPathFlagName, Value: "__resource__.json", Usage: "Output Path. You can use __resource__ as a resource name"},
+			cli.StringFlag{Name: policyFlagName, Value: "", Usage: "Policy"},
+			cli.StringSliceFlag{Name: scopeFlagName, Value: &defaultScope, Usage: "Scope"},
 		},
 		Action: doTemplate,
 	}
@@ -431,14 +445,14 @@ func getOpenAPICommand() cli.Command {
 		Usage:       "Convert gohan schema to OpenAPI",
 		Description: "Convert gohan schema to OpenAPI",
 		Flags: []cli.Flag{
-			cli.StringFlag{Name: "config-file", Value: "gohan.yaml", Usage: "Server config File"},
-			cli.StringFlag{Name: "template, t", Value: "embed://etc/templates/openapi.tmpl", Usage: "Template File"},
-			cli.StringFlag{Name: "split-by-resource-group", Value: "", Usage: "Group by resource"},
-			cli.StringFlag{Name: "policy", Value: "admin", Usage: "Policy"},
-			cli.StringSliceFlag{Name: "scope", Value: &defaultScope, Usage: "Scope"},
-			cli.StringFlag{Name: "version", Value: "0.1", Usage: "API version"},
-			cli.StringFlag{Name: "title", Value: "gohan API", Usage: "API title"},
-			cli.StringFlag{Name: "description", Value: "", Usage: "API description"},
+			cli.StringFlag{Name: configFileFlagName, Value: "gohan.yaml", Usage: "Server config File"},
+			cli.StringFlag{Name: templateFlagWithShortName, Value: "embed://etc/templates/openapi.tmpl", Usage: "Template File"},
+			cli.StringFlag{Name: splitByResourceGroupFlagName, Value: "", Usage: "Group by resource"},
+			cli.StringFlag{Name: policyFlagName, Value: "admin", Usage: "Policy"},
+			cli.StringSliceFlag{Name: scopeFlagName, Value: &defaultScope, Usage: "Scope"},
+			cli.StringFlag{Name: versionFlagName, Value: "0.1", Usage: "API version"},
+			cli.StringFlag{Name: titleFlagName, Value: "gohan API", Usage: "API title"},
+			cli.StringFlag{Name: descriptionFlagName, Value: "", Usage: "API description"},
 		},
 		Action: doTemplate,
 	}
@@ -451,11 +465,11 @@ func getMarkdownCommand() cli.Command {
 		Usage:       "Convert gohan schema to markdown doc",
 		Description: "Convert gohan schema to markdown doc",
 		Flags: []cli.Flag{
-			cli.StringFlag{Name: "config-file", Value: "gohan.yaml", Usage: "Server config File"},
-			cli.StringFlag{Name: "template, t", Value: "embed://etc/templates/markdown.tmpl", Usage: "Template File"},
-			cli.StringFlag{Name: "split-by-resource-group", Value: "", Usage: "Group by resource"},
-			cli.StringFlag{Name: "policy", Value: "admin", Usage: "Policy"},
-			cli.StringSliceFlag{Name: "scope", Value: &defaultScope, Usage: "Scope"},
+			cli.StringFlag{Name: configFileFlagName, Value: "gohan.yaml", Usage: "Server config File"},
+			cli.StringFlag{Name: templateFlagWithShortName, Value: "embed://etc/templates/markdown.tmpl", Usage: "Template File"},
+			cli.StringFlag{Name: splitByResourceGroupFlagName, Value: "", Usage: "Group by resource"},
+			cli.StringFlag{Name: policyFlagName, Value: "admin", Usage: "Policy"},
+			cli.StringSliceFlag{Name: scopeFlagName, Value: &defaultScope, Usage: "Scope"},
 		},
 		Action: doTemplate,
 	}
@@ -468,11 +482,11 @@ func getDotCommand() cli.Command {
 		Usage:       "Convert gohan schema to dot file for graphviz",
 		Description: "Convert gohan schema to dot file for graphviz",
 		Flags: []cli.Flag{
-			cli.StringFlag{Name: "config-file", Value: "gohan.yaml", Usage: "Server config File"},
-			cli.StringFlag{Name: "template, t", Value: "embed://etc/templates/dot.tmpl", Usage: "Template File"},
-			cli.StringFlag{Name: "split-by-resource-group", Value: "", Usage: "Group by resource"},
-			cli.StringFlag{Name: "policy", Value: "admin", Usage: "Policy"},
-			cli.StringSliceFlag{Name: "scope", Value: &defaultScope, Usage: "Scope"},
+			cli.StringFlag{Name: configFileFlagName, Value: "gohan.yaml", Usage: "Server config File"},
+			cli.StringFlag{Name: templateFlagWithShortName, Value: "embed://etc/templates/dot.tmpl", Usage: "Template File"},
+			cli.StringFlag{Name: splitByResourceGroupFlagName, Value: "", Usage: "Group by resource"},
+			cli.StringFlag{Name: policyFlagName, Value: "admin", Usage: "Policy"},
+			cli.StringSliceFlag{Name: scopeFlagName, Value: &defaultScope, Usage: "Scope"},
 		},
 		Action: doTemplate,
 	}
