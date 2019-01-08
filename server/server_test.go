@@ -49,24 +49,25 @@ var (
 )
 
 const (
-	baseURL                   = "http://localhost:19090"
-	schemaURL                 = baseURL + "/gohan/v0.1/schemas"
-	versionURL                = baseURL + "/gohan/v0.1/version"
-	networkPluralURL          = baseURL + "/v2.0/networks"
-	subnetPluralURL           = baseURL + "/v2.0/subnets"
-	serverPluralURL           = baseURL + "/v2.0/servers"
-	testPluralURL             = baseURL + "/v2.0/tests"
-	parentsPluralURL          = baseURL + "/v1.0/parents"
-	childrenPluralURL         = baseURL + "/v1.0/children"
-	schoolsPluralURL          = baseURL + "/v1.0/schools"
-	citiesPluralURL           = baseURL + "/v1.0/cities"
-	profilingURL              = baseURL + "/debug/pprof/"
-	filterTestPluralURL       = baseURL + "/v2.0/filter_tests"
-	visibilityTestPluralURL   = baseURL + "/v2.0/visible_properties_tests"
-	attacherPluralURL         = baseURL + "/v2.0/attachers"
-	attacherWildcardPluralURL = baseURL + "/v2.0/wildcard_attachers"
-	attacherNestedPluralURL   = baseURL + "/v2.0/nested_attachers"
-	attachTargetPluralURL     = baseURL + "/v2.0/attach_targets"
+	baseURL                            = "http://localhost:19090"
+	schemaURL                          = baseURL + "/gohan/v0.1/schemas"
+	versionURL                         = baseURL + "/gohan/v0.1/version"
+	networkPluralURL                   = baseURL + "/v2.0/networks"
+	subnetPluralURL                    = baseURL + "/v2.0/subnets"
+	serverPluralURL                    = baseURL + "/v2.0/servers"
+	testPluralURL                      = baseURL + "/v2.0/tests"
+	parentsPluralURL                   = baseURL + "/v1.0/parents"
+	childrenPluralURL                  = baseURL + "/v1.0/children"
+	schoolsPluralURL                   = baseURL + "/v1.0/schools"
+	citiesPluralURL                    = baseURL + "/v1.0/cities"
+	profilingURL                       = baseURL + "/debug/pprof/"
+	filterTestPluralURL                = baseURL + "/v2.0/filter_tests"
+	actionByDifferentUserTestPluralURL = baseURL + "/v2.0/actions_in_different_tenant_tests"
+	visibilityTestPluralURL            = baseURL + "/v2.0/visible_properties_tests"
+	attacherPluralURL                  = baseURL + "/v2.0/attachers"
+	attacherWildcardPluralURL          = baseURL + "/v2.0/wildcard_attachers"
+	attacherNestedPluralURL            = baseURL + "/v2.0/nested_attachers"
+	attachTargetPluralURL              = baseURL + "/v2.0/attach_targets"
 )
 
 var _ = Describe("Server package test", func() {
@@ -449,7 +450,7 @@ var _ = Describe("Server package test", func() {
 			Expect(result).To(HaveKeyWithValue("network", networkExpected))
 
 			result = testURL("GET", baseURL+"/_all", memberTokenID, nil, http.StatusOK)
-			Expect(result).To(HaveLen(12))
+			Expect(result).To(HaveLen(13))
 			Expect(result).To(HaveKeyWithValue("networks", []interface{}{networkExpected}))
 			Expect(result).To(HaveKey("schemas"))
 			Expect(result).To(HaveKey("tests"))
@@ -506,7 +507,50 @@ var _ = Describe("Server package test", func() {
 			testURL("DELETE", serverPluralURL+"/"+serverID, adminTokenID, nil, http.StatusNoContent)
 		})
 
-		Context("Visiblity of properties", func() {
+		Context("Action in different tenant", func() {
+			const (
+				resourceID = "resource_id"
+				url        = actionByDifferentUserTestPluralURL + "/" + resourceID
+			)
+
+			testResource := map[string]interface{}{
+				"id":        resourceID,
+				"tenant_id": powerUserTenantID,
+				"field":     "a",
+			}
+
+			Context("Create", func() {
+				It("Should not create resource in different tenant using POST", func() {
+					testURL("POST", actionByDifferentUserTestPluralURL, memberTokenID, testResource, http.StatusUnauthorized)
+				})
+
+				It("Should not create resource in different tenant using PUT", func() {
+					testURL("PUT", url, memberTokenID, testResource, http.StatusUnauthorized)
+				})
+			})
+
+			Context("Update", func() {
+				BeforeEach(func() {
+					testURL("POST", actionByDifferentUserTestPluralURL, powerUserTokenID, testResource, http.StatusCreated)
+				})
+
+				It("Should not update resource in different tenant using PATCH", func() {
+					testResource := map[string]interface{}{
+						"field": "b",
+					}
+					testURL("PATCH", url, memberTokenID, testResource, http.StatusUnauthorized)
+				})
+
+				It("Should not update resource in different tenant using PUT", func() {
+					testResource := map[string]interface{}{
+						"field": "b",
+					}
+					testURL("PUT", url, memberTokenID, testResource, http.StatusUnauthorized)
+				})
+			})
+		})
+
+		Context("Visibility of properties", func() {
 			const (
 				resourceType   = "visible_properties_test"
 				resourceID     = "resource_id"
@@ -687,11 +731,11 @@ var _ = Describe("Server package test", func() {
 
 				testURL("POST", filterTestPluralURL, memberTokenID, testUp, http.StatusCreated)
 				testURL("GET", filterTestPluralURL+"/"+testID, powerUserTokenID, nil, http.StatusOK)
-				testURL("PUT", filterTestPluralURL+"/"+testID, powerUserTokenID, testInvalid, http.StatusForbidden)
+				testURL("PUT", filterTestPluralURL+"/"+testID, powerUserTokenID, testInvalid, http.StatusUnauthorized)
 				testURL("DELETE", filterTestPluralURL+"/"+testID, powerUserTokenID, nil, http.StatusForbidden)
 				testURL("PUT", filterTestPluralURL+"/"+testID, memberTokenID, testInvalid, http.StatusOK)
 				testURL("GET", filterTestPluralURL+"/"+testID, memberTokenID, nil, http.StatusOK)
-				testURL("PUT", filterTestPluralURL+"/"+testID, memberTokenID, testDown, http.StatusForbidden)
+				testURL("PUT", filterTestPluralURL+"/"+testID, memberTokenID, testDown, http.StatusUnauthorized)
 				testURL("DELETE", filterTestPluralURL+"/"+testID, memberTokenID, nil, http.StatusForbidden)
 				testURL("GET", filterTestPluralURL+"/"+testID, powerUserTokenID, nil, http.StatusNotFound)
 				testURL("DELETE", filterTestPluralURL+"/"+testID, powerUserTokenID, nil, http.StatusNotFound)

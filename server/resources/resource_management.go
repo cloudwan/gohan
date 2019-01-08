@@ -224,7 +224,7 @@ func GetResources(context middleware.Context, dataStore db.DB, resourceSchema *s
 //GetResourcesInTransaction returns specified resources without calling non in_transaction events
 func GetResourcesInTransaction(context middleware.Context, resourceSchema *schema.Schema, filter map[string]interface{}, paginator *pagination.Paginator) error {
 	defer MeasureRequestTime(time.Now(), "get.resources.in_tx", resourceSchema.ID)
-	mainTransaction := context["transaction"].(transaction.Transaction)
+	mainTransaction := mustGetTransaction(context)
 	response := map[string]interface{}{}
 
 	environmentManager := extension.GetManager()
@@ -438,7 +438,7 @@ func GetSingleResourceInTransaction(context middleware.Context, resourceSchema *
 	if ok {
 		options = listOptionsFromQueryParameter(r.URL.Query())
 	}
-	mainTransaction := context["transaction"].(transaction.Transaction)
+	mainTransaction := mustGetTransaction(context)
 	environmentManager := extension.GetManager()
 	environment, ok := environmentManager.GetEnvironment(resourceSchema.ID)
 	if !ok {
@@ -498,37 +498,14 @@ func CreateOrUpdateResource(
 ) (bool, error) {
 	defer MeasureRequestTime(time.Now(), "create_or_update", resourceSchema.ID)
 
-	auth := ctx["auth"].(schema.Authorization)
-
-	//LoadPolicy
-	policy, err := LoadPolicy(
-		ctx,
-		"update",
-		strings.Replace(resourceSchema.GetSingleURL(), ":id", resourceID, 1),
-		auth,
-	)
-	if err != nil {
-		return false, err
-	}
-
 	var exists bool
 
 	if preTxErr := db.WithinTx(dataStore, func(preTransaction transaction.Transaction) error {
-		exists, err = checkIfResourceExistsForTenant(mustGetContext(ctx), auth, resourceID, resourceSchema, policy, preTransaction)
-		if err != nil {
-			return err
-		}
-		if exists {
-			return nil
-		}
-
+		var err error
 		filter := transaction.IDFilter(resourceID)
 		exists, err = checkIfResourceExists(mustGetContext(ctx), filter, resourceSchema, preTransaction)
 		if err != nil {
 			return err
-		}
-		if exists {
-			return ResourceError{transaction.ErrResourceNotFound, "", Forbidden}
 		}
 		return nil
 	}, transaction.Context(mustGetContext(ctx)), transaction.TraceId(traceIdOrEmpty(ctx)),
@@ -541,10 +518,25 @@ func CreateOrUpdateResource(
 		if err := CreateResource(ctx, dataStore, identityService, resourceSchema, dataMap); err != nil {
 			return false, err
 		}
-		return true, err
+		return true, nil
 	}
 
 	return false, UpdateResource(ctx, dataStore, identityService, resourceSchema, resourceID, dataMap)
+}
+
+func getFilterFromPolicy(
+	auth schema.Authorization,
+	resourceID string,
+	resourceSchema *schema.Schema,
+	policy *schema.Policy,
+) transaction.Filter {
+	filter := transaction.IDFilter(resourceID)
+
+	currCond := policy.GetCurrentResourceCondition()
+	extendFilterByTenantAndDomain(resourceSchema, filter, schema.ActionUpdate, currCond, auth)
+	currCond.AddCustomFilters(resourceSchema, filter, auth)
+
+	return filter
 }
 
 func checkIfResourceExistsForTenant(
@@ -555,11 +547,7 @@ func checkIfResourceExistsForTenant(
 	policy *schema.Policy,
 	preTransaction transaction.Transaction,
 ) (bool, error) {
-	filter := transaction.IDFilter(resourceID)
-
-	currCond := policy.GetCurrentResourceCondition()
-	extendFilterByTenantAndDomain(resourceSchema, filter, schema.ActionUpdate, currCond, auth)
-	currCond.AddCustomFilters(resourceSchema, filter, auth)
+	filter := getFilterFromPolicy(auth, resourceID, resourceSchema, policy)
 
 	return checkIfResourceExists(context, filter, resourceSchema, preTransaction)
 }
@@ -657,6 +645,10 @@ func CreateResource(
 		return err
 	}
 
+	if !applyFilterToResource(resource.Data(), getFilterFromPolicy(auth, resource.ID(), resourceSchema, policy)) {
+		return ResourceError{err, "", Unauthorized}
+	}
+
 	context["resource"] = resource.Data()
 
 	if err := resourceTransactionWithContext(
@@ -717,7 +709,7 @@ func buildAuthDataMap(resourceSchema *schema.Schema, auth schema.Authorization,
 func CreateResourceInTransaction(context middleware.Context, resourceSchema *schema.Schema, resource *schema.Resource) error {
 	defer MeasureRequestTime(time.Now(), "create.in_tx", resource.Schema().ID)
 	manager := schema.GetManager()
-	mainTransaction := context["transaction"].(transaction.Transaction)
+	mainTransaction := mustGetTransaction(context)
 	environmentManager := extension.GetManager()
 	environment, ok := environmentManager.GetEnvironment(resourceSchema.ID)
 	if !ok {
@@ -825,6 +817,13 @@ func UpdateResource(
 		func() error {
 			currCond := policy.GetCurrentResourceCondition()
 			tenantIDs, domainIDs := currCond.GetTenantAndDomainFilters(schema.ActionRead, auth)
+			exists, err := checkIfResourceExistsForTenant(mustGetContext(context), auth, resourceID, resourceSchema, policy, mustGetTransaction(context))
+			if err != nil {
+				return err
+			}
+			if !exists {
+				return ResourceError{transaction.ErrResourceNotFound, "", Unauthorized}
+			}
 			return UpdateResourceInTransaction(context, resourceSchema, resourceID, dataMap, tenantIDs, domainIDs)
 		},
 	); err != nil {
@@ -850,7 +849,7 @@ func UpdateResourceInTransaction(
 	defer MeasureRequestTime(time.Now(), "update.in_tx", resourceSchema.ID)
 
 	manager := schema.GetManager()
-	mainTransaction := context["transaction"].(transaction.Transaction)
+	mainTransaction := mustGetTransaction(context)
 	environmentManager := extension.GetManager()
 	environment, ok := environmentManager.GetEnvironment(resourceSchema.ID)
 	if !ok {
@@ -1036,7 +1035,7 @@ func fetchResourceForAction(action string, auth schema.Authorization, resourceID
 //DeleteResourceInTransaction deletes resources in a transaction
 func DeleteResourceInTransaction(context middleware.Context, resourceSchema *schema.Schema, resourceID string) error {
 	defer MeasureRequestTime(time.Now(), "delete.in_tx", resourceSchema.ID)
-	mainTransaction := context["transaction"].(transaction.Transaction)
+	mainTransaction := mustGetTransaction(context)
 	environmentManager := extension.GetManager()
 	environment, ok := environmentManager.GetEnvironment(resourceSchema.ID)
 	if !ok {
@@ -1227,7 +1226,7 @@ func validateAttachmentRelation(
 
 	options := &transaction.ViewOptions{}
 
-	mainTransaction := context["transaction"].(transaction.Transaction)
+	mainTransaction := mustGetTransaction(context)
 	relatedRes, err := mainTransaction.Fetch(mustGetContext(context), relatedSchema, filter, options)
 
 	if err != nil {
@@ -1402,6 +1401,10 @@ func copyResourceData(context middleware.Context, dataMap *map[string]interface{
 
 func mustGetContext(requestContext middleware.Context) context.Context {
 	return requestContext["context"].(context.Context)
+}
+
+func mustGetTransaction(requestContext middleware.Context) transaction.Transaction {
+	return requestContext["transaction"].(transaction.Transaction)
 }
 
 func traceIdOrEmpty(requestContext middleware.Context) string {
