@@ -119,6 +119,7 @@ var _ = Describe("format checkers", func() {
 			},
 			Entry("IPv4", "127.0.0.1"),
 			Entry("IPv4 cidr", "127.0.0.1/16"),
+			Entry("IPv4 network", "127.0.0.0/24"),
 		)
 
 		DescribeTable("should fail",
@@ -130,7 +131,6 @@ var _ = Describe("format checkers", func() {
 			Entry("IPv6 network", "fe80::9e17/64"),
 			Entry("wrong IPv4", "218.108.149.379/16"),
 			Entry("wrong IPv6", "134:g/16"),
-			Entry("IPv4 network", "127.0.0.0/24"),
 			Entry("IPv4 with wrong mask", "127.0.0.1/33"),
 			Entry("IPv6 with wrong mask", "::1/129"),
 			Entry("IPv4 cidr with two zeros in octet", "127.00.0.1/24"),
