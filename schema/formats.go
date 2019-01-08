@@ -83,7 +83,8 @@ func (f cidrFormatChecker) IsFormat(input string) bool {
 func (f cidrOrIPv4FormatChecker) IsFormat(input string) bool {
 	ipv4 := ipv4FormatChecker{}
 	cidr := ipv4AddressWithCidrFormatChecker{}
-	return ipv4.IsFormat(input) || cidr.IsFormat(input)
+	net := ipv4NetworkFormatChecker{}
+	return ipv4.IsFormat(input) || cidr.IsFormat(input) || net.IsFormat(input)
 }
 
 func (f ipv4NetworkFormatChecker) IsFormat(input string) bool {
