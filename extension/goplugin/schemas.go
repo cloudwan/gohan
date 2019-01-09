@@ -594,18 +594,46 @@ func (schema *Schema) ColumnNames() []string {
 }
 
 // Properties returns properties of schema
-func (schema *Schema) Properties() []goext.Property {
-	rawProperties := schema.raw.Properties
-	properties := make([]goext.Property, len(rawProperties))
-	for i, property := range rawProperties {
-		properties[i] = goext.Property{
-			ID:       property.ID,
-			Title:    property.Title,
-			Relation: goext.SchemaID(property.Relation),
-			Type:     property.Type,
-		}
+func (schema *Schema) Properties() map[string]goext.Property {
+	return convertProperties(schema.raw.Properties)
+}
+
+func convertProperties(rawProperties []gohan_schema.Property) map[string]goext.Property {
+	if len(rawProperties) == 0 {
+		return nil
+	}
+
+	properties := make(map[string]goext.Property, len(rawProperties))
+	for _, property := range rawProperties {
+		properties[property.ID] = *convertProperty(&property)
 	}
 	return properties
+}
+
+func convertProperty(property *gohan_schema.Property) *goext.Property {
+	if property == nil {
+		return nil
+	}
+
+	return &goext.Property{
+		ID:         property.ID,
+		Title:      property.Title,
+		Relation:   goext.SchemaID(property.Relation),
+		Type:       property.Type,
+		Enum:       deepCopySlice(property.Enum),
+		Properties: convertProperties(property.Properties),
+		Items:      convertProperty(property.Items),
+	}
+}
+
+func deepCopySlice(src []string) []string {
+	if len(src) == 0 {
+		return nil
+	}
+
+	dst := make([]string, len(src))
+	copy(dst, src)
+	return dst
 }
 
 // Extends returns schema_ids which given schema extends

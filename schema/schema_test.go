@@ -174,6 +174,27 @@ var _ = Describe("Schema", func() {
 				"container_array.[].attach_array_id",
 			))
 		})
+
+		It("should get enum values", func() {
+			networkSchema, ok := manager.Schema("network")
+			Expect(ok).To(BeTrue())
+
+			providor_networks, err := networkSchema.GetPropertyByID("providor_networks")
+			Expect(err).NotTo(HaveOccurred())
+
+			var segmentationType Property
+			found := false
+			for _, property := range providor_networks.Properties {
+				if property.ID == "segmentation_type" {
+					segmentationType = property
+					found = true
+					break
+				}
+			}
+
+			Expect(found).To(BeTrue())
+			Expect(segmentationType.Enum).To(Equal([]string{"vlan", "vxlan", "gre"}))
+		})
 	})
 
 	Describe("Properties order", func() {

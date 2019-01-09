@@ -30,6 +30,7 @@ import (
 	"github.com/cloudwan/gohan/db/dbutil"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/transaction"
+	"github.com/cloudwan/gohan/extension/goplugin/test_data/ext_good/test"
 	"github.com/cloudwan/gohan/schema"
 	srv "github.com/cloudwan/gohan/server"
 	"github.com/cloudwan/gohan/util"
@@ -139,6 +140,18 @@ var _ = Describe("Environment", func() {
 		})
 	})
 
+	matchTestObject := func(actualResponse interface{}, expectedResponse map[string]interface{}) {
+		Expect(actualResponse).To(HaveKey("test"))
+		response := actualResponse.(map[string]interface{})["test"].(map[string]interface{})
+
+		// gomega does not handle nested slices comparison gracefully, we compare it manually
+		Expect(response).To(HaveKeyWithValue("enumerations", BeEmpty()))
+		delete(response, "enumerations")
+
+		Expect(response).To(Equal(expectedResponse))
+
+	}
+
 	Context("Resource creation", func() {
 		It("Creates resources", func() {
 			resource := map[string]interface{}{
@@ -163,7 +176,7 @@ var _ = Describe("Environment", func() {
 			Expect(result).To(HaveKeyWithValue("error", "Validation error: Json validation error:\n\tname: String length must be greater than or equal to 3,"))
 			resource["name"] = "abc"
 			result = testURL("PUT", baseURL+"/v0.1/tests/testId", adminTokenID, resource, http.StatusCreated)
-			Expect(result).To(HaveKeyWithValue("test", expectedResponse))
+			matchTestObject(result, expectedResponse)
 		})
 
 		It("Fails to create when string field given as int", func() {
@@ -199,7 +212,7 @@ var _ = Describe("Environment", func() {
 
 			testURL("PUT", baseURL+"/v0.1/tests/testId", adminTokenID, resource, http.StatusCreated)
 			result := testURL("GET", baseURL+"/v0.1/tests/testId", adminTokenID, nil, http.StatusOK)
-			Expect(result).To(HaveKeyWithValue("test", expectedResponse))
+			matchTestObject(result, expectedResponse)
 		})
 
 		It("Update resources", func() {
@@ -215,7 +228,7 @@ var _ = Describe("Environment", func() {
 			resource["name"] = "abcd"
 			expectedResponse["name"] = "abcd"
 			result = testURL("PUT", baseURL+"/v0.1/tests/testId", adminTokenID, resource, http.StatusOK)
-			Expect(result).To(HaveKeyWithValue("test", expectedResponse))
+			matchTestObject(result, expectedResponse)
 		})
 	})
 
@@ -226,6 +239,7 @@ var _ = Describe("Environment", func() {
 				"description":   "test description",
 				"test_suite_id": nil,
 				"subobject":     nil,
+				"enumerations":  []test.EnumerationSubobject{},
 				"name":          "abc",
 			}
 

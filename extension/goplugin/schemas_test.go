@@ -154,32 +154,56 @@ var _ = Describe("Schemas", func() {
 	Context("Properties", func() {
 		It("Should get correct properties", func() {
 			Expect(testSchema.Properties()).To(Equal(
-				[]goext.Property{
-					{
+				map[string]goext.Property{
+					"id": {
 						ID:    "id",
 						Title: "ID",
 						Type:  "string",
 					},
-					{
+					"description": {
 						ID:    "description",
 						Title: "Description",
 						Type:  "string",
 					},
-					{
+					"name": {
 						ID:    "name",
 						Title: "Name",
 						Type:  "string",
 					},
-					{
+					"test_suite_id": {
 						ID:       "test_suite_id",
 						Title:    "Test Suite ID",
 						Relation: goext.SchemaID("test_suite"),
 						Type:     "string",
 					},
-					{
+					"enumerations": {
+						ID:    "enumerations",
+						Title: "Enumerations",
+						Type:  "array",
+						Items: &goext.Property{
+							ID:   "[]",
+							Type: "object",
+							Properties: map[string]goext.Property{
+								"enumeration": {
+									ID:    "enumeration",
+									Title: "Enum",
+									Type:  "string",
+									Enum:  []string{"v1", "v2"},
+								},
+							},
+						},
+					},
+					"subobject": {
 						ID:    "subobject",
 						Title: "Subobject",
 						Type:  "object",
+						Properties: map[string]goext.Property{
+							"subproperty": {
+								ID:    "subproperty",
+								Title: "Subproperty",
+								Type:  "string",
+							},
+						},
 					},
 				},
 			))
@@ -217,10 +241,11 @@ var _ = Describe("Schemas", func() {
 			context = goext.MakeContext().WithTransaction(tx)
 
 			createdResource = test.Test{
-				ID:          "some-id",
-				Description: "description",
-				TestSuiteID: goext.MakeNullString(),
-				Name:        goext.MakeNullString(),
+				ID:           "some-id",
+				Description:  "description",
+				TestSuiteID:  goext.MakeNullString(),
+				Name:         goext.MakeNullString(),
+				Enumerations: []test.EnumerationSubobject{},
 			}
 		})
 
@@ -880,7 +905,12 @@ var _ = Describe("Schemas", func() {
 			Expect(err).ToNot(HaveOccurred())
 			context = goext.MakeContext().WithTransaction(tx)
 			context["test"] = 42
-			testResource = &test.Test{ID: "13", Name: goext.MakeString("123"), TestSuiteID: goext.MakeNullString()}
+			testResource = &test.Test{
+				ID:           "13",
+				Name:         goext.MakeString("123"),
+				TestSuiteID:  goext.MakeNullString(),
+				Enumerations: []test.EnumerationSubobject{},
+			}
 
 			checkContext := func(ctx goext.Context, resource goext.Resource, environment goext.IEnvironment) *goext.Error {
 				Expect(&ctx).ToNot(Equal(&context))

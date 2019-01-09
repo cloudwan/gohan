@@ -22,13 +22,18 @@ type Subobject struct {
 	Subproperty string `json:"subproperty,omitempty"`
 }
 
+type EnumerationSubobject struct {
+	Enumeration goext.MaybeString `db:"enumeration" json:"enumeration"`
+}
+
 // Test is a test resource
 type Test struct {
-	ID          string            `db:"id" json:"id"`
-	Description string            `db:"description" json:"description"`
-	Name        goext.MaybeString `db:"name" json:"name,omitempty"`
-	Subobject   *Subobject        `db:"subobject" json:"subobject,omitempty"`
-	TestSuiteID goext.MaybeString `db:"test_suite_id" json:"test_suite_id"`
+	ID           string                 `db:"id" json:"id"`
+	Description  string                 `db:"description" json:"description"`
+	Name         goext.MaybeString      `db:"name" json:"name,omitempty"`
+	Subobject    *Subobject             `db:"subobject" json:"subobject,omitempty"`
+	TestSuiteID  goext.MaybeString      `db:"test_suite_id" json:"test_suite_id"`
+	Enumerations []EnumerationSubobject `db:"enumerations" json:"enumerations"`
 }
 
 // TestSuite is a test suite resource

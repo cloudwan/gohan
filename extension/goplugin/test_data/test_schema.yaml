@@ -63,6 +63,27 @@ schemas:
             title: Subproperty
             type: string
             maxLength: 255
+      enumerations:
+        default: []
+        title: Enumerations
+        description: Property for testing nested enum values
+        type: array
+        permission:
+          - create
+          - update
+        items:
+          type: object
+          properties:
+            enumeration:
+              type: string
+              title: Enum
+              description: Property for testing enum values
+              permission:
+              - create
+              - update
+              enum:
+                - v1
+                - v2
       test_suite_id:
         description: Test suite ID
         permission:
