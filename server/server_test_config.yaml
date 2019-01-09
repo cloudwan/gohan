@@ -1,6 +1,6 @@
 database:
     type: "sqlite3"
-    connection: "test.db"
+    connection: "server_test.db"
 schemas:
     - "embed://etc/schema/gohan.json"
     - "../tests/test_abstract_schema.yaml"

@@ -34,7 +34,7 @@ const (
 	configDir         = "../../server"
 	configFile        = "./server_test_config.yaml"
 	dbType            = "sqlite3"
-	dbFile            = "./test.db"
+	dbFile            = "./otto_test.db"
 	testSyncEndpoint  = "localhost:2379"
 	adminTokenID      = "admin_token"
 	memberTokenID     = "demo_token"
