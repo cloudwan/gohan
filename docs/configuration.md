@@ -501,15 +501,6 @@ WARNING: The value of watched etcd keys must be a JSON dictionary.
         timing: "*/5 * * * * *"
 ```
 
-- Job queue
-
-  Gohan uses background job queue & workers.
-  You can decide how many worker can run concurrently.
-
-```yaml
-   workers: 100
-```
-
 - schema editor
 
   You can use a Gohan server as a schema editor if you specify editable_schema YAML file.

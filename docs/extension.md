@@ -207,7 +207,6 @@ Each context contains following items:
 - params - map[string]interface{} - HTTP request parameters
 - sync - sync.Sync - Sync client
 - DB - db.DB - DB client
-- queue - *job.Queue - jobs queue
 - identity_service - middleware.IdentityService - identity service
 - service_auth - schema.Authorization - Autorization object
 - openstack_client - *gophercloud.ServiceClient - OpenStack client

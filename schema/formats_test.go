@@ -67,12 +67,12 @@ var _ = Describe("format checkers", func() {
 			Entry("IPv6 only", "::1"),
 			Entry("wrong IPv4", "218.108.149.379/16"),
 			Entry("wrong IPv6", "134:g/16"),
-			Entry("IPv4 with wrong mask","127.0.0.1/33"),
+			Entry("IPv4 with wrong mask", "127.0.0.1/33"),
 			Entry("IPv6 with wrong mask", "::1/129"),
 			Entry("IPv4 with two zeros in octet", "127.00.0.1/24"),
 			Entry("IPv4 with three zeros in octet", "127.000.0.1/24"),
 			Entry("IPv4 with two zeros in the first octet", "00.0.0.1/24"),
-			Entry("IPv4 with three zeros in the first octet" , "000.0.0.1/24"),
+			Entry("IPv4 with three zeros in the first octet", "000.0.0.1/24"),
 		)
 	})
 
@@ -139,7 +139,7 @@ var _ = Describe("format checkers", func() {
 			Entry("IPv4 with three zeros in octet", "127.000.0.1"),
 			Entry("IPv4 cidr with two zeros in the first octet", "00.0.0.1/24"),
 			Entry("IPv4 cidr with three zeros in the first octet", "000.0.0.1/24"),
-			Entry("IPv4 with two zeros in the first octet","00.0.0.1"),
+			Entry("IPv4 with two zeros in the first octet", "00.0.0.1"),
 			Entry("IPv4 with three zeros in first octet", "000.0.0.1"),
 		)
 	})
@@ -161,14 +161,14 @@ var _ = Describe("format checkers", func() {
 			func(input string) {
 				Expect(formatChecker.IsFormat(input)).To(Equal(false))
 			},
-			Entry("IPv4 network with '1' host bits present","192.168.0.2/24"),
+			Entry("IPv4 network with '1' host bits present", "192.168.0.2/24"),
 			Entry("IPv4", "10.11.12.13"),
-			Entry("wrong IPv4 network","218.308.0.0/16"),
-			Entry("IPv4 network with wrong mask","127.0.0.0/33"),
-			Entry("IPv4 network with two zeros in octet","192.168.00.0/24"),
-			Entry("IPv4 network with three zeros in octet","192.168.000.0/24"),
-			Entry("IPv4 network with two zeros in the first octet ","00.168.0.0/24"),
-			Entry("IPv4 network with three zeros in the first octet ","000.168.0.0/24"),
+			Entry("wrong IPv4 network", "218.308.0.0/16"),
+			Entry("IPv4 network with wrong mask", "127.0.0.0/33"),
+			Entry("IPv4 network with two zeros in octet", "192.168.00.0/24"),
+			Entry("IPv4 network with three zeros in octet", "192.168.000.0/24"),
+			Entry("IPv4 network with two zeros in the first octet ", "00.168.0.0/24"),
+			Entry("IPv4 network with three zeros in the first octet ", "000.168.0.0/24"),
 		)
 	})
 
@@ -201,7 +201,6 @@ var _ = Describe("format checkers", func() {
 			Entry("IPv4 with three zeros in the first octet ", "000.168.0.2/24"),
 		)
 	})
-
 
 	Describe("Regex format checker", func() {
 		BeforeEach(func() {
