@@ -37,7 +37,6 @@ import (
 	"github.com/cloudwan/gohan/db/initializer"
 	"github.com/cloudwan/gohan/db/migration"
 	"github.com/cloudwan/gohan/db/transaction"
-	"github.com/cloudwan/gohan/job"
 	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/metrics"
 	"github.com/cloudwan/gohan/schema"
@@ -68,7 +67,6 @@ type Server struct {
 	martini          *martini.ClassicMartini
 	extensions       []string
 	keystoneIdentity middleware.IdentityService
-	queue            *job.Queue
 
 	masterCtx       context.Context
 	masterCtxCancel context.CancelFunc
@@ -402,9 +400,6 @@ func NewServer(configFile string) (*Server, error) {
 	}
 	server.mapRoutes()
 
-	maxWorkerCount := config.GetInt("workers", 100)
-	server.queue = job.NewQueue(uint(maxWorkerCount))
-
 	return server, nil
 }
 
@@ -458,12 +453,6 @@ func (server *Server) Stop() {
 	server.masterCtxCancel()
 	stopCRONProcess(server)
 	manners.Close()
-	server.queue.Stop()
-}
-
-//Queue returns servers build-in queue
-func (server *Server) Queue() *job.Queue {
-	return server.queue
 }
 
 //RunServer runs gohan api server
