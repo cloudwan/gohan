@@ -188,7 +188,7 @@ var _ = Describe("Schemas", func() {
 									ID:    "enumeration",
 									Title: "Enum",
 									Type:  "string",
-									Enum:  []string{"v1", "v2"},
+									Enum:  []interface{}{"v1", "v2"},
 								},
 							},
 						},

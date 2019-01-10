@@ -37,7 +37,7 @@ type Property struct {
 	Default                interface{}
 	DefaultMask            interface{}
 	Indexed                bool
-	Enum                   []string
+	Enum                   []interface{}
 }
 
 const ItemPropertyID = "[]"
@@ -72,7 +72,7 @@ func (pb *PropertyBuilder) WithItems(items *Property) *PropertyBuilder {
 	return pb
 }
 
-func (pb *PropertyBuilder) WithEnum(enum []string) *PropertyBuilder {
+func (pb *PropertyBuilder) WithEnum(enum []interface{}) *PropertyBuilder {
 	pb.property.Enum = enum
 	return pb
 }
@@ -209,13 +209,8 @@ func parseItems(itemsRaw interface{}) *Property {
 	}
 }
 
-func parseEnum(enumRaw interface{}) []string {
-	enum := enumRaw.([]interface{})
-	ret := make([]string, 0, len(enum))
-	for _, v := range enum {
-		ret = append(ret, fmt.Sprint(v))
-	}
-	return ret
+func parseEnum(enumRaw interface{}) []interface{} {
+	return enumRaw.([]interface{})
 }
 
 func parseSubproperties(typeData map[string]interface{}) []Property {

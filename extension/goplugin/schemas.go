@@ -626,12 +626,12 @@ func convertProperty(property *gohan_schema.Property) *goext.Property {
 	}
 }
 
-func deepCopySlice(src []string) []string {
+func deepCopySlice(src []interface{}) []interface{} {
 	if len(src) == 0 {
 		return nil
 	}
 
-	dst := make([]string, len(src))
+	dst := make([]interface{}, len(src))
 	copy(dst, src)
 	return dst
 }

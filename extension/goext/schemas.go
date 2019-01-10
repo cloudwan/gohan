@@ -279,7 +279,7 @@ type Property struct {
 	Title      string
 	Relation   SchemaID
 	Type       string
-	Enum       []string
+	Enum       []interface{}
 	Properties map[string]Property
 	Items      *Property
 }

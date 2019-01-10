@@ -193,7 +193,7 @@ var _ = Describe("Schema", func() {
 			}
 
 			Expect(found).To(BeTrue())
-			Expect(segmentationType.Enum).To(Equal([]string{"vlan", "vxlan", "gre"}))
+			Expect(segmentationType.Enum).To(Equal([]interface{}{"vlan", "vxlan", "gre"}))
 		})
 	})
 
