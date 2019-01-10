@@ -41,9 +41,6 @@ var log = logger.NewLogger()
 
 const (
 	defaultConfigFile = "gohan.yaml"
-
-	// flags
-	flagConfigFile = "config-file"
 )
 
 //Run execute main command
@@ -326,11 +323,11 @@ Run extensions tests in a gohan-server-like environment.
 Test files and directories can be supplied as arguments. See Gohan
 documentation for detail information about writing tests.`,
 		Flags: []cli.Flag{
-			cli.BoolFlag{Name: "verbose, v", Usage: "Print logs for passing tests"},
-			cli.StringFlag{Name: "config-file, c", Value: "", Usage: "Config file path"},
-			cli.StringFlag{Name: "run-test, r", Value: "", Usage: "Run only tests matching specified regex"},
-			cli.IntFlag{Name: "parallel, p", Value: runtime.NumCPU(), Usage: "Allow parallel execution of test functions"},
-			cli.StringFlag{Name: "type, t", Value: "", Usage: "Run only specific types of tests from a comma separated list (js,go); if not specified, all types of tests are run"},
+			cli.BoolFlag{Name: framework.FlagVerbose + ", v", Usage: "Print logs for passing tests"},
+			cli.StringFlag{Name: framework.FlagConfigFile + ", c", Value: "", Usage: "Config file path"},
+			cli.StringFlag{Name: framework.FlagRunTest + ", r", Value: "", Usage: "Run only tests matching specified regex"},
+			cli.IntFlag{Name: framework.FlagParallel + ", p", Value: runtime.NumCPU(), Usage: "Allow parallel execution of test functions"},
+			cli.StringFlag{Name: framework.FlagType + ", t", Value: "", Usage: "Run only specific types of tests from a comma separated list (js,go); if not specified, all types of tests are run"},
 		},
 		Action: framework.TestExtensions,
 	}
@@ -341,7 +338,7 @@ func getMigrateSubcommand(subcmd, usage string) cli.Command {
 		Name:  subcmd,
 		Usage: usage,
 		Flags: []cli.Flag{
-			cli.StringFlag{Name: flagConfigFile, Value: defaultConfigFile, Usage: "Server config File"},
+			cli.StringFlag{Name: framework.FlagConfigFile, Value: defaultConfigFile, Usage: "Server config File"},
 			cli.BoolFlag{Name: FlagLockWithETCD, Usage: "Enable if ETCD should be used to synchronize migrations"},
 		},
 		Action: actionMigrate(subcmd),
@@ -353,7 +350,7 @@ func getMigrateWithPostMigrationEventSubcommand(subcmd, usage string) cli.Comman
 		Name:  subcmd,
 		Usage: usage,
 		Flags: []cli.Flag{
-			cli.StringFlag{Name: flagConfigFile, Value: defaultConfigFile, Usage: "Server config File"},
+			cli.StringFlag{Name: framework.FlagConfigFile, Value: defaultConfigFile, Usage: "Server config File"},
 			cli.BoolFlag{Name: FlagLockWithETCD, Usage: "Enable if ETCD should be used to synchronize migrations"},
 			cli.BoolFlag{Name: FlagEmitPostMigrationEvent, Usage: "Enable if post-migration event should be emitted to modified schema extensions"},
 			cli.StringFlag{Name: FlagForcedSchemas, Usage: "A list of comma separated schemas to receive the post-migration event, even if those schemas did not request for the event"},

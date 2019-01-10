@@ -38,13 +38,22 @@ var (
 	log                 = l.NewLogger(l.ModuleName("extest"))
 )
 
+const (
+	// flags
+	FlagConfigFile = "config-file"
+	FlagVerbose    = "verbose"
+	FlagRunTest    = "run-test"
+	FlagParallel   = "parallel"
+	FlagType       = "type"
+)
+
 func setupConfig(c *cli.Context) *util.Config {
 	l.SetUpBasicLogging(logWriter, l.DefaultFormat)
 
 	var config *util.Config
-	configFilePath := c.String("config-file")
+	configFilePath := c.String(FlagConfigFile)
 
-	if configFilePath != "" && !c.Bool("verbose") {
+	if configFilePath != "" && !c.Bool(FlagVerbose) {
 		config = util.GetConfig()
 		err := config.ReadConfig(configFilePath)
 		if err != nil {
@@ -65,11 +74,11 @@ func setupConfig(c *cli.Context) *util.Config {
 // TestExtensions runs extension tests when invoked from Gohan CLI
 func TestExtensions(context *cli.Context) {
 	config := setupConfig(context)
-	hasExtTypes := context.IsSet("type")
+	hasExtTypes := context.IsSet(FlagType)
 	runJsExt := !hasExtTypes
 	runSoExt := !hasExtTypes
 	if hasExtTypes {
-		extTypes := strings.Split(context.String("type"), ",")
+		extTypes := strings.Split(context.String(FlagType), ",")
 		for _, t := range extTypes {
 			switch t {
 			case "js":
@@ -81,13 +90,21 @@ func TestExtensions(context *cli.Context) {
 	}
 	if runJsExt {
 		testFiles := getTestFiles(context.Args(), "js")
-		if ret := RunTests(testFiles, context.Bool("verbose") || config != nil, context.String("run-test"), context.Int("parallel")); ret != 0 {
+		if ret := RunTests(testFiles, context.Bool(FlagVerbose) ||
+			config != nil, context.String(FlagRunTest), context.Int(FlagParallel)); ret != 0 {
 			os.Exit(ret)
 		}
 	}
 	if runSoExt {
 		testFiles := getTestFiles(context.Args(), "so")
-		if err := gorunner.NewTestRunner(testFiles, context.Bool("verbose") || config != nil, context.String("run-test"), context.Int("parallel")).Run(); err != nil {
+		printAllLogs := context.Bool(FlagVerbose) || config != nil
+		testFilter := context.String(FlagRunTest)
+		workers := context.Int(FlagParallel)
+		var schemas []string
+		if config != nil {
+			schemas = config.GetStringList("schemas", []string{})
+		}
+		if err := gorunner.NewTestRunner(testFiles, printAllLogs, testFilter, workers, schemas).Run(); err != nil {
 			log.Fatalf("%s", err.Error())
 			os.Exit(1)
 		}

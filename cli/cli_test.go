@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/cloudwan/gohan/db/migration"
+	"github.com/cloudwan/gohan/extension/framework"
 	"github.com/cloudwan/gohan/sync/etcdv3"
 	sync_util "github.com/cloudwan/gohan/sync/util"
 	"github.com/cloudwan/gohan/util"
@@ -127,11 +128,11 @@ var _ = Describe("CLI", func() {
 			set := flag.NewFlagSet("", flag.PanicOnError)
 			cli.StringFlag{Name: FlagForcedSchemas, Value: "force_schema"}.Apply(set)
 			cli.BoolTFlag{Name: FlagEmitPostMigrationEvent}.Apply(set)
-			cli.StringFlag{Name: flagConfigFile, Value: "../tests/test_forced_post_migrate_config.yaml"}.Apply(set)
+			cli.StringFlag{Name: framework.FlagConfigFile, Value: "../tests/test_forced_post_migrate_config.yaml"}.Apply(set)
 			cli.DurationFlag{Name: FlagPostMigrationEventTimeout, Value: time.Duration(60) * time.Second}.Apply(set)
 			context := cli.NewContext(nil, set, &cli.Context{})
 
-			configFile := context.String(flagConfigFile)
+			configFile := context.String(framework.FlagConfigFile)
 			loadConfig(configFile)
 			Expect(migration.LoadConfig(configFile)).To(Succeed())
 
