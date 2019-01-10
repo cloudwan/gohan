@@ -287,6 +287,27 @@ policies:
       - id
       - state
       - level
+- action: '*'
+  effect: allow
+  id: actions_in_different_tenant_complex_condition_test_all_admin
+  principal: admin
+  resource:
+    path: /v2.0/actions_in_different_tenant_test.*
+- action: '*'
+  effect: allow
+  id: actions_in_different_tenant_complex_condition_test_all_member
+  principal: Member
+  resource:
+    path: /v2.0/actions_in_different_tenant_test.*
+    blacklistProperties:
+    - dummy
+  condition:
+  - and:
+    - is_owner
+    - match:
+        property: dummy
+        type: eq
+        value: false
 - action: create
   id: visible_properties_test_create
   principal: admin
@@ -1044,6 +1065,50 @@ schemas:
     - level
     type: object
   title: Test Filter
+- description: Test Actions In Different Tenant
+  id: actions_in_different_tenant_test
+  singular: actions_in_different_tenant_test
+  plural: actions_in_different_tenant_tests
+  prefix: /v2.0
+  schema:
+    properties:
+      id:
+        description: ID
+        permission:
+          - create
+        title: ID
+        type: string
+        unique: true
+      tenant_id:
+        description: Tenant ID
+        permission:
+        - create
+        title: TenantID
+        type: string
+        unique: false
+      field:
+        description: Dummy
+        permission:
+        - create
+        - update
+        title: Dummy
+        type: string
+        unique: false
+      dummy:
+        description: Dummy
+        permission:
+        - create
+        title: Dummy
+        type: boolean
+        unique: false
+        default: false
+    propertiesOrder:
+    - id
+    - tenant_id
+    - field
+    - dummy
+    type: object
+  title: Test Actions In Different Tenant
 - description: Test Visible Properties
   id: visible_properties_test
   singular: visible_properties_test

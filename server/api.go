@@ -25,7 +25,6 @@ import (
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/extension/goext"
-	"github.com/cloudwan/gohan/job"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/server/middleware"
 	"github.com/cloudwan/gohan/server/resources"
@@ -190,7 +189,7 @@ func fillInContext(context middleware.Context, db db.DB,
 	r *http.Request, w http.ResponseWriter,
 	s *schema.Schema, p martini.Params, sync sync.Sync,
 	identityService middleware.IdentityService,
-	queue *job.Queue, requestData map[string]interface{}) {
+	requestData map[string]interface{}) {
 	context["path"] = r.URL.Path
 	context["http_request"] = r
 	context["http_response"] = w
@@ -204,7 +203,6 @@ func fillInContext(context middleware.Context, db db.DB,
 	context["params"] = params
 	context["sync"] = sync
 	context["db"] = db
-	context["queue"] = queue
 	context["identity_service"] = identityService
 	context["service_auth"], _ = identityService.GetServiceAuthorization()
 	context["openstack_client"] = identityService.GetClient()
@@ -240,7 +238,7 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 	//setup list route
 	getPluralFunc := func(w http.ResponseWriter, r *http.Request, p martini.Params, identityService middleware.IdentityService, context middleware.Context) {
 		addJSONContentTypeHeader(w)
-		fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, server.queue, nil)
+		fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, nil)
 		if err := resources.GetMultipleResources(context, dataStore, s, r.URL.Query()); err != nil {
 			handleError(w, err)
 			return
@@ -257,7 +255,7 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 	//setup show route
 	getSingleFunc := func(w http.ResponseWriter, r *http.Request, p martini.Params, identityService middleware.IdentityService, context middleware.Context) {
 		addJSONContentTypeHeader(w)
-		fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, server.queue, nil)
+		fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, nil)
 		id := p["id"]
 		if err := resources.GetSingleResource(context, dataStore, s, id); err != nil {
 			handleError(w, err)
@@ -274,7 +272,7 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 	//setup delete route
 	deleteSingleFunc := func(w http.ResponseWriter, r *http.Request, p martini.Params, identityService middleware.IdentityService, context middleware.Context) {
 		addJSONContentTypeHeader(w)
-		fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, server.queue, nil)
+		fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, nil)
 		id := p["id"]
 		if err := resources.DeleteResource(context, dataStore, s, id); err != nil {
 			handleError(w, err)
@@ -297,7 +295,7 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 			return
 		}
 		dataMap = removeResourceWrapper(s, dataMap)
-		fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, server.queue, dataMap)
+		fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, dataMap)
 		if s.Parent != "" {
 			if _, ok := dataMap[s.ParentID()]; !ok {
 				queryParams := r.URL.Query()
@@ -331,7 +329,7 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 			return
 		}
 		dataMap = removeResourceWrapper(s, dataMap)
-		fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, server.queue, dataMap)
+		fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, dataMap)
 		if isCreated, err := resources.CreateOrUpdateResource(
 			context, dataStore, identityService, s, id, dataMap); err != nil {
 			handleError(w, err)
@@ -358,7 +356,7 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 			return
 		}
 		dataMap = removeResourceWrapper(s, dataMap)
-		fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, server.queue, dataMap)
+		fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, dataMap)
 		if err := resources.UpdateResource(
 			context, dataStore, identityService, s, id, dataMap); err != nil {
 			handleError(w, err)
@@ -389,7 +387,7 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 					return
 				}
 			}
-			fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, server.queue, input)
+			fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, input)
 
 			// TODO use authorization middleware
 			manager := schema.GetManager()

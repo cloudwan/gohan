@@ -52,13 +52,13 @@ func TestServer(t *testing.T) {
 	RunSpecs(t, "Server Suite")
 }
 
-var _ = Describe("Suit set up and tear down", func() {
+var _ = Describe("Suite set up and tear down", func() {
 	var conn, dbType string
 	if os.Getenv("MYSQL_TEST") == "true" {
 		conn = "root@/gohan_test"
 		dbType = "mysql"
 	} else {
-		conn = "./test.db"
+		conn = "./server_test.db"
 		dbType = "sqlite3"
 	}
 

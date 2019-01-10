@@ -51,156 +51,155 @@ var _ = Describe("format checkers", func() {
 			formatChecker = cidrFormatChecker{}
 		})
 
-		It("Should pass - IPv4", func() {
-			result := formatChecker.IsFormat("127.0.0.1/16")
-			Expect(result).To(Equal(true))
+		DescribeTable("should pass",
+			func(input string) {
+				Expect(formatChecker.IsFormat(input)).To(Equal(true))
+			},
+			Entry("IPv4", "127.0.0.1/16"),
+			Entry("IPv6", "::1/16"),
+		)
+
+		DescribeTable("should fail",
+			func(input string) {
+				Expect(formatChecker.IsFormat(input)).To(Equal(false))
+			},
+			Entry("IPv4 only", "127.0.0.1"),
+			Entry("IPv6 only", "::1"),
+			Entry("wrong IPv4", "218.108.149.379/16"),
+			Entry("wrong IPv6", "134:g/16"),
+			Entry("IPv4 with wrong mask", "127.0.0.1/33"),
+			Entry("IPv6 with wrong mask", "::1/129"),
+			Entry("IPv4 with two zeros in octet", "127.00.0.1/24"),
+			Entry("IPv4 with three zeros in octet", "127.000.0.1/24"),
+			Entry("IPv4 with two zeros in the first octet", "00.0.0.1/24"),
+			Entry("IPv4 with three zeros in the first octet", "000.0.0.1/24"),
+		)
+	})
+
+	Describe("IPv4 format checker", func() {
+
+		BeforeEach(func() {
+			formatChecker = ipv4FormatChecker{}
 		})
 
-		It("Should pass - IPv6", func() {
-			result := formatChecker.IsFormat("::1/16")
-			Expect(result).To(Equal(true))
-		})
+		DescribeTable("should pass",
+			func(input string) {
+				Expect(formatChecker.IsFormat(input)).To(Equal(true))
+			},
+			Entry("IPv4", "127.0.0.1"),
+		)
 
-		It("Should not pass - IPv4 only", func() {
-			result := formatChecker.IsFormat("127.0.0.1")
-			Expect(result).To(Equal(false))
-		})
-
-		It("Should not pass - IPv6 only", func() {
-			result := formatChecker.IsFormat("::1")
-			Expect(result).To(Equal(false))
-		})
-
-		It("Should not pass - wrong IPv4", func() {
-			result := formatChecker.IsFormat("218.108.149.379/16")
-			Expect(result).To(Equal(false))
-		})
-
-		It("Should not pass - wrong IPv6", func() {
-			result := formatChecker.IsFormat("134:g/16")
-			Expect(result).To(Equal(false))
-		})
-
-		It("Should not pass - wrong mask with IPv4", func() {
-			result := formatChecker.IsFormat("127.0.0.1/33")
-			Expect(result).To(Equal(false))
-		})
-
-		It("Should not pass - wrong mask with IPv6", func() {
-			result := formatChecker.IsFormat("::1/129")
-			Expect(result).To(Equal(false))
-		})
+		DescribeTable("should fail",
+			func(input string) {
+				Expect(formatChecker.IsFormat(input)).To(Equal(false))
+			},
+			Entry("IPv6", "::1"),
+			Entry("IPv4 cidr", "127.0.0.1/16"),
+			Entry("IPv4 network", "127.0.0.0/16"),
+			Entry("IPv6 cidr", "::1/16"),
+			Entry("IPv6 network", "fe80::9e17/64"),
+			Entry("wrong IPv4", "218.108.149.379"),
+			Entry("wrong IPv4 with three octets only", "218.149.179"),
+			Entry("IPv4 with two zeros in octet ", "127.00.0.1"),
+			Entry("IPv4 with three zeros in octet ", "127.000.0.1"),
+			Entry("IPv4 with two zeros in the first octet ", "00.3.0.1"),
+			Entry("IPv4 with three zeros in the first octet ", "000.4.0.1"),
+		)
 	})
 
 	Describe("CIDR or IPv4 checker", func() {
+
 		BeforeEach(func() {
 			formatChecker = cidrOrIPv4FormatChecker{}
 		})
 
-		It("Should pass - IPv4", func() {
-			result := formatChecker.IsFormat("127.0.0.1")
-			Expect(result).To(Equal(true))
-		})
+		DescribeTable("should pass",
+			func(input string) {
+				Expect(formatChecker.IsFormat(input)).To(Equal(true))
+			},
+			Entry("IPv4", "127.0.0.1"),
+			Entry("IPv4 cidr", "127.0.0.1/16"),
+			Entry("IPv4 network", "127.0.0.0/24"),
+		)
 
-		It("Should not pass - IPv6", func() {
-			result := formatChecker.IsFormat("::1")
-			Expect(result).To(Equal(false))
-		})
-
-		It("Should pass - IPv4 cidr", func() {
-			result := formatChecker.IsFormat("127.0.0.1/16")
-			Expect(result).To(Equal(true))
-		})
-
-		It("Should not pass - IPv6 cidr", func() {
-			result := formatChecker.IsFormat("::1/16")
-			Expect(result).To(Equal(false))
-		})
-
-		It("Should not pass - wrong IPv4", func() {
-			result := formatChecker.IsFormat("218.108.149.379/16")
-			Expect(result).To(Equal(false))
-		})
-
-		It("Should not pass - wrong IPv6", func() {
-			result := formatChecker.IsFormat("134:g/16")
-			Expect(result).To(Equal(false))
-		})
-
-		It("Should not pass - wrong mask with IPv4", func() {
-			result := formatChecker.IsFormat("127.0.0.1/33")
-			Expect(result).To(Equal(false))
-		})
-
-		It("Should not pass - wrong mask with IPv6", func() {
-			result := formatChecker.IsFormat("::1/129")
-			Expect(result).To(Equal(false))
-		})
+		DescribeTable("should fail",
+			func(input string) {
+				Expect(formatChecker.IsFormat(input)).To(Equal(false))
+			},
+			Entry("IPv6", "::1"),
+			Entry("IPv6 cidr", "::1/16"),
+			Entry("IPv6 network", "fe80::9e17/64"),
+			Entry("wrong IPv4", "218.108.149.379/16"),
+			Entry("wrong IPv6", "134:g/16"),
+			Entry("IPv4 with wrong mask", "127.0.0.1/33"),
+			Entry("IPv6 with wrong mask", "::1/129"),
+			Entry("IPv4 cidr with two zeros in octet", "127.00.0.1/24"),
+			Entry("IPv4 cidr with three zeros in octet", "127.000.0.1/24"),
+			Entry("IPv4 with two zeros in octet", "127.00.0.1"),
+			Entry("IPv4 with three zeros in octet", "127.000.0.1"),
+			Entry("IPv4 cidr with two zeros in the first octet", "00.0.0.1/24"),
+			Entry("IPv4 cidr with three zeros in the first octet", "000.0.0.1/24"),
+			Entry("IPv4 with two zeros in the first octet", "00.0.0.1"),
+			Entry("IPv4 with three zeros in first octet", "000.0.0.1"),
+		)
 	})
 
 	Describe("IPv4 Network checker", func() {
+
 		BeforeEach(func() {
 			formatChecker = ipv4NetworkFormatChecker{}
 		})
 
-		It("Should pass - no '1' host bits", func() {
-			result := formatChecker.IsFormat("192.168.0.0/24")
-			Expect(result).To(Equal(true))
-		})
+		DescribeTable("should pass",
+			func(input string) {
+				Expect(formatChecker.IsFormat(input)).To(Equal(true))
+			},
+			Entry("no '1' host bits", "192.168.0.0/24"),
+		)
 
-		It("Should not pass - '1' host bits present", func() {
-			result := formatChecker.IsFormat("192.168.0.2/24")
-			Expect(result).To(Equal(false))
-		})
-
-		It("Should not pass - wrong IPv4", func() {
-			result := formatChecker.IsFormat("218.308.0.0/16")
-			Expect(result).To(Equal(false))
-		})
-
-		It("Should not pass - wrong mask with IPv4", func() {
-			result := formatChecker.IsFormat("127.0.0.0/33")
-			Expect(result).To(Equal(false))
-		})
+		DescribeTable("should fail",
+			func(input string) {
+				Expect(formatChecker.IsFormat(input)).To(Equal(false))
+			},
+			Entry("IPv4 network with '1' host bits present", "192.168.0.2/24"),
+			Entry("IPv4", "10.11.12.13"),
+			Entry("wrong IPv4 network", "218.308.0.0/16"),
+			Entry("IPv4 network with wrong mask", "127.0.0.0/33"),
+			Entry("IPv4 network with two zeros in octet", "192.168.00.0/24"),
+			Entry("IPv4 network with three zeros in octet", "192.168.000.0/24"),
+			Entry("IPv4 network with two zeros in the first octet ", "00.168.0.0/24"),
+			Entry("IPv4 network with three zeros in the first octet ", "000.168.0.0/24"),
+		)
 	})
 
 	Describe("IPv4 Address with CIDR checker", func() {
+
 		BeforeEach(func() {
 			formatChecker = ipv4AddressWithCidrFormatChecker{}
 		})
 
-		It("Should not pass - no '1' host bits", func() {
-			result := formatChecker.IsFormat("192.168.0.0/24")
-			Expect(result).To(Equal(false))
-		})
+		DescribeTable("should pass",
+			func(input string) {
+				Expect(formatChecker.IsFormat(input)).To(Equal(true))
+			},
+			Entry("cidr with '1' host bits present", "192.168.0.2/24"),
+			Entry("cidr which is not a broadcast", "192.168.255.2/16"),
+		)
 
-		It("Should pass - '1' host bits present", func() {
-			result := formatChecker.IsFormat("192.168.0.2/24")
-			Expect(result).To(Equal(true))
-		})
-
-		It("Should pass - not a broadcast", func() {
-			result := formatChecker.IsFormat("192.168.255.2/16")
-			Expect(result).To(Equal(true))
-		})
-
-		It("Should not pass - broadcast bits present", func() {
-			result := formatChecker.IsFormat("192.168.255.255/16")
-			Expect(result).To(Equal(false))
-			result = formatChecker.IsFormat("192.168.2.127/25")
-			Expect(result).To(Equal(false))
-		})
-
-		It("Should not pass - wrong IPv4", func() {
-			result := formatChecker.IsFormat("218.108.149.379/16")
-			Expect(result).To(Equal(false))
-		})
-
-		It("Should not pass - wrong mask with IPv4", func() {
-			result := formatChecker.IsFormat("127.0.0.1/33")
-			Expect(result).To(Equal(false))
-		})
-
+		DescribeTable("should fail",
+			func(input string) {
+				Expect(formatChecker.IsFormat(input)).To(Equal(false))
+			},
+			Entry("IPv4 network", "192.168.0.0/24"),
+			Entry("broadcast IPv4 address with cidr", "192.168.255.255/16"),
+			Entry("broadcast IPv4 address with mask /25", "192.168.2.127/25"),
+			Entry("wrong IPv4", "218.108.149.379/16"),
+			Entry("IPv4 with wrong mask", "127.0.0.1/33"),
+			Entry("IPv4 with two zeros in octet", "192.168.00.2/24"),
+			Entry("IPv4 with three zeros in octet", "192.168.000.2/24"),
+			Entry("IPv4 with two zeros in the first octet", "00.168.0.2/24"),
+			Entry("IPv4 with three zeros in the first octet ", "000.168.0.2/24"),
+		)
 	})
 
 	Describe("Regex format checker", func() {

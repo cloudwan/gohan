@@ -3,7 +3,7 @@ version: 2
 jobs:
   build:
     docker:
-      - image: circleci/golang:1.9
+      - image: circleci/golang:1.11.4
     working_directory: /go/src/github.com/cloudwan/gohan
     steps:
       - checkout
@@ -11,7 +11,7 @@ jobs:
       - run: make deps gen lint build
   test:
     docker:
-      - image: circleci/golang:1.9
+      - image: circleci/golang:1.11.4
     working_directory: /go/src/github.com/cloudwan/gohan
     steps:
       - checkout

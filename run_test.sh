@@ -9,7 +9,7 @@ if [[ $MYSQL_TEST == "true" ]]; then
 fi
 
 DATA_DIR=`mktemp -d 2>/dev/null || mktemp -d -t 'mytmpdir'`
-etcd -data-dir $DATA_DIR --listen-peer-urls http://:2380 --listen-client-urls http://:2379 --advertise-client-urls http://127.0.0.1:2379 &
+etcd -data-dir $DATA_DIR --listen-peer-urls http://127.0.0.1:2380 --listen-client-urls http://127.0.0.1:2379 --advertise-client-urls http://127.0.0.1:2379 &
 ETCD_PID=$!
 
 echo "mode: count" > profile.cov
