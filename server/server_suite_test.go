@@ -58,7 +58,7 @@ var _ = Describe("Suite set up and tear down", func() {
 		conn = "root@/gohan_test"
 		dbType = "mysql"
 	} else {
-		conn = "./test.db"
+		conn = "./server_test.db"
 		dbType = "sqlite3"
 	}
 

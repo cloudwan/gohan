@@ -602,7 +602,7 @@ var _ = Describe("Otto extension manager", func() {
 
 			context := makeContext()
 			Expect(env.HandleEvent("test_event", context)).To(Succeed())
-			Expect(context).To(HaveKeyWithValue("resp", HaveKeyWithValue("connection", "test.db")))
+			Expect(context).To(HaveKeyWithValue("resp", HaveKeyWithValue("connection", "server_test.db")))
 			Expect(context).To(HaveKeyWithValue("resp", HaveKeyWithValue("type", "sqlite3")))
 		})
 
@@ -2219,10 +2219,10 @@ var _ = Describe("Using gohan_file builtin", func() {
 		It("Should work", func() {
 			extension, err := schema.NewExtension(map[string]interface{}{
 				"id": "read_file",
-				"code": `
+				"code": fmt.Sprintf(`
 					gohan_register_handler("test_event", function(context){
-						context.list = gohan_file_read('./test.db');
-					});`,
+						context.list = gohan_file_read('%s');
+					});`, dbFile),
 				"path": ".*",
 			})
 			Expect(err).ToNot(HaveOccurred())
@@ -2254,10 +2254,10 @@ var _ = Describe("Using gohan_file builtin", func() {
 		It("Should work", func() {
 			extension, err := schema.NewExtension(map[string]interface{}{
 				"id": "read_file_cd",
-				"code": `
+				"code": fmt.Sprintf(`
 					gohan_register_handler("test_event", function(context){
-						context.list = gohan_file_read_cd('./test.db');
-					});`,
+						context.list = gohan_file_read_cd('%s');
+					});`, dbFile),
 				"path": ".*",
 			})
 			Expect(err).ToNot(HaveOccurred())
@@ -2305,10 +2305,10 @@ var _ = Describe("Using gohan_file builtin", func() {
 		It("Isn't dir", func() {
 			extension, err := schema.NewExtension(map[string]interface{}{
 				"id": "read_file",
-				"code": `
+				"code": fmt.Sprintf(`
 					gohan_register_handler("test_event", function(context){
-						context.dir= gohan_file_dir('./test.db');
-					});`,
+						context.dir= gohan_file_dir('%s');
+					});`, dbFile),
 				"path": ".*",
 			})
 			Expect(err).ToNot(HaveOccurred())

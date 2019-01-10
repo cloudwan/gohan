@@ -49,8 +49,6 @@ var _ = Describe("Resource manager", func() {
 		adminAuth               schema.Authorization
 		memberAuth              schema.Authorization
 		domainScopedAuth        schema.Authorization
-		otherDomainMemberAuth   schema.Authorization
-		otherDomainScopedAuth   schema.Authorization
 		auth                    schema.Authorization
 		context                 middleware.Context
 		schemaID                string
@@ -90,19 +88,6 @@ var _ = Describe("Resource manager", func() {
 		domainScopedAuth = schema.NewAuthorizationBuilder().
 			WithDomain(domainA).
 			WithRoleIDs("Member").
-			BuildScopedToDomain()
-
-		domainB := schema.Domain{
-			ID:   domainBID,
-			Name: "domainB",
-		}
-
-		otherDomainMemberAuth = schema.NewAuthorizationBuilder().
-			WithTenant(schema.Tenant{ID: otherDomainTenantID, Name: "richard"}).
-			WithDomain(domainB).
-			BuildScopedToTenant()
-		otherDomainScopedAuth = schema.NewAuthorizationBuilder().
-			WithDomain(domainB).
 			BuildScopedToDomain()
 
 		auth = adminAuth
