@@ -153,60 +153,59 @@ var _ = Describe("Schemas", func() {
 
 	Context("Properties", func() {
 		It("Should get correct properties", func() {
-			Expect(testSchema.Properties()).To(Equal(
-				map[string]goext.Property{
-					"id": {
-						ID:    "id",
-						Title: "ID",
-						Type:  "string",
-					},
-					"description": {
-						ID:    "description",
-						Title: "Description",
-						Type:  "string",
-					},
-					"name": {
-						ID:    "name",
-						Title: "Name",
-						Type:  "string",
-					},
-					"test_suite_id": {
-						ID:       "test_suite_id",
-						Title:    "Test Suite ID",
-						Relation: goext.SchemaID("test_suite"),
-						Type:     "string",
-					},
-					"enumerations": {
-						ID:    "enumerations",
-						Title: "Enumerations",
-						Type:  "array",
-						Items: &goext.Property{
-							ID:   "[]",
-							Type: "object",
-							Properties: map[string]goext.Property{
-								"enumeration": {
-									ID:    "enumeration",
-									Title: "Enum",
-									Type:  "string",
-									Enum:  []interface{}{"v1", "v2"},
-								},
-							},
-						},
-					},
-					"subobject": {
-						ID:    "subobject",
-						Title: "Subobject",
-						Type:  "object",
-						Properties: map[string]goext.Property{
-							"subproperty": {
-								ID:    "subproperty",
-								Title: "Subproperty",
-								Type:  "string",
-							},
+			properties := testSchema.Properties()
+			Expect(properties).To(HaveKeyWithValue("id", goext.Property{
+				ID:    "id",
+				Title: "ID",
+				Type:  "string",
+			}))
+			Expect(properties).To(HaveKeyWithValue("description", goext.Property{
+				ID:    "description",
+				Title: "Description",
+				Type:  "string",
+			}))
+			Expect(properties).To(HaveKeyWithValue("name", goext.Property{
+				ID:    "name",
+				Title: "Name",
+				Type:  "string",
+			}))
+			Expect(properties).To(HaveKeyWithValue("test_suite_id", goext.Property{
+				ID:       "test_suite_id",
+				Title:    "Test Suite ID",
+				Relation: goext.SchemaID("test_suite"),
+				Type:     "string",
+			}))
+			Expect(properties).To(HaveKeyWithValue("enumerations", goext.Property{
+				ID:    "enumerations",
+				Title: "Enumerations",
+				Type:  "array",
+				Items: &goext.Property{
+					ID:   "[]",
+					Type: "object",
+					Properties: map[string]goext.Property{
+						"enumeration": {
+							ID:    "enumeration",
+							Title: "Enum",
+							Type:  "string",
+							Enum:  []interface{}{"v1", "v2"},
 						},
 					},
 				},
-			))
+			}))
+			Expect(properties).To(HaveKeyWithValue("subobject", goext.Property{
+				ID:    "subobject",
+				Title: "Subobject",
+				Type:  "object",
+				Properties: map[string]goext.Property{
+					"subproperty": {
+						ID:    "subproperty",
+						Title: "Subproperty",
+						Type:  "string",
+					},
+				},
+			}))
+
+			Expect(properties).To(HaveLen(6))
 		})
 	})
 
