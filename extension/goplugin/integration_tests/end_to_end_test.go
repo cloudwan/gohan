@@ -140,18 +140,6 @@ var _ = Describe("Environment", func() {
 		})
 	})
 
-	matchTestObject := func(actualResponse interface{}, expectedResponse map[string]interface{}) {
-		Expect(actualResponse).To(HaveKey("test"))
-		response := actualResponse.(map[string]interface{})["test"].(map[string]interface{})
-
-		// gomega does not handle nested slices comparison gracefully, we compare it manually
-		Expect(response).To(HaveKeyWithValue("enumerations", BeEmpty()))
-		delete(response, "enumerations")
-
-		Expect(response).To(Equal(expectedResponse))
-
-	}
-
 	Context("Resource creation", func() {
 		It("Creates resources", func() {
 			resource := map[string]interface{}{
@@ -167,6 +155,7 @@ var _ = Describe("Environment", func() {
 				"description":   "test description",
 				"test_suite_id": nil,
 				"name":          "abc",
+				"enumerations":  []interface{}{},
 			}
 
 			result := testURL("PUT", baseURL+"/v0.1/tests/testId", adminTokenID, resource, http.StatusBadRequest)
@@ -176,7 +165,7 @@ var _ = Describe("Environment", func() {
 			Expect(result).To(HaveKeyWithValue("error", "Validation error: Json validation error:\n\tname: String length must be greater than or equal to 3,"))
 			resource["name"] = "abc"
 			result = testURL("PUT", baseURL+"/v0.1/tests/testId", adminTokenID, resource, http.StatusCreated)
-			matchTestObject(result, expectedResponse)
+			Expect(result).To(HaveKeyWithValue("test", expectedResponse))
 		})
 
 		It("Fails to create when string field given as int", func() {
@@ -199,6 +188,7 @@ var _ = Describe("Environment", func() {
 			"test_suite_id": nil,
 			"name":          "abc",
 			"subobject":     nil,
+			"enumerations":  []interface{}{},
 		}
 
 		BeforeEach(func() {
@@ -208,11 +198,12 @@ var _ = Describe("Environment", func() {
 				"test_suite_id": nil,
 				"subobject":     nil,
 				"name":          "abc",
+				"enumerations":  []interface{}{},
 			}
 
 			testURL("PUT", baseURL+"/v0.1/tests/testId", adminTokenID, resource, http.StatusCreated)
 			result := testURL("GET", baseURL+"/v0.1/tests/testId", adminTokenID, nil, http.StatusOK)
-			matchTestObject(result, expectedResponse)
+			Expect(result).To(HaveKeyWithValue("test", expectedResponse))
 		})
 
 		It("Update resources", func() {
@@ -228,7 +219,7 @@ var _ = Describe("Environment", func() {
 			resource["name"] = "abcd"
 			expectedResponse["name"] = "abcd"
 			result = testURL("PUT", baseURL+"/v0.1/tests/testId", adminTokenID, resource, http.StatusOK)
-			matchTestObject(result, expectedResponse)
+			Expect(result).To(HaveKeyWithValue("test", expectedResponse))
 		})
 	})
 
