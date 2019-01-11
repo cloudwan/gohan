@@ -1641,6 +1641,7 @@ func getSubnet(color string, tenant string, parent string) map[string]interface{
 		"tenant_id":   tenant,
 		"cidr":        "10.0.0.0/24",
 		"network_id":  parent,
+		"ip_version":  4,
 	}
 }
 

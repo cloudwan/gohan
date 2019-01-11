@@ -646,6 +646,15 @@ schemas:
         title: Cidr
         type: string
         unique: false
+      ip_version:
+        type: integer
+        title: IP Version
+        description: IP protocol version
+        permission:
+          - create
+          - update
+        enum:
+          - 4
     propertiesOrder:
     - cidr
     type: object

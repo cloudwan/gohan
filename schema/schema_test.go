@@ -175,25 +175,44 @@ var _ = Describe("Schema", func() {
 			))
 		})
 
-		It("should get enum values", func() {
-			networkSchema, ok := manager.Schema("network")
-			Expect(ok).To(BeTrue())
+		mustGetSchema := func(schemaId string) *Schema {
+			schema, ok := manager.Schema(schemaId)
+			Expect(ok).To(BeTrue(), "schema %s not found", schemaId)
 
-			providor_networks, err := networkSchema.GetPropertyByID("providor_networks")
+			return schema
+		}
+
+		mustGetProperty := func(schema *Schema, propertyId string) *Property {
+			property, err := schema.GetPropertyByID(propertyId)
 			Expect(err).NotTo(HaveOccurred())
+			return property
+		}
 
-			var segmentationType Property
+		mustGetChildProperty := func(parent *Property, childId string) *Property {
 			found := false
-			for _, property := range providor_networks.Properties {
-				if property.ID == "segmentation_type" {
-					segmentationType = property
-					found = true
-					break
+			for _, property := range parent.Properties {
+				if property.ID == childId {
+					return &property
 				}
 			}
 
-			Expect(found).To(BeTrue())
+			Expect(found).To(BeTrue(), "child property %s not found in %s", childId, parent.ID)
+			return nil
+		}
+
+		It("should get enum values", func() {
+			networkSchema := mustGetSchema("network")
+			providorNetworks := mustGetProperty(networkSchema, "providor_networks")
+			segmentationType := mustGetChildProperty(providorNetworks, "segmentation_type")
+
 			Expect(segmentationType.Enum).To(Equal([]interface{}{"vlan", "vxlan", "gre"}))
+		})
+
+		It("should get single enum value", func() {
+			subnetSchema := mustGetSchema("subnet")
+			ipVersion := mustGetProperty(subnetSchema, "ip_version")
+
+			Expect(ipVersion.Enum).To(Equal([]interface{}{4}))
 		})
 	})
 
