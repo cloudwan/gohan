@@ -50,15 +50,17 @@ type TestRunner struct {
 	verboseLogs    bool
 	fileNameFilter *regexp.Regexp
 	workerCount    int
+	schemas        []string
 }
 
 // NewTestRunner allocates a new TestRunner
-func NewTestRunner(fileNames []string, printAllLogs bool, testFilter string, workers int) *TestRunner {
+func NewTestRunner(fileNames []string, printAllLogs bool, testFilter string, workers int, schemas []string) *TestRunner {
 	return &TestRunner{
 		fileNames:      fileNames,
 		verboseLogs:    printAllLogs,
 		fileNameFilter: regexp.MustCompile(testFilter),
 		workerCount:    workers,
+		schemas:        schemas,
 	}
 }
 
@@ -92,22 +94,6 @@ func (testRunner *TestRunner) Run() error {
 	}
 
 	return nil
-}
-
-func readSchemas(p *plugin.Plugin) ([]string, error) {
-	fnRaw, err := p.Lookup("Schemas")
-
-	if err != nil {
-		return nil, fmt.Errorf("missing 'Schemas' export: %s", err)
-	}
-
-	fn, ok := fnRaw.(func() []string)
-
-	if !ok {
-		return nil, fmt.Errorf("invalid signature of 'Schemas' export")
-	}
-
-	return fn(), nil
 }
 
 func readBinaries(p *plugin.Plugin) ([]string, error) {
@@ -156,20 +142,20 @@ func (testRunner *TestRunner) runSingle(t ginkgo.GinkgoTestingT, reporter *Repor
 	}
 
 	// read schemas
-	schemas, err := readSchemas(p)
+	path := filepath.Dir(fileName)
+	schemas, err := testRunner.readSchemas(p, path)
 
 	if err != nil {
 		return fmt.Errorf("failed to read schemas from: %s", err)
 	}
 
 	// get state
-	path := filepath.Dir(fileName)
 	manager := schema.GetManager()
 	manager.TimeLimit = time.Duration(util.GetConfig().GetInt("extension/timelimit", 30)) * time.Second
 
 	// load schemas
 	for _, schemaPath := range schemas {
-		if err = manager.LoadSchemaFromFile(path + "/" + schemaPath); err != nil {
+		if err = manager.LoadSchemaFromFile(schemaPath); err != nil {
 			return fmt.Errorf("failed to load schema %s: %s", schemaPath, err)
 		}
 	}
@@ -264,4 +250,26 @@ func (testRunner *TestRunner) runSingle(t ginkgo.GinkgoTestingT, reporter *Repor
 	log.Notice("Go extension test finished: %s", fileName)
 
 	return nil
+}
+
+func (testRunner *TestRunner) readSchemas(p *plugin.Plugin, path string) ([]string, error) {
+	fnRaw, err := p.Lookup("Schemas")
+
+	if err != nil {
+		if len(testRunner.schemas) == 0 {
+			return nil, fmt.Errorf("neither Schemas() function nor schemas in config file have been found")
+		}
+		return testRunner.schemas, nil
+	}
+
+	fn, ok := fnRaw.(func() []string)
+
+	if !ok {
+		return nil, fmt.Errorf("invalid signature of 'Schemas' export")
+	}
+	schemas := fn()
+	for i := range schemas {
+		schemas[i] = filepath.Join(path, schemas[i])
+	}
+	return schemas, nil
 }
