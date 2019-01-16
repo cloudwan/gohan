@@ -78,6 +78,7 @@ var _ = Describe("Transaction", func() {
 				"name":          nil,
 				"subobject":     map[string]interface{}{},
 				"test_suite_id": nil,
+				"enumerations":  nil,
 			}
 		})
 

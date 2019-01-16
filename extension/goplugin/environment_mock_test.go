@@ -88,10 +88,11 @@ var _ = Describe("Mocks", func() {
 
 		It("should not affect another module", func() {
 			createdResource := test.Test{
-				ID:          "some-id",
-				Description: "description",
-				TestSuiteID: goext.MakeNullString(),
-				Name:        goext.MakeNullString(),
+				ID:           "some-id",
+				Description:  "description",
+				TestSuiteID:  goext.MakeNullString(),
+				Name:         goext.MakeNullString(),
+				Enumerations: []test.EnumerationSubobject{},
 			}
 			env.Database().Within(context, func(tx goext.ITransaction) error {
 				Expect(testSchema.CreateRaw(&createdResource, context)).To(Succeed())

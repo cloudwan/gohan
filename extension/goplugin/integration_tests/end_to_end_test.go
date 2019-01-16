@@ -30,6 +30,7 @@ import (
 	"github.com/cloudwan/gohan/db/dbutil"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/transaction"
+	"github.com/cloudwan/gohan/extension/goplugin/test_data/ext_good/test"
 	"github.com/cloudwan/gohan/schema"
 	srv "github.com/cloudwan/gohan/server"
 	"github.com/cloudwan/gohan/util"
@@ -154,6 +155,7 @@ var _ = Describe("Environment", func() {
 				"description":   "test description",
 				"test_suite_id": nil,
 				"name":          "abc",
+				"enumerations":  []interface{}{},
 			}
 
 			result := testURL("PUT", baseURL+"/v0.1/tests/testId", adminTokenID, resource, http.StatusBadRequest)
@@ -186,6 +188,7 @@ var _ = Describe("Environment", func() {
 			"test_suite_id": nil,
 			"name":          "abc",
 			"subobject":     nil,
+			"enumerations":  []interface{}{},
 		}
 
 		BeforeEach(func() {
@@ -195,6 +198,7 @@ var _ = Describe("Environment", func() {
 				"test_suite_id": nil,
 				"subobject":     nil,
 				"name":          "abc",
+				"enumerations":  []interface{}{},
 			}
 
 			testURL("PUT", baseURL+"/v0.1/tests/testId", adminTokenID, resource, http.StatusCreated)
@@ -226,6 +230,7 @@ var _ = Describe("Environment", func() {
 				"description":   "test description",
 				"test_suite_id": nil,
 				"subobject":     nil,
+				"enumerations":  []test.EnumerationSubobject{},
 				"name":          "abc",
 			}
 

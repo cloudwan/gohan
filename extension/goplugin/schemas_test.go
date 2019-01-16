@@ -153,36 +153,59 @@ var _ = Describe("Schemas", func() {
 
 	Context("Properties", func() {
 		It("Should get correct properties", func() {
-			Expect(testSchema.Properties()).To(Equal(
-				[]goext.Property{
-					{
-						ID:    "id",
-						Title: "ID",
-						Type:  "string",
-					},
-					{
-						ID:    "description",
-						Title: "Description",
-						Type:  "string",
-					},
-					{
-						ID:    "name",
-						Title: "Name",
-						Type:  "string",
-					},
-					{
-						ID:       "test_suite_id",
-						Title:    "Test Suite ID",
-						Relation: goext.SchemaID("test_suite"),
-						Type:     "string",
-					},
-					{
-						ID:    "subobject",
-						Title: "Subobject",
-						Type:  "object",
+			properties := testSchema.Properties()
+			Expect(properties).To(HaveKeyWithValue("id", goext.Property{
+				ID:    "id",
+				Title: "ID",
+				Type:  "string",
+			}))
+			Expect(properties).To(HaveKeyWithValue("description", goext.Property{
+				ID:    "description",
+				Title: "Description",
+				Type:  "string",
+			}))
+			Expect(properties).To(HaveKeyWithValue("name", goext.Property{
+				ID:    "name",
+				Title: "Name",
+				Type:  "string",
+			}))
+			Expect(properties).To(HaveKeyWithValue("test_suite_id", goext.Property{
+				ID:       "test_suite_id",
+				Title:    "Test Suite ID",
+				Relation: goext.SchemaID("test_suite"),
+				Type:     "string",
+			}))
+			Expect(properties).To(HaveKeyWithValue("enumerations", goext.Property{
+				ID:    "enumerations",
+				Title: "Enumerations",
+				Type:  "array",
+				Items: &goext.Property{
+					ID:   "[]",
+					Type: "object",
+					Properties: map[string]goext.Property{
+						"enumeration": {
+							ID:    "enumeration",
+							Title: "Enum",
+							Type:  "string",
+							Enum:  []interface{}{"v1", "v2"},
+						},
 					},
 				},
-			))
+			}))
+			Expect(properties).To(HaveKeyWithValue("subobject", goext.Property{
+				ID:    "subobject",
+				Title: "Subobject",
+				Type:  "object",
+				Properties: map[string]goext.Property{
+					"subproperty": {
+						ID:    "subproperty",
+						Title: "Subproperty",
+						Type:  "string",
+					},
+				},
+			}))
+
+			Expect(properties).To(HaveLen(6))
 		})
 	})
 
@@ -217,10 +240,11 @@ var _ = Describe("Schemas", func() {
 			context = goext.MakeContext().WithTransaction(tx)
 
 			createdResource = test.Test{
-				ID:          "some-id",
-				Description: "description",
-				TestSuiteID: goext.MakeNullString(),
-				Name:        goext.MakeNullString(),
+				ID:           "some-id",
+				Description:  "description",
+				TestSuiteID:  goext.MakeNullString(),
+				Name:         goext.MakeNullString(),
+				Enumerations: []test.EnumerationSubobject{},
 			}
 		})
 
@@ -880,7 +904,12 @@ var _ = Describe("Schemas", func() {
 			Expect(err).ToNot(HaveOccurred())
 			context = goext.MakeContext().WithTransaction(tx)
 			context["test"] = 42
-			testResource = &test.Test{ID: "13", Name: goext.MakeString("123"), TestSuiteID: goext.MakeNullString()}
+			testResource = &test.Test{
+				ID:           "13",
+				Name:         goext.MakeString("123"),
+				TestSuiteID:  goext.MakeNullString(),
+				Enumerations: []test.EnumerationSubobject{},
+			}
 
 			checkContext := func(ctx goext.Context, resource goext.Resource, environment goext.IEnvironment) *goext.Error {
 				Expect(&ctx).ToNot(Equal(&context))

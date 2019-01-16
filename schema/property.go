@@ -37,6 +37,7 @@ type Property struct {
 	Default                interface{}
 	DefaultMask            interface{}
 	Indexed                bool
+	Enum                   []interface{}
 }
 
 const ItemPropertyID = "[]"
@@ -68,6 +69,11 @@ func (pb *PropertyBuilder) WithProperties(properties []Property) *PropertyBuilde
 
 func (pb *PropertyBuilder) WithItems(items *Property) *PropertyBuilder {
 	pb.property.Items = items
+	return pb
+}
+
+func (pb *PropertyBuilder) WithEnum(enum []interface{}) *PropertyBuilder {
+	pb.property.Enum = enum
 	return pb
 }
 
@@ -175,6 +181,10 @@ func NewPropertyFromObj(id string, rawTypeData interface{}, required bool) *Prop
 		pb.WithItems(parseItems(itemsRaw))
 	}
 
+	if enumRaw, hasEnum := typeData["enum"]; hasEnum {
+		pb.WithEnum(parseEnum(enumRaw))
+	}
+
 	if typeID == "object" {
 		pb.WithProperties(parseSubproperties(typeData))
 	}
@@ -197,6 +207,10 @@ func parseItems(itemsRaw interface{}) *Property {
 			itemsRaw,
 		))
 	}
+}
+
+func parseEnum(enumRaw interface{}) []interface{} {
+	return enumRaw.([]interface{})
 }
 
 func parseSubproperties(typeData map[string]interface{}) []Property {

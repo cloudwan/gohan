@@ -267,7 +267,7 @@ type ISchema interface {
 	ColumnNames() []string
 
 	// Properties returns properties of schema
-	Properties() []Property
+	Properties() map[string]Property
 
 	// Extends return list of schema_ids which given schema extends
 	Extends() []SchemaID
@@ -275,10 +275,13 @@ type ISchema interface {
 
 // Property represents schema property
 type Property struct {
-	ID       string
-	Title    string
-	Relation SchemaID
-	Type     string
+	ID         string
+	Title      string
+	Relation   SchemaID
+	Type       string
+	Enum       []interface{}
+	Properties map[string]Property
+	Items      *Property
 }
 
 // SchemaRelationInfo describes schema relation
