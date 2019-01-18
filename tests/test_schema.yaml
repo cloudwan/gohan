@@ -205,8 +205,6 @@ policies:
   resource:
     path: /v2.0/domain_owner_test.*
 - action: '*'
-  condition:
-  - is_owner
   effect: allow
   id: member_statement_test
   principal: Member
@@ -495,6 +493,14 @@ policies:
   - is_owner
   resource:
     path: /v2.0/nested_attacher.*
+- action: '*'
+  id: owned_resource_statement
+  effect: allow
+  principal: Member
+  condition:
+  - is_owner
+  resource:
+    path: /v2.0/owned_resource.*
 
 schemas:
 - description: Network
@@ -1006,11 +1012,6 @@ schemas:
       path: /:id/test_throw
       output:
         type: string
-    test_throw:
-      method: GET
-      path: /:id/test_throw
-      output:
-        type: string
     denied_action:
       method: GET
       path: /:id/denied_action
@@ -1372,5 +1373,27 @@ schemas:
       - accessibility
       - block_flag
   title: Target of attach
+- description: Owned resource
+  id: owned_resource
+  singular: owned_resource
+  plural: owned_resource
+  prefix: /v2.0
+  schema:
+    properties:
+      id:
+        description: ID
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: true
+      tenant_id:
+        description: Tenant ID
+        permission:
+          - create
+        title: TenantID
+        type: string
+        unique: false
+  title: Owned resource
 
 subnets: []
