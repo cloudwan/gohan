@@ -52,7 +52,7 @@ const CreateResponse = `{
     "physical_id": "66a81d68-bf48-4af5-897b-a3bfef7279a8",
     "profile_id": "d8a48377-f6a3-4af4-bbbb-6e8bcaa0cbc0",
     "profile_name": "pcirros",
-    "project_id": "eee0b7c083e84501bdd50fb269d2a10e",
+    "project": "eee0b7c083e84501bdd50fb269d2a10e",
     "role": "",
     "status": "ACTIVE",
     "status_reason": "Creation succeeded",
@@ -103,7 +103,7 @@ var ExpectedCreate = nodes.Node{
 	PhysicalID:   "66a81d68-bf48-4af5-897b-a3bfef7279a8",
 	ProfileID:    "d8a48377-f6a3-4af4-bbbb-6e8bcaa0cbc0",
 	ProfileName:  "pcirros",
-	ProjectID:    "eee0b7c083e84501bdd50fb269d2a10e",
+	Project:      "eee0b7c083e84501bdd50fb269d2a10e",
 	Role:         "",
 	Status:       "ACTIVE",
 	StatusReason: "Creation succeeded",
@@ -127,7 +127,7 @@ const ListResponse = `
       "physical_id": "66a81d68-bf48-4af5-897b-a3bfef7279a8",
       "profile_id": "d8a48377-f6a3-4af4-bbbb-6e8bcaa0cbc0",
       "profile_name": "pcirros",
-      "project_id": "eee0b7c083e84501bdd50fb269d2a10e",
+      "project": "eee0b7c083e84501bdd50fb269d2a10e",
       "role": "",
       "status": "ACTIVE",
       "status_reason": "Creation succeeded",
@@ -150,7 +150,7 @@ var ExpectedList1 = nodes.Node{
 	PhysicalID:   "66a81d68-bf48-4af5-897b-a3bfef7279a8",
 	ProfileID:    "d8a48377-f6a3-4af4-bbbb-6e8bcaa0cbc0",
 	ProfileName:  "pcirros",
-	ProjectID:    "eee0b7c083e84501bdd50fb269d2a10e",
+	Project:      "eee0b7c083e84501bdd50fb269d2a10e",
 	Role:         "",
 	Status:       "ACTIVE",
 	StatusReason: "Creation succeeded",
@@ -176,7 +176,7 @@ const GetResponse = `
     "physical_id": "66a81d68-bf48-4af5-897b-a3bfef7279a8",
     "profile_id": "d8a48377-f6a3-4af4-bbbb-6e8bcaa0cbc0",
     "profile_name": "pcirros",
-    "project_id": "eee0b7c083e84501bdd50fb269d2a10e",
+    "project": "eee0b7c083e84501bdd50fb269d2a10e",
     "role": "",
     "status": "ACTIVE",
     "status_reason": "Creation succeeded",
@@ -199,7 +199,7 @@ var ExpectedGet = nodes.Node{
 	PhysicalID:   "66a81d68-bf48-4af5-897b-a3bfef7279a8",
 	ProfileID:    "d8a48377-f6a3-4af4-bbbb-6e8bcaa0cbc0",
 	ProfileName:  "pcirros",
-	ProjectID:    "eee0b7c083e84501bdd50fb269d2a10e",
+	Project:      "eee0b7c083e84501bdd50fb269d2a10e",
 	Role:         "",
 	Status:       "ACTIVE",
 	StatusReason: "Creation succeeded",
@@ -223,7 +223,7 @@ const UpdateResponse = `
     "physical_id": "66a81d68-bf48-4af5-897b-a3bfef7279a8",
     "profile_id": "d8a48377-f6a3-4af4-bbbb-6e8bcaa0cbc0",
     "profile_name": "pcirros",
-    "project_id": "eee0b7c083e84501bdd50fb269d2a10e",
+    "project": "eee0b7c083e84501bdd50fb269d2a10e",
     "role": "",
     "status": "ACTIVE",
     "status_reason": "Creation succeeded",
@@ -246,13 +246,27 @@ var ExpectedUpdate = nodes.Node{
 	PhysicalID:   "66a81d68-bf48-4af5-897b-a3bfef7279a8",
 	ProfileID:    "d8a48377-f6a3-4af4-bbbb-6e8bcaa0cbc0",
 	ProfileName:  "pcirros",
-	ProjectID:    "eee0b7c083e84501bdd50fb269d2a10e",
+	Project:      "eee0b7c083e84501bdd50fb269d2a10e",
 	Role:         "",
 	Status:       "ACTIVE",
 	StatusReason: "Creation succeeded",
 	UpdatedAt:    time.Date(2016, 5, 13, 9, 2, 4, 0, time.UTC),
 	User:         "ab79b9647d074e46ac223a8fa297b846",
 }
+
+const OperationActionResponse = `
+{
+  "action": "2a0ff107-e789-4660-a122-3816c43af703"
+}`
+
+const OperationExpectedActionID = "2a0ff107-e789-4660-a122-3816c43af703"
+
+const ActionResponse = `
+{
+  "action": "2a0ff107-e789-4660-a122-3816c43af703"
+}`
+
+const ExpectedActionID = "2a0ff107-e789-4660-a122-3816c43af703"
 
 func HandleCreateSuccessfully(t *testing.T) {
 	th.Mux.HandleFunc("/v1/nodes", func(w http.ResponseWriter, r *http.Request) {
@@ -312,5 +326,39 @@ func HandleUpdateSuccessfully(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 
 		fmt.Fprint(w, UpdateResponse)
+	})
+}
+
+func HandleOpsSuccessfully(t *testing.T) {
+	th.Mux.HandleFunc("/v1/nodes/7d85f602-a948-4a30-afd4-e84f47471c15/ops", func(w http.ResponseWriter, r *http.Request) {
+		th.TestMethod(t, r, "POST")
+		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
+
+		w.Header().Add("Content-Type", "application/json")
+		w.WriteHeader(http.StatusAccepted)
+
+		fmt.Fprint(w, OperationActionResponse)
+	})
+}
+
+func HandleRecoverSuccessfully(t *testing.T) {
+	th.Mux.HandleFunc("/v1/nodes/edce3528-864f-41fb-8759-f4707925cc09/actions", func(w http.ResponseWriter, r *http.Request) {
+		th.TestMethod(t, r, "POST")
+		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
+		w.Header().Add("Content-Type", "application/json")
+		w.Header().Add("X-OpenStack-Request-ID", "req-edce3528-864f-41fb-8759-f4707925cc09")
+		w.WriteHeader(http.StatusAccepted)
+		fmt.Fprint(w, ActionResponse)
+	})
+}
+
+func HandleCheckSuccessfully(t *testing.T) {
+	th.Mux.HandleFunc("/v1/nodes/edce3528-864f-41fb-8759-f4707925cc09/actions", func(w http.ResponseWriter, r *http.Request) {
+		th.TestMethod(t, r, "POST")
+		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
+		w.Header().Add("Content-Type", "application/json")
+		w.Header().Add("X-OpenStack-Request-ID", "req-edce3528-864f-41fb-8759-f4707925cc09")
+		w.WriteHeader(http.StatusAccepted)
+		fmt.Fprint(w, ActionResponse)
 	})
 }

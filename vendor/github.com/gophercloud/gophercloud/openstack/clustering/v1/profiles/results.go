@@ -58,7 +58,7 @@ func (r *Profile) UnmarshalJSON(b []byte) error {
 // Spec represents a profile spec.
 type Spec struct {
 	Type       string                 `json:"type"`
-	Version    string                 `json:"version"`
+	Version    string                 `json:"-"`
 	Properties map[string]interface{} `json:"properties"`
 }
 
@@ -87,6 +87,19 @@ func (r *Spec) UnmarshalJSON(b []byte) error {
 	}
 
 	return nil
+}
+
+func (r Spec) MarshalJSON() ([]byte, error) {
+	spec := struct {
+		Type       string                 `json:"type"`
+		Version    string                 `json:"version"`
+		Properties map[string]interface{} `json:"properties"`
+	}{
+		Type:       r.Type,
+		Version:    r.Version,
+		Properties: r.Properties,
+	}
+	return json.Marshal(spec)
 }
 
 // commonResult is the base result of a Profile operation.
@@ -125,6 +138,11 @@ type UpdateResult struct {
 // method to determine if the call succeeded or failed.
 type DeleteResult struct {
 	gophercloud.ErrResult
+}
+
+// ValidateResult is the response of a Validate operations.
+type ValidateResult struct {
+	commonResult
 }
 
 // ProfilePage contains a single page of all profiles from a List operation.

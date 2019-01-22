@@ -30,7 +30,7 @@ Example to List Clusters
 		Name: "testcluster",
 	}
 
-	allPages, err := clusters.ListDetail(serviceClient, listOpts).AllPages()
+	allPages, err := clusters.List(serviceClient, listOpts).AllPages()
 	if err != nil {
 		panic(err)
 	}
@@ -212,5 +212,50 @@ Example to Check a Cluster
 	if err != nil {
 		panic(err)
 	}
+
+Example to Complete Life Cycle
+
+	clusterID :=  "b7b870e3-d3c5-4a93-b9d7-846c53b2c2da"
+	lifecycleOpts := clusters.CompleteLifecycleOpts{LifecycleActionTokenID: "2b827124-69e1-496e-9484-33ca769fe4df"}
+
+	action, err := clusters.CompleteLifecycle(computeClient, clusterID, lifecycleOpts).Extract()
+	if err != nil {
+		panic(err)
+	}
+
+Example to add nodes to a cluster
+
+	addNodesOpts := clusters.AddNodesOpts{
+		Nodes: []string{"node-123"},
+	}
+	clusterID := "b7b870e3-d3c5-4a93-b9d7-846c53b2c2da"
+	actionID, err := clusters.AddNodes(serviceClient, clusterID, addNodesOpts).Extract()
+	if err != nil {
+		panic(err)
+	}
+    fmt.Println("action=", actionID)
+
+Example to remove nodes from a cluster
+
+	removeNodesOpts := clusters.RemoveNodesOpts{
+		Nodes: []string{"node-123"},
+	}
+	clusterID := "b7b870e3-d3c5-4a93-b9d7-846c53b2c2da"
+	err := clusters.RemoveNodes(serviceClient, clusterID, removeNodesOpts).ExtractErr()
+	if err != nil {
+		panic(err)
+	}
+
+Example to replace nodes for a cluster
+
+	replaceNodesOpts := clusters.ReplaceNodesOpts{
+		Nodes: map[string]string{"node-1234": "node-5678"},
+	}
+	clusterID := "b7b870e3-d3c5-4a93-b9d7-846c53b2c2da"
+	actionID, err := clusters.ReplaceNodes(serviceClient, clusterID, replaceNodesOpts).Extract()
+	if err != nil {
+		panic(err)
+	}
+
 */
 package clusters

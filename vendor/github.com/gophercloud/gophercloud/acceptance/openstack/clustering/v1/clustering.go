@@ -317,12 +317,18 @@ func DeleteCluster(t *testing.T, client *gophercloud.ServiceClient, id string) {
 func DeleteNode(t *testing.T, client *gophercloud.ServiceClient, id string) {
 	t.Logf("Attempting to delete node: %s", id)
 
-	err := nodes.Delete(client, id).ExtractErr()
-	if err != nil {
-		t.Fatalf("Error deleting node %s: %s:", id, err)
+	res := nodes.Delete(client, id)
+	if res.Err != nil {
+		t.Fatalf("Error deleting node %s: %s:", id, res.Err)
 	}
 
-	err = WaitForNodeStatus(client, id, "DELETED")
+	actionID, err := GetActionID(res.Header)
+	if err != nil {
+		t.Fatalf("Error getting actionID %s: %s:", id, err)
+	}
+
+	err = WaitForAction(client, actionID)
+
 	if err != nil {
 		t.Fatalf("Error deleting node %s: %s", id, err)
 	}
@@ -337,7 +343,7 @@ func DeleteNode(t *testing.T, client *gophercloud.ServiceClient, id string) {
 func DeletePolicy(t *testing.T, client *gophercloud.ServiceClient, id string) {
 	t.Logf("Attempting to delete policy: %s", id)
 
-	_, err := policies.Delete(client, id).Extract()
+	err := policies.Delete(client, id).ExtractErr()
 	if err != nil {
 		t.Fatalf("Error deleting policy %s: %s:", id, err)
 	}

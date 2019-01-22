@@ -297,7 +297,7 @@ func TestListClusterPolicies(t *testing.T) {
 	HandleListPoliciesSuccessfully(t)
 
 	pageCount := 0
-	err := clusters.ListPolicies(fake.ServiceClient(), ExpectedClusterPolicy.ClusterID, nil).EachPage(func(page pagination.Page) (bool, error) {
+	err := clusters.ListPolicies(fake.ServiceClient(), ExpectedClusterPolicy.ClusterID, clusters.ListPoliciesOpts{Name: "Test"}).EachPage(func(page pagination.Page) (bool, error) {
 		pageCount++
 		actual, err := clusters.ExtractClusterPolicies(page)
 		th.AssertNoErr(t, err)
@@ -406,4 +406,72 @@ func TestClusterCheck(t *testing.T) {
 	actionID, err := clusters.Check(fake.ServiceClient(), "edce3528-864f-41fb-8759-f4707925cc09").Extract()
 	th.AssertNoErr(t, err)
 	th.AssertEquals(t, ExpectedActionID, actionID)
+}
+
+func TestLifecycle(t *testing.T) {
+	th.SetupHTTP()
+	defer th.TeardownHTTP()
+
+	HandleLifecycleSuccessfully(t)
+
+	opts := clusters.CompleteLifecycleOpts{
+		LifecycleActionTokenID: "976528c6-dcf6-4d8d-9f4c-588f4e675f29",
+	}
+
+	res := clusters.CompleteLifecycle(fake.ServiceClient(), "edce3528-864f-41fb-8759-f4707925cc09", opts)
+	location := res.Header.Get("Location")
+	th.AssertEquals(t, "http://senlin.cloud.blizzard.net:8778/v1/actions/2a0ff107-e789-4660-a122-3816c43af703", location)
+
+	actionID, err := res.Extract()
+	th.AssertNoErr(t, err)
+	th.AssertEquals(t, "2a0ff107-e789-4660-a122-3816c43af703", actionID)
+}
+
+func TestAddNodes(t *testing.T) {
+	th.SetupHTTP()
+	defer th.TeardownHTTP()
+
+	HandleAddNodesSuccessfully(t)
+
+	opts := clusters.AddNodesOpts{
+		Nodes: []string{"node1", "node2", "node3"},
+	}
+	result, err := clusters.AddNodes(fake.ServiceClient(), "7d85f602-a948-4a30-afd4-e84f47471c15", opts).Extract()
+	th.AssertNoErr(t, err)
+	th.AssertEquals(t, result, "2a0ff107-e789-4660-a122-3816c43af703")
+}
+
+func TestRemoveNodes(t *testing.T) {
+	th.SetupHTTP()
+	defer th.TeardownHTTP()
+	HandleRemoveNodesSuccessfully(t)
+	opts := clusters.RemoveNodesOpts{
+		Nodes: []string{"node1", "node2", "node3"},
+	}
+	err := clusters.RemoveNodes(fake.ServiceClient(), "7d85f602-a948-4a30-afd4-e84f47471c15", opts).ExtractErr()
+	th.AssertNoErr(t, err)
+}
+
+func TestReplaceNodes(t *testing.T) {
+	th.SetupHTTP()
+	defer th.TeardownHTTP()
+	HandleReplaceNodeSuccessfully(t)
+	opts := clusters.ReplaceNodesOpts{
+		Nodes: map[string]string{"node-1234": "node-5678"},
+	}
+	actionID, err := clusters.ReplaceNodes(fake.ServiceClient(), "7d85f602-a948-4a30-afd4-e84f47471c15", opts).Extract()
+	th.AssertNoErr(t, err)
+	th.AssertEquals(t, actionID, "2a0ff107-e789-4660-a122-3816c43af703")
+}
+
+func TestClusterCollect(t *testing.T) {
+	th.SetupHTTP()
+	defer th.TeardownHTTP()
+	HandleClusterCollectSuccessfully(t)
+	opts := clusters.CollectOpts{
+		Path: "foo.bar",
+	}
+	attributes, err := clusters.Collect(fake.ServiceClient(), "7d85f602-a948-4a30-afd4-e84f47471c15", opts).Extract()
+	th.AssertNoErr(t, err)
+	th.AssertDeepEquals(t, ExpectedCollectAttributes, attributes)
 }
