@@ -405,7 +405,7 @@ func DetachPolicy(client *gophercloud.ServiceClient, id string, opts DetachPolic
 // ListPolicyOptsBuilder allows extensions to add additional parameters to the
 // ListPolicies request.
 type ListPoliciesOptsBuilder interface {
-	ToClusterListPoliciesQuery() (string, error)
+	ToClusterPoliciesListQuery() (string, error)
 }
 
 // ListPoliciesOpts represents options to list a cluster's policies.
@@ -426,7 +426,7 @@ func (opts ListPoliciesOpts) ToClusterPoliciesListQuery() (string, error) {
 func ListPolicies(client *gophercloud.ServiceClient, clusterID string, opts ListPoliciesOptsBuilder) pagination.Pager {
 	url := listPoliciesURL(client, clusterID)
 	if opts != nil {
-		query, err := opts.ToClusterListPoliciesQuery()
+		query, err := opts.ToClusterPoliciesListQuery()
 		if err != nil {
 			return pagination.Pager{Err: err}
 		}
@@ -490,6 +490,132 @@ func Check(client *gophercloud.ServiceClient, id string) (r ActionResult) {
 	result, r.Err = client.Post(actionURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200, 201, 202},
 	})
+	if r.Err == nil {
+		r.Header = result.Header
+	}
+
+	return
+}
+
+// ToClusterCompleteLifecycleMap constructs a request body from CompleteLifecycleOpts.
+func (opts CompleteLifecycleOpts) ToClusterCompleteLifecycleMap() (map[string]interface{}, error) {
+	return gophercloud.BuildRequestBody(opts, "complete_lifecycle")
+}
+
+type CompleteLifecycleOpts struct {
+	LifecycleActionTokenID string `json:"lifecycle_action_token" required:"true"`
+}
+
+func CompleteLifecycle(client *gophercloud.ServiceClient, id string, opts CompleteLifecycleOpts) (r ActionResult) {
+	b, err := opts.ToClusterCompleteLifecycleMap()
+	if err != nil {
+		r.Err = err
+		return
+	}
+
+	var result *http.Response
+	result, r.Err = client.Post(actionURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
+		OkCodes: []int{202},
+	})
+	if r.Err == nil {
+		r.Header = result.Header
+	}
+
+	return
+}
+
+func (opts AddNodesOpts) ToClusterAddNodeMap() (map[string]interface{}, error) {
+	return gophercloud.BuildRequestBody(opts, "add_nodes")
+}
+
+type AddNodesOpts struct {
+	Nodes []string `json:"nodes" required:"true"`
+}
+
+func AddNodes(client *gophercloud.ServiceClient, id string, opts AddNodesOpts) (r ActionResult) {
+	b, err := opts.ToClusterAddNodeMap()
+	if err != nil {
+		r.Err = err
+		return
+	}
+	var result *http.Response
+	result, r.Err = client.Post(nodeURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
+		OkCodes: []int{202},
+	})
+	r.Header = result.Header
+	return
+}
+
+func (opts RemoveNodesOpts) ToClusterRemoveNodeMap() (map[string]interface{}, error) {
+	return gophercloud.BuildRequestBody(opts, "del_nodes")
+}
+
+type RemoveNodesOpts struct {
+	Nodes []string `json:"nodes" required:"true"`
+}
+
+func RemoveNodes(client *gophercloud.ServiceClient, clusterID string, opts RemoveNodesOpts) (r DeleteResult) {
+	b, err := opts.ToClusterRemoveNodeMap()
+	if err != nil {
+		r.Err = err
+		return
+	}
+	var result *http.Response
+	result, r.Err = client.Post(nodeURL(client, clusterID), b, &r.Body, &gophercloud.RequestOpts{
+		OkCodes: []int{202},
+	})
+	r.Header = result.Header
+	return
+}
+
+func (opts ReplaceNodesOpts) ToClusterReplaceNodeMap() (map[string]interface{}, error) {
+	return gophercloud.BuildRequestBody(opts, "replace_nodes")
+}
+
+type ReplaceNodesOpts struct {
+	Nodes map[string]string `json:"nodes" required:"true"`
+}
+
+func ReplaceNodes(client *gophercloud.ServiceClient, id string, opts ReplaceNodesOpts) (r ActionResult) {
+	b, err := opts.ToClusterReplaceNodeMap()
+	if err != nil {
+		r.Err = err
+		return
+	}
+	var result *http.Response
+	result, r.Err = client.Post(nodeURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
+		OkCodes: []int{202},
+	})
+	r.Header = result.Header
+	return
+}
+
+type CollectOptsBuilder interface {
+	ToClusterCollectMap() (string, error)
+}
+
+// CollectOpts represents options to collect attribute values across a cluster
+type CollectOpts struct {
+	Path string `q:"path" required:"true"`
+}
+
+func (opts CollectOpts) ToClusterCollectMap() (string, error) {
+	return opts.Path, nil
+}
+
+// Collect instructs OpenStack to aggregate attribute values across a cluster
+func Collect(client *gophercloud.ServiceClient, id string, opts CollectOptsBuilder) (r CollectResult) {
+	query, err := opts.ToClusterCollectMap()
+	if err != nil {
+		r.Err = err
+		return
+	}
+
+	var result *http.Response
+	result, r.Err = client.Get(collectURL(client, id, query), &r.Body, &gophercloud.RequestOpts{
+		OkCodes: []int{200},
+	})
+
 	if r.Err == nil {
 		r.Header = result.Header
 	}

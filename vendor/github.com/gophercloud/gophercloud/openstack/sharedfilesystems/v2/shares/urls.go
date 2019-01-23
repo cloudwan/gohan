@@ -6,11 +6,19 @@ func createURL(c *gophercloud.ServiceClient) string {
 	return c.ServiceURL("shares")
 }
 
+func listDetailURL(c *gophercloud.ServiceClient) string {
+	return c.ServiceURL("shares", "detail")
+}
+
 func deleteURL(c *gophercloud.ServiceClient, id string) string {
 	return c.ServiceURL("shares", id)
 }
 
 func getURL(c *gophercloud.ServiceClient, id string) string {
+	return c.ServiceURL("shares", id)
+}
+
+func updateURL(c *gophercloud.ServiceClient, id string) string {
 	return c.ServiceURL("shares", id)
 }
 
@@ -27,5 +35,13 @@ func revokeAccessURL(c *gophercloud.ServiceClient, id string) string {
 }
 
 func listAccessRightsURL(c *gophercloud.ServiceClient, id string) string {
+	return c.ServiceURL("shares", id, "action")
+}
+
+func extendURL(c *gophercloud.ServiceClient, id string) string {
+	return c.ServiceURL("shares", id, "action")
+}
+
+func shrinkURL(c *gophercloud.ServiceClient, id string) string {
 	return c.ServiceURL("shares", id, "action")
 }

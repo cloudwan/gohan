@@ -65,7 +65,7 @@ type Spec struct {
 	Description string                 `json:"description"`
 	Properties  map[string]interface{} `json:"properties"`
 	Type        string                 `json:"type"`
-	Version     string                 `json:"version"`
+	Version     string                 `json:"-"`
 }
 
 func (r *Spec) UnmarshalJSON(b []byte) error {
@@ -94,6 +94,19 @@ func (r *Spec) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+func (r Spec) MarshalJSON() ([]byte, error) {
+	spec := struct {
+		Type       string                 `json:"type"`
+		Version    string                 `json:"version"`
+		Properties map[string]interface{} `json:"properties"`
+	}{
+		Type:       r.Type,
+		Version:    r.Version,
+		Properties: r.Properties,
+	}
+	return json.Marshal(spec)
+}
+
 // policyResult is the resposne of a base Policy result.
 type policyResult struct {
 	gophercloud.Result
@@ -115,6 +128,12 @@ type CreateResult struct {
 	policyResult
 }
 
+// GetResult is the result of a Get operation. Call its Extract method to
+// interpret it as a Policy.
+type GetResult struct {
+	policyResult
+}
+
 // UpdateResult is the result of an Update operation. Call its Extract
 // method to interpret it as a Policy.
 type UpdateResult struct {
@@ -130,18 +149,7 @@ type ValidateResult struct {
 // DeleteResult is the result of a Delete operation. Call its Extract
 // method to interpret it as a DeleteHeader.
 type DeleteResult struct {
-	gophercloud.HeaderResult
-}
-
-// DeleteHeader contains the delete information from a delete policy request.
-type DeleteHeader struct {
-	RequestID string `json:"X-OpenStack-Request-ID"`
-}
-
-func (r DeleteResult) Extract() (*DeleteHeader, error) {
-	var s *DeleteHeader
-	err := r.HeaderResult.ExtractInto(&s)
-	return s, err
+	gophercloud.ErrResult
 }
 
 // PolicyPage contains a list page of all policies from a List call.

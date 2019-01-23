@@ -3,6 +3,8 @@
 package v1
 
 import (
+	"sort"
+	"strings"
 	"testing"
 
 	"github.com/gophercloud/gophercloud/acceptance/clients"
@@ -264,4 +266,185 @@ func TestClustersRecovery(t *testing.T) {
 	th.AssertNoErr(t, err)
 
 	tools.PrintResource(t, newCluster)
+}
+
+func TestClustersAddNode(t *testing.T) {
+	client, err := clients.NewClusteringV1Client()
+	th.AssertNoErr(t, err)
+
+	profile, err := CreateProfile(t, client)
+	th.AssertNoErr(t, err)
+	defer DeleteProfile(t, client, profile.ID)
+
+	cluster, err := CreateCluster(t, client, profile.ID)
+	th.AssertNoErr(t, err)
+	defer DeleteCluster(t, client, cluster.ID)
+
+	node1, err := CreateNode(t, client, "", profile.ID)
+	th.AssertNoErr(t, err)
+	// Even tho deleting the cluster will delete the nodes but only if added into cluster successfully.
+	defer DeleteNode(t, client, node1.ID)
+
+	node2, err := CreateNode(t, client, "", profile.ID)
+	th.AssertNoErr(t, err)
+	// Even tho deleting the cluster will delete the nodes but only if added into cluster successfully.
+	defer DeleteNode(t, client, node2.ID)
+
+	cluster, err = clusters.Get(client, cluster.ID).Extract()
+	th.AssertNoErr(t, err)
+
+	nodeIDs := []string{node1.ID, node2.ID}
+	nodeIDs = append(nodeIDs, cluster.Nodes...)
+
+	nodeNames := []string{node1.Name, node2.Name}
+	addNodesOpts := clusters.AddNodesOpts{
+		Nodes: nodeNames,
+	}
+	actionID, err := clusters.AddNodes(client, cluster.ID, addNodesOpts).Extract()
+	if err != nil {
+		t.Fatalf("Unable to add nodes to cluster: %v", err)
+	}
+
+	err = WaitForAction(client, actionID)
+	th.AssertNoErr(t, err)
+
+	cluster, err = clusters.Get(client, cluster.ID).Extract()
+	th.AssertNoErr(t, err)
+
+	sort.Strings(nodeIDs)
+	sort.Strings(cluster.Nodes)
+
+	tools.PrintResource(t, nodeIDs)
+	tools.PrintResource(t, cluster.Nodes)
+
+	th.AssertDeepEquals(t, nodeIDs, cluster.Nodes)
+
+	tools.PrintResource(t, cluster)
+}
+
+func TestClustersRemoveNodeFromCluster(t *testing.T) {
+	client, err := clients.NewClusteringV1Client()
+	th.AssertNoErr(t, err)
+
+	profile, err := CreateProfile(t, client)
+	th.AssertNoErr(t, err)
+	defer DeleteProfile(t, client, profile.ID)
+
+	cluster, err := CreateCluster(t, client, profile.ID)
+	th.AssertNoErr(t, err)
+	defer DeleteCluster(t, client, cluster.ID)
+
+	cluster, err = clusters.Get(client, cluster.ID).Extract()
+	th.AssertNoErr(t, err)
+	tools.PrintResource(t, cluster)
+
+	opt := clusters.RemoveNodesOpts{Nodes: cluster.Nodes}
+	res := clusters.RemoveNodes(client, cluster.ID, opt)
+	err = res.ExtractErr()
+	th.AssertNoErr(t, err)
+
+	for _, n := range cluster.Nodes {
+		defer DeleteNode(t, client, n)
+	}
+
+	actionID, err := GetActionID(res.Header)
+	th.AssertNoErr(t, err)
+
+	err = WaitForAction(client, actionID)
+	th.AssertNoErr(t, err)
+
+	cluster, err = clusters.Get(client, cluster.ID).Extract()
+	th.AssertNoErr(t, err)
+
+	th.AssertEquals(t, 0, len(cluster.Nodes))
+
+	tools.PrintResource(t, cluster)
+}
+
+func TestClustersReplaceNode(t *testing.T) {
+	client, err := clients.NewClusteringV1Client()
+	th.AssertNoErr(t, err)
+	client.Microversion = "1.3"
+
+	profile, err := CreateProfile(t, client)
+	th.AssertNoErr(t, err)
+	defer DeleteProfile(t, client, profile.ID)
+
+	cluster, err := CreateCluster(t, client, profile.ID)
+	th.AssertNoErr(t, err)
+	defer DeleteCluster(t, client, cluster.ID)
+
+	node1, err := CreateNode(t, client, "", profile.ID)
+	th.AssertNoErr(t, err)
+	defer DeleteNode(t, client, node1.ID)
+
+	cluster, err = clusters.Get(client, cluster.ID).Extract()
+	th.AssertNoErr(t, err)
+	th.AssertEquals(t, true, len(cluster.Nodes) > 0)
+	for _, n := range cluster.Nodes {
+		defer DeleteNode(t, client, n)
+	}
+
+	nodeIDToBeReplaced := cluster.Nodes[0]
+	opts := clusters.ReplaceNodesOpts{Nodes: map[string]string{nodeIDToBeReplaced: node1.ID}}
+	actionID, err := clusters.ReplaceNodes(client, cluster.ID, opts).Extract()
+	th.AssertNoErr(t, err)
+	err = WaitForAction(client, actionID)
+	th.AssertNoErr(t, err)
+
+	cluster, err = clusters.Get(client, cluster.ID).Extract()
+	th.AssertNoErr(t, err)
+
+	clusterNodes := strings.Join(cluster.Nodes, ",")
+	th.AssertEquals(t, true, strings.Contains(clusterNodes, node1.ID))
+	th.AssertEquals(t, false, strings.Contains(clusterNodes, nodeIDToBeReplaced))
+	tools.PrintResource(t, cluster)
+}
+
+func TestClustersCollectAttributes(t *testing.T) {
+	client, err := clients.NewClusteringV1Client()
+	th.AssertNoErr(t, err)
+	client.Microversion = "1.2"
+
+	profile, err := CreateProfile(t, client)
+	th.AssertNoErr(t, err)
+	defer DeleteProfile(t, client, profile.ID)
+
+	cluster, err := CreateCluster(t, client, profile.ID)
+	th.AssertNoErr(t, err)
+	defer DeleteCluster(t, client, cluster.ID)
+
+	cluster, err = clusters.Get(client, cluster.ID).Extract()
+	th.AssertNoErr(t, err)
+	th.AssertEquals(t, true, len(cluster.Nodes) > 0)
+
+	_, err = CreateNode(t, client, cluster.ID, profile.ID)
+	th.AssertNoErr(t, err)
+
+	cluster, err = clusters.Get(client, cluster.ID).Extract()
+	th.AssertNoErr(t, err)
+	th.AssertEquals(t, true, len(cluster.Nodes) > 0)
+
+	for _, n := range cluster.Nodes {
+		defer DeleteNode(t, client, n)
+	}
+
+	opts := clusters.CollectOpts{
+		Path: "status",
+	}
+	attrs, err := clusters.Collect(client, cluster.ID, opts).Extract()
+	th.AssertNoErr(t, err)
+	for _, attr := range attrs {
+		th.AssertEquals(t, attr.Value, "ACTIVE")
+	}
+
+	opts = clusters.CollectOpts{
+		Path: "data.placement.zone",
+	}
+	attrs, err = clusters.Collect(client, cluster.ID, opts).Extract()
+	th.AssertNoErr(t, err)
+	for _, attr := range attrs {
+		th.AssertEquals(t, attr.Value, "nova")
+	}
+
 }
