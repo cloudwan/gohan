@@ -27,6 +27,7 @@ import (
 	"github.com/cloudwan/gohan/metrics"
 	"github.com/cloudwan/gohan/schema"
 	gohan_sync "github.com/cloudwan/gohan/sync"
+	"github.com/cloudwan/gohan/util"
 )
 
 const (
@@ -35,8 +36,9 @@ const (
 
 	configPrefix = "/config"
 
-	eventPollingTime  = 30 * time.Second
-	eventPollingLimit = 10000
+	defaultEventPollingInterval = 10 * time.Second
+	defaultEventPollingLimit    = 10000
+	defaultBackoff              = 5 * time.Second
 )
 
 // SyncWriter copies data from the RDBMS to the sync layer.
@@ -44,18 +46,34 @@ const (
 // sync layer by SyncWriter.
 // SyncWriter gets items to sync from the event table.
 type SyncWriter struct {
-	sync    gohan_sync.Sync
-	db      db.DB
-	backoff time.Duration
+	sync              gohan_sync.Sync
+	db                db.DB
+	backoff           time.Duration
+	pollingTicker     <-chan time.Time
+	eventPollingLimit uint64
 }
 
 // NewSyncWriter creates a new instance of SyncWriter.
 func NewSyncWriter(sync gohan_sync.Sync, db db.DB) *SyncWriter {
 	return &SyncWriter{
-		sync:    sync,
-		db:      db,
-		backoff: time.Second * 5,
+		sync:              sync,
+		db:                db,
+		backoff:           getBackoff(),
+		pollingTicker:     time.Tick(getEventPollingInterval()),
+		eventPollingLimit: getEventPollingLimit(),
 	}
+}
+
+func getBackoff() time.Duration {
+	return util.GetConfig().GetDuration("sync_writer/backoff", defaultBackoff)
+}
+
+func getEventPollingInterval() time.Duration {
+	return util.GetConfig().GetDuration("sync_writer/interval_ms", defaultEventPollingInterval)
+}
+
+func getEventPollingLimit() uint64 {
+	return uint64(util.GetConfig().GetInt("sync_writer/polling_limit", defaultEventPollingLimit))
 }
 
 // NewSyncWriterFromServer is a helper method for test.
@@ -67,50 +85,45 @@ func NewSyncWriterFromServer(server *Server) *SyncWriter {
 // Run starts a loop to keep running Sync().
 // This method blocks until the ctx is canceled.
 func (writer *SyncWriter) Run(ctx context.Context) error {
-	pollingTicker := time.Tick(eventPollingTime)
-	committed := transactionCommitInformer()
-
-	recentlySynced := false
 	for {
-		err := func() error {
-			lost, err := writer.sync.Lock(syncPath, true)
-			if err != nil {
-				return err
-			}
-			defer writer.sync.Unlock(syncPath)
-
-			for {
-				select {
-				case <-lost:
-					metrics.UpdateCounter(1, "sync_writer.locks_lost")
-					return fmt.Errorf("lost lock for sync")
-				case <-ctx.Done():
-					return nil
-				case <-pollingTicker:
-					if recentlySynced {
-						recentlySynced = false
-						continue
-					}
-					metrics.UpdateCounter(1, "sync_writer.wake_up.on_timer")
-				case <-committed:
-					recentlySynced = true
-					metrics.UpdateCounter(1, "sync_writer.wake_up.on_commit")
-				}
-				_, err := writer.Sync()
-				if err != nil {
-					return err
-				}
-			}
-		}()
-
-		if err != nil {
-			log.Error("sync writer is interrupted: %s", err)
+		if err := writer.run(ctx); err != nil {
+			log.Error("SyncWriter was interrupted: %s", err)
 		}
 
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-time.After(writer.backoff):
+		}
+	}
+}
+
+func (writer *SyncWriter) run(ctx context.Context) error {
+	lost, err := writer.sync.Lock(syncPath, true)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := writer.sync.Unlock(syncPath); err != nil {
+			log.Warning("SyncWriter: unlocking failed: %s", err)
+		}
+	}()
+
+	for {
+		select {
+		case <-lost:
+			metrics.UpdateCounter(1, "sync_writer.locks_lost")
+			return fmt.Errorf("lost lock for sync")
+		case <-ctx.Done():
+			return nil
+		case <-writer.pollingTicker:
+			metrics.UpdateCounter(1, "sync_writer.wake_up.on_timer")
+		case <-transactionCommitted:
+			metrics.UpdateCounter(1, "sync_writer.wake_up.on_commit")
+		}
+
+		if _, err := writer.Sync(); err != nil {
+			return err
 		}
 	}
 }
@@ -146,7 +159,7 @@ func (writer *SyncWriter) listEvents() ([]*schema.Resource, error) {
 		paginator, _ := pagination.NewPaginator(
 			pagination.OptionKey(eventSchema, "id"),
 			pagination.OptionOrder(pagination.ASC),
-			pagination.OptionLimit(eventPollingLimit))
+			pagination.OptionLimit(writer.eventPollingLimit))
 		res, _, err := tx.List(context.Background(), eventSchema, nil, nil, paginator)
 		resourceList = res
 		return err

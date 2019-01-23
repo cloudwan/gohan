@@ -18,7 +18,6 @@ package server
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/cloudwan/gohan/db"
@@ -28,17 +27,7 @@ import (
 	"github.com/cloudwan/gohan/schema"
 )
 
-var (
-	transactionCommited     chan int
-	transactionCommitedOnce sync.Once
-)
-
-func transactionCommitInformer() chan int {
-	transactionCommitedOnce.Do(func() {
-		transactionCommited = make(chan int, 1)
-	})
-	return transactionCommited
-}
+var transactionCommitted = make(chan struct{}, 1)
 
 //DbSyncWrapper wraps db.DB so it logs events in database on every transaction.
 type DbSyncWrapper struct {
@@ -197,9 +186,9 @@ func (tl *transactionEventLogger) Commit() error {
 	if !tl.eventLogged {
 		return nil
 	}
-	committed := transactionCommitInformer()
+
 	select {
-	case committed <- 1:
+	case transactionCommitted <- struct{}{}:
 		metrics.UpdateCounter(1, "event_logger.notified")
 	default:
 		metrics.UpdateCounter(1, "event_logger.skipped")

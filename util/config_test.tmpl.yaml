@@ -4,3 +4,4 @@ address: ":19090"
 document_root: "./etc/"
 test: "{{.GOHAN_TEST_KEY}}"
 cors: "*"
+delay: 3s
