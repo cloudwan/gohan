@@ -208,6 +208,14 @@ func fillInContext(context middleware.Context, db db.DB,
 	context["openstack_client"] = identityService.GetClient()
 }
 
+func mustGetSchema(manager *schema.Manager, schemaID string) *schema.Schema {
+	schema, ok := manager.Schema(schemaID)
+	if !ok {
+		panic(fmt.Sprintf("The '%s' schema is missing. Check if gohan.json is loaded", schemaID))
+	}
+	return schema
+}
+
 //MapRouteBySchema setup api route by schema
 func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 	if s.IsAbstract() {
@@ -461,10 +469,7 @@ func MapRouteBySchemas(server *Server, dataStore db.DB) {
 }
 
 func mapVersionRoute(route martini.Router, manager *schema.Manager) {
-	versionSchema, hasSchema := manager.Schema("version")
-	if !hasSchema {
-		panic("The 'version' schema is missing. Check if gohan.json is loaded")
-	}
+	versionSchema := mustGetSchema(manager, "version")
 	url := versionSchema.GetPluralURL()
 	urlWithParents := versionSchema.GetPluralURLWithParents()
 
@@ -487,10 +492,8 @@ func mapVersionRoute(route martini.Router, manager *schema.Manager) {
 }
 
 func mapSchemaRoute(route martini.Router, manager *schema.Manager) {
-	metaschema, hasMetaschema := manager.Schema("schema")
-	if !hasMetaschema {
-		panic("The metaschema is missing. Check if gohan.json is loaded")
-	}
+	metaschema := mustGetSchema(manager, "schema")
+
 	singleURL := metaschema.GetSingleURL()
 	pluralURL := metaschema.GetPluralURL()
 	singleURLWithParents := metaschema.GetSingleURLWithParents()
