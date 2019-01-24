@@ -19,6 +19,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/cloudwan/gohan/db"
@@ -84,7 +85,9 @@ func NewSyncWriterFromServer(server *Server) *SyncWriter {
 
 // Run starts a loop to keep running Sync().
 // This method blocks until the ctx is canceled.
-func (writer *SyncWriter) Run(ctx context.Context) error {
+func (writer *SyncWriter) Run(ctx context.Context, wg *sync.WaitGroup) error {
+	defer wg.Done()
+
 	for {
 		if err := writer.run(ctx); err != nil {
 			log.Error("SyncWriter was interrupted: %s", err)

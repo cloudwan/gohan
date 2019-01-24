@@ -18,6 +18,7 @@ package server_test
 import (
 	"os"
 	"testing"
+	"time"
 
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/dbutil"
@@ -64,7 +65,10 @@ var _ = Describe("Suite set up and tear down", func() {
 
 	var _ = BeforeSuite(func() {
 		var err error
-		testDB, err = dbutil.ConnectDB(dbType, conn, db.DefaultMaxOpenConn, options.Default())
+		testDB, err = dbutil.ConnectDB(dbType, conn, db.DefaultMaxOpenConn, options.Options{
+			RetryTxCount:    3,
+			RetryTxInterval: 100 * time.Millisecond,
+		})
 		Expect(err).ToNot(HaveOccurred(), "Failed to connect database.")
 		if os.Getenv("MYSQL_TEST") == "true" {
 			err = startTestServer("./server_test_mysql_config.yaml")

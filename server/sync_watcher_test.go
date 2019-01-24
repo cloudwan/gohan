@@ -19,6 +19,7 @@ import (
 	"context"
 	"sort"
 	"strings"
+	sync_lib "sync"
 	"time"
 
 	"github.com/cloudwan/gohan/db"
@@ -39,13 +40,20 @@ const (
 
 var _ = Describe("Sync watcher test", func() {
 	var (
-		ctx context.Context
+		ctx    context.Context
+		cancel context.CancelFunc
+		done   sync_lib.WaitGroup
 	)
 
 	BeforeEach(func() {
-		ctx = context.Background()
+		ctx, cancel = context.WithCancel(context.Background())
 		watcher := srv.NewSyncWatcherFromServer(server)
-		go watcher.Run(context.Background())
+		done.Add(1)
+		go func() {
+			defer GinkgoRecover()
+			Expect(watcher.Run(ctx, &done)).To(Equal(context.Canceled))
+		}()
+
 		time.Sleep(time.Second)
 	})
 
@@ -59,6 +67,8 @@ var _ = Describe("Sync watcher test", func() {
 			}
 			return nil
 		})).ToNot(HaveOccurred(), "Failed to create or commit transaction.")
+		cancel()
+		done.Wait()
 	})
 
 	Describe("Sync watch load balancing with HA", func() {

@@ -28,6 +28,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	sync_lib "sync"
 	"syscall"
 	"time"
 
@@ -70,6 +71,7 @@ type Server struct {
 
 	masterCtx       context.Context
 	masterCtxCancel context.CancelFunc
+	done            sync_lib.WaitGroup
 }
 
 func (server *Server) mapRoutes() {
@@ -453,6 +455,7 @@ func (server *Server) Stop() {
 	server.masterCtxCancel()
 	stopCRONProcess(server)
 	manners.Close()
+	server.done.Wait()
 }
 
 //RunServer runs gohan api server
@@ -490,15 +493,18 @@ func RunServer(configFile string) {
 	server.masterCtx, server.masterCtxCancel = context.WithCancel(context.Background())
 
 	if server.sync != nil {
+		server.done.Add(1)
 		stateWatcher := NewStateWatcher(server.sync, server.db, server.keystoneIdentity)
-		go stateWatcher.Run(server.masterCtx)
+		go stateWatcher.Run(server.masterCtx, &server.done)
 
+		server.done.Add(1)
 		syncWriter := NewSyncWriter(server.sync, server.db)
-		go syncWriter.Run(server.masterCtx)
+		go syncWriter.Run(server.masterCtx, &server.done)
 
+		server.done.Add(1)
 		syncWatcher := NewSyncWatcherFromServer(server)
 		go func(masterCtx context.Context) {
-			if err := syncWatcher.Run(masterCtx); err != nil {
+			if err := syncWatcher.Run(masterCtx, &server.done); err != nil {
 				log.Error("An error occurred during SyncWatcher shutdown: %s", err)
 			}
 		}(server.masterCtx)

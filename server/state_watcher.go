@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/cloudwan/gohan/db"
@@ -73,7 +74,9 @@ func NewStateWatcherFromServer(server *Server) *StateWatcher {
 // Run starts the main loop of the watcher.
 // This method blocks until canceled by the ctx.
 // Errors are logged, but do not interrupt the loop.
-func (watcher *StateWatcher) Run(ctx context.Context) error {
+func (watcher *StateWatcher) Run(ctx context.Context, wg *sync.WaitGroup) error {
+	defer wg.Done()
+
 	for {
 		err := watcher.iterate(ctx)
 		if err != nil {

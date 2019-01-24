@@ -86,7 +86,9 @@ func NewSyncWatcherFromServer(server *Server) *SyncWatcher {
 
 // Run starts the main loop of the watcher.
 // This method blocks until the ctx is canceled by the caller
-func (watcher *SyncWatcher) Run(ctx context.Context) error {
+func (watcher *SyncWatcher) Run(ctx context.Context, wg *sync.WaitGroup) error {
+	defer wg.Done()
+
 	for {
 		err := func() error {
 			// register self process to the cluster
