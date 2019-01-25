@@ -74,6 +74,13 @@ var _ = Describe("Server package test", func() {
 		Expect(configNetwork).To(util.MatchAsJSON(rawResource))
 	}
 
+	withinTx := func(fn func(transaction.Transaction)) {
+		Expect(db.WithinTx(syncedDb, func(tx transaction.Transaction) error {
+			fn(tx)
+			return nil
+		})).To(Succeed())
+	}
+
 	deleteResource := func(schemaId string, resource *schema.Resource) {
 		Expect(db.WithinTx(syncedDb, func(tx transaction.Transaction) error {
 			schema, _ := schema.GetManager().Schema(schemaId)
@@ -87,10 +94,9 @@ var _ = Describe("Server package test", func() {
 
 	Describe("Sync", func() {
 		It("should work", func() {
-			Expect(db.WithinTx(syncedDb, func(tx transaction.Transaction) error {
+			withinTx(func(tx transaction.Transaction) {
 				rawRed, red = createNetwork(ctx, tx, "red")
-				return nil
-			})).To(Succeed())
+			})
 
 			writer := srv.NewSyncWriterFromServer(server)
 			Expect(writer.Sync()).To(Equal(1))
@@ -262,15 +268,11 @@ var _ = Describe("Server package test", func() {
 			})
 
 			It("writes all events from a single transaction", func() {
-
-				err := db.WithinTx(syncedDb, func(tx transaction.Transaction) error {
+				withinTx(func(tx transaction.Transaction) {
 					rawRed, red = createNetwork(ctx, tx, "red")
 					rawBlue, blue = createNetwork(ctx, tx, "blue")
 					rawGreen, green = createNetwork(ctx, tx, "green")
-
-					return nil
 				})
-				Expect(err).ToNot(HaveOccurred())
 
 				checkIsSynced(rawRed, red)
 				checkIsSynced(rawBlue, blue)
@@ -278,20 +280,17 @@ var _ = Describe("Server package test", func() {
 			})
 
 			It("writes all events from many transactions", func() {
-				Expect(db.WithinTx(syncedDb, func(tx transaction.Transaction) error {
+				withinTx(func(tx transaction.Transaction) {
 					rawRed, red = createNetwork(ctx, tx, "red")
-					return nil
-				})).To(Succeed())
+				})
 
-				Expect(db.WithinTx(syncedDb, func(tx transaction.Transaction) error {
+				withinTx(func(tx transaction.Transaction) {
 					rawBlue, blue = createNetwork(ctx, tx, "blue")
-					return nil
-				})).To(Succeed())
+				})
 
-				Expect(db.WithinTx(syncedDb, func(tx transaction.Transaction) error {
+				withinTx(func(tx transaction.Transaction) {
 					rawGreen, green = createNetwork(ctx, tx, "green")
-					return nil
-				})).To(Succeed())
+				})
 
 				checkIsSynced(rawRed, red)
 				checkIsSynced(rawBlue, blue)
