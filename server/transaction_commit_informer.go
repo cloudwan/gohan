@@ -18,6 +18,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/cloudwan/gohan/db"
@@ -25,9 +26,65 @@ import (
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/metrics"
 	"github.com/cloudwan/gohan/schema"
+	gohan_sync "github.com/cloudwan/gohan/sync"
 )
 
-var transactionCommitted = make(chan struct{}, 1)
+var transactionCommitted = make(chan struct{}, 1024)
+
+const (
+	SyncKeyTxCommitted = "/gohan/cluster/sync/tx_committed"
+)
+
+func NewTransactionCommitInformer(sync gohan_sync.Sync) *TransactionCommitInformer {
+	return &TransactionCommitInformer{
+		sync: sync,
+	}
+}
+
+type TransactionCommitInformer struct {
+	sync gohan_sync.Sync
+}
+
+func (t *TransactionCommitInformer) Run(ctx context.Context, wg *sync.WaitGroup) error {
+	defer wg.Done()
+
+	for {
+		select {
+		case <-transactionCommitted:
+			t.notify(ctx)
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+}
+
+func (t *TransactionCommitInformer) notify(ctx context.Context) {
+	for {
+		drain(transactionCommitted)
+
+		err := t.sync.Update("/gohan/cluster/sync/tx_committed", `{"value": 1}`)
+		if err == nil {
+			return
+		}
+
+		log.Error("Failed to notify about committed transaction: %s", err)
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(500 * time.Millisecond):
+		}
+	}
+}
+
+func drain(ch <-chan struct{}) {
+	for {
+		select {
+		case <-ch:
+		default:
+			return
+		}
+	}
+}
 
 //DbSyncWrapper wraps db.DB so it logs events in database on every transaction.
 type DbSyncWrapper struct {

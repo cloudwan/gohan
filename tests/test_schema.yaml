@@ -1372,5 +1372,22 @@ schemas:
       - accessibility
       - block_flag
   title: Target of attach
+- description: Schema than is not synced
+  id: not_synced
+  singular: not_synced
+  plural: not_synceds
+  prefix: /v2.0
+  metadata:
+    nosync: true
+  schema:
+    properties:
+      id:
+        description: ID
+        permission:
+          - create
+        title: ID
+        type: string
+        unique: true
+  title: Not synced
 
 subnets: []

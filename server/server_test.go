@@ -42,6 +42,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	"github.com/twinj/uuid"
 )
 
 var (
@@ -1631,6 +1632,29 @@ func getNetwork(color string, tenant string) map[string]interface{} {
 			},
 		},
 	}
+}
+
+func createResource(ctx context.Context, tx transaction.Transaction, schemaId string, rawResource map[string]interface{}) *schema.Resource {
+	manager := schema.GetManager()
+	resource, err := manager.LoadResource(schemaId, rawResource)
+	Expect(err).ToNot(HaveOccurred())
+	Expect(tx.Create(ctx, resource)).To(Succeed())
+
+	return resource
+}
+
+func createNetwork(ctx context.Context, tx transaction.Transaction, label string) (map[string]interface{}, *schema.Resource) {
+	label = label + uuid.NewV4().String()
+	network := getNetwork(label, label)
+
+	return network, createResource(ctx, tx, "network", network)
+}
+
+func createNotSyncedResource(ctx context.Context, tx transaction.Transaction, label string) (map[string]interface{}, *schema.Resource) {
+	label = label + uuid.NewV4().String()
+	raw := map[string]interface{}{"id": label}
+
+	return raw, createResource(ctx, tx, "not_synced", raw)
 }
 
 func getSubnet(color string, tenant string, parent string) map[string]interface{} {

@@ -30,7 +30,6 @@ import (
 	"github.com/cloudwan/gohan/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/twinj/uuid"
 )
 
 var _ = Describe("Server package test", func() {
@@ -305,18 +304,6 @@ var _ = Describe("Server package test", func() {
 				done.Wait()
 			})
 
-			createNetwork := func(tx transaction.Transaction, label string) (map[string]interface{}, *schema.Resource) {
-				label = label + uuid.NewV4().String()
-
-				manager := schema.GetManager()
-				network := getNetwork(label, label)
-				networkResource, err := manager.LoadResource("network", network)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(tx.Create(ctx, networkResource)).To(Succeed())
-
-				return network, networkResource
-			}
-
 			checkIsSynced := func(rawResource map[string]interface{}, resource *schema.Resource) {
 				var writtenConfig *gohan_sync.Node
 				Eventually(func() error {
@@ -340,9 +327,9 @@ var _ = Describe("Server package test", func() {
 			It("writes all events from a single transaction", func() {
 
 				err := db.WithinTx(syncedDb, func(tx transaction.Transaction) error {
-					rawRed, red = createNetwork(tx, "red")
-					rawBlue, blue = createNetwork(tx, "blue")
-					rawGreen, green = createNetwork(tx, "green")
+					rawRed, red = createNetwork(ctx, tx, "red")
+					rawBlue, blue = createNetwork(ctx, tx, "blue")
+					rawGreen, green = createNetwork(ctx, tx, "green")
 
 					return nil
 				})
@@ -355,17 +342,17 @@ var _ = Describe("Server package test", func() {
 
 			It("writes all events from many transactions", func() {
 				Expect(db.WithinTx(syncedDb, func(tx transaction.Transaction) error {
-					rawRed, red = createNetwork(tx, "red")
+					rawRed, red = createNetwork(ctx, tx, "red")
 					return nil
 				})).To(Succeed())
 
 				Expect(db.WithinTx(syncedDb, func(tx transaction.Transaction) error {
-					rawBlue, blue = createNetwork(tx, "blue")
+					rawBlue, blue = createNetwork(ctx, tx, "blue")
 					return nil
 				})).To(Succeed())
 
 				Expect(db.WithinTx(syncedDb, func(tx transaction.Transaction) error {
-					rawGreen, green = createNetwork(tx, "green")
+					rawGreen, green = createNetwork(ctx, tx, "green")
 					return nil
 				})).To(Succeed())
 
