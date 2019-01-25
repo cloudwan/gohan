@@ -37,8 +37,7 @@ const (
 
 	configPrefix = "/config"
 
-	defaultEventPollingLimit = 10000
-	defaultBackoff           = 5 * time.Second
+	defaultBackoff = 5 * time.Second
 )
 
 // SyncWriter copies data from the RDBMS to the sync layer.
@@ -46,28 +45,22 @@ const (
 // sync layer by SyncWriter.
 // SyncWriter gets items to sync from the event table.
 type SyncWriter struct {
-	sync              gohan_sync.Sync
-	db                db.DB
-	backoff           time.Duration
-	eventPollingLimit uint64
+	sync    gohan_sync.Sync
+	db      db.DB
+	backoff time.Duration
 }
 
 // NewSyncWriter creates a new instance of SyncWriter.
 func NewSyncWriter(sync gohan_sync.Sync, db db.DB) *SyncWriter {
 	return &SyncWriter{
-		sync:              sync,
-		db:                db,
-		backoff:           getBackoff(),
-		eventPollingLimit: getEventPollingLimit(),
+		sync:    sync,
+		db:      db,
+		backoff: getBackoff(),
 	}
 }
 
 func getBackoff() time.Duration {
 	return util.GetConfig().GetDuration("sync_writer/backoff", defaultBackoff)
-}
-
-func getEventPollingLimit() uint64 {
-	return uint64(util.GetConfig().GetInt("sync_writer/polling_limit", defaultEventPollingLimit))
 }
 
 // NewSyncWriterFromServer is a helper method for test.
@@ -159,7 +152,7 @@ func (writer *SyncWriter) listEvents() ([]*schema.Resource, error) {
 		paginator, _ := pagination.NewPaginator(
 			pagination.OptionKey(eventSchema, "id"),
 			pagination.OptionOrder(pagination.ASC),
-			pagination.OptionLimit(writer.eventPollingLimit))
+		)
 		res, _, err := tx.List(context.Background(), eventSchema, nil, nil, paginator)
 		resourceList = res
 		return err
