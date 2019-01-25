@@ -32,7 +32,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = FDescribe("Transaction Commit Informer", func() {
+var _ = Describe("Transaction Commit Informer", func() {
 	var (
 		ctx      context.Context
 		cancel   context.CancelFunc

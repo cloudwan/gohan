@@ -38,8 +38,11 @@ func (ft *FuzzyTransaction) fuzzIt(fn func() error) error {
 }
 
 // Create creates a new resource
-func (ft *FuzzyTransaction) Create(ctx context.Context, resource *schema.Resource) error {
-	return ft.fuzzIt(func() error { return ft.Tx.Create(ctx, resource) })
+func (ft *FuzzyTransaction) Create(ctx context.Context, resource *schema.Resource) (Result, error) {
+	if rand.Int()&1 == 0 {
+		return nil, fmt.Errorf("database is locked")
+	}
+	return ft.Tx.Create(ctx, resource)
 }
 
 // Update updates an existing resource

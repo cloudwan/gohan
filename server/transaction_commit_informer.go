@@ -178,15 +178,21 @@ func (tl *transactionEventLogger) logEvent(ctx context.Context, eventType string
 		"timestamp":     int64(time.Now().Unix()),
 	})
 	tl.eventLogged = true
-	return tl.Transaction.Create(ctx, eventResource)
+
+	_, err = tl.Transaction.Create(ctx, eventResource)
+	return err
 }
 
-func (tl *transactionEventLogger) Create(ctx context.Context, resource *schema.Resource) error {
-	err := tl.Transaction.Create(ctx, resource)
+func (tl *transactionEventLogger) Create(ctx context.Context, resource *schema.Resource) (transaction.Result, error) {
+	result, err := tl.Transaction.Create(ctx, resource)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return tl.logEvent(ctx, "create", resource, 1)
+	if err = tl.logEvent(ctx, "create", resource, 1); err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 func (tl *transactionEventLogger) Update(ctx context.Context, resource *schema.Resource) error {

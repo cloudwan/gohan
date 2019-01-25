@@ -1144,6 +1144,11 @@ var _ = Describe("Server package test", func() {
 		})
 	})
 
+	create := func(tx transaction.Transaction, resource *schema.Resource) {
+		_, err := tx.Create(ctx, resource)
+		Expect(err).NotTo(HaveOccurred())
+	}
+
 	Describe("Resync command test", func() {
 		It("Should resync syncable resources", func() {
 			var err error
@@ -1193,9 +1198,10 @@ var _ = Describe("Server package test", func() {
 				"cidr":        "10.11.23.0/24",
 				"tenant_id":   "tenant1",
 			})
-			Expect(tx.Create(ctx, net1)).To(Succeed())
-			Expect(tx.Create(ctx, subnet1)).To(Succeed())
-			Expect(tx.Create(ctx, net2)).To(Succeed())
+
+			create(tx, net1)
+			create(tx, subnet1)
+			create(tx, net2)
 			Expect(tx.Commit()).To(Succeed())
 
 			if err != nil {
@@ -1638,7 +1644,8 @@ func createResource(ctx context.Context, tx transaction.Transaction, schemaId st
 	manager := schema.GetManager()
 	resource, err := manager.LoadResource(schemaId, rawResource)
 	Expect(err).ToNot(HaveOccurred())
-	Expect(tx.Create(ctx, resource)).To(Succeed())
+	_, err = tx.Create(ctx, resource)
+	Expect(err).NotTo(HaveOccurred())
 
 	return resource
 }

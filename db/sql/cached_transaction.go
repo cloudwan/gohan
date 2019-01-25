@@ -22,6 +22,7 @@ import (
 	"github.com/cloudwan/gohan/db/pagination"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
+
 	// Import mysql lib
 	_ "github.com/go-sql-driver/mysql"
 	// Import go-sqlite3 lib
@@ -49,7 +50,7 @@ func MakeCachedTransaction(transx TxInterface) TxInterface {
 	return cachedTransaction
 }
 
-func (tx *CachedTransaction) Create(ctx context.Context, resource *schema.Resource) error {
+func (tx *CachedTransaction) Create(ctx context.Context, resource *schema.Resource) (transaction.Result, error) {
 	tx.ClearCache()
 	return tx.TxInterface.Create(ctx, resource)
 }

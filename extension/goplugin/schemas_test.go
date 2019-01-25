@@ -407,7 +407,8 @@ var _ = Describe("Schemas", func() {
 					"name": resourceName,
 				})
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(tx.Create(ctx, resource)).To(Succeed())
+				_, err = tx.Create(ctx, resource)
+				Expect(err).NotTo(HaveOccurred())
 				Expect(tx.Commit()).To(Succeed())
 			})
 

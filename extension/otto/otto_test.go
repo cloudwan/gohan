@@ -58,6 +58,11 @@ var _ = Describe("Otto extension manager", func() {
 		return map[string]interface{}{"context": ctx}
 	}
 
+	create := func(tx transaction.Transaction, resource *schema.Resource) {
+		_, err := tx.Create(ctx, resource)
+		Expect(err).NotTo(HaveOccurred())
+	}
+
 	BeforeEach(func() {
 		manager = schema.GetManager()
 		environmentManager = extension.GetManager()
@@ -886,7 +891,7 @@ var _ = Describe("Otto extension manager", func() {
 					tx, err = testDB.BeginTx()
 					Expect(err).NotTo(HaveOccurred())
 					defer tx.Close()
-					Expect(tx.Create(ctx, resource)).To(Succeed())
+					create(tx, resource)
 					Expect(tx.Commit()).To(Succeed())
 
 					action = "read"
@@ -1044,7 +1049,7 @@ var _ = Describe("Otto extension manager", func() {
 					tx, err = testDB.BeginTx()
 					Expect(err).NotTo(HaveOccurred())
 					defer tx.Close()
-					Expect(tx.Create(ctx, resource)).To(Succeed())
+					create(tx, resource)
 					Expect(tx.Commit()).To(Succeed())
 
 					action = "read"
@@ -1170,7 +1175,7 @@ var _ = Describe("Otto extension manager", func() {
 					tx, err = testDB.BeginTx()
 					Expect(err).NotTo(HaveOccurred())
 					defer tx.Close()
-					Expect(tx.Create(ctx, resource)).To(Succeed())
+					create(tx, resource)
 					Expect(tx.Commit()).To(Succeed())
 
 					action = "create"
@@ -1291,7 +1296,7 @@ var _ = Describe("Otto extension manager", func() {
 					tx, err = testDB.BeginTx()
 					Expect(err).NotTo(HaveOccurred())
 					defer tx.Close()
-					Expect(tx.Create(ctx, resource)).To(Succeed())
+					create(tx, resource)
 					Expect(tx.Commit()).To(Succeed())
 
 					action = "update"
@@ -1415,7 +1420,7 @@ var _ = Describe("Otto extension manager", func() {
 					tx, err = testDB.BeginTx()
 					Expect(err).NotTo(HaveOccurred())
 					defer tx.Close()
-					Expect(tx.Create(ctx, resource)).To(Succeed())
+					create(tx, resource)
 					Expect(tx.Commit()).To(Succeed())
 
 					action = "delete"
@@ -1504,7 +1509,7 @@ var _ = Describe("Otto extension manager", func() {
 					tx, err = testDB.BeginTx()
 					Expect(err).NotTo(HaveOccurred())
 					defer tx.Close()
-					Expect(tx.Create(ctx, resource)).To(Succeed())
+					create(tx, resource)
 					Expect(tx.Commit()).To(Succeed())
 
 					action = "read"

@@ -51,7 +51,8 @@ func (t *Transaction) Create(ctx context.Context, s goext.ISchema, resource map[
 	// use context.Background to avoid cancellation mid-query for all Queries/Exec
 	// ESI-16552 context cancellation tends to break next Begin
 	// It doesn't work in mysql driver anyway https://github.com/go-sql-driver/mysql/issues/731
-	return t.tx.Create(context.Background(), res)
+	_, err := t.tx.Create(context.Background(), res)
+	return err
 }
 
 // Update updates an existing resource

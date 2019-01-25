@@ -142,6 +142,11 @@ var _ = Describe("Resource manager", func() {
 		}
 	}
 
+	create := func(tx transaction.Transaction, resource *schema.Resource) {
+		_, err := tx.Create(ctx, resource)
+		Expect(err).NotTo(HaveOccurred())
+	}
+
 	createTestResources := func() {
 		adminResource, err := manager.LoadResource(currentSchema.ID, adminResourceData)
 		Expect(err).NotTo(HaveOccurred())
@@ -149,13 +154,13 @@ var _ = Describe("Resource manager", func() {
 		Expect(err).NotTo(HaveOccurred())
 		otherDomainResource, err := manager.LoadResource(currentSchema.ID, otherDomainResourceData)
 		Expect(err).NotTo(HaveOccurred())
-		transaction, err := testDB.BeginTx()
+		tx, err := testDB.BeginTx()
 		Expect(err).NotTo(HaveOccurred())
-		defer transaction.Close()
-		Expect(transaction.Create(ctx, adminResource)).To(Succeed())
-		Expect(transaction.Create(ctx, memberResource)).To(Succeed())
-		Expect(transaction.Create(ctx, otherDomainResource)).To(Succeed())
-		Expect(transaction.Commit()).To(Succeed())
+		defer tx.Close()
+		create(tx, adminResource)
+		create(tx, memberResource)
+		create(tx, otherDomainResource)
+		Expect(tx.Commit()).To(Succeed())
 	}
 
 	setupAndCreateTestResources := func() {
