@@ -39,11 +39,14 @@ var _ = Describe("Transaction Commit Informer", func() {
 		done     sync.WaitGroup
 		sync     *gohan_etcd.Sync
 		mockCtrl *gomock.Controller
+		syncedDb db.DB
 	)
 
 	BeforeEach(func() {
 		mockCtrl = gomock.NewController(GinkgoT())
 		ctx, cancel = context.WithCancel(context.Background())
+
+		syncedDb = srv.NewDbSyncWrapper(testDB)
 
 		var err error
 		sync, err = gohan_etcd.NewSync([]string{"http://127.0.0.1:2379"}, time.Second)
@@ -74,8 +77,8 @@ var _ = Describe("Transaction Commit Informer", func() {
 		Consistently(ch).ShouldNot(Receive())
 	}
 
-	withinTx := func(database db.DB, fn func(transaction.Transaction)) {
-		Expect(db.WithinTx(database, func(tx transaction.Transaction) error {
+	withinTx := func(fn func(transaction.Transaction)) {
+		Expect(db.WithinTx(syncedDb, func(tx transaction.Transaction) error {
 			fn(tx)
 			return nil
 		})).To(Succeed())
@@ -104,8 +107,7 @@ var _ = Describe("Transaction Commit Informer", func() {
 	It("should update ETCD key on commit", func() {
 		startInformer(sync)
 
-		syncedDb := srv.NewDbSyncWrapper(testDB)
-		withinTx(syncedDb, func(tx transaction.Transaction) {
+		withinTx(func(tx transaction.Transaction) {
 			createNetwork(ctx, tx, "red")
 		})
 
@@ -116,9 +118,7 @@ var _ = Describe("Transaction Commit Informer", func() {
 		startInformer(sync)
 		respCh := sync.WatchContext(ctx, srv.SyncKeyTxCommitted, gohan_sync.RevisionCurrent)
 
-		syncedDb := srv.NewDbSyncWrapper(testDB)
-
-		withinTx(syncedDb, func(tx transaction.Transaction) {
+		withinTx(func(tx transaction.Transaction) {
 			createNetwork(ctx, tx, "red")
 			createNetwork(ctx, tx, "green")
 			createNetwork(ctx, tx, "blue")
@@ -130,15 +130,13 @@ var _ = Describe("Transaction Commit Informer", func() {
 	It("should update ETCD key once per a batch of transactions", func() {
 		respCh := sync.WatchContext(ctx, srv.SyncKeyTxCommitted, gohan_sync.RevisionCurrent)
 
-		syncedDb := srv.NewDbSyncWrapper(testDB)
-
-		withinTx(syncedDb, func(tx transaction.Transaction) {
+		withinTx(func(tx transaction.Transaction) {
 			createNetwork(ctx, tx, "red")
 		})
-		withinTx(syncedDb, func(tx transaction.Transaction) {
+		withinTx(func(tx transaction.Transaction) {
 			createNetwork(ctx, tx, "green")
 		})
-		withinTx(syncedDb, func(tx transaction.Transaction) {
+		withinTx(func(tx transaction.Transaction) {
 			createNetwork(ctx, tx, "blue")
 		})
 
@@ -149,8 +147,6 @@ var _ = Describe("Transaction Commit Informer", func() {
 
 	It("should not update ETCD key on rollback", func() {
 		startInformer(sync)
-
-		syncedDb := srv.NewDbSyncWrapper(testDB)
 
 		Expect(db.WithinTx(syncedDb, func(tx transaction.Transaction) error {
 			createNetwork(ctx, tx, "red")
@@ -163,9 +159,7 @@ var _ = Describe("Transaction Commit Informer", func() {
 	It("should not update ETCD key on non-synced resources", func() {
 		startInformer(sync)
 
-		syncedDb := srv.NewDbSyncWrapper(testDB)
-
-		withinTx(syncedDb, func(tx transaction.Transaction) {
+		withinTx(func(tx transaction.Transaction) {
 			createNotSyncedResource(ctx, tx, "red")
 		})
 
@@ -173,9 +167,7 @@ var _ = Describe("Transaction Commit Informer", func() {
 	})
 
 	It("should retry failed calls", func() {
-		syncedDb := srv.NewDbSyncWrapper(testDB)
-
-		withinTx(syncedDb, func(tx transaction.Transaction) {
+		withinTx(func(tx transaction.Transaction) {
 			createNetwork(ctx, tx, "red")
 		})
 
@@ -194,15 +186,13 @@ var _ = Describe("Transaction Commit Informer", func() {
 	})
 
 	It("should update ETCD key once per after connection to ETCD restored", func() {
-		syncedDb := srv.NewDbSyncWrapper(testDB)
-
-		withinTx(syncedDb, func(tx transaction.Transaction) {
+		withinTx(func(tx transaction.Transaction) {
 			createNetwork(ctx, tx, "firstResource")
 		})
 
 		mockSync := mock_sync.NewMockSync(mockCtrl)
 		failedCall := mockSync.EXPECT().Update(srv.SyncKeyTxCommitted, gomock.Any()).DoAndReturn(func(interface{}, interface{}) error {
-			withinTx(syncedDb, func(tx transaction.Transaction) {
+			withinTx(func(tx transaction.Transaction) {
 				createNetwork(ctx, tx, "secondResource")
 			})
 			return fmt.Errorf("etcd update failed")
