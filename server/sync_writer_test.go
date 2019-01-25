@@ -232,71 +232,78 @@ var _ = Describe("Server package test", func() {
 			})
 		})
 
-		Context("many events", func() {
-			var (
-				cancel context.CancelFunc
-				writer *srv.SyncWriter
-				done   sync_lib.WaitGroup
-			)
+	})
 
-			BeforeEach(func() {
-				ctx, cancel = context.WithCancel(ctx)
+	Describe("Interactions with TransactionCommitInformer", func() {
+		var (
+			cancel context.CancelFunc
+			done   sync_lib.WaitGroup
+		)
 
-				done.Add(1)
-				writer = srv.NewSyncWriterFromServer(server)
-				go func() {
-					defer GinkgoRecover()
-					Expect(writer.Run(ctx, &done)).To(Equal(context.Canceled))
-				}()
+		startInformer := func() {
+			informer := srv.NewTransactionCommitInformer(sync)
 
-				informer := srv.NewTransactionCommitInformer(sync)
+			done.Add(1)
+			go func() {
+				defer GinkgoRecover()
+				Expect(informer.Run(ctx, &done)).To(Equal(context.Canceled))
+			}()
+		}
 
-				done.Add(1)
-				go func() {
-					defer GinkgoRecover()
-					Expect(informer.Run(ctx, &done)).To(Equal(context.Canceled))
-				}()
-			})
+		startWriter := func() {
+			writer := srv.NewSyncWriterFromServer(server)
 
-			AfterEach(func() {
-				deleteNetwork(red)
-				deleteNetwork(green)
-				deleteNetwork(blue)
+			done.Add(1)
+			go func() {
+				defer GinkgoRecover()
+				Expect(writer.Run(ctx, &done)).To(Equal(context.Canceled))
+			}()
+		}
 
-				cancel()
-				done.Wait()
-			})
+		BeforeEach(func() {
+			ctx, cancel = context.WithCancel(ctx)
 
-			It("writes all events from a single transaction", func() {
-				withinTx(func(tx transaction.Transaction) {
-					rawRed, red = createNetwork(ctx, tx, "red")
-					rawBlue, blue = createNetwork(ctx, tx, "blue")
-					rawGreen, green = createNetwork(ctx, tx, "green")
-				})
-
-				checkIsSynced(rawRed, red)
-				checkIsSynced(rawBlue, blue)
-				checkIsSynced(rawGreen, green)
-			})
-
-			It("writes all events from many transactions", func() {
-				withinTx(func(tx transaction.Transaction) {
-					rawRed, red = createNetwork(ctx, tx, "red")
-				})
-
-				withinTx(func(tx transaction.Transaction) {
-					rawBlue, blue = createNetwork(ctx, tx, "blue")
-				})
-
-				withinTx(func(tx transaction.Transaction) {
-					rawGreen, green = createNetwork(ctx, tx, "green")
-				})
-
-				checkIsSynced(rawRed, red)
-				checkIsSynced(rawBlue, blue)
-				checkIsSynced(rawGreen, green)
-			})
+			startWriter()
+			startInformer()
 		})
 
+		AfterEach(func() {
+			deleteNetwork(red)
+			deleteNetwork(green)
+			deleteNetwork(blue)
+
+			cancel()
+			done.Wait()
+		})
+
+		It("writes all events from a single transaction", func() {
+			withinTx(func(tx transaction.Transaction) {
+				rawRed, red = createNetwork(ctx, tx, "red")
+				rawBlue, blue = createNetwork(ctx, tx, "blue")
+				rawGreen, green = createNetwork(ctx, tx, "green")
+			})
+
+			checkIsSynced(rawRed, red)
+			checkIsSynced(rawBlue, blue)
+			checkIsSynced(rawGreen, green)
+		})
+
+		It("writes all events from many transactions", func() {
+			withinTx(func(tx transaction.Transaction) {
+				rawRed, red = createNetwork(ctx, tx, "red")
+			})
+
+			withinTx(func(tx transaction.Transaction) {
+				rawBlue, blue = createNetwork(ctx, tx, "blue")
+			})
+
+			withinTx(func(tx transaction.Transaction) {
+				rawGreen, green = createNetwork(ctx, tx, "green")
+			})
+
+			checkIsSynced(rawRed, red)
+			checkIsSynced(rawBlue, blue)
+			checkIsSynced(rawGreen, green)
+		})
 	})
 })

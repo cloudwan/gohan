@@ -114,14 +114,18 @@ func (writer *SyncWriter) run(ctx context.Context) error {
 			return fmt.Errorf("lost lock for sync")
 		case <-ctx.Done():
 			return nil
-		case <-triggerCh:
-			metrics.UpdateCounter(1, "sync_writer.wake_up.on_trigger")
-		}
-
-		if _, err := writer.Sync(); err != nil {
-			return err
+		case event := <-triggerCh:
+			if err := writer.triggerSync(event); err != nil {
+				return err
+			}
 		}
 	}
+}
+
+func (writer *SyncWriter) triggerSync(event *gohan_sync.Event) error {
+	metrics.UpdateCounter(1, "sync_writer.wake_up.on_trigger")
+	_, err := writer.Sync()
+	return err
 }
 
 // Sync runs a synchronization iteration, which
