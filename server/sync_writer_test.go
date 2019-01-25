@@ -242,6 +242,14 @@ var _ = Describe("Server package test", func() {
 					defer GinkgoRecover()
 					Expect(writer.Run(ctx, &done)).To(Equal(context.Canceled))
 				}()
+
+				informer := srv.NewTransactionCommitInformer(sync)
+
+				done.Add(1)
+				go func() {
+					defer GinkgoRecover()
+					Expect(informer.Run(ctx, &done)).To(Equal(context.Canceled))
+				}()
 			})
 
 			AfterEach(func() {

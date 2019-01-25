@@ -62,7 +62,7 @@ func (t *TransactionCommitInformer) notify(ctx context.Context) {
 	for {
 		drain(transactionCommitted)
 
-		err := t.sync.Update("/gohan/cluster/sync/tx_committed", `{"value": 1}`)
+		err := t.sync.Update(SyncKeyTxCommitted, `{"value": 1}`)
 		if err == nil {
 			return
 		}

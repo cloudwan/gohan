@@ -37,9 +37,8 @@ const (
 
 	configPrefix = "/config"
 
-	defaultEventPollingInterval = 10 * time.Second
-	defaultEventPollingLimit    = 10000
-	defaultBackoff              = 5 * time.Second
+	defaultEventPollingLimit = 10000
+	defaultBackoff           = 5 * time.Second
 )
 
 // SyncWriter copies data from the RDBMS to the sync layer.
@@ -50,7 +49,6 @@ type SyncWriter struct {
 	sync              gohan_sync.Sync
 	db                db.DB
 	backoff           time.Duration
-	pollingTicker     <-chan time.Time
 	eventPollingLimit uint64
 }
 
@@ -60,17 +58,12 @@ func NewSyncWriter(sync gohan_sync.Sync, db db.DB) *SyncWriter {
 		sync:              sync,
 		db:                db,
 		backoff:           getBackoff(),
-		pollingTicker:     time.Tick(getEventPollingInterval()),
 		eventPollingLimit: getEventPollingLimit(),
 	}
 }
 
 func getBackoff() time.Duration {
 	return util.GetConfig().GetDuration("sync_writer/backoff", defaultBackoff)
-}
-
-func getEventPollingInterval() time.Duration {
-	return util.GetConfig().GetDuration("sync_writer/interval_ms", defaultEventPollingInterval)
 }
 
 func getEventPollingLimit() uint64 {
@@ -112,6 +105,8 @@ func (writer *SyncWriter) run(ctx context.Context) error {
 		}
 	}()
 
+	triggerCh := writer.sync.WatchContext(ctx, SyncKeyTxCommitted, gohan_sync.RevisionCurrent)
+
 	for {
 		select {
 		case <-lost:
@@ -119,10 +114,8 @@ func (writer *SyncWriter) run(ctx context.Context) error {
 			return fmt.Errorf("lost lock for sync")
 		case <-ctx.Done():
 			return nil
-		case <-writer.pollingTicker:
-			metrics.UpdateCounter(1, "sync_writer.wake_up.on_timer")
-		case <-transactionCommitted:
-			metrics.UpdateCounter(1, "sync_writer.wake_up.on_commit")
+		case <-triggerCh:
+			metrics.UpdateCounter(1, "sync_writer.wake_up.on_trigger")
 		}
 
 		if _, err := writer.Sync(); err != nil {
