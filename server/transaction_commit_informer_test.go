@@ -17,12 +17,15 @@ package server_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/cloudwan/gohan/db"
+	"github.com/cloudwan/gohan/db/pagination"
 	"github.com/cloudwan/gohan/db/transaction"
+	"github.com/cloudwan/gohan/schema"
 	srv "github.com/cloudwan/gohan/server"
 	gohan_sync "github.com/cloudwan/gohan/sync"
 	gohan_etcd "github.com/cloudwan/gohan/sync/etcdv3"
@@ -104,6 +107,38 @@ var _ = Describe("Transaction Commit Informer", func() {
 		}).Should(MatchError(ContainSubstring("Key not found")))
 	}
 
+	fetchNewestEventId := func() (id int) {
+		eventSchema, _ := schema.GetManager().Schema("event")
+
+		Expect(db.WithinTx(syncedDb, func(tx transaction.Transaction) error {
+			paginator, err := pagination.NewPaginator(
+				pagination.OptionKey(eventSchema, "id"),
+				pagination.OptionOrder(pagination.DESC),
+				pagination.OptionLimit(1),
+			)
+			Expect(err).NotTo(HaveOccurred())
+			events, count, err := tx.List(ctx, eventSchema, transaction.Filter{}, nil, paginator)
+			Expect(count).To(BeNumerically(">", 1))
+			id = events[0].Get("id").(int)
+
+			return nil
+		})).To(Succeed())
+
+		return
+	}
+
+	shouldStoreEventId := func(id int) {
+		node, err := sync.Fetch(srv.SyncKeyTxCommitted)
+		Expect(err).NotTo(HaveOccurred())
+
+		result := struct {
+			EventId int `json:"event_id"`
+		}{}
+		Expect(json.Unmarshal([]byte(node.Value), &result)).To(Succeed())
+
+		Expect(result.EventId).To(Equal(id))
+	}
+
 	It("should update ETCD key on commit", func() {
 		startInformer(sync)
 
@@ -125,6 +160,8 @@ var _ = Describe("Transaction Commit Informer", func() {
 		})
 
 		shouldReceiveExactlyOnce(respCh)
+
+		shouldStoreEventId(fetchNewestEventId())
 	})
 
 	It("should update ETCD key once per a batch of transactions", func() {

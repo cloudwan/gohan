@@ -17,6 +17,7 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -29,10 +30,11 @@ import (
 	gohan_sync "github.com/cloudwan/gohan/sync"
 )
 
-var transactionCommitted = make(chan struct{}, 1024)
+var transactionCommitted = make(chan int64, 1024)
 
 const (
 	SyncKeyTxCommitted = "/gohan/cluster/sync/tx_committed"
+	badEventId         = -1
 )
 
 func NewTransactionCommitInformer(sync gohan_sync.Sync) *TransactionCommitInformer {
@@ -50,19 +52,19 @@ func (t *TransactionCommitInformer) Run(ctx context.Context, wg *sync.WaitGroup)
 
 	for {
 		select {
-		case <-transactionCommitted:
-			t.notify(ctx)
+		case id := <-transactionCommitted:
+			t.notify(ctx, id)
 		case <-ctx.Done():
 			return ctx.Err()
 		}
 	}
 }
 
-func (t *TransactionCommitInformer) notify(ctx context.Context) {
+func (t *TransactionCommitInformer) notify(ctx context.Context, lastId int64) {
 	for {
-		drain(transactionCommitted)
+		lastId = drain(transactionCommitted, lastId)
 
-		err := t.sync.Update(SyncKeyTxCommitted, `{"value": 1}`)
+		err := t.sync.Update(SyncKeyTxCommitted, buildSyncValue(lastId))
 		if err == nil {
 			return
 		}
@@ -76,14 +78,27 @@ func (t *TransactionCommitInformer) notify(ctx context.Context) {
 	}
 }
 
-func drain(ch <-chan struct{}) {
+func drain(ch <-chan int64, v int64) int64 {
 	for {
 		select {
-		case <-ch:
+		case v = <-ch:
 		default:
-			return
+			return v
 		}
 	}
+}
+
+func buildSyncValue(id int64) string {
+	type syncedEvent struct {
+		EventId int64 `json:"event_id"`
+	}
+
+	data, err := json.Marshal(syncedEvent{id})
+	if err != nil {
+		panic(fmt.Sprintf("Can't marshall data: %s", err))
+	}
+
+	return string(data)
 }
 
 //DbSyncWrapper wraps db.DB so it logs events in database on every transaction.
@@ -127,10 +142,11 @@ func (sw *DbSyncWrapper) Options() options.Options {
 type transactionEventLogger struct {
 	transaction.Transaction
 	eventLogged bool
+	lastEventId int64
 }
 
 func syncTransactionWrap(tx transaction.Transaction) *transactionEventLogger {
-	return &transactionEventLogger{tx, false}
+	return &transactionEventLogger{tx, false, badEventId}
 }
 
 func (tl *transactionEventLogger) logEvent(ctx context.Context, eventType string, resource *schema.Resource, version int64) error {
@@ -179,7 +195,12 @@ func (tl *transactionEventLogger) logEvent(ctx context.Context, eventType string
 	})
 	tl.eventLogged = true
 
-	_, err = tl.Transaction.Create(ctx, eventResource)
+	result, err := tl.Transaction.Create(ctx, eventResource)
+	if err != nil {
+		return err
+	}
+
+	tl.lastEventId, err = result.LastInsertId()
 	return err
 }
 
@@ -246,15 +267,20 @@ func (tl *transactionEventLogger) Commit() error {
 	if err != nil {
 		return err
 	}
+
+	tl.triggerSyncWriter()
+	return nil
+}
+
+func (tl *transactionEventLogger) triggerSyncWriter() {
 	if !tl.eventLogged {
-		return nil
+		return
 	}
 
-	select {
-	case transactionCommitted <- struct{}{}:
-		metrics.UpdateCounter(1, "event_logger.notified")
-	default:
-		metrics.UpdateCounter(1, "event_logger.skipped")
+	if tl.lastEventId == badEventId {
+		panic("logic error, lastEventId not set")
 	}
-	return nil
+
+	transactionCommitted <- tl.lastEventId
+	metrics.UpdateCounter(1, "event_logger.notified")
 }
