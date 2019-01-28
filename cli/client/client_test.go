@@ -211,7 +211,10 @@ var _ = Describe("CLI functions", func() {
 				os.Unsetenv("OS_USERNAME")
 				provider, err = getProviderClient()
 				Expect(provider).To(BeNil())
-				Expect(err).To(MatchError("Missing one of the following environment variables [OS_USERNAME, OS_USERID]"))
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("Missing one of the following environment variables"))
+				Expect(err.Error()).To(ContainSubstring("OS_USERNAME"))
+				Expect(err.Error()).To(ContainSubstring("OS_USERID"))
 			})
 
 			It("Should show error - OS_PASSWORD not set", func() {
