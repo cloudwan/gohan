@@ -31,7 +31,6 @@ var transactionCommitted = make(chan int64, 1024)
 
 const (
 	SyncKeyTxCommitted = "/gohan/cluster/sync/tx_committed"
-	badEventId         = -1
 
 	defaultRetryDelay = 500 * time.Millisecond
 )

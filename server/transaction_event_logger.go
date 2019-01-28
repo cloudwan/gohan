@@ -25,6 +25,17 @@ import (
 	"github.com/cloudwan/gohan/schema"
 )
 
+const noEventLogged = -1
+
+func syncTransactionWrap(tx transaction.Transaction) transaction.Transaction {
+	return &transactionEventLogger{tx, noEventLogged}
+}
+
+type transactionEventLogger struct {
+	transaction.Transaction
+	lastEventId int64
+}
+
 func (tl *transactionEventLogger) logEvent(ctx context.Context, eventType string, resource *schema.Resource, version int64) error {
 	schemaManager := schema.GetManager()
 	eventSchema, ok := schemaManager.Schema("event")
@@ -69,7 +80,6 @@ func (tl *transactionEventLogger) logEvent(ctx context.Context, eventType string
 		"sync_property": syncProperty,
 		"timestamp":     int64(time.Now().Unix()),
 	})
-	tl.eventLogged = true
 
 	result, err := tl.Transaction.Create(ctx, eventResource)
 	if err != nil {
@@ -149,14 +159,14 @@ func (tl *transactionEventLogger) Commit() error {
 }
 
 func (tl *transactionEventLogger) triggerSyncWriter() {
-	if !tl.eventLogged {
+	if !tl.wasEventLogged() {
 		return
-	}
-
-	if tl.lastEventId == badEventId {
-		panic("logic error, lastEventId not set")
 	}
 
 	transactionCommitted <- tl.lastEventId
 	metrics.UpdateCounter(1, "event_logger.notified")
+}
+
+func (tl *transactionEventLogger) wasEventLogged() bool {
+	return tl.lastEventId != noEventLogged
 }

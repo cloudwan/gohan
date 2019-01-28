@@ -59,13 +59,3 @@ func (sw *DbSyncWrapper) DropTable(s *schema.Schema) error {
 func (sw *DbSyncWrapper) Options() options.Options {
 	return sw.db.Options()
 }
-
-type transactionEventLogger struct {
-	transaction.Transaction
-	eventLogged bool
-	lastEventId int64
-}
-
-func syncTransactionWrap(tx transaction.Transaction) *transactionEventLogger {
-	return &transactionEventLogger{tx, false, badEventId}
-}
