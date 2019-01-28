@@ -45,6 +45,19 @@ var _ = Describe("Transaction Commit Informer", func() {
 		syncedDb db.DB
 	)
 
+	withinTx := func(fn func(transaction.Transaction)) {
+		Expect(db.WithinTx(syncedDb, func(tx transaction.Transaction) error {
+			fn(tx)
+			return nil
+		})).To(Succeed())
+	}
+
+	deleteAllEvents := func() {
+		withinTx(func(tx transaction.Transaction) {
+			Expect(tx.Exec(ctx, "DELETE FROM events")).To(Succeed())
+		})
+	}
+
 	BeforeEach(func() {
 		mockCtrl = gomock.NewController(GinkgoT())
 		ctx, cancel = context.WithCancel(context.Background())
@@ -62,6 +75,9 @@ var _ = Describe("Transaction Commit Informer", func() {
 		cancel()
 		done.Wait()
 		sync.Close()
+
+		deleteAllEvents()
+
 		mockCtrl.Finish()
 	})
 
@@ -78,13 +94,6 @@ var _ = Describe("Transaction Commit Informer", func() {
 	shouldReceiveExactlyOnce := func(ch <-chan *gohan_sync.Event) {
 		Eventually(ch).Should(Receive())
 		Consistently(ch).ShouldNot(Receive())
-	}
-
-	withinTx := func(fn func(transaction.Transaction)) {
-		Expect(db.WithinTx(syncedDb, func(tx transaction.Transaction) error {
-			fn(tx)
-			return nil
-		})).To(Succeed())
 	}
 
 	syncKeyShouldExist := func(key string) {
@@ -209,7 +218,7 @@ var _ = Describe("Transaction Commit Informer", func() {
 		})
 
 		mockSync := mock_sync.NewMockSync(mockCtrl)
-		failedCall := mockSync.EXPECT().Update(srv.SyncKeyTxCommitted, gomock.Any()).Return(fmt.Errorf("etcd update failed"))
+		failedCall := mockSync.EXPECT().Update(srv.SyncKeyTxCommitted, gomock.Any()).Return(fmt.Errorf("tested error: etcd update failed"))
 
 		syncUpdated := make(chan struct{}, 1)
 		mockSync.EXPECT().Update(srv.SyncKeyTxCommitted, gomock.Any()).DoAndReturn(func(interface{}, interface{}) error {
@@ -232,7 +241,7 @@ var _ = Describe("Transaction Commit Informer", func() {
 			withinTx(func(tx transaction.Transaction) {
 				createNetwork(ctx, tx, "secondResource")
 			})
-			return fmt.Errorf("etcd update failed")
+			return fmt.Errorf("tested error: etcd update failed")
 		})
 
 		syncUpdated := make(chan struct{}, 1)

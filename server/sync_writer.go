@@ -38,6 +38,8 @@ const (
 	configPrefix = "/config"
 
 	defaultBackoff = 5 * time.Second
+
+	notSyncedYet = -1
 )
 
 // SyncWriter copies data from the RDBMS to the sync layer.
@@ -45,17 +47,19 @@ const (
 // sync layer by SyncWriter.
 // SyncWriter gets items to sync from the event table.
 type SyncWriter struct {
-	sync    gohan_sync.Sync
-	db      db.DB
-	backoff time.Duration
+	sync            gohan_sync.Sync
+	db              db.DB
+	backoff         time.Duration
+	lastSyncedEvent int
 }
 
 // NewSyncWriter creates a new instance of SyncWriter.
 func NewSyncWriter(sync gohan_sync.Sync, db db.DB) *SyncWriter {
 	return &SyncWriter{
-		sync:    sync,
-		db:      db,
-		backoff: getBackoff(),
+		sync:            sync,
+		db:              db,
+		backoff:         getBackoff(),
+		lastSyncedEvent: notSyncedYet,
 	}
 }
 
@@ -107,16 +111,43 @@ func (writer *SyncWriter) run(ctx context.Context) error {
 			return fmt.Errorf("lost lock for sync")
 		case <-ctx.Done():
 			return nil
-		case event := <-triggerCh:
-			if err := writer.triggerSync(event); err != nil {
+		case event, open := <-triggerCh:
+			if !open {
+				// triggerCh could be closed due to context.Cancel()
+				// it's go schedulers arbitrary decision if <-ctx.Done() or <-triggerCh receives first,
+				// so we ensure the expected channel priorities ourselves
+				return nil
+			}
+
+			if event.Err != nil {
+				// TODO metric
+				return event.Err
+			}
+
+			if err := writer.triggerSync(getEventId(event)); err != nil {
 				return err
 			}
+
 		}
 	}
 }
 
-func (writer *SyncWriter) triggerSync(event *gohan_sync.Event) error {
+func getEventId(event *gohan_sync.Event) int {
+	eventId := event.Data["event_id"]
+
+	// our sync implementation converts data from ETCD to map[string]interface{}
+	// numbers are by default unmarshalled to float64
+	return int(eventId.(float64))
+}
+
+func (writer *SyncWriter) triggerSync(eventId int) error {
 	metrics.UpdateCounter(1, "sync_writer.wake_up.on_trigger")
+
+	if eventId < writer.lastSyncedEvent {
+		// TODO metric already synced
+		return nil
+	}
+
 	_, err := writer.Sync()
 	return err
 }
@@ -135,6 +166,7 @@ func (writer *SyncWriter) Sync() (synced int, err error) {
 			return
 		}
 		synced++
+		writer.lastSyncedEvent = resource.Get("id").(int)
 	}
 
 	if synced == 0 {
