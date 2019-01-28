@@ -93,12 +93,16 @@ func (watcher *StateWatcher) Run(ctx context.Context, wg *sync.WaitGroup) error 
 
 func (watcher *StateWatcher) iterate(ctx context.Context) error {
 	lockKey := lockPath + "/state_watch"
-	lost, err := watcher.sync.Lock(lockKey, true)
+	lost, err := watcher.sync.Lock(ctx, lockKey, true)
 	if err != nil {
 		// lock failed, another process is running
 		return nil
 	}
-	defer watcher.sync.Unlock(lockKey)
+	defer func() {
+		if err := watcher.sync.Unlock(lockKey); err != nil {
+			log.Warning("StateWatcher: unlocking etcd failed: %s", err)
+		}
+	}()
 
 	watchCtx, watchCancel := context.WithCancel(ctx)
 	respCh := watcher.sync.WatchContext(watchCtx, lockKey, gohan_sync.RevisionCurrent)

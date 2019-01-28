@@ -93,11 +93,15 @@ func (watcher *SyncWatcher) Run(ctx context.Context, wg *sync.WaitGroup) error {
 		err := func() error {
 			// register self process to the cluster
 			lockKey := processPathPrefix + "/" + watcher.sync.GetProcessID()
-			lost, err := watcher.sync.Lock(lockKey, true)
+			lost, err := watcher.sync.Lock(ctx, lockKey, true)
 			if err != nil {
 				return err
 			}
-			defer watcher.sync.Unlock(lockKey)
+			defer func() {
+				if err := watcher.sync.Unlock(lockKey); err != nil {
+					log.Warning("SyncWatcher: unlocking etcd failed on %s: %s", lockKey, err)
+				}
+			}()
 
 			watchCtx, watchCancel := context.WithCancel(ctx)
 			defer watchCancel()
@@ -260,11 +264,15 @@ func (watcher *SyncWatcher) runSyncWatches(ctx context.Context, size int, positi
 // This method gets a lock on the sync backend and returns with an error when fails.
 func (watcher *SyncWatcher) processSyncWatch(ctx context.Context, path string) error {
 	lockKey := lockPath + "/watch" + path
-	lost, err := watcher.sync.Lock(lockKey, false)
+	lost, err := watcher.sync.Lock(ctx, lockKey, false)
 	if err != nil {
 		return errLockFailed
 	}
-	defer watcher.sync.Unlock(lockKey)
+	defer func() {
+		if err := watcher.sync.Unlock(lockKey); err != nil {
+			log.Warning("SyncWatcher: unlocking etcd failed on %s: %s", lockKey, err)
+		}
+	}()
 
 	watchCtx, watchCancel := context.WithCancel(ctx)
 	defer watchCancel()

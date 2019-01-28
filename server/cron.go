@@ -56,10 +56,10 @@ func startCRONProcess(server *Server) {
 			log.Fatal(err.Error())
 		}
 
-		takeLock := func() error {
+		takeLock := func(ctx context.Context) error {
 			select {
 			case <-jobLocks[lockKey]:
-				_, err := server.sync.Lock(lockKey, false)
+				_, err := server.sync.Lock(ctx, lockKey, false)
 				if err != nil {
 					log.Debug("Failed to take ETCD lock")
 					jobLocks[lockKey] <- 1
@@ -71,8 +71,9 @@ func startCRONProcess(server *Server) {
 			}
 		}
 
-		c.AddFunc(timing, func() {
-			err := takeLock()
+		if err = c.AddFunc(timing, func() {
+			ctx := context.Background()
+			err := takeLock(ctx)
 			if err != nil {
 				log.Info("Failed to schedule cron job, err: %s", err.Error())
 				return
@@ -83,22 +84,26 @@ func startCRONProcess(server *Server) {
 				}
 				log.Debug("Unlocking %s", lockKey)
 				jobLocks[lockKey] <- 1
-				server.sync.Unlock(lockKey)
+				if err := server.sync.Unlock(lockKey); err != nil {
+					log.Warning("CRON: unlocking etcd failed: %s", err)
+				}
 			}()
 
-			ctx := map[string]interface{}{
+			eventCtx := map[string]interface{}{
 				"path":     path,
-				"context":  context.Background(),
+				"context":  ctx,
 				"trace_id": util.NewTraceID(),
 			}
 
 			clone := env.Clone()
-			if err := clone.HandleEvent("notification", ctx); err != nil {
+			if err := clone.HandleEvent("notification", eventCtx); err != nil {
 				log.Warning(fmt.Sprintf("extension error: %s", err))
 				return
 			}
 			return
-		})
+		}); err != nil {
+			log.Panicf("Adding CRON job failed, check server config: %s", err)
+		}
 	}
 	c.Start()
 }

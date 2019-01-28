@@ -17,7 +17,7 @@ package cli
 
 import (
 	"bytes"
-	"context"
+	context_pkg "context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -82,7 +82,7 @@ func withinLockedMigration(fn func(context *cli.Context)) func(*cli.Context) {
 			log.Fatal("sync is nil")
 		}
 
-		_, err = sync.Lock(syncMigrationsPath, true)
+		_, err = sync.Lock(context_pkg.Background(), syncMigrationsPath, true)
 
 		if err != nil {
 			log.Fatal(err)
@@ -270,7 +270,7 @@ func publishEventWithOptions(envName string, modifiedSchemas []string, eventName
 		eventContext["sync"] = sync
 		eventContext["db"] = db
 		eventContext["identity_service"] = ident
-		eventContext["context"] = context.Background()
+		eventContext["context"] = context_pkg.Background()
 		eventContext["trace_id"] = util.NewTraceID()
 
 		if err := env.HandleEvent(eventName, eventContext); err != nil {

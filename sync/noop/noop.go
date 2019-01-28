@@ -56,7 +56,7 @@ func (sync *Sync) HasLock(path string) bool {
 }
 
 //Lock get lock for path
-func (sync *Sync) Lock(path string, block bool) (chan struct{}, error) {
+func (sync *Sync) Lock(ctx context.Context, path string, block bool) (chan struct{}, error) {
 	return nil, nil
 }
 

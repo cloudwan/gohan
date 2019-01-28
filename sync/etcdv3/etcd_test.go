@@ -129,12 +129,14 @@ func TestLockUnblocking(t *testing.T) {
 	sync1 := newSync(t)
 	sync0.etcdClient.Delete(context.Background(), "/", etcd.WithPrefix())
 
+	ctx := context.Background()
+
 	path := "/path/lock"
-	_, err := sync0.Lock(path, false)
+	_, err := sync0.Lock(ctx, path, false)
 	if err != nil {
 		t.Fatalf("unexpected error")
 	}
-	_, err = sync1.Lock(path, false)
+	_, err = sync1.Lock(ctx, path, false)
 	if err == nil {
 		t.Fatalf("unexpected non error")
 	}
@@ -150,7 +152,7 @@ func TestLockUnblocking(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error")
 	}
-	_, err = sync1.Lock(path, false)
+	_, err = sync1.Lock(ctx, path, false)
 	if err != nil {
 		t.Fatalf("unexpected  error")
 	}
@@ -164,18 +166,20 @@ func TestLockUnblocking(t *testing.T) {
 }
 
 func TestLockBlocking(t *testing.T) {
+	ctx := context.Background()
+
 	sync0 := newSync(t)
 	sync1 := newSync(t)
-	sync0.etcdClient.Delete(context.Background(), "/", etcd.WithPrefix())
+	sync0.etcdClient.Delete(ctx, "/", etcd.WithPrefix())
 
 	path := "/path/lock"
-	_, err := sync0.Lock(path, true)
+	_, err := sync0.Lock(ctx, path, true)
 	if err != nil {
 		t.Fatalf("unexpected error")
 	}
 	locked1 := make(chan struct{})
 	go func() {
-		_, err := sync1.Lock(path, true)
+		_, err := sync1.Lock(ctx, path, true)
 		if err != nil {
 			t.Fatalf("unexpected error")
 		}

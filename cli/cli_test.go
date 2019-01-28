@@ -16,6 +16,7 @@
 package cli
 
 import (
+	context_pkg "context"
 	"flag"
 	"fmt"
 	"os"
@@ -59,9 +60,12 @@ var _ = Describe("CLI", func() {
 		waitForThread sync.WaitGroup
 		waitForLocal  sync.WaitGroup
 		etcdSync      *etcdv3.Sync
+		ctx           context_pkg.Context
 	)
 
 	BeforeEach(func() {
+		ctx = context_pkg.Background()
+
 		waitForThread = sync.WaitGroup{}
 		waitForLocal = sync.WaitGroup{}
 
@@ -95,7 +99,7 @@ var _ = Describe("CLI", func() {
 			go wrapped()
 			waitForThread.Wait()
 			waitForThread.Add(1)
-			_, err := etcdSync.Lock(syncMigrationsPath, false)
+			_, err := etcdSync.Lock(ctx, syncMigrationsPath, false)
 			waitForLocal.Done()
 			waitForThread.Wait()
 
@@ -105,7 +109,7 @@ var _ = Describe("CLI", func() {
 
 		It("Should not lock when the flag is unset - migrationsSubCommand wrapper", func() {
 			lock := func() {
-				etcdSync.Lock(syncMigrationsPath, true)
+				etcdSync.Lock(ctx, syncMigrationsPath, true)
 				waitForThread.Done()
 				waitForLocal.Wait()
 				etcdSync.Unlock(syncMigrationsPath)

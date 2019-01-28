@@ -92,7 +92,7 @@ func (writer *SyncWriter) Run(ctx context.Context, wg *sync.WaitGroup) error {
 }
 
 func (writer *SyncWriter) run(ctx context.Context) error {
-	lost, err := writer.sync.Lock(syncPath, true)
+	lost, err := writer.sync.Lock(ctx, syncPath, true)
 	if err != nil {
 		return err
 	}

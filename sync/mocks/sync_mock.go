@@ -48,16 +48,16 @@ func (mr *MockSyncMockRecorder) HasLock(path interface{}) *gomock.Call {
 }
 
 // Lock mocks base method
-func (m *MockSync) Lock(path string, block bool) (chan struct{}, error) {
-	ret := m.ctrl.Call(m, "Lock", path, block)
+func (m *MockSync) Lock(ctx context.Context, path string, block bool) (chan struct{}, error) {
+	ret := m.ctrl.Call(m, "Lock", ctx, path, block)
 	ret0, _ := ret[0].(chan struct{})
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Lock indicates an expected call of Lock
-func (mr *MockSyncMockRecorder) Lock(path, block interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Lock", reflect.TypeOf((*MockSync)(nil).Lock), path, block)
+func (mr *MockSyncMockRecorder) Lock(ctx, path, block interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Lock", reflect.TypeOf((*MockSync)(nil).Lock), ctx, path, block)
 }
 
 // Unlock mocks base method
