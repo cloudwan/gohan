@@ -22,6 +22,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cloudwan/gohan/metrics"
 	gohan_sync "github.com/cloudwan/gohan/sync"
 	"github.com/cloudwan/gohan/util"
 )
@@ -65,8 +66,12 @@ func (t *TransactionCommitInformer) Run(ctx context.Context, wg *sync.WaitGroup)
 }
 
 func (t *TransactionCommitInformer) notify(ctx context.Context, lastId int64) {
+	var attempt int64 = 0
+	defer t.updateCounter(attempt, "notify.retries")
+	t.updateCounter(1, "notify.called")
+
 	for {
-		lastId = drain(transactionCommitted, lastId)
+		lastId = t.drain(lastId)
 
 		err := t.sync.Update(SyncKeyTxCommitted, buildSyncValue(lastId))
 		if err == nil {
@@ -79,15 +84,21 @@ func (t *TransactionCommitInformer) notify(ctx context.Context, lastId int64) {
 			return
 		case <-time.After(500 * time.Millisecond):
 		}
+
+		attempt++
 	}
 }
 
-func drain(ch <-chan int64, v int64) int64 {
+func (t *TransactionCommitInformer) drain(eventId int64) int64 {
+	var drained int64 = 0
+	defer t.updateCounter(drained, "drained")
+
 	for {
 		select {
-		case v = <-ch:
+		case eventId = <-transactionCommitted:
+			drained++
 		default:
-			return v
+			return eventId
 		}
 	}
 }
@@ -103,4 +114,8 @@ func buildSyncValue(id int64) string {
 	}
 
 	return string(data)
+}
+
+func (t *TransactionCommitInformer) updateCounter(delta int64, metric string) {
+	metrics.UpdateCounter(delta, "tx_commit_informer.%s", metric)
 }

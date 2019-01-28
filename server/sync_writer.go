@@ -107,7 +107,7 @@ func (writer *SyncWriter) run(ctx context.Context) error {
 	for {
 		select {
 		case <-lost:
-			metrics.UpdateCounter(1, "sync_writer.locks_lost")
+			writer.updateCounter(1, "locks_lost")
 			return fmt.Errorf("lost lock for sync")
 		case <-ctx.Done():
 			return nil
@@ -120,7 +120,7 @@ func (writer *SyncWriter) run(ctx context.Context) error {
 			}
 
 			if event.Err != nil {
-				// TODO metric
+				writer.updateCounter(1, "event_error")
 				return event.Err
 			}
 
@@ -141,10 +141,10 @@ func getEventId(event *gohan_sync.Event) int {
 }
 
 func (writer *SyncWriter) triggerSync(eventId int) error {
-	metrics.UpdateCounter(1, "sync_writer.wake_up.on_trigger")
+	writer.updateCounter(1, "wake_up.on_trigger")
 
 	if eventId < writer.lastSyncedEvent {
-		// TODO metric already synced
+		writer.updateCounter(1, "skipped_syncs")
 		return nil
 	}
 
@@ -155,7 +155,7 @@ func (writer *SyncWriter) triggerSync(eventId int) error {
 // Sync runs a synchronization iteration, which
 // executes requests in the event table.
 func (writer *SyncWriter) Sync() (synced int, err error) {
-	metrics.UpdateCounter(1, "sync_writer.syncs")
+	writer.updateCounter(1, "syncs")
 	resourceList, err := writer.listEvents()
 	if err != nil {
 		return
@@ -170,7 +170,7 @@ func (writer *SyncWriter) Sync() (synced int, err error) {
 	}
 
 	if synced == 0 {
-		metrics.UpdateCounter(1, "sync_writer.empty_syncs")
+		writer.updateCounter(1, "empty_syncs")
 	}
 
 	return
@@ -318,4 +318,8 @@ func generatePath(resourcePath string, body string) string {
 	}
 	log.Info("Generated path: %s", path)
 	return path
+}
+
+func (writer *SyncWriter) updateCounter(delta int64, metric string) {
+	metrics.UpdateCounter(delta, "sync_writer.%s", metric)
 }
