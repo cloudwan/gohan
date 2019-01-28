@@ -28,6 +28,7 @@ import (
 	"github.com/cloudwan/gohan/metrics"
 	"github.com/cloudwan/gohan/schema"
 	gohan_sync "github.com/cloudwan/gohan/sync"
+	"github.com/cloudwan/gohan/util"
 )
 
 var transactionCommitted = make(chan int64, 1024)
@@ -35,16 +36,24 @@ var transactionCommitted = make(chan int64, 1024)
 const (
 	SyncKeyTxCommitted = "/gohan/cluster/sync/tx_committed"
 	badEventId         = -1
+
+	defaultRetryDelay = 500 * time.Millisecond
 )
 
 func NewTransactionCommitInformer(sync gohan_sync.Sync) *TransactionCommitInformer {
 	return &TransactionCommitInformer{
-		sync: sync,
+		sync:       sync,
+		retryDelay: getRetryDelay(),
 	}
 }
 
+func getRetryDelay() time.Duration {
+	return util.GetConfig().GetDuration("transaction_commit_informer/retry_delay", defaultRetryDelay)
+}
+
 type TransactionCommitInformer struct {
-	sync gohan_sync.Sync
+	sync       gohan_sync.Sync
+	retryDelay time.Duration
 }
 
 func (t *TransactionCommitInformer) Run(ctx context.Context, wg *sync.WaitGroup) error {
