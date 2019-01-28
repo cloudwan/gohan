@@ -148,7 +148,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:f693cb12e58692c92a48812420340cae6e215d41bf5babbd99a8817cf888c46b"
+  digest = "1:f175c0a8c5289a7190e425bcfc522367b8f3f280b6f19005dcfd716d909e134a"
   name = "github.com/gophercloud/gophercloud"
   packages = [
     ".",
@@ -161,8 +161,7 @@
     "pagination",
   ]
   pruneopts = ""
-  revision = "e621b2311b07793f393023049e740f5aadcd512e"
-  source = "https://github.com/cloudwan/gophercloud.git"
+  revision = "c818fa66e4c88b30db28038fe3f18f2f4a0db9a8"
 
 [[projects]]
   branch = "master"
