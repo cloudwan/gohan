@@ -30,16 +30,16 @@ var log = l.NewLogger()
 type Sync interface {
 	HasLock(path string) bool
 	Lock(ctx context.Context, path string, block bool) (notifyLost chan struct{}, err error)
-	Unlock(path string) error
-	Fetch(path string) (*Node, error)
-	Update(path, json string) error
-	Delete(path string, prefix bool) error
+	Unlock(ctx context.Context, path string) error
+	Fetch(ctx context.Context, path string) (*Node, error)
+	Update(ctx context.Context, path, json string) error
+	Delete(ctx context.Context, path string, prefix bool) error
 	// Watch monitors changes on path and emits Events to responseChan.
 	// Close stopChan to cancel.
 	// You can specify the revision to start watching,
 	// give RevisionCurrent when you want to start from the current revision.
 	// Returns an error when gets any error including connection failures.
-	Watch(path string, responseChan chan *Event, stopChan chan bool, revision int64) error
+	Watch(ctx context.Context, path string, responseChan chan *Event, stopChan chan bool, revision int64) error
 	//WatchContext keep watch update under the path until context is canceled.
 	WatchContext(ctx context.Context, path string, revision int64) <-chan *Event
 	GetProcessID() string

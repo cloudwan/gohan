@@ -67,10 +67,12 @@ var _ = Describe("Sync", func() {
 		rawSync, err := etcdv3.NewSync([]string{"localhost:2379"}, time.Second)
 		Expect(err).NotTo(HaveOccurred())
 
-		const testKey = "/test/goplugin/sync"
-		Expect(rawSync.Update(testKey, "{}")).To(Succeed())
+		ctx := context.Background()
 
-		node, err := rawSync.Fetch(testKey)
+		const testKey = "/test/goplugin/sync"
+		Expect(rawSync.Update(ctx, testKey, "{}")).To(Succeed())
+
+		node, err := rawSync.Fetch(ctx, testKey)
 		Expect(err).NotTo(HaveOccurred())
 
 		env := goplugin.Environment{}
@@ -87,7 +89,7 @@ var _ = Describe("Sync", func() {
 
 		// assuming the Watch will start in (up to) 500ms
 		<-time.After(time.Millisecond * 500)
-		Expect(rawSync.Delete(testKey, false)).To(Succeed())
+		Expect(rawSync.Delete(ctx, testKey, false)).To(Succeed())
 
 		Eventually(watchDone).Should(Receive())
 

@@ -72,7 +72,7 @@ func (t *TransactionCommitInformer) notify(ctx context.Context, lastId int64) {
 	for {
 		lastId = t.drain(lastId)
 
-		err := t.sync.Update(SyncKeyTxCommitted, buildSyncValue(lastId))
+		err := t.sync.Update(ctx, SyncKeyTxCommitted, buildSyncValue(lastId))
 		if err == nil {
 			return
 		}

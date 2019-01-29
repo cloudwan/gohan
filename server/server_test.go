@@ -1159,9 +1159,10 @@ var _ = Describe("Server package test", func() {
 			if err != nil {
 				Fail(err.Error())
 			}
-			syncConn.Delete("/config/v2.0/networks/resync-test-net1", false)
-			syncConn.Delete("/config/v2.0/networks/resync-test-net2", false)
-			syncConn.Delete("/config/v2.0/subnets/test-subnet1-id", false)
+
+			syncConn.Delete(ctx, "/config/v2.0/networks/resync-test-net1", false)
+			syncConn.Delete(ctx, "/config/v2.0/networks/resync-test-net2", false)
+			syncConn.Delete(ctx, "/config/v2.0/subnets/test-subnet1-id", false)
 
 			networkSchema, _ := manager.Schema("network")
 			subnetSchema, _ := manager.Schema("subnet")
@@ -1209,20 +1210,20 @@ var _ = Describe("Server package test", func() {
 			}
 
 			var _ *sync.Node
-			_, err = syncConn.Fetch("/config/v2.0/networks/resync-test-net1")
+			_, err = syncConn.Fetch(ctx, "/config/v2.0/networks/resync-test-net1")
 			Expect(err).Should(HaveOccurred())
-			_, err = syncConn.Fetch("/config/v2.0/networks/resync-test-net2")
+			_, err = syncConn.Fetch(ctx, "/config/v2.0/networks/resync-test-net2")
 			Expect(err).Should(HaveOccurred())
-			_, err = syncConn.Fetch("/config/v2.0/subnets/test-subnet1-id")
+			_, err = syncConn.Fetch(ctx, "/config/v2.0/subnets/test-subnet1-id")
 			Expect(err).Should(HaveOccurred())
 
 			srv.Resync(testDB, syncConn)
 
-			_, err = syncConn.Fetch("/config/v2.0/networks/resync-test-net1")
+			_, err = syncConn.Fetch(ctx, "/config/v2.0/networks/resync-test-net1")
 			Expect(err).ShouldNot(HaveOccurred())
-			_, err = syncConn.Fetch("/config/v2.0/networks/resync-test-net2")
+			_, err = syncConn.Fetch(ctx, "/config/v2.0/networks/resync-test-net2")
 			Expect(err).ShouldNot(HaveOccurred())
-			_, err = syncConn.Fetch("/config/v2.0/subnets/test-subnet1-id")
+			_, err = syncConn.Fetch(ctx, "/config/v2.0/subnets/test-subnet1-id")
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 	})

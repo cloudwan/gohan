@@ -84,7 +84,7 @@ func startCRONProcess(server *Server) {
 				}
 				log.Debug("Unlocking %s", lockKey)
 				jobLocks[lockKey] <- 1
-				if err := server.sync.Unlock(lockKey); err != nil {
+				if err := server.sync.Unlock(ctx, lockKey); err != nil {
 					log.Warning("CRON: unlocking etcd failed: %s", err)
 				}
 			}()

@@ -77,16 +77,18 @@ func handleSyncContextCancel(requestContext goext.Context, env goext.IEnvironmen
 
 	const etcdKey = "/sync_context_cancel"
 
-	if err := env.Sync().Update(etcdKey, "dummy value"); err != nil {
+	parentCtx := requestContext["context"].(context.Context)
+
+	if err := env.Sync().Update(parentCtx, etcdKey, "dummy value"); err != nil {
 		panic(err)
 	}
 
-	node, err := env.Sync().Fetch(etcdKey)
+	node, err := env.Sync().Fetch(parentCtx, etcdKey)
 	if err != nil {
 		panic(err)
 	}
 
-	ctx, cancel := context.WithCancel(requestContext["context"].(context.Context))
+	ctx, cancel := context.WithCancel(parentCtx)
 	cancel()
 
 	_, err = env.Sync().Watch(ctx, etcdKey, time.Minute, node.Revision+1)

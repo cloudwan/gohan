@@ -68,7 +68,7 @@ var _ = Describe("Transaction Commit Informer", func() {
 		sync, err = gohan_etcd.NewSync([]string{"http://127.0.0.1:2379"}, time.Second)
 		Expect(err).ToNot(HaveOccurred())
 
-		Expect(sync.Delete(srv.SyncKeyTxCommitted, false)).To(Succeed())
+		Expect(sync.Delete(ctx, srv.SyncKeyTxCommitted, false)).To(Succeed())
 	})
 
 	AfterEach(func() {
@@ -102,7 +102,7 @@ var _ = Describe("Transaction Commit Informer", func() {
 			err  error
 		)
 		Eventually(func() error {
-			node, err = sync.Fetch(key)
+			node, err = sync.Fetch(ctx, key)
 			return err
 		}).Should(Succeed())
 
@@ -111,7 +111,7 @@ var _ = Describe("Transaction Commit Informer", func() {
 
 	syncKeyShouldNotExist := func(key string) {
 		Consistently(func() error {
-			_, err := sync.Fetch(key)
+			_, err := sync.Fetch(ctx, key)
 			return err
 		}).Should(MatchError(ContainSubstring("Key not found")))
 	}
@@ -137,7 +137,7 @@ var _ = Describe("Transaction Commit Informer", func() {
 	}
 
 	shouldStoreEventId := func(id int) {
-		node, err := sync.Fetch(srv.SyncKeyTxCommitted)
+		node, err := sync.Fetch(ctx, srv.SyncKeyTxCommitted)
 		Expect(err).NotTo(HaveOccurred())
 
 		result := struct {
@@ -218,10 +218,10 @@ var _ = Describe("Transaction Commit Informer", func() {
 		})
 
 		mockSync := mock_sync.NewMockSync(mockCtrl)
-		failedCall := mockSync.EXPECT().Update(srv.SyncKeyTxCommitted, gomock.Any()).Return(fmt.Errorf("tested error: etcd update failed"))
+		failedCall := mockSync.EXPECT().Update(ctx, srv.SyncKeyTxCommitted, gomock.Any()).Return(fmt.Errorf("tested error: etcd update failed"))
 
 		syncUpdated := make(chan struct{}, 1)
-		mockSync.EXPECT().Update(srv.SyncKeyTxCommitted, gomock.Any()).DoAndReturn(func(interface{}, interface{}) error {
+		mockSync.EXPECT().Update(ctx, srv.SyncKeyTxCommitted, gomock.Any()).DoAndReturn(func(interface{}, interface{}, interface{}) error {
 			syncUpdated <- struct{}{}
 			return nil
 		}).After(failedCall)
@@ -237,7 +237,7 @@ var _ = Describe("Transaction Commit Informer", func() {
 		})
 
 		mockSync := mock_sync.NewMockSync(mockCtrl)
-		failedCall := mockSync.EXPECT().Update(srv.SyncKeyTxCommitted, gomock.Any()).DoAndReturn(func(interface{}, interface{}) error {
+		failedCall := mockSync.EXPECT().Update(ctx, srv.SyncKeyTxCommitted, gomock.Any()).DoAndReturn(func(interface{}, interface{}, interface{}) error {
 			withinTx(func(tx transaction.Transaction) {
 				createNetwork(ctx, tx, "secondResource")
 			})
@@ -245,7 +245,7 @@ var _ = Describe("Transaction Commit Informer", func() {
 		})
 
 		syncUpdated := make(chan struct{}, 1)
-		mockSync.EXPECT().Update(srv.SyncKeyTxCommitted, gomock.Any()).DoAndReturn(func(interface{}, interface{}) error {
+		mockSync.EXPECT().Update(ctx, srv.SyncKeyTxCommitted, gomock.Any()).DoAndReturn(func(interface{}, interface{}, interface{}) error {
 			syncUpdated <- struct{}{}
 			return nil
 		}).After(failedCall)

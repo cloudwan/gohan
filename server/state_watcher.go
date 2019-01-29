@@ -99,7 +99,7 @@ func (watcher *StateWatcher) iterate(ctx context.Context) error {
 		return nil
 	}
 	defer func() {
-		if err := watcher.sync.Unlock(lockKey); err != nil {
+		if err := watcher.sync.Unlock(ctx, lockKey); err != nil {
 			log.Warning("StateWatcher: unlocking etcd failed: %s", err)
 		}
 	}()

@@ -58,7 +58,7 @@ const (
 	FlagSyncETCDEvent             = "sync-etcd-event"
 )
 
-func withinLockedMigration(fn func(context *cli.Context)) func(*cli.Context) {
+func withinLockedMigration(fn func(context_pkg.Context, *cli.Context)) func(*cli.Context) {
 	return func(context *cli.Context) {
 		configFile := context.String("config-file")
 
@@ -66,8 +66,10 @@ func withinLockedMigration(fn func(context *cli.Context)) func(*cli.Context) {
 			return
 		}
 
+		ctx := context_pkg.Background()
+
 		if !context.Bool(FlagLockWithETCD) {
-			fn(context)
+			fn(ctx, context)
 			return
 		}
 
@@ -82,15 +84,15 @@ func withinLockedMigration(fn func(context *cli.Context)) func(*cli.Context) {
 			log.Fatal("sync is nil")
 		}
 
-		_, err = sync.Lock(context_pkg.Background(), syncMigrationsPath, true)
+		_, err = sync.Lock(ctx, syncMigrationsPath, true)
 
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		defer sync.Unlock(syncMigrationsPath)
+		defer sync.Unlock(ctx, syncMigrationsPath)
 
-		fn(context)
+		fn(ctx, context)
 	}
 }
 
@@ -101,7 +103,7 @@ func selectModifiedSchemas(forcedSchemas string) []string {
 	return migration.GetModifiedSchemas()
 }
 
-func emitPostMigrateEvent(forcedSchemas string, syncETCDEvent bool, postMigrationEventTimeout time.Duration) {
+func emitPostMigrateEvent(ctx context_pkg.Context, forcedSchemas string, syncETCDEvent bool, postMigrationEventTimeout time.Duration) {
 	config := util.GetConfig()
 
 	log.Info("Emit post-migrate event")
@@ -126,7 +128,7 @@ func emitPostMigrateEvent(forcedSchemas string, syncETCDEvent bool, postMigratio
 		log.Fatal(err)
 	}
 
-	if err := publishEvent(postMigrationEnvName, modifiedSchemas, eventPostMigration, syncETCDEvent, postMigrationEventTimeout); err != nil {
+	if err := publishEvent(ctx, postMigrationEnvName, modifiedSchemas, eventPostMigration, syncETCDEvent, postMigrationEventTimeout); err != nil {
 		log.Fatal("Publish post-migrate event failed: %s", err)
 	}
 
@@ -136,7 +138,7 @@ func emitPostMigrateEvent(forcedSchemas string, syncETCDEvent bool, postMigratio
 }
 
 func actionMigrate(subcmd string) func(context *cli.Context) {
-	return withinLockedMigration(func(context *cli.Context) {
+	return withinLockedMigration(func(ctx context_pkg.Context, context *cli.Context) {
 		if err := migration.Run(subcmd, context.Args()); err != nil {
 			log.Fatalf("Migrate run failed: %s", err)
 		}
@@ -144,14 +146,14 @@ func actionMigrate(subcmd string) func(context *cli.Context) {
 }
 
 func actionMigrateWithPostMigrationEvent(subcmd string) func(context *cli.Context) {
-	return withinLockedMigration(func(context *cli.Context) {
+	return withinLockedMigration(func(ctx context_pkg.Context, context *cli.Context) {
 		if err := migration.Run(subcmd, context.Args()); err != nil {
 			log.Fatalf("Migrate run failed: %s", err)
 		}
 		if !context.Bool(FlagEmitPostMigrationEvent) {
 			return
 		}
-		emitPostMigrateEvent(context.String(FlagForcedSchemas), context.Bool(FlagSyncETCDEvent), context.Duration(FlagPostMigrationEventTimeout))
+		emitPostMigrateEvent(ctx, context.String(FlagForcedSchemas), context.Bool(FlagSyncETCDEvent), context.Duration(FlagPostMigrationEventTimeout))
 	})
 }
 
@@ -227,7 +229,7 @@ func actionMigrateCreateInitialMigration() func(context *cli.Context) {
 	}
 }
 
-func publishEventWithOptions(envName string, modifiedSchemas []string, eventName string, syncETCDEvent bool, eventTimeout time.Duration, db db.DB, manager *schema.Manager, envManager *extension.Manager, sync sync.Sync, ident middleware.IdentityService) {
+func publishEventWithOptions(ctx context_pkg.Context, envName string, modifiedSchemas []string, eventName string, syncETCDEvent bool, eventTimeout time.Duration, db db.DB, manager *schema.Manager, envManager *extension.Manager, sync sync.Sync, ident middleware.IdentityService) {
 	deadline := time.Now().Add(eventTimeout)
 
 	for _, s := range manager.Schemas() {
@@ -270,7 +272,7 @@ func publishEventWithOptions(envName string, modifiedSchemas []string, eventName
 		eventContext["sync"] = sync
 		eventContext["db"] = db
 		eventContext["identity_service"] = ident
-		eventContext["context"] = context_pkg.Background()
+		eventContext["context"] = ctx
 		eventContext["trace_id"] = util.NewTraceID()
 
 		if err := env.HandleEvent(eventName, eventContext); err != nil {
@@ -279,13 +281,13 @@ func publishEventWithOptions(envName string, modifiedSchemas []string, eventName
 	}
 
 	if syncETCDEvent {
-		if _, err := server.NewSyncWriter(sync, db).Sync(); err != nil {
+		if _, err := server.NewSyncWriter(sync, db).Sync(ctx); err != nil {
 			log.Fatalf("Failed to synchronize post-migration events, err: %s", err)
 		}
 	}
 }
 
-func publishEvent(envName string, modifiedSchemas []string, eventName string, syncETCDEvent bool, eventTimeout time.Duration) error {
+func publishEvent(ctx context_pkg.Context, envName string, modifiedSchemas []string, eventName string, syncETCDEvent bool, eventTimeout time.Duration) error {
 	config := util.GetConfig()
 
 	rawDB, err := dbutil.CreateFromConfig(config)
@@ -311,7 +313,7 @@ func publishEvent(envName string, modifiedSchemas []string, eventName string, sy
 	envManager := extension.GetManager()
 	manager := schema.GetManager()
 
-	publishEventWithOptions(envName, modifiedSchemas, eventName, syncETCDEvent, eventTimeout, db, manager, envManager, sync, ident)
+	publishEventWithOptions(ctx, envName, modifiedSchemas, eventName, syncETCDEvent, eventTimeout, db, manager, envManager, sync, ident)
 
 	return nil
 }

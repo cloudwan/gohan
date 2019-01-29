@@ -291,25 +291,6 @@ Read file from path
 
 Check if dir
 
-- gohan_sync_fetch(path)
-
-Fetch a given path from Sync   
-
-- gohan_sync_delete(path, prefix)
-
-Delete a given path from Sync. If prefix is given as ``true``, all paths which starts
-with ``path`` are deleted.
-path : sync path to be deleted
-prefix (optional) : boolean - whether to delete paths which starts with ``path``.
-This option is applied if gohan uses etcd v3 for sync. If gohan uses etcd v2, this option
-is translated as ``--recursive``
-
-- gohan_sync_watch(path, timeout, revision)
-
-Watch a given path in Sync starting from a given revision. This call is blocking no longer
-than a given timeout in milliseconds. If no event occurs in the given timeout, the function
-returns an empty object.
-
 # Testing javascript extensions
 
 You can test extensions using a testing tool bundled with Gohan with the command

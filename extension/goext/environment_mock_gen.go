@@ -335,40 +335,40 @@ func (m *MockISync) EXPECT() *MockISyncMockRecorder {
 }
 
 // Delete mocks base method
-func (m *MockISync) Delete(arg0 string, arg1 bool) error {
-	ret := m.ctrl.Call(m, "Delete", arg0, arg1)
+func (m *MockISync) Delete(arg0 context.Context, arg1 string, arg2 bool) error {
+	ret := m.ctrl.Call(m, "Delete", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Delete indicates an expected call of Delete
-func (mr *MockISyncMockRecorder) Delete(arg0, arg1 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockISync)(nil).Delete), arg0, arg1)
+func (mr *MockISyncMockRecorder) Delete(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockISync)(nil).Delete), arg0, arg1, arg2)
 }
 
 // Fetch mocks base method
-func (m *MockISync) Fetch(arg0 string) (*Node, error) {
-	ret := m.ctrl.Call(m, "Fetch", arg0)
+func (m *MockISync) Fetch(arg0 context.Context, arg1 string) (*Node, error) {
+	ret := m.ctrl.Call(m, "Fetch", arg0, arg1)
 	ret0, _ := ret[0].(*Node)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Fetch indicates an expected call of Fetch
-func (mr *MockISyncMockRecorder) Fetch(arg0 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Fetch", reflect.TypeOf((*MockISync)(nil).Fetch), arg0)
+func (mr *MockISyncMockRecorder) Fetch(arg0, arg1 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Fetch", reflect.TypeOf((*MockISync)(nil).Fetch), arg0, arg1)
 }
 
 // Update mocks base method
-func (m *MockISync) Update(arg0, arg1 string) error {
-	ret := m.ctrl.Call(m, "Update", arg0, arg1)
+func (m *MockISync) Update(arg0 context.Context, arg1, arg2 string) error {
+	ret := m.ctrl.Call(m, "Update", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Update indicates an expected call of Update
-func (mr *MockISyncMockRecorder) Update(arg0, arg1 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockISync)(nil).Update), arg0, arg1)
+func (mr *MockISyncMockRecorder) Update(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockISync)(nil).Update), arg0, arg1, arg2)
 }
 
 // Watch mocks base method

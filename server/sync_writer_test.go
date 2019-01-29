@@ -58,7 +58,7 @@ var _ = Describe("Server package test", func() {
 		var writtenConfig *gohan_sync.Node
 		Eventually(func() error {
 			var err error
-			writtenConfig, err = sync.Fetch("/config" + resource.Path())
+			writtenConfig, err = sync.Fetch(ctx, "/config"+resource.Path())
 			return err
 		}, 1*time.Second).Should(Succeed())
 
@@ -99,15 +99,15 @@ var _ = Describe("Server package test", func() {
 			})
 
 			writer := srv.NewSyncWriterFromServer(server)
-			Expect(writer.Sync()).To(Equal(1))
+			Expect(writer.Sync(ctx)).To(Equal(1))
 
 			checkIsSynced(rawRed, red)
 
 			deleteNetwork(red)
 
-			Expect(writer.Sync()).To(Equal(1))
+			Expect(writer.Sync(ctx)).To(Equal(1))
 
-			_, err := sync.Fetch(red.Path())
+			_, err := sync.Fetch(ctx, red.Path())
 			Expect(err).To(HaveOccurred(), "Failed to sync db resource deletion to sync backend")
 		})
 
@@ -131,12 +131,12 @@ var _ = Describe("Server package test", func() {
 				})
 
 				writer := srv.NewSyncWriterFromServer(server)
-				Expect(writer.Sync()).To(Equal(1))
+				Expect(writer.Sync(ctx)).To(Equal(1))
 
 				sync, err := gohan_etcd.NewSync([]string{"http://127.0.0.1:2379"}, time.Second)
 				Expect(err).ToNot(HaveOccurred())
 
-				writtenConfig, err := sync.Fetch("/config" + resource.Path())
+				writtenConfig, err := sync.Fetch(ctx, "/config"+resource.Path())
 				Expect(err).ToNot(HaveOccurred())
 
 				var configContentsRaw interface{}
@@ -152,9 +152,9 @@ var _ = Describe("Server package test", func() {
 
 				deleteResource("with_sync_property", resource)
 
-				Expect(writer.Sync()).To(Equal(1))
+				Expect(writer.Sync(ctx)).To(Equal(1))
 
-				_, err = sync.Fetch(resource.Path())
+				_, err = sync.Fetch(ctx, resource.Path())
 				Expect(err).To(HaveOccurred(), "Failed to sync db resource deletion to sync backend")
 			})
 		})
@@ -166,9 +166,9 @@ var _ = Describe("Server package test", func() {
 				})
 
 				writer := srv.NewSyncWriterFromServer(server)
-				Expect(writer.Sync()).To(Equal(1))
+				Expect(writer.Sync(ctx)).To(Equal(1))
 
-				writtenConfig, err := sync.Fetch("/config" + resource.Path())
+				writtenConfig, err := sync.Fetch(ctx, "/config"+resource.Path())
 				Expect(err).ToNot(HaveOccurred())
 
 				var configContentsRaw map[string]interface{}
@@ -178,9 +178,9 @@ var _ = Describe("Server package test", func() {
 
 				deleteResource("with_sync_plain", resource)
 
-				Expect(writer.Sync()).To(Equal(1))
+				Expect(writer.Sync(ctx)).To(Equal(1))
 
-				_, err = sync.Fetch(resource.Path())
+				_, err = sync.Fetch(ctx, resource.Path())
 				Expect(err).To(HaveOccurred(), "Failed to sync db resource deletion to sync backend")
 			})
 		})
@@ -192,17 +192,17 @@ var _ = Describe("Server package test", func() {
 				})
 
 				writer := srv.NewSyncWriterFromServer(server)
-				Expect(writer.Sync()).To(Equal(1))
+				Expect(writer.Sync(ctx)).To(Equal(1))
 
-				writtenConfig, err := sync.Fetch("/config" + resource.Path())
+				writtenConfig, err := sync.Fetch(ctx, "/config"+resource.Path())
 				Expect(err).ToNot(HaveOccurred())
 				Expect(writtenConfig.Value).To(BeEquivalentTo("property0"))
 
 				deleteResource("with_sync_plain_string", resource)
 
-				Expect(writer.Sync()).To(Equal(1))
+				Expect(writer.Sync(ctx)).To(Equal(1))
 
-				_, err = sync.Fetch(resource.Path())
+				_, err = sync.Fetch(ctx, resource.Path())
 				Expect(err).To(HaveOccurred(), "Failed to sync db resource deletion to sync backend")
 			})
 		})
@@ -214,20 +214,20 @@ var _ = Describe("Server package test", func() {
 				})
 
 				writer := srv.NewSyncWriterFromServer(server)
-				Expect(writer.Sync()).To(Equal(1))
+				Expect(writer.Sync(ctx)).To(Equal(1))
 
 				sync, err := gohan_etcd.NewSync([]string{"http://127.0.0.1:2379"}, time.Second)
 				Expect(err).ToNot(HaveOccurred())
 
-				writtenConfig, err := sync.Fetch("/prefix/abcdef")
+				writtenConfig, err := sync.Fetch(ctx, "/prefix/abcdef")
 				Expect(err).ToNot(HaveOccurred())
 				Expect(writtenConfig.Value).To(BeEquivalentTo("property0"))
 
 				deleteResource("with_sync_skip_config_prefix", resource)
 
-				Expect(writer.Sync()).To(Equal(1))
+				Expect(writer.Sync(ctx)).To(Equal(1))
 
-				_, err = sync.Fetch(resource.Path())
+				_, err = sync.Fetch(ctx, resource.Path())
 				Expect(err).To(HaveOccurred(), "Failed to sync db resource deletion to sync backend")
 			})
 		})

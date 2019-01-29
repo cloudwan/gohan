@@ -76,25 +76,25 @@ var _ = Describe("Sync watcher test", func() {
 		PIt("should be load balanced based on process number", func() {
 			// Run as Single Node
 			sync := server.GetSync()
-			prn, err := sync.Fetch(processPathPrefix)
+			prn, err := sync.Fetch(ctx, processPathPrefix)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(prn.Children)).To(Equal(1))
 
 			time.Sleep(time.Second)
 
 			// Only single node, so all watch pathes are taken with this process
-			wrn, err := sync.Fetch(lockPathPrefix + "/watch/key")
+			wrn, err := sync.Fetch(ctx, lockPathPrefix+"/watch/key")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(wrn.Children)).To(Equal(6))
 
 			// (Simulate) New process joined gohan cluster
 			newProcessUUID := "ffffffff-ffff-ffff-ffff-fffffffffffe"
-			err = sync.Update(processPathPrefix+"/"+newProcessUUID, newProcessUUID)
-			defer sync.Delete(processPathPrefix+"/"+newProcessUUID, false)
+			err = sync.Update(ctx, processPathPrefix+"/"+newProcessUUID, newProcessUUID)
+			defer sync.Delete(ctx, processPathPrefix+"/"+newProcessUUID, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			// Now, process watcher detects two processes running
-			prn, err = sync.Fetch(processPathPrefix)
+			prn, err = sync.Fetch(ctx, processPathPrefix)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(prn.Children)).To(Equal(2))
 
@@ -102,7 +102,7 @@ var _ = Describe("Sync watcher test", func() {
 
 			// Watched pathes should be load balanced
 			// So, this process started watching half of them based on priority
-			wrn, err = sync.Fetch(lockPathPrefix + "/watch/key")
+			wrn, err = sync.Fetch(ctx, lockPathPrefix+"/watch/key")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(wrn.Children)).To(Equal(3))
 
@@ -110,18 +110,18 @@ var _ = Describe("Sync watcher test", func() {
 
 			// It looks other process failed to start watching.
 			// So, this process started watching rest half of them
-			wrn, err = sync.Fetch(lockPathPrefix + "/watch/key")
+			wrn, err = sync.Fetch(ctx, lockPathPrefix+"/watch/key")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(wrn.Children)).To(Equal(6))
 
 			// (Simulate) One more process joined gohan cluster
 			newProcessUUID2 := "ffffffff-ffff-ffff-ffff-ffffffffffff"
-			err = sync.Update(processPathPrefix+"/"+newProcessUUID2, newProcessUUID2)
-			defer sync.Delete(processPathPrefix+"/"+newProcessUUID2, false)
+			err = sync.Update(ctx, processPathPrefix+"/"+newProcessUUID2, newProcessUUID2)
+			defer sync.Delete(ctx, processPathPrefix+"/"+newProcessUUID2, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			// Now, process watcher detects three processes running
-			prn, err = sync.Fetch(processPathPrefix)
+			prn, err = sync.Fetch(ctx, processPathPrefix)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(prn.Children)).To(Equal(3))
 
@@ -129,23 +129,23 @@ var _ = Describe("Sync watcher test", func() {
 
 			// Watched pathes are load balanced by 3 processes
 			// So, this process started watching two of them based on priority
-			wrn, err = sync.Fetch(lockPathPrefix + "/watch/key")
+			wrn, err = sync.Fetch(ctx, lockPathPrefix+"/watch/key")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(wrn.Children)).To(Equal(2))
 
 			// (Simulate) One process of gohan cluster is down
-			err = sync.Delete(processPathPrefix+"/"+newProcessUUID, false)
+			err = sync.Delete(ctx, processPathPrefix+"/"+newProcessUUID, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			// Now, process watcher detects two processes running
-			prn, err = sync.Fetch(processPathPrefix)
+			prn, err = sync.Fetch(ctx, processPathPrefix)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(prn.Children)).To(Equal(2))
 
 			time.Sleep(masterTTL / 2 * time.Second)
 
 			// This process started watching half of them again based on priority
-			wrn, err = sync.Fetch(lockPathPrefix + "/watch/key")
+			wrn, err = sync.Fetch(ctx, lockPathPrefix+"/watch/key")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(wrn.Children)).To(Equal(3))
 		})
@@ -155,8 +155,8 @@ var _ = Describe("Sync watcher test", func() {
 
 		AfterEach(func() {
 			sync := server.GetSync()
-			sync.Delete("/test/watcher", true)
-			sync.Delete("/watch/key", true)
+			sync.Delete(ctx, "/test/watcher", true)
+			sync.Delete(ctx, "/watch/key", true)
 		})
 
 		It("should process sequentially for each watch key", func() {
@@ -166,21 +166,21 @@ var _ = Describe("Sync watcher test", func() {
 			// to a path '/test/<milisec_timestamp>' then sleep 5 seconds.
 			// Therefore, sorting fetched results by key means the order of called sync update extensions
 			watchKey1a := "/watch/key/1/apple"
-			err := sync.Update(watchKey1a, `{"pref" : "watcher"}`)
+			err := sync.Update(ctx, watchKey1a, `{"pref" : "watcher"}`)
 			Expect(err).ToNot(HaveOccurred())
 			watchKey2a := "/watch/key/2/apple"
-			err = sync.Update(watchKey2a, `{"pref" : "watcher"}`)
+			err = sync.Update(ctx, watchKey2a, `{"pref" : "watcher"}`)
 			Expect(err).ToNot(HaveOccurred())
 			watchKey1b := "/watch/key/1/banana"
-			err = sync.Update(watchKey1b, `{"pref" : "watcher"}`)
+			err = sync.Update(ctx, watchKey1b, `{"pref" : "watcher"}`)
 			Expect(err).ToNot(HaveOccurred())
 			watchKey1c := "/watch/key/1/cherry"
-			err = sync.Update(watchKey1c, `{"pref" : "watcher"}`)
+			err = sync.Update(ctx, watchKey1c, `{"pref" : "watcher"}`)
 			Expect(err).ToNot(HaveOccurred())
 
 			time.Sleep(1 * time.Second)
 
-			wrn, err := sync.Fetch("/test/watcher")
+			wrn, err := sync.Fetch(ctx, "/test/watcher")
 			Expect(err).ToNot(HaveOccurred())
 			// 2 sync updates for path /watch/key/1/apple and /watch/key/2/apple are ongoing
 			Expect(len(wrn.Children)).To(Equal(2))
@@ -193,7 +193,7 @@ var _ = Describe("Sync watcher test", func() {
 			time.Sleep(5 * time.Second)
 			// after 5 sec, another job for /watch/key/1/banana should start
 
-			wrn, err = sync.Fetch("/test/watcher")
+			wrn, err = sync.Fetch(ctx, "/test/watcher")
 			Expect(err).ToNot(HaveOccurred())
 
 			sort.Sort(ByKey(wrn.Children))
@@ -203,7 +203,7 @@ var _ = Describe("Sync watcher test", func() {
 			time.Sleep(5 * time.Second)
 			// after 5 sec, another job for /watch/key/1/cherry should start
 
-			wrn, err = sync.Fetch("/test/watcher")
+			wrn, err = sync.Fetch(ctx, "/test/watcher")
 			Expect(err).ToNot(HaveOccurred())
 
 			sort.Sort(ByKey(wrn.Children))

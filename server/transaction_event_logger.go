@@ -40,7 +40,7 @@ func (tl *transactionEventLogger) logEvent(ctx context.Context, eventType string
 	schemaManager := schema.GetManager()
 	eventSchema, ok := schemaManager.Schema("event")
 	if !ok {
-		return fmt.Errorf("event schema not found")
+		panic("Schema 'event' not found. Check if gohan.json is loaded")
 	}
 
 	if resource.Schema().Metadata["nosync"] == true {
@@ -49,6 +49,9 @@ func (tl *transactionEventLogger) logEvent(ctx context.Context, eventType string
 	}
 
 	body, err := resource.JSONString()
+	if err != nil {
+		return fmt.Errorf("Error during event resource deserialisation: %s", err.Error())
+	}
 
 	syncPlain := false
 	syncPlainRaw, ok := resource.Schema().Metadata["sync_plain"]
@@ -59,25 +62,13 @@ func (tl *transactionEventLogger) logEvent(ctx context.Context, eventType string
 		}
 	}
 
-	syncProperty := ""
-	syncPropertyRaw, ok := resource.Schema().Metadata["sync_property"]
-	if ok {
-		syncPropertyStr, ok := syncPropertyRaw.(string)
-		if ok {
-			syncProperty = syncPropertyStr
-		}
-	}
-
-	if err != nil {
-		return fmt.Errorf("Error during event resource deserialisation: %s", err.Error())
-	}
 	eventResource := schema.NewResource(eventSchema, map[string]interface{}{
 		"type":          eventType,
 		"path":          resource.Path(),
 		"version":       version,
 		"body":          body,
 		"sync_plain":    syncPlain,
-		"sync_property": syncProperty,
+		"sync_property": getSyncProperty(resource),
 		"timestamp":     int64(time.Now().Unix()),
 	})
 
@@ -88,6 +79,16 @@ func (tl *transactionEventLogger) logEvent(ctx context.Context, eventType string
 
 	tl.lastEventId, err = result.LastInsertId()
 	return err
+}
+
+func getSyncProperty(resource *schema.Resource) string {
+	if syncPropertyRaw, ok := resource.Schema().Metadata["sync_property"]; ok {
+		if syncPropertyStr, ok := syncPropertyRaw.(string); ok {
+			return syncPropertyStr
+		}
+	}
+
+	return ""
 }
 
 func (tl *transactionEventLogger) Create(ctx context.Context, resource *schema.Resource) (transaction.Result, error) {
@@ -119,13 +120,13 @@ func (tl *transactionEventLogger) Update(ctx context.Context, resource *schema.R
 
 func (tl *transactionEventLogger) Resync(ctx context.Context, resource *schema.Resource) error {
 	if !resource.Schema().StateVersioning() {
-		return tl.logEvent(context.Background(), "update", resource, 0)
+		return tl.logEvent(ctx, "update", resource, 0)
 	}
 	state, err := tl.StateFetch(ctx, resource.Schema(), transaction.IDFilter(resource.ID()))
 	if err != nil {
 		return err
 	}
-	return tl.logEvent(context.Background(), "update", resource, state.ConfigVersion)
+	return tl.logEvent(ctx, "update", resource, state.ConfigVersion)
 }
 
 func (tl *transactionEventLogger) Delete(ctx context.Context, s *schema.Schema, resourceID interface{}) error {

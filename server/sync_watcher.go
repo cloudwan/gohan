@@ -98,7 +98,7 @@ func (watcher *SyncWatcher) Run(ctx context.Context, wg *sync.WaitGroup) error {
 				return err
 			}
 			defer func() {
-				if err := watcher.sync.Unlock(lockKey); err != nil {
+				if err := watcher.sync.Unlock(ctx, lockKey); err != nil {
 					log.Warning("SyncWatcher: unlocking etcd failed on %s: %s", lockKey, err)
 				}
 			}()
@@ -269,14 +269,14 @@ func (watcher *SyncWatcher) processSyncWatch(ctx context.Context, path string) e
 		return errLockFailed
 	}
 	defer func() {
-		if err := watcher.sync.Unlock(lockKey); err != nil {
+		if err := watcher.sync.Unlock(ctx, lockKey); err != nil {
 			log.Warning("SyncWatcher: unlocking etcd failed on %s: %s", lockKey, err)
 		}
 	}()
 
 	watchCtx, watchCancel := context.WithCancel(ctx)
 	defer watchCancel()
-	fromRevision := watcher.fetchStoredRevision(path) + 1
+	fromRevision := watcher.fetchStoredRevision(ctx, path) + 1
 	respCh := watcher.sync.WatchContext(watchCtx, path, fromRevision)
 	watchErr := make(chan error, 1)
 	go func() {
@@ -287,7 +287,7 @@ func (watcher *SyncWatcher) processSyncWatch(ctx context.Context, path string) e
 				}
 				watcher.watchExtensionHandler(response)
 
-				err := watcher.storeRevision(path, response.Revision)
+				err := watcher.storeRevision(ctx, path, response.Revision)
 				if err != nil {
 					return err
 				}
@@ -327,9 +327,9 @@ func (watcher *SyncWatcher) watchExtensionHandler(response *gohan_sync.Event) {
 
 // fetchStoredRevision returns the revision number stored in the sync backend for a path.
 // When it's a new in the backend, returns sync.RevisionCurrent.
-func (watcher *SyncWatcher) fetchStoredRevision(path string) int64 {
+func (watcher *SyncWatcher) fetchStoredRevision(ctx context.Context, path string) int64 {
 	fromRevision := int64(gohan_sync.RevisionCurrent)
-	lastSeen, err := watcher.sync.Fetch(SyncWatchRevisionPrefix + path)
+	lastSeen, err := watcher.sync.Fetch(ctx, SyncWatchRevisionPrefix+path)
 	if err == nil {
 		inStore, err := strconv.ParseInt(lastSeen.Value, 10, 64)
 		if err == nil {
@@ -345,8 +345,8 @@ func (watcher *SyncWatcher) fetchStoredRevision(path string) int64 {
 }
 
 // storeRevision puts a revision number for a path to the sync backend.
-func (watcher *SyncWatcher) storeRevision(path string, revision int64) error {
-	err := watcher.sync.Update(SyncWatchRevisionPrefix+path, strconv.FormatInt(revision, 10))
+func (watcher *SyncWatcher) storeRevision(ctx context.Context, path string, revision int64) error {
+	err := watcher.sync.Update(ctx, SyncWatchRevisionPrefix+path, strconv.FormatInt(revision, 10))
 	if err != nil {
 		return fmt.Errorf("Failed to update revision number for watch path `%s` in sync storage", path)
 	}

@@ -33,6 +33,7 @@ import (
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/server/middleware"
 	"github.com/cloudwan/gohan/sync/noop"
+
 	// Import otto underscore lib
 	_ "github.com/robertkrimen/otto/underscore"
 )
@@ -229,9 +230,6 @@ func (env *Environment) addTestingAPI() {
 	env.mockFunction("gohan_db_transaction")
 	env.mockFunction("gohan_exec")
 	env.mockFunction("gohan_config")
-	env.mockFunction("gohan_sync_fetch")
-	env.mockFunction("gohan_sync_delete")
-	env.mockFunction("gohan_sync_watch")
 }
 
 func (env *Environment) getTransaction(isNew bool, isolationLevel transaction.Type) (transaction.Transaction, error) {

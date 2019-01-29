@@ -97,7 +97,7 @@ func (writer *SyncWriter) run(ctx context.Context) error {
 		return err
 	}
 	defer func() {
-		if err := writer.sync.Unlock(syncPath); err != nil {
+		if err := writer.sync.Unlock(context.Background(), syncPath); err != nil {
 			log.Warning("SyncWriter: unlocking failed: %s", err)
 		}
 	}()
@@ -124,7 +124,7 @@ func (writer *SyncWriter) run(ctx context.Context) error {
 				return event.Err
 			}
 
-			if err := writer.triggerSync(getEventId(event)); err != nil {
+			if err := writer.triggerSync(ctx, getEventId(event)); err != nil {
 				return err
 			}
 
@@ -140,7 +140,7 @@ func getEventId(event *gohan_sync.Event) int {
 	return int(eventId.(float64))
 }
 
-func (writer *SyncWriter) triggerSync(eventId int) error {
+func (writer *SyncWriter) triggerSync(ctx context.Context, eventId int) error {
 	writer.updateCounter(1, "wake_up.on_trigger")
 
 	if eventId < writer.lastSyncedEvent {
@@ -148,20 +148,20 @@ func (writer *SyncWriter) triggerSync(eventId int) error {
 		return nil
 	}
 
-	_, err := writer.Sync()
+	_, err := writer.Sync(ctx)
 	return err
 }
 
 // Sync runs a synchronization iteration, which
 // executes requests in the event table.
-func (writer *SyncWriter) Sync() (synced int, err error) {
+func (writer *SyncWriter) Sync(ctx context.Context) (synced int, err error) {
 	writer.updateCounter(1, "syncs")
 	resourceList, err := writer.listEvents()
 	if err != nil {
 		return
 	}
 	for _, resource := range resourceList {
-		err = writer.syncEvent(resource)
+		err = writer.syncEvent(ctx, resource)
 		if err != nil {
 			return
 		}
@@ -195,7 +195,7 @@ func (writer *SyncWriter) listEvents() ([]*schema.Resource, error) {
 	return resourceList, nil
 }
 
-func (writer *SyncWriter) syncEvent(resource *schema.Resource) error {
+func (writer *SyncWriter) syncEvent(ctx context.Context, resource *schema.Resource) error {
 	schemaManager := schema.GetManager()
 	eventSchema, _ := schemaManager.Schema("event")
 	return db.WithinTx(writer.db, func(tx transaction.Transaction) error {
@@ -254,7 +254,7 @@ func (writer *SyncWriter) syncEvent(resource *schema.Resource) error {
 				content = string(data)
 			}
 
-			err = writer.sync.Update(path, content)
+			err = writer.sync.Update(ctx, path, content)
 			if err != nil {
 				return fmt.Errorf("Update() failed on sync: %s", err)
 			}
@@ -267,28 +267,28 @@ func (writer *SyncWriter) syncEvent(resource *schema.Resource) error {
 				json.Unmarshal(([]byte)(body), &data)
 				deletePath, err = resourceSchema.GenerateCustomPath(data)
 				if err != nil {
-					return fmt.Errorf("Delete from sync failed %s - generating of custom path failed", err)
+					return fmt.Errorf("Delete from sync failed: %s - generating of custom path failed", err)
 				}
 			}
 			log.Debug("deleting %s", statePrefix+deletePath)
-			err = writer.sync.Delete(statePrefix+deletePath, false)
+			err = writer.sync.Delete(ctx, statePrefix+deletePath, false)
 			if err != nil {
-				log.Error(fmt.Sprintf("Delete from sync failed %s", err))
+				log.Error(fmt.Sprintf("Delete from sync failed: %s", err))
 			}
 			log.Debug("deleting %s", monitoringPrefix+deletePath)
-			err = writer.sync.Delete(monitoringPrefix+deletePath, false)
+			err = writer.sync.Delete(ctx, monitoringPrefix+deletePath, false)
 			if err != nil {
-				log.Error(fmt.Sprintf("Delete from sync failed %s", err))
+				log.Error(fmt.Sprintf("Delete from sync failed: %s", err))
 			}
 			log.Debug("deleting %s", resourcePath)
-			err = writer.sync.Delete(path, false)
+			err = writer.sync.Delete(ctx, path, false)
 			if err != nil {
-				return fmt.Errorf("delete from sync failed %s", err)
+				return fmt.Errorf("delete from sync failed: %s", err)
 			}
 		}
 		log.Debug("delete event %d", resource.Get("id"))
 		id := resource.Get("id")
-		err = tx.Delete(context.Background(), eventSchema, id)
+		err = tx.Delete(ctx, eventSchema, id)
 		if err != nil {
 			return fmt.Errorf("delete failed: %s", err)
 		}

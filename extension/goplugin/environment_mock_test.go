@@ -16,6 +16,7 @@
 package goplugin_test
 
 import (
+	context_pkg "context"
 	"os"
 
 	"github.com/cloudwan/gohan/db"
@@ -78,9 +79,9 @@ var _ = Describe("Mocks", func() {
 	Context("Mocking module", func() {
 		It("should mock sync module", func() {
 			env.SetMockModules(goext.MockModules{Sync: true})
-			env.MockSync().EXPECT().Fetch("testKey").Return(&goext.Node{Value: "42"}, nil)
+			env.MockSync().EXPECT().Fetch(gomock.Any(), "testKey").Return(&goext.Node{Value: "42"}, nil)
 
-			resp, err := env.Sync().Fetch("testKey")
+			resp, err := env.Sync().Fetch(context["context"].(context_pkg.Context), "testKey")
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(resp.Value).To(Equal("42"))
@@ -115,7 +116,7 @@ var _ = Describe("Mocks", func() {
 	Context("Reset mock env", func() {
 		It("should create new controller", func() {
 			env.SetMockModules(goext.MockModules{Sync: true})
-			env.MockSync().EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
+			env.MockSync().EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			env.Reset()
 			env.GetController().Finish()
 		})

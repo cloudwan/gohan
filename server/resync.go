@@ -68,7 +68,7 @@ func Resync(dbConn db.DB, sync sync.Sync) (err error) {
 	syncWriter := NewSyncWriter(sync, dbConn)
 	totallySynced := 0
 	for {
-		synced, err := syncWriter.Sync()
+		synced, err := syncWriter.Sync(ctx)
 		if err != nil {
 			return fmt.Errorf("Error when syncing events: %s", err)
 		}
