@@ -105,7 +105,7 @@ func (watcher *StateWatcher) iterate(ctx context.Context) error {
 	}()
 
 	watchCtx, watchCancel := context.WithCancel(ctx)
-	respCh := watcher.sync.WatchContext(watchCtx, lockKey, gohan_sync.RevisionCurrent)
+	respCh := watcher.sync.Watch(watchCtx, lockKey, gohan_sync.RevisionCurrent)
 	watchErr := make(chan error, 1)
 	go func() {
 		watchErr <- func() error {

@@ -65,13 +65,8 @@ func (sync *Sync) Unlock(ctx context.Context, path string) error {
 	return nil
 }
 
-//Watch keep watch update under the path
-func (sync *Sync) Watch(ctx context.Context, path string, responseChan chan *sync.Event, stopChan chan bool, revision int64) error {
-	return nil
-}
-
-//WatchContext keep watch update under the path until context is canceled
-func (sync *Sync) WatchContext(ctx context.Context, path string, revision int64) <-chan *sync.Event {
+//Watch keep watch update under the path until context is canceled
+func (sync *Sync) Watch(ctx context.Context, path string, revision int64) <-chan *sync.Event {
 	return nil
 }
 

@@ -160,7 +160,7 @@ var _ = Describe("Transaction Commit Informer", func() {
 
 	It("should update ETCD key once per transaction", func() {
 		startInformer(sync)
-		respCh := sync.WatchContext(ctx, srv.SyncKeyTxCommitted, gohan_sync.RevisionCurrent)
+		respCh := sync.Watch(ctx, srv.SyncKeyTxCommitted, gohan_sync.RevisionCurrent)
 
 		withinTx(func(tx transaction.Transaction) {
 			createNetwork(ctx, tx, "red")
@@ -174,7 +174,7 @@ var _ = Describe("Transaction Commit Informer", func() {
 	})
 
 	It("should update ETCD key once per a batch of transactions", func() {
-		respCh := sync.WatchContext(ctx, srv.SyncKeyTxCommitted, gohan_sync.RevisionCurrent)
+		respCh := sync.Watch(ctx, srv.SyncKeyTxCommitted, gohan_sync.RevisionCurrent)
 
 		withinTx(func(tx transaction.Transaction) {
 			createNetwork(ctx, tx, "red")

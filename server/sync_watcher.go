@@ -105,7 +105,7 @@ func (watcher *SyncWatcher) Run(ctx context.Context, wg *sync.WaitGroup) error {
 
 			watchCtx, watchCancel := context.WithCancel(ctx)
 			defer watchCancel()
-			events := watcher.sync.WatchContext(watchCtx, processPathPrefix, int64(gohan_sync.RevisionCurrent))
+			events := watcher.sync.Watch(watchCtx, processPathPrefix, int64(gohan_sync.RevisionCurrent))
 			watchErr := make(chan error, 1)
 			go func() {
 				watchErr <- watcher.processWatchLoop(events)
@@ -277,7 +277,7 @@ func (watcher *SyncWatcher) processSyncWatch(ctx context.Context, path string) e
 	watchCtx, watchCancel := context.WithCancel(ctx)
 	defer watchCancel()
 	fromRevision := watcher.fetchStoredRevision(ctx, path) + 1
-	respCh := watcher.sync.WatchContext(watchCtx, path, fromRevision)
+	respCh := watcher.sync.Watch(watchCtx, path, fromRevision)
 	watchErr := make(chan error, 1)
 	go func() {
 		watchErr <- func() error {

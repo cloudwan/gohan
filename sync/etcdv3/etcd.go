@@ -293,7 +293,7 @@ func (s *Sync) Unlock(ctx context.Context, path string) error {
 	return nil
 }
 
-func eventsFromNode(action string, kvs []*pb.KeyValue, responseChan chan *sync.Event, stopChan chan bool) {
+func eventsFromNode(ctx context.Context, action string, kvs []*pb.KeyValue, responseChan chan *sync.Event) {
 	for _, kv := range kvs {
 		event := &sync.Event{
 			Action:   action,
@@ -307,7 +307,7 @@ func eventsFromNode(action string, kvs []*pb.KeyValue, responseChan chan *sync.E
 			}
 		}
 		select {
-		case <-stopChan:
+		case <-ctx.Done():
 			log.Debug("Events from node interrupted by stop")
 			return
 		case responseChan <- event:
@@ -316,7 +316,7 @@ func eventsFromNode(action string, kvs []*pb.KeyValue, responseChan chan *sync.E
 }
 
 //Watch keep watch update under the path
-func (s *Sync) Watch(ctx context.Context, path string, responseChan chan *sync.Event, stopChan chan bool, revision int64) error {
+func (s *Sync) watch(ctx context.Context, path string, responseChan chan *sync.Event, revision int64) error {
 	options := []etcd.OpOption{etcd.WithPrefix(), etcd.WithSort(etcd.SortByModRevision, etcd.SortAscend)}
 	if revision != sync.RevisionCurrent {
 		options = append(options, etcd.WithMinModRev(revision))
@@ -326,7 +326,7 @@ func (s *Sync) Watch(ctx context.Context, path string, responseChan chan *sync.E
 		updateCounter(1, "watch.get.error")
 		return err
 	}
-	eventsFromNode("get", node.Kvs, responseChan, stopChan)
+	eventsFromNode(ctx, "get", node.Kvs, responseChan)
 	revision = node.Header.Revision + 1
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -355,7 +355,7 @@ func (s *Sync) Watch(ctx context.Context, path string, responseChan chan *sync.E
 					case etcd.EventTypeDelete:
 						action = "delete"
 					}
-					eventsFromNode(action, []*pb.KeyValue{ev.Kv}, responseChan, stopChan)
+					eventsFromNode(ctx, action, []*pb.KeyValue{ev.Kv}, responseChan)
 				}
 			}
 
@@ -384,35 +384,34 @@ func (s *Sync) Watch(ctx context.Context, path string, responseChan chan *sync.E
 	select {
 	case <-session.Done():
 		return fmt.Errorf("Watch aborted by etcd session close")
-	case <-stopChan:
+	case <-ctx.Done():
 		return nil
 	case err := <-errorsCh:
 		return err
 	}
 }
 
-// WatchContext keep watch update under the path until context is canceled
-func (s *Sync) WatchContext(ctx context.Context, path string, revision int64) <-chan *sync.Event {
+// Watch keep watch update under the path until context is canceled
+func (s *Sync) Watch(ctx context.Context, path string, revision int64) <-chan *sync.Event {
 	eventCh := make(chan *sync.Event, 32)
-	stopCh := make(chan bool)
-	errCh := make(chan error, 1)
+	watchDoneCh := make(chan error, 1)
 	go func() {
-		errCh <- s.Watch(ctx, path, eventCh, stopCh, revision)
+		watchDoneCh <- s.watch(ctx, path, eventCh, revision)
 	}()
 	go func() {
 		defer close(eventCh)
 
 		select {
 		case <-ctx.Done():
-			close(stopCh)
-			// don't return without ensuring Watch finished or we risk panic: send on closed channel
-			<-errCh
-		case err := <-errCh:
-			close(stopCh)
+			// don't return without ensuring Watch finished or we risk panic:
+			// send on closed eventCh channel
+			<-watchDoneCh
+		case err := <-watchDoneCh:
 			if err != nil {
 				select {
 				case eventCh <- &sync.Event{Err: err}:
 				default:
+					updateCounter(1, "watch.eventch_full")
 					log.Debug("Unable to send error: '%s' via response chan. Don't linger.", err)
 				}
 			}

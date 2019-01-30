@@ -5,11 +5,11 @@
 package mock_sync
 
 import (
-	context "context"
-	reflect "reflect"
+	"context"
+	"reflect"
 
 	"github.com/cloudwan/gohan/sync"
-	gomock "github.com/golang/mock/gomock"
+	"github.com/golang/mock/gomock"
 )
 
 // MockSync is a mock of Sync interface
@@ -110,27 +110,15 @@ func (mr *MockSyncMockRecorder) Delete(ctx, path, prefix interface{}) *gomock.Ca
 }
 
 // Watch mocks base method
-func (m *MockSync) Watch(ctx context.Context, path string, responseChan chan *sync.Event, stopChan chan bool, revision int64) error {
-	ret := m.ctrl.Call(m, "Watch", ctx, path, responseChan, stopChan, revision)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Watch indicates an expected call of Watch
-func (mr *MockSyncMockRecorder) Watch(ctx, path, responseChan, stopChan, revision interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Watch", reflect.TypeOf((*MockSync)(nil).Watch), ctx, path, responseChan, stopChan, revision)
-}
-
-// WatchContext mocks base method
-func (m *MockSync) WatchContext(ctx context.Context, path string, revision int64) <-chan *sync.Event {
-	ret := m.ctrl.Call(m, "WatchContext", ctx, path, revision)
+func (m *MockSync) Watch(ctx context.Context, path string, revision int64) <-chan *sync.Event {
+	ret := m.ctrl.Call(m, "Watch", ctx, path, revision)
 	ret0, _ := ret[0].(<-chan *sync.Event)
 	return ret0
 }
 
-// WatchContext indicates an expected call of WatchContext
-func (mr *MockSyncMockRecorder) WatchContext(ctx, path, revision interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WatchContext", reflect.TypeOf((*MockSync)(nil).WatchContext), ctx, path, revision)
+// Watch indicates an expected call of Watch
+func (mr *MockSyncMockRecorder) Watch(ctx, path, revision interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Watch", reflect.TypeOf((*MockSync)(nil).Watch), ctx, path, revision)
 }
 
 // GetProcessID mocks base method

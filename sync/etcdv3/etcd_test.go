@@ -222,23 +222,16 @@ func TestLockBlocking(t *testing.T) {
 }
 
 func TestWatch(t *testing.T) {
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	sync := newSync(t)
 	sync.etcdClient.Delete(ctx, "/", etcd.WithPrefix())
 
 	path := "/path/to/watch/without/revision"
-	responseChan := make(chan *gohan_sync.Event)
-	stopChan := make(chan bool)
-
 	sync.etcdClient.Put(ctx, path+"/existing", `{"existing": true}`)
 
-	go func() {
-		err := sync.Watch(ctx, path, responseChan, stopChan, gohan_sync.RevisionCurrent)
-		if err != nil {
-			t.Fatalf("failed to watch")
-		}
-	}()
+	responseChan := sync.Watch(ctx, path, gohan_sync.RevisionCurrent)
 
 	resp := <-responseChan
 	if resp.Action != "get" || resp.Key != path+"/existing" || resp.Data["existing"].(bool) != true {
@@ -259,14 +252,13 @@ func TestWatch(t *testing.T) {
 }
 
 func TestWatchWithRevision(t *testing.T) {
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	sync := newSync(t)
 	sync.etcdClient.Delete(ctx, "/", etcd.WithPrefix())
 
 	path := "/path/to/watch/with/revision"
-	responseChan := make(chan *gohan_sync.Event)
-	stopChan := make(chan bool)
 
 	putResponse, err := sync.etcdClient.Put(ctx, path+"/existing", `{"existing": true}`)
 	if err != nil {
@@ -280,12 +272,7 @@ func TestWatchWithRevision(t *testing.T) {
 	}
 	secondRevision := putResponse.Header.Revision
 
-	go func() {
-		err := sync.Watch(ctx, path, responseChan, stopChan, startRev+1)
-		if err != nil {
-			t.Fatalf("failed to watch")
-		}
-	}()
+	responseChan := sync.Watch(ctx, path, startRev+1)
 
 	resp := <-responseChan
 	if resp.Key != path+"/new" || resp.Data["existing"].(bool) != false || resp.Revision != secondRevision {
