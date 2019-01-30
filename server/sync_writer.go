@@ -37,7 +37,8 @@ const (
 
 	configPrefix = "/config"
 
-	defaultBackoff = 5 * time.Second
+	defaultBackoff       = 5 * time.Second
+	defaultUnlockTimeout = 3 * time.Second
 
 	notSyncedYet = -1
 )
@@ -50,6 +51,7 @@ type SyncWriter struct {
 	sync            gohan_sync.Sync
 	db              db.DB
 	backoff         time.Duration
+	unlockTimeout   time.Duration
 	lastSyncedEvent int
 }
 
@@ -59,12 +61,17 @@ func NewSyncWriter(sync gohan_sync.Sync, db db.DB) *SyncWriter {
 		sync:            sync,
 		db:              db,
 		backoff:         getBackoff(),
+		unlockTimeout:   getUnlockTimeout(),
 		lastSyncedEvent: notSyncedYet,
 	}
 }
 
 func getBackoff() time.Duration {
 	return util.GetConfig().GetDuration("sync_writer/backoff", defaultBackoff)
+}
+
+func getUnlockTimeout() time.Duration {
+	return util.GetConfig().GetDuration("sync_writer/unlock", defaultUnlockTimeout)
 }
 
 // NewSyncWriterFromServer is a helper method for test.
@@ -97,7 +104,9 @@ func (writer *SyncWriter) run(ctx context.Context) error {
 		return err
 	}
 	defer func() {
-		if err := writer.sync.Unlock(context.Background(), syncPath); err != nil {
+		// can't use the parent context, it may be already canceled
+		unlockCtx, _ := context.WithTimeout(context.Background(), writer.unlockTimeout)
+		if err := writer.sync.Unlock(unlockCtx, syncPath); err != nil {
 			log.Warning("SyncWriter: unlocking failed: %s", err)
 		}
 	}()
