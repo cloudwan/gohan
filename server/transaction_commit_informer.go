@@ -90,7 +90,9 @@ func (t *TransactionCommitInformer) notify(ctx context.Context, lastId int64) {
 
 func (t *TransactionCommitInformer) drain(eventId int64) int64 {
 	var drained int64 = 0
-	defer t.updateCounter(drained, "drained")
+	defer func() {
+		t.updateCounter(drained, "drained")
+	}()
 
 	for {
 		select {
