@@ -152,7 +152,7 @@ func getEventId(event *gohan_sync.Event) int {
 func (writer *SyncWriter) triggerSync(ctx context.Context, eventId int) error {
 	writer.updateCounter(1, "wake_up.on_trigger")
 
-	if eventId < writer.lastSyncedEvent {
+	if eventId <= writer.lastSyncedEvent {
 		writer.updateCounter(1, "skipped_syncs")
 		return nil
 	}
