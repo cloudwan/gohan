@@ -501,6 +501,22 @@ WARNING: The value of watched etcd keys must be a JSON dictionary.
         timing: "*/5 * * * * *"
 ```
 
+- Health Check
+
+  Gohan allows to determine whether database and etcd are up and running or not.
+  You can do this on /healthcheck endpoint.
+  As healtcheck does not require authentication it runs on separate port
+  (by default is gohan port + 1).
+  HTTP code 200 means server is running, whereas code 503 indicates something is wrong.
+  Health Check is disabled by default as it does not requires authentication.
+
+```yaml
+    healthcheck:
+      enabled: true
+      etcd_key: "/gohan"
+      address: ":19091"
+```
+
 - schema editor
 
   You can use a Gohan server as a schema editor if you specify editable_schema YAML file.

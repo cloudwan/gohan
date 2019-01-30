@@ -19,6 +19,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 //Config stores configuration parameters for api server
@@ -163,4 +164,18 @@ func (config *Config) GetParam(key string, defaultValue interface{}) interface{}
 	return data
 }
 
-//(TODO) nati: Add more utility functions
+//GetDuration returns time.Duration parameter from config
+func (config *Config) GetDuration(key string, defaultValue time.Duration) time.Duration {
+	rawData := config.GetParam(key, defaultValue)
+	data, ok := rawData.(string)
+	if !ok {
+		return defaultValue
+	}
+
+	duration, err := time.ParseDuration(data)
+	if err != nil {
+		return defaultValue
+	}
+
+	return duration
+}
