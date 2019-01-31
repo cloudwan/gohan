@@ -13,6 +13,9 @@ schemas:
     - "../tests/test_sync_watch_extension.yaml"
     - "../tests/test_blacklisted_tenant_id_schema.yaml"
 address: ":19090"
+healthcheck:
+  address: ":19091"
+  enabled: true
 document_root: "embed"
 sync: etcdv3
 etcd:

@@ -1,8 +1,6 @@
 package etcdv3
 
 import (
-	"fmt"
-	"strings"
 	"testing"
 	"time"
 
@@ -56,7 +54,7 @@ func TestNonEmptyUpdate(t *testing.T) {
 	}
 
 	node, err = sync.Fetch(ctx, path)
-	if err == nil || !strings.Contains(err.Error(), fmt.Sprintf("Key not found (%s)", path)) {
+	if err == nil || err != KeyNotFound {
 		t.Fatalf("unexpected non error")
 	}
 }
@@ -401,7 +399,7 @@ func TestNotIncludedPaths(t *testing.T) {
 	checkNode(pathTo.Children[0], "/path/to/somewhere", "test", 0, t)
 
 	_, err = sync.Fetch(ctx, "/path/not")
-	if err == nil || !strings.Contains(err.Error(), fmt.Sprintf("Key not found (%s)", "/path/not")) {
+	if err == nil || err != KeyNotFound {
 		t.Fatalf("unexpected error %s", err.Error())
 	}
 
@@ -410,7 +408,7 @@ func TestNotIncludedPaths(t *testing.T) {
 		t.Fatalf("unexpected error")
 	}
 	_, err = sync.Fetch(ctx, "/path/to/not")
-	if err == nil || !strings.Contains(err.Error(), fmt.Sprintf("Key not found (%s)", "/path/to/not")) {
+	if err == nil || err != KeyNotFound {
 		t.Fatalf("unexpected error %s", err.Error())
 	}
 }

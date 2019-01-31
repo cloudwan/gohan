@@ -49,7 +49,6 @@
 [[constraint]]
   branch = "master"
   name = "github.com/gophercloud/gophercloud"
-  source= "https://github.com/cloudwan/gophercloud.git"
 
 [[constraint]]
   branch = "master"

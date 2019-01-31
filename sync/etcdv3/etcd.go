@@ -39,6 +39,8 @@ const (
 	masterTTL = 10
 )
 
+var KeyNotFound = errors.New("key not found")
+
 //Sync is struct for etcd based sync
 type Sync struct {
 	locks      cmap.ConcurrentMap
@@ -137,7 +139,8 @@ func (s *Sync) Fetch(ctx context.Context, key string) (*sync.Node, error) {
 	}
 	children := recursiveFetch(curr, dir.Kvs, key, sep)
 	if children == nil {
-		return nil, fmt.Errorf("Key not found (%s)", key)
+		log.Warning("Key not found (%s)", key)
+		return nil, KeyNotFound
 	}
 	return children, nil
 }

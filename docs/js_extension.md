@@ -332,7 +332,7 @@ arguments during subsequent calls by calling
 ``gohan_*`` (FIFO queue). If no return value, or wrong arguments are provided
 for a call then an unexpected call is assumed, which will result in test failures.
 
-In addition to the abovementioned functions, the framework provides the
+In addition to the above mentioned functions, the framework provides the
 following API:
 
 * ``Fail(format_string, ...)`` - stop execution of a single test case and
