@@ -40,7 +40,7 @@ const (
 	masterTTL   = 10
 )
 
-var KeyNotFound = errors.New("key not found")
+var KeyNotFound = errors.New("Key not found")
 
 //Sync is struct for etcd based sync
 type Sync struct {
