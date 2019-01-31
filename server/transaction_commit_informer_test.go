@@ -113,7 +113,7 @@ var _ = Describe("Transaction Commit Informer", func() {
 		Consistently(func() error {
 			_, err := sync.Fetch(ctx, key)
 			return err
-		}).Should(MatchError(ContainSubstring("key not found")))
+		}).Should(MatchError(ContainSubstring("Key not found")))
 	}
 
 	fetchNewestEventId := func() (id int) {
