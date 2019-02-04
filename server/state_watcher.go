@@ -99,12 +99,14 @@ func (watcher *StateWatcher) iterate(ctx context.Context) error {
 		return nil
 	}
 	defer func() {
-		if err := watcher.sync.Unlock(ctx, lockKey); err != nil {
+		// can't use the parent context, it may be already canceled
+		if err := watcher.sync.Unlock(context.Background(), lockKey); err != nil {
 			log.Warning("StateWatcher: unlocking etcd failed: %s", err)
 		}
 	}()
 
 	watchCtx, watchCancel := context.WithCancel(ctx)
+	defer watchCancel()
 	respCh := watcher.sync.Watch(watchCtx, lockKey, gohan_sync.RevisionCurrent)
 	watchErr := make(chan error, 1)
 	go func() {

@@ -98,7 +98,8 @@ func (watcher *SyncWatcher) Run(ctx context.Context, wg *sync.WaitGroup) error {
 				return err
 			}
 			defer func() {
-				if err := watcher.sync.Unlock(ctx, lockKey); err != nil {
+				// can't use the parent context, it may be already canceled
+				if err := watcher.sync.Unlock(context.Background(), lockKey); err != nil {
 					log.Warning("SyncWatcher: unlocking etcd failed on %s: %s", lockKey, err)
 				}
 			}()
@@ -242,10 +243,12 @@ func (watcher *SyncWatcher) runSyncWatches(ctx context.Context, size int, positi
 
 				switch err {
 				case errLockFailed:
-					log.Warning("(SyncWatcher) failed to acquire lock, retrying...")
+					watcher.updateCounter(1, "lock.failed")
+					log.Debug("(SyncWatcher) failed to acquire lock, retrying...")
 				case context.Canceled:
 					// Do nothing, normal shutdown
 				default:
+					watcher.updateCounter(1, "error")
 					log.Error("(SyncWatcher) on `%s` aborted, retrying...: %s", path, err)
 				}
 
@@ -263,13 +266,17 @@ func (watcher *SyncWatcher) runSyncWatches(ctx context.Context, size int, positi
 // Returns any error or context cancel.
 // This method gets a lock on the sync backend and returns with an error when fails.
 func (watcher *SyncWatcher) processSyncWatch(ctx context.Context, path string) error {
+	watcher.updateCounter(1, "active")
+	defer watcher.updateCounter(-1, "active")
+
 	lockKey := lockPath + "/watch" + path
 	lost, err := watcher.sync.Lock(ctx, lockKey, false)
 	if err != nil {
 		return errLockFailed
 	}
 	defer func() {
-		if err := watcher.sync.Unlock(ctx, lockKey); err != nil {
+		// can't use the parent context, it may be already canceled
+		if err := watcher.sync.Unlock(context.Background(), lockKey); err != nil {
 			log.Warning("SyncWatcher: unlocking etcd failed on %s: %s", lockKey, err)
 		}
 	}()
@@ -280,6 +287,8 @@ func (watcher *SyncWatcher) processSyncWatch(ctx context.Context, path string) e
 	respCh := watcher.sync.Watch(watchCtx, path, fromRevision)
 	watchErr := make(chan error, 1)
 	go func() {
+		watcher.updateCounter(1, "running")
+		defer watcher.updateCounter(-1, "running")
 		watchErr <- func() error {
 			for response := range respCh {
 				if response.Err != nil {
@@ -303,6 +312,7 @@ func (watcher *SyncWatcher) processSyncWatch(ctx context.Context, path string) e
 		}
 		return ctx.Err()
 	case <-lost:
+		watcher.updateCounter(1, "lock.lost")
 		watchCancel()
 		if err := <-watchErr; err != nil {
 			log.Error("(SyncWatcher) error after lost lock: %s", err)
@@ -373,4 +383,8 @@ func (watcher *SyncWatcher) runExtensionOnSync(response *gohan_sync.Event, env e
 		return
 	}
 	return
+}
+
+func (watcher *SyncWatcher) updateCounter(delta int64, metric string) {
+	metrics.UpdateCounter(delta, "sync_watcher.%s", metric)
 }

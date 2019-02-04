@@ -111,7 +111,9 @@ func (writer *SyncWriter) run(ctx context.Context) error {
 		}
 	}()
 
-	triggerCh := writer.sync.Watch(ctx, SyncKeyTxCommitted, gohan_sync.RevisionCurrent)
+	watchCtx, watchCancel := context.WithCancel(ctx)
+	defer watchCancel()
+	triggerCh := writer.sync.Watch(watchCtx, SyncKeyTxCommitted, gohan_sync.RevisionCurrent)
 
 	for {
 		select {
