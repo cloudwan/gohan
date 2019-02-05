@@ -33,6 +33,7 @@ import (
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/server/middleware"
 	"github.com/cloudwan/gohan/sync/noop"
+
 	// Import otto underscore lib
 	_ "github.com/robertkrimen/otto/underscore"
 )

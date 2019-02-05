@@ -35,6 +35,7 @@ import (
 	"github.com/cloudwan/gohan/util"
 	"github.com/jmoiron/sqlx"
 	sq "github.com/lann/squirrel"
+
 	// Import mysql lib
 	_ "github.com/go-sql-driver/mysql"
 	// Import go-sqlite3 lib
@@ -1157,8 +1158,8 @@ func (tx *Transaction) GetIsolationLevel() transaction.Type {
 }
 
 const (
-	OrCondition  = "__or__"
-	AndCondition = "__and__"
+	OrCondition   = "__or__"
+	AndCondition  = "__and__"
 	BoolCondition = "__bool__"
 )
 
