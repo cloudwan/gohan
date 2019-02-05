@@ -533,7 +533,11 @@ func (server *Server) startSyncProcess(process syncProcess) {
 
 	go func(ctx context.Context, wg *sync_lib.WaitGroup) {
 		if err := process.Run(ctx, wg); err != nil {
-			log.Error("An error occurred during %T startup: %s", process, err)
+			if err == context.Canceled {
+				log.Info("%T finished", process)
+			} else {
+				log.Error("An error occurred during %T startup: %s", process, err)
+			}
 		}
 	}(server.masterCtx, &server.done)
 }
