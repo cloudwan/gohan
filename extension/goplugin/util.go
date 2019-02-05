@@ -259,7 +259,7 @@ func sliceToMap(context map[string]interface{}, fieldName string, field reflect.
 	return nil
 }
 
-var jsonMapper *reflectx.Mapper = reflectx.NewMapper("json")
+var jsonMapper = reflectx.NewMapper("json")
 
 // ResourceToMap converts structure representation of the resource to mapped representation
 func (util *Util) ResourceToMap(resource interface{}) map[string]interface{} {
