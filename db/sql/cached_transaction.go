@@ -22,6 +22,7 @@ import (
 	"github.com/cloudwan/gohan/db/pagination"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
+
 	// Import mysql lib
 	_ "github.com/go-sql-driver/mysql"
 	// Import go-sqlite3 lib
