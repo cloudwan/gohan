@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"sync"
 
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/extension/goext"
@@ -260,18 +259,11 @@ func sliceToMap(context map[string]interface{}, fieldName string, field reflect.
 	return nil
 }
 
-var (
-	jsonMapperInitOnce sync.Once
-	jsonMapper         *reflectx.Mapper
-)
+var jsonMapper *reflectx.Mapper = reflectx.NewMapper("json")
 
 // ResourceToMap converts structure representation of the resource to mapped representation
 func (util *Util) ResourceToMap(resource interface{}) map[string]interface{} {
 	fieldsMap := map[string]interface{}{}
-
-	jsonMapperInitOnce.Do(func() {
-		jsonMapper = reflectx.NewMapper("json")
-	})
 
 	structMap := jsonMapper.TypeMap(reflect.TypeOf(resource))
 	resourceValue := reflect.ValueOf(resource).Elem()
