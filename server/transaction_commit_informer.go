@@ -66,7 +66,9 @@ func (t *TransactionCommitInformer) Run(ctx context.Context, wg *sync.WaitGroup)
 
 func (t *TransactionCommitInformer) notify(ctx context.Context, lastId int64) {
 	var attempt int64 = 0
-	defer t.updateCounter(attempt, "notify.retries")
+	defer func() {
+		t.updateCounter(attempt, "notify.retries")
+	}()
 	t.updateCounter(1, "notify.called")
 
 	for {
