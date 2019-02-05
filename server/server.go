@@ -507,6 +507,10 @@ func RunServer(configFile string) {
 }
 
 func (server *Server) startSyncProcesses() {
+	if server.sync == nil {
+		return
+	}
+
 	stateWatcher := NewStateWatcher(server.sync, server.db, server.keystoneIdentity)
 	server.startSyncProcess(stateWatcher)
 

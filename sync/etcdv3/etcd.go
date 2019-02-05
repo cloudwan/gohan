@@ -49,9 +49,11 @@ type Sync struct {
 	processID  string
 }
 
-func (s *Sync) withTimeout(parent context.Context) context.Context {
-	ctx, _ := context.WithTimeout(parent, s.timeout)
-	return ctx
+func (s *Sync) withTimeout(parent context.Context, fn func(ctx context.Context)) {
+	ctx, cancel := context.WithTimeout(parent, s.timeout)
+	defer cancel()
+
+	fn(ctx)
 }
 
 //NewSync initialize new etcd sync
@@ -99,7 +101,11 @@ func (s *Sync) Update(ctx context.Context, key, jsonString string) error {
 		// do nothing, because clientv3 doesn't have directories
 		return nil
 	}
-	_, err = s.etcdClient.Put(s.withTimeout(ctx), key, jsonString)
+
+	s.withTimeout(ctx, func(ctx context.Context) {
+		_, err = s.etcdClient.Put(ctx, key, jsonString)
+	})
+
 	if err != nil {
 		log.Error(fmt.Sprintf("failed to sync with backend: %s", err))
 		updateCounter(1, "update.error")
@@ -116,7 +122,12 @@ func (s *Sync) Delete(ctx context.Context, key string, prefix bool) error {
 	if prefix {
 		opts = append(opts, etcd.WithPrefix())
 	}
-	_, err := s.etcdClient.Delete(s.withTimeout(ctx), key, opts...)
+
+	var err error
+	s.withTimeout(ctx, func(ctx context.Context) {
+		_, err = s.etcdClient.Delete(ctx, key, opts...)
+	})
+
 	if err != nil {
 		updateCounter(1, "delete.error")
 	}
@@ -126,7 +137,16 @@ func (s *Sync) Delete(ctx context.Context, key string, prefix bool) error {
 //Fetch data from sync
 func (s *Sync) Fetch(ctx context.Context, key string) (*sync.Node, error) {
 	defer measureTime(time.Now(), "fetch")
-	dir, err := s.etcdClient.Get(s.withTimeout(ctx), key, etcd.WithPrefix(), etcd.WithSort(etcd.SortByKey, etcd.SortAscend))
+
+	var (
+		dir *etcd.GetResponse
+		err error
+	)
+
+	s.withTimeout(ctx, func(ctx context.Context) {
+		dir, err = s.etcdClient.Get(ctx, key, etcd.WithPrefix(), etcd.WithSort(etcd.SortByKey, etcd.SortAscend))
+	})
+
 	if err != nil {
 		updateCounter(1, "fetch.dir.error")
 		return nil, err
@@ -215,13 +235,22 @@ func (s *Sync) Lock(ctx context.Context, path string, block bool) (chan struct{}
 	defer updateCounter(-1, "lock.waiting")
 
 	for {
-		var err error
-		lease, err := s.etcdClient.Grant(s.withTimeout(ctx), masterTTL)
+		var (
+			lease *etcd.LeaseGrantResponse
+			err   error
+		)
+		s.withTimeout(ctx, func(ctx context.Context) {
+			lease, err = s.etcdClient.Grant(ctx, masterTTL)
+		})
+
 		var resp *etcd.TxnResponse
 		if err == nil {
 			cmp := etcd.Compare(etcd.CreateRevision(path), "=", 0)
 			put := etcd.OpPut(path, s.processID, etcd.WithLease(lease.ID))
-			resp, err = s.etcdClient.Txn(s.withTimeout(ctx)).If(cmp).Then(put).Commit()
+
+			s.withTimeout(ctx, func(ctx context.Context) {
+				resp, err = s.etcdClient.Txn(ctx).If(cmp).Then(put).Commit()
+			})
 		}
 		if err != nil || !resp.Succeeded {
 			msg := fmt.Sprintf("failed to lock path %s", path)
@@ -252,8 +281,15 @@ func (s *Sync) Lock(ctx context.Context, path string, block bool) (chan struct{}
 			defer close(lost)
 			defer updateCounter(-1, "lock.granted")
 
+			var (
+				resp *etcd.LeaseKeepAliveResponse
+				err  error
+			)
+
 			for s.HasLock(path) {
-				resp, err := s.etcdClient.KeepAliveOnce(s.withTimeout(ctx), lease.ID)
+				s.withTimeout(ctx, func(ctx context.Context) {
+					resp, err = s.etcdClient.KeepAliveOnce(ctx, lease.ID)
+				})
 				if err != nil || resp.TTL <= 0 {
 					updateCounter(1, "lock.keepalive.error")
 					log.Notice("failed to keepalive lock for %s %s", path, err)
@@ -283,15 +319,19 @@ func (s *Sync) Unlock(ctx context.Context, path string) error {
 
 	leaseID := s.abortLock(path)
 	if leaseID > 0 {
-		if _, err := s.etcdClient.Revoke(s.withTimeout(ctx), leaseID); err != nil {
-			log.Notice("Revoking lease failed: %s", err)
-		}
+		s.withTimeout(ctx, func(ctx context.Context) {
+			if _, err := s.etcdClient.Revoke(ctx, leaseID); err != nil {
+				log.Notice("Revoking lease failed: %s", err)
+			}
+		})
 
-		cmp := etcd.Compare(etcd.Value(path), "=", s.processID)
-		del := etcd.OpDelete(path)
-		if _, err := s.etcdClient.Txn(s.withTimeout(ctx)).If(cmp).Then(del).Commit(); err != nil {
-			log.Notice("Deleting %s failed: %s", path, err)
-		}
+		s.withTimeout(ctx, func(ctx context.Context) {
+			cmp := etcd.Compare(etcd.Value(path), "=", s.processID)
+			del := etcd.OpDelete(path)
+			if _, err := s.etcdClient.Txn(ctx).If(cmp).Then(del).Commit(); err != nil {
+				log.Notice("Deleting %s failed: %s", path, err)
+			}
+		})
 	}
 	return nil
 }
@@ -324,7 +364,16 @@ func (s *Sync) watch(ctx context.Context, path string, responseChan chan *sync.E
 	if revision != sync.RevisionCurrent {
 		options = append(options, etcd.WithMinModRev(revision))
 	}
-	node, err := s.etcdClient.Get(s.withTimeout(ctx), path, options...)
+
+	var (
+		node *etcd.GetResponse
+		err  error
+	)
+
+	s.withTimeout(ctx, func(ctx context.Context) {
+		node, err = s.etcdClient.Get(ctx, path, options...)
+	})
+
 	if err != nil {
 		updateCounter(1, "watch.get.error")
 		return err

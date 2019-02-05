@@ -1372,7 +1372,7 @@ schemas:
       - accessibility
       - block_flag
   title: Target of attach
-- description: Schema than is not synced
+- description: Schema that is not synced
   id: not_synced
   singular: not_synced
   plural: not_synceds
@@ -1413,6 +1413,6 @@ schemas:
         title: Dummy field
         unique: false
         description: A property is required to create a resource
-  title: Not synced
+  title: Schema with int primary key
 
 subnets: []
