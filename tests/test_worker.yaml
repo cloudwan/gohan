@@ -78,4 +78,3 @@ watch:
     events:
       - config/v2.0/networks
       # kick extension which meets extension path
-    worker_count: 10

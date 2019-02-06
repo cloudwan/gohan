@@ -28,22 +28,16 @@ import (
 var _ = Describe("Keystone client", func() {
 	var (
 		server     *ghttp.Server
-		client     KeystoneClient
+		client     KeystoneIdentity
 		username   = "admin"
 		password   = "password"
 		domainName = "domain"
 		tenantName = "admin"
 	)
 
-	setupV2Client := func() {
-		var err error
-		client, err = NewKeystoneV2Client(server.URL()+"/v2.0", username, password, tenantName)
-		Expect(err).ToNot(HaveOccurred())
-	}
-
 	setupV3Client := func() {
 		var err error
-		client, err = NewKeystoneV3Client(server.URL()+"/v3", username, password, domainName, tenantName)
+		client, err = NewKeystoneIdentity(server.URL()+"/v3", username, password, domainName, tenantName)
 		Expect(err).ToNot(HaveOccurred())
 	}
 
@@ -56,13 +50,6 @@ var _ = Describe("Keystone client", func() {
 	})
 
 	Describe("Match version from auth URL", func() {
-		It("Should match v2 version successfully", func() {
-			res := matchVersionFromAuthURL("http://example.com:5000/v2.0")
-			Expect(res).To(Equal("v2.0"))
-			res = matchVersionFromAuthURL("http://example.com:5000/v2.0/")
-			Expect(res).To(Equal("v2.0"))
-		})
-
 		It("Should match v3 version successfully", func() {
 			res := matchVersionFromAuthURL("http://example.com:5000/v3")
 			Expect(res).To(Equal("v3"))
@@ -77,61 +64,6 @@ var _ = Describe("Keystone client", func() {
 	})
 
 	Describe("Tenant ID <-> Tenant Name Mapper", func() {
-		Context("Keystone v2", func() {
-			BeforeEach(func() {
-				server.AppendHandlers(
-					ghttp.RespondWithJSONEncoded(200, getV2TokensResponse()),
-				)
-				setupV2Client()
-			})
-
-			It("Should map Tenant Name to Tenant ID successfully", func() {
-				server.AppendHandlers(
-					ghttp.RespondWithJSONEncoded(200, getV2TenantsResponse()),
-					ghttp.RespondWithJSONEncoded(200, getV2TenantsResponse()),
-				)
-				tenantID, err := client.GetTenantID("admin")
-				Expect(err).ToNot(HaveOccurred())
-				Expect(tenantID).To(Equal("1234"))
-
-				tenantID, err = client.GetTenantID("demo")
-				Expect(err).ToNot(HaveOccurred())
-				Expect(tenantID).To(Equal("3456"))
-			})
-
-			It("Should map Tenant ID to Tenant Name successfully", func() {
-				server.AppendHandlers(
-					ghttp.RespondWithJSONEncoded(200, getV2TenantsResponse()),
-					ghttp.RespondWithJSONEncoded(200, getV2TenantsResponse()),
-				)
-				tenantName, err := client.GetTenantName("1234")
-				Expect(err).ToNot(HaveOccurred())
-				Expect(tenantName).To(Equal("admin"))
-
-				tenantName, err = client.GetTenantName("3456")
-				Expect(err).ToNot(HaveOccurred())
-				Expect(tenantName).To(Equal("demo"))
-			})
-
-			It("Should show error - tenant with provided id not found", func() {
-				server.AppendHandlers(
-					ghttp.RespondWithJSONEncoded(200, getV2TenantsResponse()),
-				)
-				tenantID, err := client.GetTenantID("santa")
-				Expect(tenantID).To(Equal(""))
-				Expect(err).To(MatchError("Tenant with name 'santa' not found"))
-			})
-
-			It("Should show error - tenant with provided name not found", func() {
-				server.AppendHandlers(
-					ghttp.RespondWithJSONEncoded(200, getV2TenantsResponse()),
-				)
-				tenantName, err := client.GetTenantName("santa")
-				Expect(tenantName).To(Equal(""))
-				Expect(err).To(MatchError("Tenant with ID 'santa' not found"))
-			})
-		})
-
 		Context("Keystone v3", func() {
 			BeforeEach(func() {
 				server.AppendHandlers(

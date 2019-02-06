@@ -58,7 +58,7 @@ Gohan server configuration uses YAML format.
   keystone:
       use_keystone: false
       fake: true
-      auth_url: "http://localhost:35357/v2.0"
+      auth_url: "http://localhost:35357/v3"
       user_name: "admin"
       tenant_name: "admin"
       password: "gohan"
@@ -217,7 +217,7 @@ Gohan supports OpenStack Keystone authentication backend.
 
 - auth_url
 
-  keystone admin URL
+  keystone admin URL - only v3 API is supported, so it must end with `/v3`
 
 - user_name
 
@@ -225,19 +225,15 @@ Gohan supports OpenStack Keystone authentication backend.
 
 - tenant_name
 
-  service tenant_name (needed for Keystone v2.0 API)
+  service tenant_name
 
 - domain
 
-  service domain name (needed for Keystone v3.0 API)
+  service domain name
 
 - password
 
   password for a service user
-
-- version
-
-  v2.0 or v3 is supported
 
 - use_auth_cache
 
@@ -254,7 +250,7 @@ Gohan supports OpenStack Keystone authentication backend.
   keystone:
       use_keystone: false
       fake: true
-      auth_url: "http://localhost:35357/v2.0"
+      auth_url: "http://localhost:35357/v3"
       user_name: "admin"
       tenant_name: "admin"
       password: "gohan"
@@ -478,7 +474,6 @@ a sample configuration.
 - watch/keys  list of watched keys in etcd. Gohan watches the pathes which start with keys for etcd v3.
   For etcd v2, this will be done recursively.
 - events list of an event we invokes an extension
-- worker_count: number of concurrent execution tasks
 
 ```yaml
   watch:
@@ -486,7 +481,6 @@ a sample configuration.
         - v2.0
       events:
         - v2.0/servers/
-      worker_count: 4
 ```
 
 WARNING: The value of watched etcd keys must be a JSON dictionary.

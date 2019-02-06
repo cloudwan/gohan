@@ -31,7 +31,7 @@ import (
 	etcd "github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/clientv3/concurrency"
 	pb "github.com/coreos/etcd/mvcc/mvccpb"
-	"github.com/streamrail/concurrent-map"
+	cmap "github.com/streamrail/concurrent-map"
 	"github.com/twinj/uuid"
 )
 
