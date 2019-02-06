@@ -2,6 +2,9 @@ database:
     type: "mysql"
     connection: "root@/gohan_test"
     drop_on_create: true
+    deadlock_retry_tx:
+      count: 3
+      interval_msec: 100
 schemas:
     - "../etc/schema/gohan.json"
     - "../tests/test_abstract_schema.yaml"

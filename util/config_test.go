@@ -17,6 +17,7 @@ package util
 
 import (
 	"os"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -36,34 +37,50 @@ var _ = Describe("Config utility", func() {
 	})
 
 	Context("When it reads plain YAML config", func() {
-		It("Should load proper values", func() {
+		BeforeEach(func() {
 			Expect(config.ReadConfig("./config_test.yaml")).To(Succeed())
+		})
+
+		It("Should load proper values", func() {
 			Expect(config.GetString("unknown_param", "fail")).To(Equal("fail"))
 			Expect(config.GetString("keystone/usr_keystone", "fail")).To(Equal("fail"))
 			Expect(config.GetString("address", "fail")).To(Equal(":19090"))
 			Expect(config.GetBool("keystone/use_keystone", false)).ToNot(BeFalse())
 			Expect(config.GetString("database/type", "fail")).To(Equal("sqlite3"))
 			Expect(config.GetInt("timelimit", 10)).To(Equal(100))
+			Expect(config.GetDuration("delay", time.Hour)).To(Equal(time.Second * 3))
 			etcdServers := config.GetStringList("etcd", nil)
 			Expect(etcdServers).ToNot(BeNil())
 			etcdServerList := config.GetList("etcd", nil)
 			Expect(etcdServerList).ToNot(BeNil())
 		})
+
+		It("Should apply defaults for unspecified values", func() {
+			Expect(config.GetDuration("key_does_not_exist", time.Second)).To(Equal(time.Second))
+		})
 	})
 
 	Context("When it reads YAML template", func() {
-		It("Should load proper values", func() {
+		BeforeEach(func() {
 			Expect(config.ReadConfig("./config_test.tmpl.yaml")).To(Succeed())
+		})
+
+		It("Should load proper values", func() {
 			Expect(config.GetString("unknown_param", "fail")).To(Equal("fail"))
 			Expect(config.GetString("keystone/usr_keystone", "fail")).To(Equal("fail"))
 			Expect(config.GetString("address", "fail")).To(Equal(":19090"))
 			Expect(config.GetBool("keystone/use_keystone", false)).ToNot(BeFalse())
 			Expect(config.GetString("database/type", "fail")).To(Equal("sqlite3"))
 			Expect(config.GetString("test", "")).To(Equal(gohanTestValue))
+			Expect(config.GetDuration("delay", time.Second*3)).To(Equal(time.Second * 3))
 			etcdServers := config.GetStringList("etcd", nil)
 			Expect(etcdServers).ToNot(BeNil())
 			etcdServerList := config.GetList("etcd", nil)
 			Expect(etcdServerList).ToNot(BeNil())
+		})
+
+		It("Should apply defaults for unspecified values", func() {
+			Expect(config.GetDuration("key_does_not_exist", time.Second)).To(Equal(time.Second))
 		})
 	})
 })

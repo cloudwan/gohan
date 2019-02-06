@@ -1372,5 +1372,47 @@ schemas:
       - accessibility
       - block_flag
   title: Target of attach
+- description: Schema that is not synced
+  id: not_synced
+  singular: not_synced
+  plural: not_synceds
+  prefix: /v2.0
+  metadata:
+    nosync: true
+  schema:
+    properties:
+      id:
+        description: ID
+        permission:
+          - create
+        title: ID
+        type: string
+        unique: true
+  title: Not synced
+- description: Schema with int primary key
+  id: int_pk
+  singular: int_pk
+  plural: int_pk
+  prefix: /v2.0
+  metadata:
+    nosync: true
+  schema:
+    properties:
+      id:
+        description: ID
+        permission:
+          - create
+        title: ID
+        type: integer
+        sql: integer primary key auto_increment
+      dummy_field:
+        permission:
+          - create
+          - update
+        type: integer
+        title: Dummy field
+        unique: false
+        description: A property is required to create a resource
+  title: Schema with int primary key
 
 subnets: []

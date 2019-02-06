@@ -583,13 +583,17 @@ func (tx *Transaction) Exec(ctx context.Context, sql string, args ...interface{}
 }
 
 func (tx *Transaction) exec(ctx context.Context, sql string, args ...interface{}) error {
-	tx.logQuery(sql, args...)
-	_, err := tx.transaction.ExecContext(safeMysqlContext(ctx), sql, args...)
+	_, err := tx.execWithResult(ctx, sql, args...)
 	return err
 }
 
+func (tx *Transaction) execWithResult(ctx context.Context, sql string, args ...interface{}) (transaction.Result, error) {
+	tx.logQuery(sql, args...)
+	return tx.transaction.ExecContext(safeMysqlContext(ctx), sql, args...)
+}
+
 //Create create resource in the db
-func (tx *Transaction) Create(ctx context.Context, resource *schema.Resource) error {
+func (tx *Transaction) Create(ctx context.Context, resource *schema.Resource) (transaction.Result, error) {
 	defer tx.measureTime(time.Now(), resource.Schema().ID, "create")
 
 	var cols []string
@@ -605,7 +609,7 @@ func (tx *Transaction) Create(ctx context.Context, resource *schema.Resource) er
 			cols = append(cols, quote(attr.ID))
 			encoded, err := handler.encode(&attr, data[attr.ID])
 			if err != nil {
-				return fmt.Errorf("SQL Create encoding error: %s", err)
+				return nil, fmt.Errorf("SQL Create encoding error: %s", err)
 			}
 			values = append(values, encoded)
 		}
@@ -613,9 +617,9 @@ func (tx *Transaction) Create(ctx context.Context, resource *schema.Resource) er
 	q = q.Columns(cols...).Values(values...)
 	sql, args, err := q.ToSql()
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return tx.exec(ctx, sql, args...)
+	return tx.execWithResult(ctx, sql, args...)
 }
 
 func (tx *Transaction) updateQuery(resource *schema.Resource) (sq.UpdateBuilder, error) {

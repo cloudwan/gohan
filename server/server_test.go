@@ -46,6 +46,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	"github.com/twinj/uuid"
 )
 
 var (
@@ -1148,6 +1149,11 @@ var _ = Describe("Server package test", func() {
 		})
 	})
 
+	create := func(tx transaction.Transaction, resource *schema.Resource) {
+		_, err := tx.Create(ctx, resource)
+		Expect(err).NotTo(HaveOccurred())
+	}
+
 	Describe("Resync command test", func() {
 		It("Should resync syncable resources", func() {
 			var err error
@@ -1158,9 +1164,10 @@ var _ = Describe("Server package test", func() {
 			if err != nil {
 				Fail(err.Error())
 			}
-			syncConn.Delete("/config/v2.0/networks/resync-test-net1", false)
-			syncConn.Delete("/config/v2.0/networks/resync-test-net2", false)
-			syncConn.Delete("/config/v2.0/subnets/test-subnet1-id", false)
+
+			syncConn.Delete(ctx, "/config/v2.0/networks/resync-test-net1", false)
+			syncConn.Delete(ctx, "/config/v2.0/networks/resync-test-net2", false)
+			syncConn.Delete(ctx, "/config/v2.0/subnets/test-subnet1-id", false)
 
 			networkSchema, _ := manager.Schema("network")
 			subnetSchema, _ := manager.Schema("subnet")
@@ -1197,9 +1204,10 @@ var _ = Describe("Server package test", func() {
 				"cidr":        "10.11.23.0/24",
 				"tenant_id":   "tenant1",
 			})
-			Expect(tx.Create(ctx, net1)).To(Succeed())
-			Expect(tx.Create(ctx, subnet1)).To(Succeed())
-			Expect(tx.Create(ctx, net2)).To(Succeed())
+
+			create(tx, net1)
+			create(tx, subnet1)
+			create(tx, net2)
 			Expect(tx.Commit()).To(Succeed())
 
 			if err != nil {
@@ -1207,20 +1215,20 @@ var _ = Describe("Server package test", func() {
 			}
 
 			var _ *sync.Node
-			_, err = syncConn.Fetch("/config/v2.0/networks/resync-test-net1")
+			_, err = syncConn.Fetch(ctx, "/config/v2.0/networks/resync-test-net1")
 			Expect(err).Should(HaveOccurred())
-			_, err = syncConn.Fetch("/config/v2.0/networks/resync-test-net2")
+			_, err = syncConn.Fetch(ctx, "/config/v2.0/networks/resync-test-net2")
 			Expect(err).Should(HaveOccurred())
-			_, err = syncConn.Fetch("/config/v2.0/subnets/test-subnet1-id")
+			_, err = syncConn.Fetch(ctx, "/config/v2.0/subnets/test-subnet1-id")
 			Expect(err).Should(HaveOccurred())
 
 			srv.Resync(testDB, syncConn)
 
-			_, err = syncConn.Fetch("/config/v2.0/networks/resync-test-net1")
+			_, err = syncConn.Fetch(ctx, "/config/v2.0/networks/resync-test-net1")
 			Expect(err).ShouldNot(HaveOccurred())
-			_, err = syncConn.Fetch("/config/v2.0/networks/resync-test-net2")
+			_, err = syncConn.Fetch(ctx, "/config/v2.0/networks/resync-test-net2")
 			Expect(err).ShouldNot(HaveOccurred())
-			_, err = syncConn.Fetch("/config/v2.0/subnets/test-subnet1-id")
+			_, err = syncConn.Fetch(ctx, "/config/v2.0/subnets/test-subnet1-id")
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 	})
@@ -1567,7 +1575,7 @@ var _ = Describe("Server package test", func() {
 			controller := gomock.NewController(GinkgoT())
 			mockSync := mock_sync.NewMockSync(controller)
 			server.HealthCheck.Etcd = mockSync
-			mockSync.EXPECT().Fetch("/gohan").Return(nil, errors.New("etcd is down"))
+			mockSync.EXPECT().Fetch(gomock.Any(), "/gohan").Return(nil, errors.New("etcd is down"))
 		}
 
 		systemHealthy := func() {}
@@ -1680,6 +1688,30 @@ func getNetwork(color string, tenant string) map[string]interface{} {
 			},
 		},
 	}
+}
+
+func createResource(ctx context.Context, tx transaction.Transaction, schemaId string, rawResource map[string]interface{}) *schema.Resource {
+	manager := schema.GetManager()
+	resource, err := manager.LoadResource(schemaId, rawResource)
+	Expect(err).ToNot(HaveOccurred())
+	_, err = tx.Create(ctx, resource)
+	Expect(err).NotTo(HaveOccurred())
+
+	return resource
+}
+
+func createNetwork(ctx context.Context, tx transaction.Transaction, label string) (map[string]interface{}, *schema.Resource) {
+	label = label + uuid.NewV4().String()
+	network := getNetwork(label, label)
+
+	return network, createResource(ctx, tx, "network", network)
+}
+
+func createNotSyncedResource(ctx context.Context, tx transaction.Transaction, label string) (map[string]interface{}, *schema.Resource) {
+	label = label + uuid.NewV4().String()
+	raw := map[string]interface{}{"id": label}
+
+	return raw, createResource(ctx, tx, "not_synced", raw)
 }
 
 func getSubnet(color string, tenant string, parent string) map[string]interface{} {

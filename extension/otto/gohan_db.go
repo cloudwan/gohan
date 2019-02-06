@@ -533,7 +533,7 @@ func GohanDbCreate(transaction transaction.Transaction, needCommit bool, schemaI
 		return nil, fmt.Errorf("Error during gohan_db_create: %s", err.Error())
 	}
 	resource.PopulateDefaults()
-	if err = transaction.Create(context.Background(), resource); err != nil {
+	if _, err = transaction.Create(context.Background(), resource); err != nil {
 		return nil, fmt.Errorf("Error during gohan_db_create: %s", err.Error())
 	}
 	if needCommit {

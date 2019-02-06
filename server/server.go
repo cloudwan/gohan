@@ -28,6 +28,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	sync_lib "sync"
 	"syscall"
 	"time"
 
@@ -72,6 +73,7 @@ type Server struct {
 
 	masterCtx       context.Context
 	masterCtxCancel context.CancelFunc
+	done            sync_lib.WaitGroup
 }
 
 func (server *Server) mapRoutes() {
@@ -457,6 +459,7 @@ func (server *Server) Stop() {
 	server.masterCtxCancel()
 	stopCRONProcess(server)
 	manners.Close()
+	server.done.Wait()
 }
 
 //RunServer runs gohan api server
@@ -493,24 +496,48 @@ func RunServer(configFile string) {
 	server.running = true
 	server.masterCtx, server.masterCtxCancel = context.WithCancel(context.Background())
 
-	if server.sync != nil {
-		stateWatcher := NewStateWatcher(server.sync, server.db, server.keystoneIdentity)
-		go stateWatcher.Run(server.masterCtx)
+	server.startSyncProcesses()
 
-		syncWriter := NewSyncWriter(server.sync, server.db)
-		go syncWriter.Run(server.masterCtx)
-
-		syncWatcher := NewSyncWatcherFromServer(server)
-		go func(masterCtx context.Context) {
-			if err := syncWatcher.Run(masterCtx); err != nil {
-				log.Error("An error occurred during SyncWatcher shutdown: %s", err)
-			}
-		}(server.masterCtx)
-	}
 	startCRONProcess(server)
 	metrics.StartMetricsProcess()
 	err = server.Start()
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func (server *Server) startSyncProcesses() {
+	if server.sync == nil {
+		return
+	}
+
+	stateWatcher := NewStateWatcher(server.sync, server.db, server.keystoneIdentity)
+	server.startSyncProcess(stateWatcher)
+
+	transactionCommitInformer := NewTransactionCommitInformer(server.sync)
+	server.startSyncProcess(transactionCommitInformer)
+
+	syncWriter := NewSyncWriter(server.sync, server.db)
+	server.startSyncProcess(syncWriter)
+
+	syncWatcher := NewSyncWatcherFromServer(server)
+	server.startSyncProcess(syncWatcher)
+}
+
+type syncProcess interface {
+	Run(ctx context.Context, wg *sync_lib.WaitGroup) error
+}
+
+func (server *Server) startSyncProcess(process syncProcess) {
+	server.done.Add(1)
+
+	go func(ctx context.Context, wg *sync_lib.WaitGroup) {
+		if err := process.Run(ctx, wg); err != nil {
+			if err == context.Canceled {
+				log.Info("%T finished", process)
+			} else {
+				log.Error("An error occurred during %T startup: %s", process, err)
+			}
+		}
+	}(server.masterCtx, &server.done)
 }

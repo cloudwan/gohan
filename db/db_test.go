@@ -155,6 +155,11 @@ var _ = Describe("Database operation test", func() {
 				}
 			})
 
+			create := func(resource *schema.Resource) {
+				_, err := tx.Create(ctx, resource)
+				Expect(err).NotTo(HaveOccurred())
+			}
+
 			Context("When the database is empty", func() {
 				It("Returns an empty list", func() {
 					list, num, err := tx.List(ctx, networkSchema, nil, nil, nil)
@@ -165,7 +170,30 @@ var _ = Describe("Database operation test", func() {
 				})
 
 				It("Creates a resource", func() {
-					Expect(tx.Create(ctx, networkResource1)).To(Succeed())
+					create(networkResource1)
+
+					Expect(tx.Commit()).To(Succeed())
+				})
+
+				insertAndGetId := func(resource *schema.Resource) int64 {
+					result, err := tx.Create(ctx, resource)
+					Expect(err).NotTo(HaveOccurred())
+
+					id, err := result.LastInsertId()
+					Expect(err).NotTo(HaveOccurred())
+
+					return id
+				}
+
+				It("Returns ID of last inserted resource", func() {
+					pkSchema, _ := manager.Schema("int_pk")
+					resource1 := schema.NewResource(pkSchema, map[string]interface{}{"dummy_field": 1})
+					resource2 := schema.NewResource(pkSchema, map[string]interface{}{"dummy_field": 2})
+
+					id1 := insertAndGetId(resource1)
+					id2 := insertAndGetId(resource2)
+
+					Expect(id2).To(Equal(id1 + 1))
 
 					Expect(tx.Commit()).To(Succeed())
 				})
@@ -173,9 +201,9 @@ var _ = Describe("Database operation test", func() {
 
 			Describe("When the database is not empty", func() {
 				JustBeforeEach(func() {
-					Expect(tx.Create(ctx, networkResource1)).To(Succeed())
-					Expect(tx.Create(ctx, networkResource2)).To(Succeed())
-					Expect(tx.Create(ctx, serverResource)).To(Succeed())
+					create(networkResource1)
+					create(networkResource2)
+					create(serverResource)
 					Expect(tx.Commit()).To(Succeed())
 					tx.Close()
 					tx, err = dataStore.BeginTx()
@@ -341,7 +369,7 @@ var _ = Describe("Database operation test", func() {
 				})
 
 				It("Creates a dependent resource", func() {
-					Expect(tx.Create(ctx, subnetResource)).To(Succeed())
+					create(subnetResource)
 					Expect(tx.Commit()).To(Succeed())
 				})
 

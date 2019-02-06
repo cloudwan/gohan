@@ -15,6 +15,42 @@ import (
 	sqlx "github.com/jmoiron/sqlx"
 )
 
+// MockResult is a mock of Result interface
+type MockResult struct {
+	ctrl     *gomock.Controller
+	recorder *MockResultMockRecorder
+}
+
+// MockResultMockRecorder is the mock recorder for MockResult
+type MockResultMockRecorder struct {
+	mock *MockResult
+}
+
+// NewMockResult creates a new mock instance
+func NewMockResult(ctrl *gomock.Controller) *MockResult {
+	mock := &MockResult{ctrl: ctrl}
+	mock.recorder = &MockResultMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockResult) EXPECT() *MockResultMockRecorder {
+	return m.recorder
+}
+
+// LastInsertId mocks base method
+func (m *MockResult) LastInsertId() (int64, error) {
+	ret := m.ctrl.Call(m, "LastInsertId")
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// LastInsertId indicates an expected call of LastInsertId
+func (mr *MockResultMockRecorder) LastInsertId() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LastInsertId", reflect.TypeOf((*MockResult)(nil).LastInsertId))
+}
+
 // MockTransaction is a mock of Transaction interface
 type MockTransaction struct {
 	ctrl     *gomock.Controller
@@ -99,10 +135,11 @@ func (mr *MockTransactionMockRecorder) GetIsolationLevel() *gomock.Call {
 }
 
 // Create mocks base method
-func (m *MockTransaction) Create(arg0 context.Context, arg1 *schema.Resource) error {
+func (m *MockTransaction) Create(arg0 context.Context, arg1 *schema.Resource) (Result, error) {
 	ret := m.ctrl.Call(m, "Create", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(Result)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // Create indicates an expected call of Create

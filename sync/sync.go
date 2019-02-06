@@ -29,19 +29,13 @@ var log = l.NewLogger()
 //Sync is a interface for sync servers
 type Sync interface {
 	HasLock(path string) bool
-	Lock(path string, block bool) (notifyLost chan struct{}, err error)
-	Unlock(path string) error
-	Fetch(path string) (*Node, error)
-	Update(path, json string) error
-	Delete(path string, prefix bool) error
-	// Watch monitors changes on path and emits Events to responseChan.
-	// Close stopChan to cancel.
-	// You can specify the revision to start watching,
-	// give RevisionCurrent when you want to start from the current revision.
-	// Returns an error when gets any error including connection failures.
-	Watch(path string, responseChan chan *Event, stopChan chan bool, revision int64) error
-	//WatchContext keep watch update under the path until context is canceled.
-	WatchContext(ctx context.Context, path string, revision int64) <-chan *Event
+	Lock(ctx context.Context, path string, block bool) (notifyLost chan struct{}, err error)
+	Unlock(ctx context.Context, path string) error
+	Fetch(ctx context.Context, path string) (*Node, error)
+	Update(ctx context.Context, path, json string) error
+	Delete(ctx context.Context, path string, prefix bool) error
+	//Watch keep watch update under the path until context is canceled.
+	Watch(ctx context.Context, path string, revision int64) <-chan *Event
 	GetProcessID() string
 	Close()
 }
@@ -52,7 +46,7 @@ type Event struct {
 	Key      string
 	Data     map[string]interface{}
 	Revision int64
-	// Err is used only by Sync.WatchContext()
+	// Err is used only by Sync.Watch()
 	Err error
 }
 

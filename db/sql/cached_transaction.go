@@ -50,7 +50,7 @@ func MakeCachedTransaction(transx TxInterface) TxInterface {
 	return cachedTransaction
 }
 
-func (tx *CachedTransaction) Create(ctx context.Context, resource *schema.Resource) error {
+func (tx *CachedTransaction) Create(ctx context.Context, resource *schema.Resource) (transaction.Result, error) {
 	tx.ClearCache()
 	return tx.TxInterface.Create(ctx, resource)
 }

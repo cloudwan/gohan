@@ -1,6 +1,7 @@
 package healthcheck
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -22,8 +23,10 @@ const (
 	healthCheckEtcdKey    = healthCheckKey + "/etcd_key"
 	healthCheckAddressKey = healthCheckKey + "/address"
 	healthCheckTimeoutKey = healthCheckKey + "/timeout"
+	healthCheckBackoffKey = healthCheckKey + "/backoff"
 	defaultEtcdKey        = "/gohan"
 	defaultTimeout        = 5 * time.Second
+	defaultBackoff        = 5 * time.Second
 )
 
 type HealthCheck struct {
@@ -32,6 +35,7 @@ type HealthCheck struct {
 	etcdKey   string
 	address   string
 	timeout   time.Duration
+	backoff   time.Duration
 	logger    log.Logger
 }
 
@@ -43,12 +47,13 @@ func NewHealthCheck(db db.DB, etcd sync.Sync, serverAddress string, config *util
 	if err != nil {
 		panic(err)
 	}
-	timeout := config.GetDuration(healthCheckTimeoutKey, defaultTimeout)
+
 	return &HealthCheck{
 		DataStore: db,
 		Etcd:      etcd,
 		address:   healthCheckAddress,
-		timeout:   timeout,
+		timeout:   config.GetDuration(healthCheckTimeoutKey, defaultTimeout),
+		backoff:   config.GetDuration(healthCheckBackoffKey, defaultBackoff),
 		etcdKey:   config.GetString(healthCheckEtcdKey, defaultEtcdKey),
 		logger:    log.NewLogger(log.ModuleName(healthCheckKey)),
 	}
@@ -58,8 +63,12 @@ func (healthCheck *HealthCheck) Run() {
 	if healthCheck == nil {
 		return
 	}
+
 	healthCheckHandler := func(w http.ResponseWriter, req *http.Request) {
-		if err := healthCheck.isHealthy(); err == nil {
+		ctx, cancel := context.WithTimeout(context.Background(), healthCheck.timeout)
+		defer cancel()
+
+		if err := healthCheck.isHealthy(ctx); err == nil {
 			w.WriteHeader(http.StatusOK)
 		} else {
 			healthCheck.logger.Error("Health Check error: %s", err.Error())
@@ -67,8 +76,10 @@ func (healthCheck *HealthCheck) Run() {
 		}
 	}
 
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthcheck", healthCheckHandler)
+
 
 	go func() {
 		for {
@@ -76,7 +87,7 @@ func (healthCheck *HealthCheck) Run() {
 			if err != nil {
 				healthCheck.logger.Critical("Health Check server error %+v. Restarting", err)
 			}
-			time.Sleep(healthCheck.timeout)
+			time.Sleep(healthCheck.backoff)
 		}
 	}()
 }
@@ -97,11 +108,11 @@ func getHealthCheckAddress(serverAddress string, config *util.Config) (string, e
 	return healthCheckAddress, nil
 }
 
-func (healthCheck *HealthCheck) isHealthy() error {
+func (healthCheck *HealthCheck) isHealthy(ctx context.Context) error {
 	if dbErr := db.WithinTx(healthCheck.DataStore, func(transaction transaction.Transaction) error { return nil }); dbErr != nil {
 		return dbErr
 	}
-	if _, syncErr := healthCheck.Etcd.Fetch(healthCheck.etcdKey); syncErr != nil && syncErr != etcdv3.KeyNotFound {
+	if _, syncErr := healthCheck.Etcd.Fetch(ctx, healthCheck.etcdKey); syncErr != nil && syncErr != etcdv3.KeyNotFound {
 		return syncErr
 	}
 	return nil

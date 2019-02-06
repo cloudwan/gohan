@@ -72,7 +72,7 @@ func CopyDBResources(input *initializer.Initializer, output db.DB, overrideExist
 				destResource, _ := outputTx.Fetch(ctx, schema, transaction.IDFilter(resource.ID()), nil)
 				if destResource == nil {
 					resource.PopulateDefaults()
-					err := outputTx.Create(ctx, resource)
+					_, err := outputTx.Create(ctx, resource)
 					if err != nil {
 						return err
 					}

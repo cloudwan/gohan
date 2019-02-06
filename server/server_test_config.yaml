@@ -1,6 +1,9 @@
 database:
     type: "sqlite3"
     connection: "server_test.db"
+    deadlock_retry_tx:
+      count: 3
+      interval_msec: 100
 schemas:
     - "embed://etc/schema/gohan.json"
     - "../tests/test_abstract_schema.yaml"

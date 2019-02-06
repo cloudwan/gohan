@@ -65,8 +65,8 @@ type Sync struct {
 }
 
 // Fetch fetches a path from sync
-func (sync *Sync) Fetch(path string) (*goext.Node, error) {
-	node, err := sync.raw.Fetch(path)
+func (sync *Sync) Fetch(ctx context.Context, path string) (*goext.Node, error) {
+	node, err := sync.raw.Fetch(ctx, path)
 
 	if err != nil {
 		return nil, err
@@ -76,13 +76,13 @@ func (sync *Sync) Fetch(path string) (*goext.Node, error) {
 }
 
 // Delete deletes a path from sync
-func (sync *Sync) Delete(path string, prefix bool) error {
-	return sync.raw.Delete(path, prefix)
+func (sync *Sync) Delete(ctx context.Context, path string, prefix bool) error {
+	return sync.raw.Delete(ctx, path, prefix)
 }
 
 // Watch watches a single path in sync
 func (sync *Sync) Watch(ctx context.Context, path string, timeout time.Duration, revision int64) ([]*goext.Event, error) {
-	eventChan := sync.raw.WatchContext(ctx, path, revision)
+	eventChan := sync.raw.Watch(ctx, path, revision)
 	select {
 	case event := <-eventChan:
 		return []*goext.Event{convertEvent(event)}, nil
@@ -94,8 +94,8 @@ func (sync *Sync) Watch(ctx context.Context, path string, timeout time.Duration,
 }
 
 // Update updates a path with given json
-func (sync *Sync) Update(path string, json string) error {
-	return sync.raw.Update(path, json)
+func (sync *Sync) Update(ctx context.Context, path string, json string) error {
+	return sync.raw.Update(ctx, path, json)
 }
 
 // NewSync allocates Sync

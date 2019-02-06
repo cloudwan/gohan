@@ -58,6 +58,11 @@ var _ = Describe("Otto extension manager", func() {
 		return map[string]interface{}{"context": ctx}
 	}
 
+	create := func(tx transaction.Transaction, resource *schema.Resource) {
+		_, err := tx.Create(ctx, resource)
+		Expect(err).NotTo(HaveOccurred())
+	}
+
 	BeforeEach(func() {
 		manager = schema.GetManager()
 		environmentManager = extension.GetManager()
@@ -886,7 +891,7 @@ var _ = Describe("Otto extension manager", func() {
 					tx, err = testDB.BeginTx()
 					Expect(err).NotTo(HaveOccurred())
 					defer tx.Close()
-					Expect(tx.Create(ctx, resource)).To(Succeed())
+					create(tx, resource)
 					Expect(tx.Commit()).To(Succeed())
 
 					action = "read"
@@ -1044,7 +1049,7 @@ var _ = Describe("Otto extension manager", func() {
 					tx, err = testDB.BeginTx()
 					Expect(err).NotTo(HaveOccurred())
 					defer tx.Close()
-					Expect(tx.Create(ctx, resource)).To(Succeed())
+					create(tx, resource)
 					Expect(tx.Commit()).To(Succeed())
 
 					action = "read"
@@ -1170,7 +1175,7 @@ var _ = Describe("Otto extension manager", func() {
 					tx, err = testDB.BeginTx()
 					Expect(err).NotTo(HaveOccurred())
 					defer tx.Close()
-					Expect(tx.Create(ctx, resource)).To(Succeed())
+					create(tx, resource)
 					Expect(tx.Commit()).To(Succeed())
 
 					action = "create"
@@ -1291,7 +1296,7 @@ var _ = Describe("Otto extension manager", func() {
 					tx, err = testDB.BeginTx()
 					Expect(err).NotTo(HaveOccurred())
 					defer tx.Close()
-					Expect(tx.Create(ctx, resource)).To(Succeed())
+					create(tx, resource)
 					Expect(tx.Commit()).To(Succeed())
 
 					action = "update"
@@ -1415,7 +1420,7 @@ var _ = Describe("Otto extension manager", func() {
 					tx, err = testDB.BeginTx()
 					Expect(err).NotTo(HaveOccurred())
 					defer tx.Close()
-					Expect(tx.Create(ctx, resource)).To(Succeed())
+					create(tx, resource)
 					Expect(tx.Commit()).To(Succeed())
 
 					action = "delete"
@@ -1504,7 +1509,7 @@ var _ = Describe("Otto extension manager", func() {
 					tx, err = testDB.BeginTx()
 					Expect(err).NotTo(HaveOccurred())
 					defer tx.Close()
-					Expect(tx.Create(ctx, resource)).To(Succeed())
+					create(tx, resource)
 					Expect(tx.Commit()).To(Succeed())
 
 					action = "read"
@@ -1883,143 +1888,6 @@ var _ = Describe("Otto extension manager", func() {
 		})
 	})
 
-	Describe("Using gohan_sync_fetch builtin", func() {
-		It("Should fetch sync", func() {
-			extension, err := schema.NewExtension(map[string]interface{}{
-				"id": "test_extension",
-				"code": `
-					gohan_register_handler(
-						"test_event",
-					 	function(context) {
-							context.resp = gohan_sync_fetch("/gohan_sync_fetch_test");
-						}
-					);
-					`,
-				"path": ".*",
-			})
-			Expect(err).ToNot(HaveOccurred())
-			extensions := []*schema.Extension{extension}
-			env := newEnvironment()
-			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
-			context := makeContext()
-			env.Sync.Delete("/gohan_sync_fetch_test", false)
-			env.Sync.Update("/gohan_sync_fetch_test", "{}")
-			Expect(env.HandleEvent("test_event", context)).To(Succeed())
-			Expect(context).To(HaveKeyWithValue("resp", HaveKeyWithValue("value", "{}")))
-		})
-	})
-	Describe("Using gohan_sync_watch builtin", func() {
-		It("Should timeout with no events", func() {
-			extension, err := schema.NewExtension(map[string]interface{}{
-				"id": "test_extension",
-				"code": `
-					gohan_register_handler(
-						"test_event",
-					 	function(context) {
-							context.resp = gohan_sync_watch("/gohan_sync_watch_test", 500, 0);
-						}
-					);
-					`,
-				"path": ".*",
-			})
-			Expect(err).ToNot(HaveOccurred())
-			extensions := []*schema.Extension{extension}
-			env := newEnvironment()
-			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
-
-			context := makeContext()
-			env.Sync.Delete("/gohan_sync_watch_test", false)
-			Expect(env.HandleEvent("test_event", context)).To(Succeed())
-			Expect(context).To(HaveKeyWithValue("resp", HaveLen(0)))
-		})
-
-		It("Should timeout with one event", func() {
-			extension, err := schema.NewExtension(map[string]interface{}{
-				"id": "test_extension",
-				"code": `
-					gohan_register_handler(
-						"test_event",
-					 	function(context) {
-							context.resp = gohan_sync_watch("/gohan_sync_watch_test", 500, 0);
-						}
-					);
-					`,
-				"path": ".*",
-			})
-			Expect(err).ToNot(HaveOccurred())
-			extensions := []*schema.Extension{extension}
-			env := newEnvironment()
-			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
-
-			context := makeContext()
-			env.Sync.Delete("/gohan_sync_watch_test", false)
-			go func() {
-				time.Sleep(time.Duration(200) * time.Millisecond)
-				env.Sync.Update("/gohan_sync_watch_test", "{}")
-			}()
-			Expect(env.HandleEvent("test_event", context)).To(Succeed())
-			Expect(context).To(HaveKeyWithValue("resp", HaveKeyWithValue("action", "set")))
-			Expect(context).To(HaveKeyWithValue("resp", HaveKeyWithValue("key", "/gohan_sync_watch_test")))
-			Expect(context).To(HaveKeyWithValue("resp", HaveKeyWithValue("data", map[string]interface{}{})))
-		})
-	})
-
-	Describe("Using gohan_sync_delete builtin", func() {
-		It("Should delete sync", func() {
-			extension, err := schema.NewExtension(map[string]interface{}{
-				"id": "test_extension",
-				"code": `
-					gohan_register_handler(
-						"test_event",
-					 	function(context) {
-							gohan_sync_delete("/gohan_sync_delete_test");
-						}
-					);
-					`,
-				"path": ".*",
-			})
-			Expect(err).ToNot(HaveOccurred())
-			extensions := []*schema.Extension{extension}
-			env := newEnvironment()
-			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
-			context := makeContext()
-			env.Sync.Delete("/gohan_sync_delete_test", false)
-			env.Sync.Update("/gohan_sync_delete_test", "{}")
-			Expect(env.HandleEvent("test_event", context)).To(Succeed())
-			node, err := env.Sync.Fetch("/gohan_sync_delete_test")
-			Expect(err).To(HaveOccurred())
-			Expect(node).To(BeNil())
-		})
-	})
-
-	Describe("Using gohan_sync_delete builtin with prefix", func() {
-		It("Should delete sync", func() {
-			extension, err := schema.NewExtension(map[string]interface{}{
-				"id": "test_extension",
-				"code": `
-					gohan_register_handler(
-						"test_event",
-					 	function(context) {
-							gohan_sync_delete("/gohan_sync_delete_test", true);
-						}
-					);
-					`,
-				"path": ".*",
-			})
-			Expect(err).ToNot(HaveOccurred())
-			extensions := []*schema.Extension{extension}
-			env := newEnvironment()
-			Expect(env.LoadExtensionsForPath(extensions, timeLimit, timeLimits, "test_path")).To(Succeed())
-			context := makeContext()
-			env.Sync.Delete("/gohan_sync_delete_test", true)
-			env.Sync.Update("/gohan_sync_delete_test/child1", "bla")
-			env.Sync.Update("/gohan_sync_delete_test/child2", "bar")
-			Expect(env.HandleEvent("test_event", context)).To(Succeed())
-			node, err := env.Sync.Fetch("/gohan_sync_delete_test")
-			Expect(err).To(HaveOccurred())
-			Expect(node).To(BeNil())
-		})
-	})
 	var _ = Describe("Concurrency race", func() {
 		var (
 			env *otto.Environment

@@ -58,7 +58,8 @@ var _ = Describe("Updating the state", func() {
 		tx, err := wrappedTestDB.BeginTx()
 		defer tx.Close()
 		Expect(err).ToNot(HaveOccurred())
-		Expect(tx.Create(ctx, networkResource)).To(Succeed())
+		_, err = tx.Create(ctx, networkResource)
+		Expect(err).NotTo(HaveOccurred())
 		Expect(tx.Commit()).To(Succeed())
 	})
 

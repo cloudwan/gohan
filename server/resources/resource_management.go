@@ -731,7 +731,7 @@ func CreateResourceInTransaction(context middleware.Context, resourceSchema *sch
 			return fmt.Errorf("Loading resource failed: %s", err)
 		}
 	}
-	if err := mainTransaction.Create(mustGetContext(context), resource); err != nil {
+	if _, err := mainTransaction.Create(mustGetContext(context), resource); err != nil {
 		log.Debug("%s transaction error", err)
 		if isForeignKeyFailed(err) {
 			return handleForeignKeyError(err, dataMap)

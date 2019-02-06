@@ -36,17 +36,17 @@ func (sync *Sync) GetProcessID() string {
 }
 
 //Update sync update sync
-func (sync *Sync) Update(path, json string) error {
+func (sync *Sync) Update(ctx context.Context, path, json string) error {
 	return nil
 }
 
 //Delete sync update sync
-func (sync *Sync) Delete(path string, prefix bool) error {
+func (sync *Sync) Delete(ctx context.Context, path string, prefix bool) error {
 	return nil
 }
 
 // Fetch sync
-func (sync *Sync) Fetch(path string) (*sync.Node, error) {
+func (sync *Sync) Fetch(ctx context.Context, path string) (*sync.Node, error) {
 	return nil, nil
 }
 
@@ -56,22 +56,17 @@ func (sync *Sync) HasLock(path string) bool {
 }
 
 //Lock get lock for path
-func (sync *Sync) Lock(path string, block bool) (chan struct{}, error) {
+func (sync *Sync) Lock(ctx context.Context, path string, block bool) (chan struct{}, error) {
 	return nil, nil
 }
 
 //Unlock unlocks paths
-func (sync *Sync) Unlock(path string) error {
+func (sync *Sync) Unlock(ctx context.Context, path string) error {
 	return nil
 }
 
-//Watch keep watch update under the path
-func (sync *Sync) Watch(path string, responseChan chan *sync.Event, stopChan chan bool, revision int64) error {
-	return nil
-}
-
-//WatchContext keep watch update under the path until context is canceled
-func (sync *Sync) WatchContext(ctx context.Context, path string, revision int64) <-chan *sync.Event {
+//Watch keep watch update under the path until context is canceled
+func (sync *Sync) Watch(ctx context.Context, path string, revision int64) <-chan *sync.Event {
 	return nil
 }
 

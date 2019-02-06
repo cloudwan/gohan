@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/cloudwan/gohan/db"
@@ -73,7 +74,9 @@ func NewStateWatcherFromServer(server *Server) *StateWatcher {
 // Run starts the main loop of the watcher.
 // This method blocks until canceled by the ctx.
 // Errors are logged, but do not interrupt the loop.
-func (watcher *StateWatcher) Run(ctx context.Context) error {
+func (watcher *StateWatcher) Run(ctx context.Context, wg *sync.WaitGroup) error {
+	defer wg.Done()
+
 	for {
 		err := watcher.iterate(ctx)
 		if err != nil {
@@ -90,15 +93,21 @@ func (watcher *StateWatcher) Run(ctx context.Context) error {
 
 func (watcher *StateWatcher) iterate(ctx context.Context) error {
 	lockKey := lockPath + "/state_watch"
-	lost, err := watcher.sync.Lock(lockKey, true)
+	lost, err := watcher.sync.Lock(ctx, lockKey, true)
 	if err != nil {
 		// lock failed, another process is running
 		return nil
 	}
-	defer watcher.sync.Unlock(lockKey)
+	defer func() {
+		// can't use the parent context, it may be already canceled
+		if err := watcher.sync.Unlock(context.Background(), lockKey); err != nil {
+			log.Warning("StateWatcher: unlocking etcd failed: %s", err)
+		}
+	}()
 
 	watchCtx, watchCancel := context.WithCancel(ctx)
-	respCh := watcher.sync.WatchContext(watchCtx, lockKey, gohan_sync.RevisionCurrent)
+	defer watchCancel()
+	respCh := watcher.sync.Watch(watchCtx, lockKey, gohan_sync.RevisionCurrent)
 	watchErr := make(chan error, 1)
 	go func() {
 		watchErr <- func() error {

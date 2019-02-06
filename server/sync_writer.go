@@ -19,6 +19,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/cloudwan/gohan/db"
@@ -27,6 +28,7 @@ import (
 	"github.com/cloudwan/gohan/metrics"
 	"github.com/cloudwan/gohan/schema"
 	gohan_sync "github.com/cloudwan/gohan/sync"
+	"github.com/cloudwan/gohan/util"
 )
 
 const (
@@ -35,8 +37,10 @@ const (
 
 	configPrefix = "/config"
 
-	eventPollingTime  = 30 * time.Second
-	eventPollingLimit = 10000
+	defaultBackoff       = 5 * time.Second
+	defaultUnlockTimeout = 3 * time.Second
+
+	notSyncedYet = -1
 )
 
 // SyncWriter copies data from the RDBMS to the sync layer.
@@ -44,18 +48,30 @@ const (
 // sync layer by SyncWriter.
 // SyncWriter gets items to sync from the event table.
 type SyncWriter struct {
-	sync    gohan_sync.Sync
-	db      db.DB
-	backoff time.Duration
+	sync            gohan_sync.Sync
+	db              db.DB
+	backoff         time.Duration
+	unlockTimeout   time.Duration
+	lastSyncedEvent int
 }
 
 // NewSyncWriter creates a new instance of SyncWriter.
 func NewSyncWriter(sync gohan_sync.Sync, db db.DB) *SyncWriter {
 	return &SyncWriter{
-		sync:    sync,
-		db:      db,
-		backoff: time.Second * 5,
+		sync:            sync,
+		db:              db,
+		backoff:         getBackoff(),
+		unlockTimeout:   getUnlockTimeout(),
+		lastSyncedEvent: notSyncedYet,
 	}
+}
+
+func getBackoff() time.Duration {
+	return util.GetConfig().GetDuration("sync_writer/backoff", defaultBackoff)
+}
+
+func getUnlockTimeout() time.Duration {
+	return util.GetConfig().GetDuration("sync_writer/unlock", defaultUnlockTimeout)
 }
 
 // NewSyncWriterFromServer is a helper method for test.
@@ -66,45 +82,12 @@ func NewSyncWriterFromServer(server *Server) *SyncWriter {
 
 // Run starts a loop to keep running Sync().
 // This method blocks until the ctx is canceled.
-func (writer *SyncWriter) Run(ctx context.Context) error {
-	pollingTicker := time.Tick(eventPollingTime)
-	committed := transactionCommitInformer()
+func (writer *SyncWriter) Run(ctx context.Context, wg *sync.WaitGroup) error {
+	defer wg.Done()
 
-	recentlySynced := false
 	for {
-		err := func() error {
-			lost, err := writer.sync.Lock(syncPath, true)
-			if err != nil {
-				return err
-			}
-			defer writer.sync.Unlock(syncPath)
-
-			for {
-				select {
-				case <-lost:
-					metrics.UpdateCounter(1, "sync_writer.locks_lost")
-					return fmt.Errorf("lost lock for sync")
-				case <-ctx.Done():
-					return nil
-				case <-pollingTicker:
-					if recentlySynced {
-						recentlySynced = false
-						continue
-					}
-					metrics.UpdateCounter(1, "sync_writer.wake_up.on_timer")
-				case <-committed:
-					recentlySynced = true
-					metrics.UpdateCounter(1, "sync_writer.wake_up.on_commit")
-				}
-				_, err := writer.Sync()
-				if err != nil {
-					return err
-				}
-			}
-		}()
-
-		if err != nil {
-			log.Error("sync writer is interrupted: %s", err)
+		if err := writer.run(ctx); err != nil {
+			log.Error("SyncWriter was interrupted: %s", err)
 		}
 
 		select {
@@ -115,24 +98,90 @@ func (writer *SyncWriter) Run(ctx context.Context) error {
 	}
 }
 
+func (writer *SyncWriter) run(ctx context.Context) error {
+	lost, err := writer.sync.Lock(ctx, syncPath, true)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		// can't use the parent context, it may be already canceled
+		unlockCtx, _ := context.WithTimeout(context.Background(), writer.unlockTimeout)
+		if err := writer.sync.Unlock(unlockCtx, syncPath); err != nil {
+			log.Warning("SyncWriter: unlocking failed: %s", err)
+		}
+	}()
+
+	watchCtx, watchCancel := context.WithCancel(ctx)
+	defer watchCancel()
+	triggerCh := writer.sync.Watch(watchCtx, SyncKeyTxCommitted, gohan_sync.RevisionCurrent)
+
+	for {
+		select {
+		case <-lost:
+			writer.updateCounter(1, "locks_lost")
+			return fmt.Errorf("lost lock for sync")
+		case <-ctx.Done():
+			return nil
+		case event, open := <-triggerCh:
+			if !open {
+				// triggerCh could be closed due to context.Cancel()
+				// it's go schedulers arbitrary decision if <-ctx.Done() or <-triggerCh receives first,
+				// so we ensure the expected channel priorities ourselves
+				return nil
+			}
+
+			if event.Err != nil {
+				writer.updateCounter(1, "event_error")
+				return event.Err
+			}
+
+			if err := writer.triggerSync(ctx, getEventId(event)); err != nil {
+				return err
+			}
+
+		}
+	}
+}
+
+func getEventId(event *gohan_sync.Event) int {
+	eventId := event.Data["event_id"]
+
+	// our sync implementation converts data from ETCD to map[string]interface{}
+	// numbers are by default unmarshalled to float64
+	return int(eventId.(float64))
+}
+
+func (writer *SyncWriter) triggerSync(ctx context.Context, eventId int) error {
+	writer.updateCounter(1, "wake_up.on_trigger")
+
+	if eventId <= writer.lastSyncedEvent {
+		writer.updateCounter(1, "skipped_syncs")
+		return nil
+	}
+
+	_, err := writer.Sync(ctx)
+	return err
+}
+
 // Sync runs a synchronization iteration, which
 // executes requests in the event table.
-func (writer *SyncWriter) Sync() (synced int, err error) {
-	metrics.UpdateCounter(1, "sync_writer.syncs")
+func (writer *SyncWriter) Sync(ctx context.Context) (synced int, err error) {
+	writer.updateCounter(1, "syncs")
 	resourceList, err := writer.listEvents()
 	if err != nil {
 		return
 	}
 	for _, resource := range resourceList {
-		err = writer.syncEvent(resource)
+		err = writer.syncEvent(ctx, resource)
 		if err != nil {
 			return
 		}
 		synced++
+		writer.lastSyncedEvent = resource.Get("id").(int)
 	}
 
 	if synced == 0 {
-		metrics.UpdateCounter(1, "sync_writer.empty_syncs")
+		writer.updateCounter(1, "empty_syncs")
 	}
 
 	return
@@ -146,7 +195,7 @@ func (writer *SyncWriter) listEvents() ([]*schema.Resource, error) {
 		paginator, _ := pagination.NewPaginator(
 			pagination.OptionKey(eventSchema, "id"),
 			pagination.OptionOrder(pagination.ASC),
-			pagination.OptionLimit(eventPollingLimit))
+		)
 		res, _, err := tx.List(context.Background(), eventSchema, nil, nil, paginator)
 		resourceList = res
 		return err
@@ -157,7 +206,7 @@ func (writer *SyncWriter) listEvents() ([]*schema.Resource, error) {
 	return resourceList, nil
 }
 
-func (writer *SyncWriter) syncEvent(resource *schema.Resource) error {
+func (writer *SyncWriter) syncEvent(ctx context.Context, resource *schema.Resource) error {
 	schemaManager := schema.GetManager()
 	eventSchema, _ := schemaManager.Schema("event")
 	return db.WithinTx(writer.db, func(tx transaction.Transaction) error {
@@ -216,7 +265,7 @@ func (writer *SyncWriter) syncEvent(resource *schema.Resource) error {
 				content = string(data)
 			}
 
-			err = writer.sync.Update(path, content)
+			err = writer.sync.Update(ctx, path, content)
 			if err != nil {
 				return fmt.Errorf("Update() failed on sync: %s", err)
 			}
@@ -229,28 +278,28 @@ func (writer *SyncWriter) syncEvent(resource *schema.Resource) error {
 				json.Unmarshal(([]byte)(body), &data)
 				deletePath, err = resourceSchema.GenerateCustomPath(data)
 				if err != nil {
-					return fmt.Errorf("Delete from sync failed %s - generating of custom path failed", err)
+					return fmt.Errorf("Delete from sync failed: %s - generating of custom path failed", err)
 				}
 			}
 			log.Debug("deleting %s", statePrefix+deletePath)
-			err = writer.sync.Delete(statePrefix+deletePath, false)
+			err = writer.sync.Delete(ctx, statePrefix+deletePath, false)
 			if err != nil {
-				log.Error(fmt.Sprintf("Delete from sync failed %s", err))
+				log.Error(fmt.Sprintf("Delete from sync failed: %s", err))
 			}
 			log.Debug("deleting %s", monitoringPrefix+deletePath)
-			err = writer.sync.Delete(monitoringPrefix+deletePath, false)
+			err = writer.sync.Delete(ctx, monitoringPrefix+deletePath, false)
 			if err != nil {
-				log.Error(fmt.Sprintf("Delete from sync failed %s", err))
+				log.Error(fmt.Sprintf("Delete from sync failed: %s", err))
 			}
 			log.Debug("deleting %s", resourcePath)
-			err = writer.sync.Delete(path, false)
+			err = writer.sync.Delete(ctx, path, false)
 			if err != nil {
-				return fmt.Errorf("delete from sync failed %s", err)
+				return fmt.Errorf("delete from sync failed: %s", err)
 			}
 		}
 		log.Debug("delete event %d", resource.Get("id"))
 		id := resource.Get("id")
-		err = tx.Delete(context.Background(), eventSchema, id)
+		err = tx.Delete(ctx, eventSchema, id)
 		if err != nil {
 			return fmt.Errorf("delete failed: %s", err)
 		}
@@ -280,4 +329,8 @@ func generatePath(resourcePath string, body string) string {
 	}
 	log.Info("Generated path: %s", path)
 	return path
+}
+
+func (writer *SyncWriter) updateCounter(delta int64, metric string) {
+	metrics.UpdateCounter(delta, "sync_writer.%s", metric)
 }

@@ -86,20 +86,27 @@ func NewSyncWatcherFromServer(server *Server) *SyncWatcher {
 
 // Run starts the main loop of the watcher.
 // This method blocks until the ctx is canceled by the caller
-func (watcher *SyncWatcher) Run(ctx context.Context) error {
+func (watcher *SyncWatcher) Run(ctx context.Context, wg *sync.WaitGroup) error {
+	defer wg.Done()
+
 	for {
 		err := func() error {
 			// register self process to the cluster
 			lockKey := processPathPrefix + "/" + watcher.sync.GetProcessID()
-			lost, err := watcher.sync.Lock(lockKey, true)
+			lost, err := watcher.sync.Lock(ctx, lockKey, true)
 			if err != nil {
 				return err
 			}
-			defer watcher.sync.Unlock(lockKey)
+			defer func() {
+				// can't use the parent context, it may be already canceled
+				if err := watcher.sync.Unlock(context.Background(), lockKey); err != nil {
+					log.Warning("SyncWatcher: unlocking etcd failed on %s: %s", lockKey, err)
+				}
+			}()
 
 			watchCtx, watchCancel := context.WithCancel(ctx)
 			defer watchCancel()
-			events := watcher.sync.WatchContext(watchCtx, processPathPrefix, int64(gohan_sync.RevisionCurrent))
+			events := watcher.sync.Watch(watchCtx, processPathPrefix, int64(gohan_sync.RevisionCurrent))
 			watchErr := make(chan error, 1)
 			go func() {
 				watchErr <- watcher.processWatchLoop(events)
@@ -236,10 +243,12 @@ func (watcher *SyncWatcher) runSyncWatches(ctx context.Context, size int, positi
 
 				switch err {
 				case errLockFailed:
-					log.Warning("(SyncWatcher) failed to acquire lock, retrying...")
+					watcher.updateCounter(1, "lock.failed")
+					log.Debug("(SyncWatcher) failed to acquire lock, retrying...")
 				case context.Canceled:
 					// Do nothing, normal shutdown
 				default:
+					watcher.updateCounter(1, "error")
 					log.Error("(SyncWatcher) on `%s` aborted, retrying...: %s", path, err)
 				}
 
@@ -257,19 +266,29 @@ func (watcher *SyncWatcher) runSyncWatches(ctx context.Context, size int, positi
 // Returns any error or context cancel.
 // This method gets a lock on the sync backend and returns with an error when fails.
 func (watcher *SyncWatcher) processSyncWatch(ctx context.Context, path string) error {
+	watcher.updateCounter(1, "active")
+	defer watcher.updateCounter(-1, "active")
+
 	lockKey := lockPath + "/watch" + path
-	lost, err := watcher.sync.Lock(lockKey, false)
+	lost, err := watcher.sync.Lock(ctx, lockKey, false)
 	if err != nil {
 		return errLockFailed
 	}
-	defer watcher.sync.Unlock(lockKey)
+	defer func() {
+		// can't use the parent context, it may be already canceled
+		if err := watcher.sync.Unlock(context.Background(), lockKey); err != nil {
+			log.Warning("SyncWatcher: unlocking etcd failed on %s: %s", lockKey, err)
+		}
+	}()
 
 	watchCtx, watchCancel := context.WithCancel(ctx)
 	defer watchCancel()
-	fromRevision := watcher.fetchStoredRevision(path) + 1
-	respCh := watcher.sync.WatchContext(watchCtx, path, fromRevision)
+	fromRevision := watcher.fetchStoredRevision(ctx, path) + 1
+	respCh := watcher.sync.Watch(watchCtx, path, fromRevision)
 	watchErr := make(chan error, 1)
 	go func() {
+		watcher.updateCounter(1, "running")
+		defer watcher.updateCounter(-1, "running")
 		watchErr <- func() error {
 			for response := range respCh {
 				if response.Err != nil {
@@ -277,7 +296,7 @@ func (watcher *SyncWatcher) processSyncWatch(ctx context.Context, path string) e
 				}
 				watcher.watchExtensionHandler(response)
 
-				err := watcher.storeRevision(path, response.Revision)
+				err := watcher.storeRevision(ctx, path, response.Revision)
 				if err != nil {
 					return err
 				}
@@ -293,6 +312,7 @@ func (watcher *SyncWatcher) processSyncWatch(ctx context.Context, path string) e
 		}
 		return ctx.Err()
 	case <-lost:
+		watcher.updateCounter(1, "lock.lost")
 		watchCancel()
 		if err := <-watchErr; err != nil {
 			log.Error("(SyncWatcher) error after lost lock: %s", err)
@@ -317,9 +337,9 @@ func (watcher *SyncWatcher) watchExtensionHandler(response *gohan_sync.Event) {
 
 // fetchStoredRevision returns the revision number stored in the sync backend for a path.
 // When it's a new in the backend, returns sync.RevisionCurrent.
-func (watcher *SyncWatcher) fetchStoredRevision(path string) int64 {
+func (watcher *SyncWatcher) fetchStoredRevision(ctx context.Context, path string) int64 {
 	fromRevision := int64(gohan_sync.RevisionCurrent)
-	lastSeen, err := watcher.sync.Fetch(SyncWatchRevisionPrefix + path)
+	lastSeen, err := watcher.sync.Fetch(ctx, SyncWatchRevisionPrefix+path)
 	if err == nil {
 		inStore, err := strconv.ParseInt(lastSeen.Value, 10, 64)
 		if err == nil {
@@ -335,8 +355,8 @@ func (watcher *SyncWatcher) fetchStoredRevision(path string) int64 {
 }
 
 // storeRevision puts a revision number for a path to the sync backend.
-func (watcher *SyncWatcher) storeRevision(path string, revision int64) error {
-	err := watcher.sync.Update(SyncWatchRevisionPrefix+path, strconv.FormatInt(revision, 10))
+func (watcher *SyncWatcher) storeRevision(ctx context.Context, path string, revision int64) error {
+	err := watcher.sync.Update(ctx, SyncWatchRevisionPrefix+path, strconv.FormatInt(revision, 10))
 	if err != nil {
 		return fmt.Errorf("Failed to update revision number for watch path `%s` in sync storage", path)
 	}
@@ -363,4 +383,8 @@ func (watcher *SyncWatcher) runExtensionOnSync(response *gohan_sync.Event, env e
 		return
 	}
 	return
+}
+
+func (watcher *SyncWatcher) updateCounter(delta int64, metric string) {
+	metrics.UpdateCounter(delta, "sync_watcher.%s", metric)
 }

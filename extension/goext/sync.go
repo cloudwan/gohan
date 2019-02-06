@@ -39,11 +39,11 @@ type Node struct {
 // ISync is an interface to sync in Gohan
 type ISync interface {
 	// Fetch fetches a path from sync
-	Fetch(path string) (*Node, error)
+	Fetch(ctx context.Context, path string) (*Node, error)
 	// Delete deletes a path from sync
-	Delete(path string, prefix bool) error
+	Delete(ctx context.Context, path string, prefix bool) error
 	// Watch watches a single path in sync
 	Watch(ctx context.Context, path string, timeout time.Duration, revision int64) ([]*Event, error)
 	// Update updates a path with given json
-	Update(path string, json string) error
+	Update(ctx context.Context, path string, json string) error
 }
