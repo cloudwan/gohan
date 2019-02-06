@@ -320,22 +320,7 @@ func Authentication() martini.Handler {
 			return
 		}
 
-		authToken := req.Header.Get("X-Auth-Token")
-
-		var targetIdentityService IdentityService
-
-		if authToken == "" {
-			if nobodyResourceService.VerifyResourcePath(req.URL.Path) {
-				targetIdentityService = &NobodyIdentityService{}
-			} else {
-				HTTPJSONError(res, "No X-Auth-Token", http.StatusUnauthorized)
-				return
-			}
-		} else {
-			targetIdentityService = identityService
-		}
-
-		auth, err := targetIdentityService.VerifyToken(authToken)
+		auth, err := authenticate(req, identityService, nobodyResourceService)
 
 		if err != nil {
 			HTTPJSONError(res, err.Error(), http.StatusUnauthorized)
@@ -345,6 +330,37 @@ func Authentication() martini.Handler {
 		c.Map(auth)
 		c.Next()
 	}
+}
+
+func authenticate(req *http.Request, identityService IdentityService, nobodyResourceService NobodyResourceService) (schema.Authorization, error) {
+	defer metrics.UpdateTimer(time.Now(), "req.auth")
+
+	targetIdentityService, err := getIdentityService(req, identityService, nobodyResourceService)
+	if err != nil {
+		return nil, err
+	}
+
+	return targetIdentityService.VerifyToken(getAuthToken(req))
+}
+
+func getIdentityService(req *http.Request, identityService IdentityService, nobodyResourceService NobodyResourceService) (IdentityService, error) {
+	if hasAuthToken(req) {
+		return identityService, nil
+	}
+
+	if nobodyResourceService.VerifyResourcePath(req.URL.Path) {
+		return &NobodyIdentityService{}, nil
+	}
+
+	return nil, fmt.Errorf("No X-Auth-Token")
+}
+
+func hasAuthToken(req *http.Request) bool {
+	return getAuthToken(req) != ""
+}
+
+func getAuthToken(req *http.Request) string {
+	return req.Header.Get("X-Auth-Token")
 }
 
 //Context type
