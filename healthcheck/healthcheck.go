@@ -76,11 +76,14 @@ func (healthCheck *HealthCheck) Run() {
 		}
 	}
 
-	http.HandleFunc("/healthcheck", healthCheckHandler)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/healthcheck", healthCheckHandler)
+
 
 	go func() {
 		for {
-			err := http.ListenAndServe(healthCheck.address, nil)
+			err := http.ListenAndServe(healthCheck.address, mux)
 			if err != nil {
 				healthCheck.logger.Critical("Health Check server error %+v. Restarting", err)
 			}
