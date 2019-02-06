@@ -28,7 +28,7 @@ import (
 var _ = Describe("Keystone client", func() {
 	var (
 		server     *ghttp.Server
-		client     KeystoneClient
+		client     KeystoneIdentity
 		username   = "admin"
 		password   = "password"
 		domainName = "domain"
@@ -37,7 +37,7 @@ var _ = Describe("Keystone client", func() {
 
 	setupV3Client := func() {
 		var err error
-		client, err = NewKeystoneV3Client(server.URL()+"/v3", username, password, domainName, tenantName)
+		client, err = NewKeystoneIdentity(server.URL()+"/v3", username, password, domainName, tenantName)
 		Expect(err).ToNot(HaveOccurred())
 	}
 

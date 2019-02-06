@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	"github.com/gophercloud/gophercloud"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -17,7 +16,6 @@ var _ = ginkgo.Describe("Cached identity service", func() {
 		cachedIdentityService IdentityService
 		mockedIdentityService *MockIdentityService
 		auth                  schema.Authorization
-		serviceClient         *gophercloud.ServiceClient
 		tenantID              string
 		tenantName            string
 		token                 string
@@ -28,7 +26,6 @@ var _ = ginkgo.Describe("Cached identity service", func() {
 		ctrl = gomock.NewController(ginkgo.GinkgoT())
 		mockedIdentityService = NewMockIdentityService(ctrl)
 		cachedIdentityService = NewCachedIdentityService(mockedIdentityService, time.Second)
-		serviceClient = &gophercloud.ServiceClient{ProviderClient: &gophercloud.ProviderClient{TokenID: token}}
 		tenant := schema.Tenant{
 			ID:   "tenant-id",
 			Name: "tenant-name",
@@ -72,7 +69,7 @@ var _ = ginkgo.Describe("Cached identity service", func() {
 	})
 
 	ginkgo.It("Uses client Token during GetServiceAuthorization", func() {
-		mockedIdentityService.EXPECT().GetClient().Return(serviceClient)
+		mockedIdentityService.EXPECT().GetServiceTokenID().Return(token)
 		mockedIdentityService.EXPECT().VerifyToken(token).Return(auth, nil)
 		rv, err := cachedIdentityService.GetServiceAuthorization()
 		Expect(rv).To(Equal(auth))

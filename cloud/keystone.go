@@ -31,42 +31,12 @@ import (
 )
 
 //KeystoneIdentity middleware
-type KeystoneIdentity struct {
-	Client KeystoneClient
-}
-
-// VerifyToken verifies identity
-func (identity *KeystoneIdentity) VerifyToken(token string) (schema.Authorization, error) {
-	return identity.Client.VerifyToken(token)
-}
-
-// GetTenantID maps the given tenant/project name to the tenant's/project's ID
-func (identity *KeystoneIdentity) GetTenantID(tenantName string) (string, error) {
-	return identity.Client.GetTenantID(tenantName)
-}
-
-// GetTenantName maps the given tenant/project name to the tenant's/project's ID
-func (identity *KeystoneIdentity) GetTenantName(tenantID string) (string, error) {
-	return identity.Client.GetTenantName(tenantID)
-}
-
-// GetServiceAuthorization returns the master authorization with full permissions
-func (identity *KeystoneIdentity) GetServiceAuthorization() (schema.Authorization, error) {
-	return identity.Client.GetServiceAuthorization()
-}
-
-// GetClient returns openstack client
-func (identity *KeystoneIdentity) GetClient() *gophercloud.ServiceClient {
-	return identity.Client.GetClient()
-}
-
-//KeystoneClient represents keystone client
-type KeystoneClient interface {
+type KeystoneIdentity interface {
 	GetTenantID(string) (string, error)
 	GetTenantName(string) (string, error)
 	VerifyToken(string) (schema.Authorization, error)
 	GetServiceAuthorization() (schema.Authorization, error)
-	GetClient() *gophercloud.ServiceClient
+	GetServiceTokenID() string
 }
 
 type keystoneV3Client struct {
@@ -86,27 +56,11 @@ func matchVersionFromAuthURL(authURL string) (version string) {
 }
 
 //NewKeystoneIdentity is an constructor for KeystoneIdentity middleware
-func NewKeystoneIdentity(authURL, userName, password, domainName, tenantName, version string) (*KeystoneIdentity, error) {
-	var client KeystoneClient
-	var err error
-	if version == "" {
-		version = matchVersionFromAuthURL(authURL)
-	}
-	if version == "v3" {
-		client, err = NewKeystoneV3Client(authURL, userName, password, domainName, tenantName)
-	} else {
+func NewKeystoneIdentity(authURL, userName, password, domainName, tenantName string) (KeystoneIdentity, error) {
+	if version := matchVersionFromAuthURL(authURL); version != "v3" {
 		return nil, fmt.Errorf("Unsupported keystone version: %s", version)
 	}
-	if err != nil {
-		return nil, err
-	}
-	return &KeystoneIdentity{
-		Client: client,
-	}, nil
-}
 
-//NewKeystoneV3Client is an constructor for KeystoneV3Client
-func NewKeystoneV3Client(authURL, userName, password, domainName, tenantName string) (KeystoneClient, error) {
 	opts := gophercloud.AuthOptions{
 		IdentityEndpoint: authURL,
 		Username:         userName,
@@ -229,9 +183,8 @@ func (client *keystoneV3Client) GetServiceAuthorization() (schema.Authorization,
 	return client.VerifyToken(client.client.TokenID)
 }
 
-// GetClient returns openstack client
-func (client *keystoneV3Client) GetClient() *gophercloud.ServiceClient {
-	return client.client
+func (client *keystoneV3Client) GetServiceTokenID() string {
+	return client.client.TokenID
 }
 
 func extractDomain(result *v3tokens.GetResult) (*v3tokens.Domain, error) {

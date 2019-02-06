@@ -3,10 +3,8 @@ package middleware
 import (
 	"time"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/patrickmn/go-cache"
-
 	"github.com/cloudwan/gohan/schema"
+	"github.com/patrickmn/go-cache"
 )
 
 type CachedIdentityService struct {
@@ -45,11 +43,11 @@ func (c *CachedIdentityService) VerifyToken(token string) (schema.Authorization,
 }
 
 func (c *CachedIdentityService) GetServiceAuthorization() (schema.Authorization, error) {
-	return c.VerifyToken(c.GetClient().TokenID)
+	return c.VerifyToken(c.GetServiceTokenID())
 }
 
-func (c *CachedIdentityService) GetClient() *gophercloud.ServiceClient {
-	return c.inner.GetClient()
+func (c *CachedIdentityService) GetServiceTokenID() string {
+	return c.inner.GetServiceTokenID()
 }
 
 func NewCachedIdentityService(inner IdentityService, ttl time.Duration) IdentityService {

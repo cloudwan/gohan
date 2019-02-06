@@ -138,7 +138,7 @@ type IdentityService interface {
 	GetTenantName(string) (string, error)
 	VerifyToken(string) (schema.Authorization, error)
 	GetServiceAuthorization() (schema.Authorization, error)
-	GetClient() *gophercloud.ServiceClient
+	GetServiceTokenID() string
 }
 
 // CreateIdentityServiceFromConfig creates keystone identity from config
@@ -159,8 +159,7 @@ func CreateIdentityServiceFromConfig(config *util.Config) (IdentityService, erro
 			config.GetString("keystone/user_name", "admin"),
 			config.GetString("keystone/password", "password"),
 			config.GetString("keystone/domain_name", "Default"),
-			config.GetString("keystone/tenant_name", "admin"),
-			config.GetString("keystone/version", ""))
+			config.GetString("keystone/tenant_name", "admin"))
 		if err != nil {
 			log.Fatal(fmt.Sprintf("Failed to create keystone identity service, err: %s", err))
 		}
@@ -273,6 +272,10 @@ func (i *NobodyIdentityService) GetServiceAuthorization() (schema.Authorization,
 //GetClient returns always nil
 func (i *NobodyIdentityService) GetClient() *gophercloud.ServiceClient {
 	return nil
+}
+
+func (i *NobodyIdentityService) GetServiceTokenID() string {
+	return ""
 }
 
 //HTTPJSONError helper for returning JSON errors
