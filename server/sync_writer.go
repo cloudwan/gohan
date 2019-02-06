@@ -105,7 +105,9 @@ func (writer *SyncWriter) run(ctx context.Context) error {
 	}
 	defer func() {
 		// can't use the parent context, it may be already canceled
-		unlockCtx, _ := context.WithTimeout(context.Background(), writer.unlockTimeout)
+		unlockCtx, cancel := context.WithTimeout(context.Background(), writer.unlockTimeout)
+		defer cancel()
+
 		if err := writer.sync.Unlock(unlockCtx, syncPath); err != nil {
 			log.Warning("SyncWriter: unlocking failed: %s", err)
 		}

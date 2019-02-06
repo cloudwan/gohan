@@ -261,6 +261,7 @@ var _ = Describe("Server package test", func() {
 		}
 
 		BeforeEach(func() {
+			// go vet complains about cancel(), but it's called in AfterEach
 			ctx, cancel = context.WithCancel(ctx)
 
 			startWriter()

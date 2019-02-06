@@ -75,7 +75,7 @@ var _ = Describe("Transaction", func() {
 		BeforeEach(func() {
 			mockCtrl = gomock.NewController(GinkgoT())
 			transx = mocks.NewMockTransaction(mockCtrl)
-			cachedTx = &sql.CachedTransaction{transx, nil}
+			cachedTx = &sql.CachedTransaction{TxInterface: transx, QueryCache: nil}
 			cachedTx.ClearCache()
 
 			manager := schema.GetManager()

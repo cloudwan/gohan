@@ -60,6 +60,7 @@ var _ = Describe("Transaction Commit Informer", func() {
 
 	BeforeEach(func() {
 		mockCtrl = gomock.NewController(GinkgoT())
+		// go vet complains about cancel(), but it's called in AfterEach
 		ctx, cancel = context.WithCancel(context.Background())
 
 		syncedDb = srv.NewDbSyncWrapper(testDB)
