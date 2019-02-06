@@ -47,7 +47,6 @@ watch:
   - /watch/key/6
   events:
   - watch/key
-  worker_count: 4
 
 version:
   app: 1.2.3

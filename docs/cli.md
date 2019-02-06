@@ -130,7 +130,7 @@ from gophercloud/gophercloud:
 * `OS_USERNAME` - keystone username
 * `OS_PASSWORD` - keystone password
 * `OS_TENANT_NAME` or `OS_TENANT_ID` - keystone tenant name or id
-* `OS_DOMAIN_NAME` or `OS_DOMAIN_ID` - keystone domain name or id (for keystone v3 only)
+* `OS_DOMAIN_NAME` or `OS_DOMAIN_ID` - keystone domain name or id
 
 ### Endpoint
 
@@ -389,7 +389,6 @@ Sync keys and event path can be configured in ``gohan.yaml`` configuration file 
         - /v2.0/systems
       events:
         - v2.0
-      worker_count: 4
 ```
 
 With an above configuration example, gohan will watch the updates of sync keys including

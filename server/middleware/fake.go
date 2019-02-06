@@ -239,6 +239,10 @@ func (identity *FakeIdentity) GetServiceAuthorization() (schema.Authorization, e
 	return identity.VerifyToken("admin_token")
 }
 
+func (identity *FakeIdentity) GetServiceTokenID() string {
+	return "admin_token"
+}
+
 //FakeKeystone server for only test purpose
 func FakeKeystone(martini *martini.ClassicMartini) {
 	//mocking keystone v2.0 API

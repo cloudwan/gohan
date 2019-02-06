@@ -20,7 +20,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/cloudwan/gohan/db/mocks"
+	mock_db "github.com/cloudwan/gohan/db/mocks"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/extension/goext"
 	"github.com/cloudwan/gohan/extension/goplugin"

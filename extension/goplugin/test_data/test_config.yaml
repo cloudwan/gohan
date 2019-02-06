@@ -31,4 +31,3 @@ watch:
   - /watch/key/1
   events:
   - watch/key
-  worker_count: 1
