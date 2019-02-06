@@ -16,18 +16,18 @@
 package cloud
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
+	"time"
 
+	"github.com/cloudwan/gohan/metrics"
+	"github.com/cloudwan/gohan/schema"
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
 	v3tenants "github.com/gophercloud/gophercloud/openstack/identity/v3/projects"
 	v3tokens "github.com/gophercloud/gophercloud/openstack/identity/v3/tokens"
 	"github.com/gophercloud/gophercloud/pagination"
-
-	"errors"
-
-	"github.com/cloudwan/gohan/schema"
 )
 
 //KeystoneIdentity middleware
@@ -83,6 +83,8 @@ func NewKeystoneIdentity(authURL, userName, password, domainName, tenantName str
 
 //VerifyToken verifies keystone v3.0 token
 func (client *keystoneV3Client) VerifyToken(token string) (schema.Authorization, error) {
+	defer client.measureTime(time.Now(), "verify_token")
+
 	tokenResult := v3tokens.Get(client.client, token)
 	if tokenResult.Err != nil {
 		return nil, fmt.Errorf("Error during verifying token: %s", tokenResult.Err.Error())
@@ -94,12 +96,14 @@ func (client *keystoneV3Client) VerifyToken(token string) (schema.Authorization,
 	// If system token needed reauth and user token is invalid, err wont be propagated neither by return nor Err field,
 	// but response is nil
 	if err != nil || !ok {
+		client.updateCounter(1, "error.token.invalid")
 		return nil, fmt.Errorf("Invalid token")
 	}
 
 	// Get roles
 	roles, err := tokenResult.ExtractRoles()
 	if err != nil {
+		client.updateCounter(1, "error.token.extract_roles")
 		return nil, err
 	}
 	roleIDs := []string{}
@@ -110,6 +114,7 @@ func (client *keystoneV3Client) VerifyToken(token string) (schema.Authorization,
 	// Get project/tenant
 	project, err := tokenResult.ExtractProject()
 	if err != nil {
+		client.updateCounter(1, "error.token.extract_project")
 		return nil, err
 	}
 	if project != nil {
@@ -133,9 +138,11 @@ func (client *keystoneV3Client) VerifyToken(token string) (schema.Authorization,
 	} else {
 		dom, err := extractDomain(&tokenResult)
 		if err != nil {
+			client.updateCounter(1, "error.token.extract_domain")
 			return nil, err
 		}
 		if dom == nil {
+			client.updateCounter(1, "error.token.unscoped")
 			return nil, errors.New("Token is unscoped")
 		}
 		domain := schema.Domain{
@@ -152,6 +159,8 @@ func (client *keystoneV3Client) VerifyToken(token string) (schema.Authorization,
 
 // GetTenantID maps the given v3.0 project ID to the projects's name
 func (client *keystoneV3Client) GetTenantID(tenantName string) (string, error) {
+	defer client.measureTime(time.Now(), "get_tenant.id")
+
 	tenant, err := client.getTenant(func(tenant *v3tenants.Project) bool { return tenant.Name == tenantName })
 	if err != nil {
 		return "", err
@@ -166,6 +175,8 @@ func (client *keystoneV3Client) GetTenantID(tenantName string) (string, error) {
 
 // GetTenantName maps the given v3.0 project name to the projects's ID
 func (client *keystoneV3Client) GetTenantName(tenantID string) (string, error) {
+	defer client.measureTime(time.Now(), "get_tenant.name")
+
 	tenant, err := client.getTenant(func(tenant *v3tenants.Project) bool { return tenant.ID == tenantID })
 	if err != nil {
 		return "", err
@@ -180,6 +191,8 @@ func (client *keystoneV3Client) GetTenantName(tenantID string) (string, error) {
 
 // GetServiceAuthorization returns the master authorization with full permissions
 func (client *keystoneV3Client) GetServiceAuthorization() (schema.Authorization, error) {
+	defer client.measureTime(time.Now(), "get_service_authorization")
+
 	return client.VerifyToken(client.client.TokenID)
 }
 
@@ -227,4 +240,12 @@ func (client *keystoneV3Client) getTenant(filter func(*v3tenants.Project) bool) 
 	}
 
 	return result, nil
+}
+
+func (client *keystoneV3Client) updateCounter(delta int64, action string) {
+	metrics.UpdateCounter(delta, "auth.v3.%s", action)
+}
+
+func (client *keystoneV3Client) measureTime(timeStarted time.Time, action string) {
+	metrics.UpdateTimer(timeStarted, "auth.v3.%s", action)
 }
