@@ -21,12 +21,12 @@ import (
 
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
-	v2tenants "github.com/gophercloud/gophercloud/openstack/identity/v2/tenants"
 	v3tenants "github.com/gophercloud/gophercloud/openstack/identity/v3/projects"
 	v3tokens "github.com/gophercloud/gophercloud/openstack/identity/v3/tokens"
 	"github.com/gophercloud/gophercloud/pagination"
 
 	"errors"
+
 	"github.com/cloudwan/gohan/schema"
 )
 
@@ -69,10 +69,6 @@ type KeystoneClient interface {
 	GetClient() *gophercloud.ServiceClient
 }
 
-type keystoneV2Client struct {
-	client *gophercloud.ServiceClient
-}
-
 type keystoneV3Client struct {
 	client *gophercloud.ServiceClient
 }
@@ -96,9 +92,7 @@ func NewKeystoneIdentity(authURL, userName, password, domainName, tenantName, ve
 	if version == "" {
 		version = matchVersionFromAuthURL(authURL)
 	}
-	if version == "v2.0" {
-		client, err = NewKeystoneV2Client(authURL, userName, password, tenantName)
-	} else if version == "v3" {
+	if version == "v3" {
 		client, err = NewKeystoneV3Client(authURL, userName, password, domainName, tenantName)
 	} else {
 		return nil, fmt.Errorf("Unsupported keystone version: %s", version)
@@ -109,27 +103,6 @@ func NewKeystoneIdentity(authURL, userName, password, domainName, tenantName, ve
 	return &KeystoneIdentity{
 		Client: client,
 	}, nil
-}
-
-//NewKeystoneV2Client is an constructor for KeystoneV2Client
-func NewKeystoneV2Client(authURL, userName, password, tenantName string) (KeystoneClient, error) {
-	opts := gophercloud.AuthOptions{
-		IdentityEndpoint: authURL,
-		Username:         userName,
-		Password:         password,
-		TenantName:       tenantName,
-		AllowReauth:      true,
-	}
-
-	client, err := openstack.AuthenticatedClient(opts)
-	if err != nil {
-		return nil, err
-	}
-	identityClient, err := openstack.NewIdentityV2(client, gophercloud.EndpointOpts{})
-	if err != nil {
-		return nil, err
-	}
-	return &keystoneV2Client{client: identityClient}, nil
 }
 
 //NewKeystoneV3Client is an constructor for KeystoneV3Client
@@ -277,95 +250,6 @@ func isTokenScopedToAdminProject(result *v3tokens.GetResult) bool {
 	return (err == nil) && s.IsAdminProject
 }
 
-//VerifyToken verifies keystone v2.0 token
-func (client *keystoneV2Client) VerifyToken(token string) (schema.Authorization, error) {
-	tokenResult, err := verifyV2Token(client.client, token)
-	if err != nil {
-		return nil, fmt.Errorf("Invalid token")
-	}
-	fmt.Printf("%v", tokenResult)
-	tokenBody := tokenResult.(map[string]interface{})["access"]
-	userBody := tokenBody.(map[string]interface{})["user"]
-	roles := userBody.(map[string]interface{})["roles"]
-	roleIDs := []string{}
-	for _, roleBody := range roles.([]interface{}) {
-		roleIDs = append(roleIDs, roleBody.(map[string]interface{})["name"].(string))
-	}
-	tokenBodyMap := tokenBody.(map[string]interface{})
-	tenantObj, ok := tokenBodyMap["token"].(map[string]interface{})["tenant"]
-	if !ok {
-		return nil, fmt.Errorf("Token is unscoped")
-	}
-	tenant := tenantObj.(map[string]interface{})
-	tenantID := tenant["id"].(string)
-	tenantName := tenant["name"].(string)
-	auth := schema.NewAuthorizationBuilder().
-		WithKeystoneV2Compatibility().
-		WithTenant(schema.Tenant{ID: tenantID, Name: tenantName}).
-		WithRoleIDs(roleIDs...).
-		BuildScopedToTenant()
-	return auth, nil
-}
-
-// GetTenantID maps the given v2.0 project name to the tenant's id
-func (client *keystoneV2Client) GetTenantID(tenantName string) (string, error) {
-	tenant, err := client.getTenant(func(tenant *v2tenants.Tenant) bool { return tenant.Name == tenantName })
-	if err != nil {
-		return "", err
-	}
-
-	if tenant == nil {
-		return "", fmt.Errorf("Tenant with name '%s' not found", tenantName)
-	}
-
-	return tenant.ID, nil
-}
-
-// GetTenantName maps the given v2.0 project id to the tenant's name
-func (client *keystoneV2Client) GetTenantName(tenantID string) (string, error) {
-	tenant, err := client.getTenant(func(tenant *v2tenants.Tenant) bool { return tenant.ID == tenantID })
-	if err != nil {
-		return "", err
-	}
-
-	if tenant == nil {
-		return "", fmt.Errorf("Tenant with ID '%s' not found", tenantID)
-	}
-
-	return tenant.Name, nil
-}
-
-// GetServiceAuthorization returns the master authorization with full permissions
-func (client *keystoneV2Client) GetServiceAuthorization() (schema.Authorization, error) {
-	return client.VerifyToken(client.client.TokenID)
-}
-
-func (client *keystoneV2Client) getTenant(filter func(*v2tenants.Tenant) bool) (*v2tenants.Tenant, error) {
-	opts := v2tenants.ListOpts{}
-	pager := v2tenants.List(client.client, &opts)
-	var result *v2tenants.Tenant
-	err := pager.EachPage(func(page pagination.Page) (bool, error) {
-		tenantsList, err := v2tenants.ExtractTenants(page)
-		if err != nil {
-			return false, err
-		}
-
-		for _, tenant := range tenantsList {
-			if filter(&tenant) {
-				result = &tenant
-				return false, nil
-			}
-		}
-
-		return true, nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
 func (client *keystoneV3Client) getTenant(filter func(*v3tenants.Project) bool) (*v3tenants.Project, error) {
 	opts := v3tenants.ListOpts{}
 	pager := v3tenants.List(client.client, opts)
@@ -390,25 +274,4 @@ func (client *keystoneV3Client) getTenant(filter func(*v3tenants.Project) bool) 
 	}
 
 	return result, nil
-}
-
-//TODO(nati) this should be implemented in openstack go client side package
-func verifyV2Token(c *gophercloud.ServiceClient, token string) (interface{}, error) {
-	var result interface{}
-	_, err := c.Get(tokenURL(c, token), &result, &gophercloud.RequestOpts{
-		OkCodes: []int{200, 203},
-	})
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
-}
-
-func tokenURL(c *gophercloud.ServiceClient, token string) string {
-	return c.ServiceURL("tokens", token)
-}
-
-// GetClient returns openstack client
-func (client *keystoneV2Client) GetClient() *gophercloud.ServiceClient {
-	return client.client
 }
