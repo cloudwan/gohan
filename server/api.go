@@ -204,7 +204,6 @@ func fillInContext(context middleware.Context, db db.DB,
 	context["sync"] = sync
 	context["db"] = db
 	context["identity_service"] = identityService
-	context["service_auth"], _ = identityService.GetServiceAuthorization()
 }
 
 func mustGetSchema(manager *schema.Manager, schemaID string) *schema.Schema {
