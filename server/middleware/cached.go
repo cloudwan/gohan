@@ -50,6 +50,7 @@ func (c *CachedIdentityService) VerifyToken(token string) (schema.Authorization,
 }
 
 func (c *CachedIdentityService) GetServiceAuthorization() (schema.Authorization, error) {
+	defer c.measureTime(time.Now(), "get_service_authorization")
 	return c.VerifyToken(c.GetServiceTokenID())
 }
 
@@ -59,6 +60,10 @@ func (c *CachedIdentityService) GetServiceTokenID() string {
 
 func (c *CachedIdentityService) updateCounter(delta int64, action string) {
 	metrics.UpdateCounter(delta, "auth.cache.%s", action)
+}
+
+func (c *CachedIdentityService) measureTime(timeStarted time.Time, action string) {
+	metrics.UpdateTimer(timeStarted, "auth.cache.%s", action)
 }
 
 func NewCachedIdentityService(inner IdentityService, ttl time.Duration) IdentityService {
