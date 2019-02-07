@@ -327,7 +327,10 @@ var _ = Describe("Environment", func() {
 
 			It("should clone database options", func() {
 				expectedOptions := goext.DbOptions{RetryTxCount: 1, RetryTxInterval: 2}
-				mockDB.EXPECT().Options().Return(options.Options{expectedOptions.RetryTxCount, expectedOptions.RetryTxInterval})
+				mockDB.EXPECT().Options().Return(options.Options{
+					RetryTxCount:    expectedOptions.RetryTxCount,
+					RetryTxInterval: expectedOptions.RetryTxInterval,
+				})
 
 				env.SetDatabase(mockDB)
 				clone := env.Clone().(*goplugin.Environment)

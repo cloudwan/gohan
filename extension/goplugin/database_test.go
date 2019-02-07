@@ -88,7 +88,9 @@ var _ = Describe("Database", func() {
 			})
 
 			It("should call inner function using Context with Timeout", func() {
-				tempCtxWithTimeout, _ := context.WithTimeout(context.Background(), 50*time.Millisecond)
+				tempCtxWithTimeout, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+				defer cancel()
+
 				ctx := goext.Context{
 					"context": tempCtxWithTimeout,
 				}

@@ -62,8 +62,6 @@ func handleWaitForContextCancel(requestContext goext.Context, _ goext.IEnvironme
 	case <-time.After(time.Minute):
 		return goext.NewErrorInternalServerError(errors.New("context should be canceled"))
 	}
-
-	panic("test extension: something went terribly wrong")
 }
 
 func handleEcho(requestContext goext.Context, env goext.IEnvironment) *goext.Error {
