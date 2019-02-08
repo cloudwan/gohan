@@ -472,6 +472,25 @@ func (s *Sync) Watch(ctx context.Context, path string, revision int64) <-chan *s
 	return eventCh
 }
 
+func (s *Sync) CompareAndSwap(ctx context.Context, path, data string, expectedRevision int64) (bool, error) {
+	var (
+		resp *etcd.TxnResponse
+		err  error
+	)
+
+	s.withTimeout(ctx, func(ctx context.Context) {
+		cmp := etcd.Compare(etcd.ModRevision(path), "=", expectedRevision)
+		put := etcd.OpPut(path, data)
+		resp, err = s.etcdClient.Txn(ctx).If(cmp).Then(put).Commit()
+	})
+
+	if err != nil {
+		return false, err
+	}
+
+	return resp.Succeeded, nil
+}
+
 // Close closes etcd client
 func (s *Sync) Close() {
 	defer measureTime(time.Now(), "close")

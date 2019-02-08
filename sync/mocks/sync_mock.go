@@ -5,8 +5,8 @@
 package mock_sync
 
 import (
-	"context"
-	"reflect"
+	context "context"
+	reflect "reflect"
 
 	"github.com/cloudwan/gohan/sync"
 	"github.com/golang/mock/gomock"
@@ -95,6 +95,19 @@ func (m *MockSync) Update(ctx context.Context, path, json string) error {
 // Update indicates an expected call of Update
 func (mr *MockSyncMockRecorder) Update(ctx, path, json interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockSync)(nil).Update), ctx, path, json)
+}
+
+// CompareAndSwap mocks base method
+func (m *MockSync) CompareAndSwap(ctx context.Context, path, data string, expectedRevision int64) (bool, error) {
+	ret := m.ctrl.Call(m, "CompareAndSwap", ctx, path, data, expectedRevision)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CompareAndSwap indicates an expected call of CompareAndSwap
+func (mr *MockSyncMockRecorder) CompareAndSwap(ctx, path, data, expectedRevision interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CompareAndSwap", reflect.TypeOf((*MockSync)(nil).CompareAndSwap), ctx, path, data, expectedRevision)
 }
 
 // Delete mocks base method
