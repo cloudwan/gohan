@@ -426,6 +426,89 @@ func TestSubstr(t *testing.T) {
 	expectToEqual(substrN("/a/b/c/d", "/", 5), "/a/b/c/d")
 }
 
+func TestCASShouldUpdateWhenNoChanges(t *testing.T) {
+	ctx := context.Background()
+
+	sync := newSync(t)
+	sync.etcdClient.Delete(ctx, "/", etcd.WithPrefix())
+
+	path := "/path/to/cas"
+	data := "initial_data"
+	err := sync.Update(ctx, path, data)
+	if err != nil {
+		t.Fatalf("Update failed: %s", err)
+	}
+
+	currentRev := getCurrentRevision(t, sync, ctx, path)
+
+	newData := "new_data"
+	swapped, err := sync.CompareAndSwap(ctx, path, newData, currentRev)
+	if err != nil {
+		t.Fatalf("CAS failed: %s", err)
+	}
+
+	if !swapped {
+		t.Fatalf("Value was not swapped")
+	}
+
+	node, err := sync.Fetch(ctx, path)
+	if err != nil {
+		t.Fatalf("Fetch failed %s", err)
+	}
+	if node.Key != path || node.Value != newData || len(node.Children) != 0 {
+		t.Fatalf("unexpected node: %+v", node)
+	}
+}
+
+func TestCASShouldNowUpdateWhenRevisionChanged(t *testing.T) {
+	ctx := context.Background()
+
+	sync := newSync(t)
+	sync.etcdClient.Delete(ctx, "/", etcd.WithPrefix())
+
+	path := "/path/to/cas"
+	data := "initial_data"
+	err := sync.Update(ctx, path, data)
+	if err != nil {
+		t.Fatalf("Update failed: %s", err)
+	}
+
+	initialRev := getCurrentRevision(t, sync, ctx, path)
+
+	updatedData := "updated_data"
+	err = sync.Update(ctx, path, updatedData)
+	if err != nil {
+		t.Fatalf("Update failed: %s", err)
+	}
+
+	newData := "new_data"
+	swapped, err := sync.CompareAndSwap(ctx, path, newData, initialRev)
+	if err != nil {
+		t.Fatalf("CAS failed: %s", err)
+	}
+
+	if swapped {
+		t.Fatalf("Value was unexpectedly swapped")
+	}
+
+	node, err := sync.Fetch(ctx, path)
+	if err != nil {
+		t.Fatalf("Fetch failed %s", err)
+	}
+	if node.Key != path || node.Value != updatedData || len(node.Children) != 0 {
+		t.Fatalf("unexpected node: %+v", node)
+	}
+}
+
+func getCurrentRevision(t *testing.T, sync *Sync, ctx context.Context, key string) int64 {
+	node, err := sync.Fetch(ctx, key)
+	if err != nil {
+		t.Fatalf("Fetch failed %s", err)
+	}
+
+	return node.Revision
+}
+
 func newSync(t *testing.T) *Sync {
 	sync, err := NewSync(endpoints, time.Millisecond*100)
 	if err != nil {

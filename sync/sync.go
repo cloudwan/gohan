@@ -33,6 +33,8 @@ type Sync interface {
 	Unlock(ctx context.Context, path string) error
 	Fetch(ctx context.Context, path string) (*Node, error)
 	Update(ctx context.Context, path, json string) error
+	//CompareAndSwap (CAS) values atomically. Returns true is value was swapped
+	CompareAndSwap(ctx context.Context, path, data string, expectedRevision int64) (bool, error)
 	Delete(ctx context.Context, path string, prefix bool) error
 	//Watch keep watch update under the path until context is canceled.
 	Watch(ctx context.Context, path string, revision int64) <-chan *Event

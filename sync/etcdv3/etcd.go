@@ -31,7 +31,7 @@ import (
 	etcd "github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/clientv3/concurrency"
 	pb "github.com/coreos/etcd/mvcc/mvccpb"
-	"github.com/streamrail/concurrent-map"
+	cmap "github.com/streamrail/concurrent-map"
 	"github.com/twinj/uuid"
 )
 
@@ -470,6 +470,25 @@ func (s *Sync) Watch(ctx context.Context, path string, revision int64) <-chan *s
 		}
 	}()
 	return eventCh
+}
+
+func (s *Sync) CompareAndSwap(ctx context.Context, path, data string, expectedRevision int64) (bool, error) {
+	var (
+		resp *etcd.TxnResponse
+		err  error
+	)
+
+	s.withTimeout(ctx, func(ctx context.Context) {
+		cmp := etcd.Compare(etcd.ModRevision(path), "=", expectedRevision)
+		put := etcd.OpPut(path, data)
+		resp, err = s.etcdClient.Txn(ctx).If(cmp).Then(put).Commit()
+	})
+
+	if err != nil {
+		return false, err
+	}
+
+	return resp.Succeeded, nil
 }
 
 // Close closes etcd client
