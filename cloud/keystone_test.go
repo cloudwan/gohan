@@ -194,7 +194,7 @@ var _ = Describe("Keystone client", func() {
 					Expect(auth.TenantName()).To(Equal("acme"))
 					Expect(auth.DomainID()).To(Equal("domain-id"))
 					Expect(auth.DomainName()).To(Equal("domain"))
-					Expect(auth.Roles()).To(Equal([]*schema.Role{{"member"}}))
+					Expect(auth.Roles()).To(Equal([]*schema.Role{{Name: "member"}}))
 				})
 			})
 		})

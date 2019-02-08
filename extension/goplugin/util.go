@@ -56,10 +56,6 @@ func (util *Util) GetTransaction(context goext.Context) (goext.ITransaction, boo
 	return contextGetTransaction(context)
 }
 
-func (util *Util) Clone() *Util {
-	return &Util{}
-}
-
 var controllers map[gomock.TestReporter]*gomock.Controller = make(map[gomock.TestReporter]*gomock.Controller)
 
 func NewController(testReporter gomock.TestReporter) *gomock.Controller {
@@ -263,12 +259,13 @@ func sliceToMap(context map[string]interface{}, fieldName string, field reflect.
 	return nil
 }
 
+var jsonMapper = reflectx.NewMapper("json")
+
 // ResourceToMap converts structure representation of the resource to mapped representation
 func (util *Util) ResourceToMap(resource interface{}) map[string]interface{} {
 	fieldsMap := map[string]interface{}{}
 
-	mapper := reflectx.NewMapper("json")
-	structMap := mapper.TypeMap(reflect.TypeOf(resource))
+	structMap := jsonMapper.TypeMap(reflect.TypeOf(resource))
 	resourceValue := reflect.ValueOf(resource).Elem()
 
 	for fieldName, fi := range structMap.Names {

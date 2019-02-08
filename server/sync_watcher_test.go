@@ -46,6 +46,7 @@ var _ = Describe("Sync watcher test", func() {
 	)
 
 	BeforeEach(func() {
+		// go vet complains about cancel(), but it's called in AfterEach
 		ctx, cancel = context.WithCancel(context.Background())
 		watcher := srv.NewSyncWatcherFromServer(server)
 		done.Add(1)
