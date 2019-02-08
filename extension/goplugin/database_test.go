@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cloudwan/gohan/db/mocks"
+	mock_db "github.com/cloudwan/gohan/db/mocks"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/db/transaction/mocks"

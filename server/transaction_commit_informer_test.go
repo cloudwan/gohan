@@ -29,7 +29,7 @@ import (
 	srv "github.com/cloudwan/gohan/server"
 	gohan_sync "github.com/cloudwan/gohan/sync"
 	gohan_etcd "github.com/cloudwan/gohan/sync/etcdv3"
-	"github.com/cloudwan/gohan/sync/mocks"
+	mock_sync "github.com/cloudwan/gohan/sync/mocks"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
