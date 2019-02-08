@@ -26,6 +26,7 @@ import (
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/extension"
+	"github.com/cloudwan/gohan/extension/goext"
 	"github.com/cloudwan/gohan/metrics"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/server/middleware"
@@ -107,7 +108,7 @@ func (watcher *StateWatcher) iterate(ctx context.Context) error {
 
 	watchCtx, watchCancel := context.WithCancel(ctx)
 	defer watchCancel()
-	respCh := watcher.sync.Watch(watchCtx, lockKey, gohan_sync.RevisionCurrent)
+	respCh := watcher.sync.Watch(watchCtx, lockKey, goext.RevisionCurrent)
 	watchErr := make(chan error, 1)
 	go func() {
 		watchErr <- func() error {

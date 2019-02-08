@@ -1,15 +1,20 @@
 package etcdv3
 
 import (
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/cloudwan/gohan/extension/goext"
 	gohan_sync "github.com/cloudwan/gohan/sync"
 	etcd "github.com/coreos/etcd/clientv3"
 	"golang.org/x/net/context"
 )
 
-var endpoints = []string{"localhost:2379"}
+var (
+	endpoints   = []string{"localhost:2379"}
+	testTimeout = 10 * time.Second
+)
 
 func TestNewSyncTimeout(t *testing.T) {
 	done := make(chan struct{})
@@ -21,7 +26,7 @@ func TestNewSyncTimeout(t *testing.T) {
 		close(done)
 	}()
 	select {
-	case <-time.NewTimer(time.Millisecond * 200).C:
+	case <-time.After(time.Millisecond * 200):
 		t.Fatalf("timeout didn't work")
 	case <-done:
 	}
@@ -30,79 +35,46 @@ func TestNewSyncTimeout(t *testing.T) {
 func TestNonEmptyUpdate(t *testing.T) {
 	ctx := context.Background()
 
-	sync := newSync(t)
-	sync.etcdClient.Delete(ctx, "/", etcd.WithPrefix())
+	sync := newSync(t, ctx)
+	sync.cleanup()
 
 	path := "/path/to/somewhere"
 	data := "blabla"
-	err := sync.Update(ctx, path, data)
-	if err != nil {
-		t.Fatalf("unexpected error")
-	}
+	sync.mustUpdate(path, data)
+	sync.mustExist(path, data, 0)
 
-	node, err := sync.Fetch(ctx, path)
-	if err != nil {
-		t.Fatalf("unexpected error")
-	}
-	if node.Key != path || node.Value != data || len(node.Children) != 0 {
-		t.Fatalf("unexpected node: %+v", node)
-	}
-
-	err = sync.Delete(ctx, path, false)
-	if err != nil {
-		t.Fatalf("unexpected error")
-	}
-
-	node, err = sync.Fetch(ctx, path)
-	if err == nil || err != KeyNotFound {
-		t.Fatalf("unexpected non error")
-	}
+	sync.mustDelete(path, false)
+	sync.mustNotExist(path)
 }
 
 func TestEmptyUpdate(t *testing.T) {
 	ctx := context.Background()
 
-	sync := newSync(t)
-	sync.etcdClient.Delete(ctx, "/", etcd.WithPrefix())
+	sync := newSync(t, ctx)
+	sync.cleanup()
 
 	path := "/path/to/somewhere"
 	data := ""
-	err := sync.Update(ctx, path, data)
-	if err != nil {
-		t.Fatalf("unexpected error")
-	}
+	sync.mustUpdate(path, data)
 
 	// not found because v3 doesn't support directories
-	_, err = sync.Fetch(ctx, path)
-	if err == nil {
-		t.Fatalf("unexpected error")
-	}
+	sync.mustNotExist(path)
 }
 
 func TestRecursiveUpdate(t *testing.T) {
 	ctx := context.Background()
 
-	syn := newSync(t)
-	syn.etcdClient.Delete(ctx, "/", etcd.WithPrefix())
-	mustUpdate := func(key, value string) {
-		if err := syn.Update(ctx, key, value); err != nil {
-			t.Fatalf("unexpected error %s", err.Error())
-		}
-	}
+	sync := newSync(t, ctx)
+	sync.cleanup()
 
-	mustUpdate("/a/b/c/d/1", "test1")
-	mustUpdate("/a/b/c/d/2", "test2")
-	mustUpdate("/a/b/c/d/3", "test3")
-	mustUpdate("/a/b/e/d/1", "test4")
-	mustUpdate("/a/b/e/d/2", "test5")
-	mustUpdate("/a/b/e/d/3", "test6")
+	sync.mustUpdate("/a/b/c/d/1", "test1")
+	sync.mustUpdate("/a/b/c/d/2", "test2")
+	sync.mustUpdate("/a/b/c/d/3", "test3")
+	sync.mustUpdate("/a/b/e/d/1", "test4")
+	sync.mustUpdate("/a/b/e/d/2", "test5")
+	sync.mustUpdate("/a/b/e/d/3", "test6")
 
-	node, err := syn.Fetch(ctx, "/a")
-	if err != nil {
-		t.Fatalf("unexpected error %s", err.Error())
-	}
-
-	checkNode(node, "/a", "", 1, t)
+	node := sync.mustExist("/a", "", 1)
 	ab := node.Children[0]
 	checkNode(ab, "/a/b", "", 2, t)
 	abc := ab.Children[0]
@@ -121,19 +93,15 @@ func TestRecursiveUpdate(t *testing.T) {
 	checkNode(abed.Children[1], "/a/b/e/d/2", "test5", 0, t)
 	checkNode(abed.Children[2], "/a/b/e/d/3", "test6", 0, t)
 
-	node, err = syn.Fetch(ctx, "/a/b/c")
-	if err != nil {
-		t.Fatalf("unexpected error %s", err.Error())
-	}
-	checkNode(abc, "/a/b/c", "", 1, t)
+	sync.mustExist("/a/b/c", "", 1)
 }
 
 func TestLockUnblocking(t *testing.T) {
 	ctx := context.Background()
 
-	sync0 := newSync(t)
-	sync1 := newSync(t)
-	sync0.etcdClient.Delete(ctx, "/", etcd.WithPrefix())
+	sync0 := newSync(t, ctx)
+	sync1 := newSync(t, ctx)
+	sync0.cleanup()
 
 	path := "/path/lock"
 	_, err := sync0.Lock(ctx, path, false)
@@ -172,9 +140,9 @@ func TestLockUnblocking(t *testing.T) {
 func TestLockBlocking(t *testing.T) {
 	ctx := context.Background()
 
-	sync0 := newSync(t)
-	sync1 := newSync(t)
-	sync0.etcdClient.Delete(ctx, "/", etcd.WithPrefix())
+	sync0 := newSync(t, ctx)
+	sync1 := newSync(t, ctx)
+	sync0.cleanup()
 
 	path := "/path/lock"
 	_, err := sync0.Lock(ctx, path, true)
@@ -220,23 +188,23 @@ func TestLockBlocking(t *testing.T) {
 }
 
 func TestWatch(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 	defer cancel()
 
-	sync := newSync(t)
-	sync.etcdClient.Delete(ctx, "/", etcd.WithPrefix())
+	sync := newSync(t, ctx)
+	sync.cleanup()
 
 	path := "/path/to/watch/without/revision"
-	sync.etcdClient.Put(ctx, path+"/existing", `{"existing": true}`)
+	sync.mustPut(path+"/existing", `{"existing": true}`)
 
-	responseChan := sync.Watch(ctx, path, gohan_sync.RevisionCurrent)
+	responseChan := sync.Watch(ctx, path, goext.RevisionCurrent)
 
 	resp := <-responseChan
 	if resp.Action != "get" || resp.Key != path+"/existing" || resp.Data["existing"].(bool) != true {
 		t.Fatalf("mismatch response: %+v", resp)
 	}
 
-	sync.etcdClient.Put(ctx, path+"/new", `{"existing": false}`)
+	sync.mustPut(path+"/new", `{"existing": false}`)
 	resp = <-responseChan
 	if resp.Action != "set" || resp.Key != path+"/new" || resp.Data["existing"].(bool) != false {
 		t.Fatalf("mismatch response: %+v", resp)
@@ -250,25 +218,16 @@ func TestWatch(t *testing.T) {
 }
 
 func TestWatchWithRevision(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 	defer cancel()
 
-	sync := newSync(t)
-	sync.etcdClient.Delete(ctx, "/", etcd.WithPrefix())
+	sync := newSync(t, ctx)
+	sync.cleanup()
 
 	path := "/path/to/watch/with/revision"
 
-	putResponse, err := sync.etcdClient.Put(ctx, path+"/existing", `{"existing": true}`)
-	if err != nil {
-		t.Fatalf("failed to put key: %s", err)
-	}
-	startRev := putResponse.Header.Revision
-
-	putResponse, err = sync.etcdClient.Put(ctx, path+"/new", `{"existing": false}`)
-	if err != nil {
-		t.Fatalf("failed to update key: %s", err)
-	}
-	secondRevision := putResponse.Header.Revision
+	startRev := sync.mustPut(path+"/existing", `{"existing": true}`)
+	secondRevision := sync.mustPut(path+"/new", `{"existing": false}`)
 
 	responseChan := sync.Watch(ctx, path, startRev+1)
 
@@ -277,88 +236,135 @@ func TestWatchWithRevision(t *testing.T) {
 		t.Fatalf("mismatch response: %+v, expecting /new, existing==false, revision==%d", resp, secondRevision)
 	}
 
-	putResponse, err = sync.etcdClient.Put(ctx, path+"/third", `{"existing": false}`)
-	if err != nil {
-		t.Fatalf("failed to update key: %s", err)
-	}
-	thirdRevision := putResponse.Header.Revision
+	thirdRevision := sync.mustPut(path+"/third", `{"existing": false}`)
 
 	resp = <-responseChan
 	if resp.Key != path+"/third" || resp.Data["existing"].(bool) != false || resp.Revision != thirdRevision {
 		t.Fatalf("mismatch response: %+v, expecting /third, existing==false, revision==%d", resp, thirdRevision)
 	}
+}
 
+func TestShouldReturnAllValuesWhenWatchingAtCurrentRevision(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
+	defer cancel()
+
+	sync := newSync(t, ctx)
+	sync.cleanup()
+
+	path := "/path/to/watch/with/revision"
+
+	firstRevision := sync.mustPut(path+"/first", `{"version": "1"}`)
+	secondRevision := sync.mustPut(path+"/second", `{"version": "2"}`)
+
+	responseChan := sync.Watch(ctx, path, goext.RevisionCurrent)
+
+	verifyResponse(<-responseChan, path+"/first", "1", firstRevision, t)
+	verifyResponse(<-responseChan, path+"/second", "2", secondRevision, t)
+}
+
+func TestShouldStartWatchingAtSpecifiedRevision(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
+	defer cancel()
+
+	sync := newSync(t, ctx)
+	sync.cleanup()
+
+	path := "/path/to/watch/with/starting/revision"
+
+	firstRevision := sync.mustPut(path, `{"version": "1"}`)
+	secondRevision := sync.mustPut(path, `{"version": "2"}`)
+
+	responseChan := sync.Watch(ctx, path, firstRevision-1)
+
+	verifyResponse(<-responseChan, path, "1", firstRevision, t)
+	verifyResponse(<-responseChan, path, "2", secondRevision, t)
+}
+
+func verifyResponse(event *gohan_sync.Event, expectedKey string, expectedVersion string, expectedRevision int64, t *testing.T) {
+	if event.Key != expectedKey {
+		t.Fatalf("expected key %s, got %s instead", expectedKey, event.Key)
+	}
+	if event.Data["version"].(string) != expectedVersion {
+		t.Fatalf("expected version %s, got %s instead", event.Data["version"], expectedVersion)
+	}
+	if event.Revision != expectedRevision {
+		t.Fatalf("expected revision %d, got %d instead", event.Revision, expectedRevision)
+	}
+}
+
+func Test_ShouldReturnCompactedErr_WhenWatchingAtCompactedRevision(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
+	defer cancel()
+
+	sync := newSync(t, ctx)
+	sync.cleanup()
+
+	path := "/path/to/watch/with/starting/revision"
+
+	firstRevision := sync.mustPut(path, `{"version": "1"}`)
+	secondRevision := sync.mustPut(path, `{"version": "2"}`)
+
+	sync.mustCompact(secondRevision)
+
+	responseChan := sync.Watch(ctx, path, firstRevision)
+
+	resp := <-responseChan
+	if resp.Err == nil || !strings.Contains(resp.Err.Error(), "required revision has been compacted") {
+		t.Fatalf("mismatch response: %+v, expecting a compaction error", resp)
+	}
+
+	errCompacted := resp.Err.(goext.ErrCompacted)
+	if errCompacted.CompactRevision != secondRevision {
+		t.Fatalf("expected compaction at %d, got %d", secondRevision, errCompacted.CompactRevision)
+	}
+}
+
+func Test_ShouldNotReturnCompactedErr_WhenWatchingAtCurrentRevision(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
+	defer cancel()
+
+	sync := newSync(t, ctx)
+	sync.cleanup()
+
+	path := "/path/to/watch/with/starting/revision"
+
+	sync.mustPut(path, `{"version": "1"}`)
+	secondRevision := sync.mustPut(path, `{"version": "2"}`)
+
+	sync.mustCompact(secondRevision)
+
+	responseChan := sync.Watch(ctx, path, goext.RevisionCurrent)
+
+	verifyResponse(<-responseChan, path, "2", secondRevision, t)
 }
 
 func TestFetchMultipleNodes(t *testing.T) {
 	ctx := context.Background()
 
-	sync := newSync(t)
-	sync.etcdClient.Delete(ctx, "/", etcd.WithPrefix())
+	sync := newSync(t, ctx)
+	sync.cleanup()
 
-	err := sync.Update(ctx, "/path/to/somewhere", "test1")
-	if err != nil {
-		t.Fatalf("unexpected error")
-	}
-	err = sync.Update(ctx, "/path/to/elsewhere", "test2")
-	if err != nil {
-		t.Fatalf("unexpected error")
-	}
-	err = sync.Update(ctx, "/path/notto/elsewhere", "test3")
-	if err != nil {
-		t.Fatalf("unexpected error")
-	}
+	sync.mustUpdate("/path/to/somewhere", "test1")
+	sync.mustUpdate("/path/to/elsewhere", "test2")
+	sync.mustUpdate("/path/notto/elsewhere", "test3")
 
-	nodes, err := sync.Fetch(ctx, "/path")
-	if err != nil {
-		t.Fatalf("unexpected error %s", err.Error())
-	}
-	if nodes.Key != "/path" {
-		t.Fatalf("expected node to has key /path has %s instead", nodes.Key)
-	}
-	if len(nodes.Children) != 2 {
-		t.Fatalf("expected 2 node has %d", len(nodes.Children))
-	}
-	if nodes.Children[0].Key != "/path/notto" {
-		t.Fatalf("expected node to has key /path/notto has %s instead", nodes.Children[0].Key)
-	}
-	if len(nodes.Children[0].Children) != 1 {
-		t.Fatalf("expected 1 node has %d", len(nodes.Children[0].Children))
-	}
-	node0 := nodes.Children[0].Children[0]
-	if node0.Value != "test3" || node0.Key != "/path/notto/elsewhere" || len(node0.Children) != 0 {
-		t.Fatalf("incorrect value for node %+v", node0)
-	}
-	if nodes.Children[1].Key != "/path/to" {
-		t.Fatalf("expected node to has key /path/to has %s instead", nodes.Children[1].Key)
-	}
-	if len(nodes.Children[1].Children) != 2 {
-		t.Fatalf("expected 2 nodes has %d", len(nodes.Children[1].Children))
-	}
-	node0 = nodes.Children[1].Children[0]
-	if node0.Value != "test2" || node0.Key != "/path/to/elsewhere" || len(node0.Children) != 0 {
-		t.Fatalf("incorrect value for node %+v", node0)
-	}
-	node1 := nodes.Children[1].Children[1]
-	if node1.Value != "test1" || node1.Key != "/path/to/somewhere" || len(node1.Children) != 0 {
-		t.Fatalf("incorrect value for node %+v", node1)
-	}
+	nodes := sync.mustExist("/path", "", 2)
+
+	checkNode(nodes.Children[0], "/path/notto", "", 1, t)
+	checkNode(nodes.Children[0].Children[0], "/path/notto/elsewhere", "test3", 0, t)
+
+	checkNode(nodes.Children[1], "/path/to", "", 2, t)
+	checkNode(nodes.Children[1].Children[0], "/path/to/elsewhere", "test2", 0, t)
+	checkNode(nodes.Children[1].Children[1], "/path/to/somewhere", "test1", 0, t)
+
 }
 
 func TestUpdateWithoutPath(t *testing.T) {
 	ctx := context.Background()
+	sync := newSync(t, ctx)
 
-	sync := newSync(t)
-	err := sync.Update(ctx, "post-migration", "test")
-	if err != nil {
-		t.Fatalf("unexpected error")
-	}
-
-	nodes, err := sync.Fetch(ctx, "post-migration")
-	if err != nil {
-		t.Fatalf("unexpected error %s", err.Error())
-	}
-	checkNode(nodes, "post-migration", "test", 0, t)
+	sync.mustUpdate("post-migration", "test")
+	sync.mustExist("post-migration", "test", 0)
 }
 
 func checkNode(node *gohan_sync.Node, key, value string, children int, t *testing.T) {
@@ -376,41 +382,21 @@ func checkNode(node *gohan_sync.Node, key, value string, children int, t *testin
 func TestNotIncludedPaths(t *testing.T) {
 	ctx := context.Background()
 
-	sync := newSync(t)
-	sync.etcdClient.Delete(ctx, "/", etcd.WithPrefix())
+	sync := newSync(t, ctx)
+	sync.cleanup()
 
-	err := sync.Update(ctx, "/path/to/somewhere", "test")
-	if err != nil {
-		t.Fatalf("unexpected error")
-	}
-	err = sync.Update(ctx, "/pathnottobeincluded", "should not appear")
-	if err != nil {
-		t.Fatalf("unexpected error")
-	}
+	sync.mustUpdate("/path/to/somewhere", "test")
+	sync.mustUpdate("/pathnottobeincluded", "should not appear")
 
-	nodes, err := sync.Fetch(ctx, "/path")
-	if err != nil {
-		t.Fatalf("unexpected error %s", err.Error())
-	}
-
-	checkNode(nodes, "/path", "", 1, t)
+	nodes := sync.mustExist("/path", "", 1)
 	pathTo := nodes.Children[0]
 	checkNode(pathTo, "/path/to", "", 1, t)
 	checkNode(pathTo.Children[0], "/path/to/somewhere", "test", 0, t)
 
-	_, err = sync.Fetch(ctx, "/path/not")
-	if err == nil || err != KeyNotFound {
-		t.Fatalf("unexpected error %s", err.Error())
-	}
+	sync.mustNotExist("/path/not")
 
-	err = sync.Update(ctx, "/path/to/notbeincluded", "should not appear")
-	if err != nil {
-		t.Fatalf("unexpected error")
-	}
-	_, err = sync.Fetch(ctx, "/path/to/not")
-	if err == nil || err != KeyNotFound {
-		t.Fatalf("unexpected error %s", err.Error())
-	}
+	sync.mustUpdate("/path/to/notbeincluded", "should not appear")
+	sync.mustNotExist("/path/to/not")
 }
 
 func TestSubstr(t *testing.T) {
@@ -426,10 +412,132 @@ func TestSubstr(t *testing.T) {
 	expectToEqual(substrN("/a/b/c/d", "/", 5), "/a/b/c/d")
 }
 
-func newSync(t *testing.T) *Sync {
+func TestCASShouldUpdateWhenValueDidNotChange(t *testing.T) {
+	ctx := context.Background()
+
+	sync := newSync(t, ctx)
+	sync.cleanup()
+
+	path := "/path/to/cas"
+	data := "initial_data"
+	sync.mustUpdate(path, data)
+
+	newData := "new_data"
+	swapped := sync.compareAndSwap(path, newData, sync.ByValue(data))
+	if !swapped {
+		t.Fatalf("Value was not swapped")
+	}
+
+	sync.mustExist(path, newData, 0)
+}
+
+func TestCASShouldNotUpdateWhenValueChanged(t *testing.T) {
+	ctx := context.Background()
+
+	sync := newSync(t, ctx)
+	sync.cleanup()
+
+	path := "/path/to/cas"
+	data := "initial_data"
+	sync.mustUpdate(path, data)
+
+	updatedData := "updated_data"
+	sync.mustUpdate(path, updatedData)
+
+	newData := "new_data"
+	swapped := sync.compareAndSwap(path, newData, sync.ByValue(data))
+	if swapped {
+		t.Fatalf("Value was unexpectedly swapped")
+	}
+
+	sync.mustExist(path, updatedData, 0)
+}
+
+type testedSync struct {
+	*Sync
+	t   *testing.T
+	ctx context.Context
+}
+
+func (sync *testedSync) cleanup() {
+	sync.etcdClient.Delete(sync.ctx, "/", etcd.WithPrefix())
+}
+
+func (sync *testedSync) getCurrentRevision(key string) int64 {
+	node, err := sync.Fetch(sync.ctx, key)
+	if err != nil {
+		sync.t.Fatalf("Fetch failed %s", err)
+	}
+
+	return node.Revision
+}
+
+func (sync *testedSync) mustUpdate(path, data string) {
+	err := sync.Update(sync.ctx, path, data)
+	if err != nil {
+		sync.t.Fatalf("unexpected error on updating %s with %s: %s", path, data, err)
+	}
+}
+
+func (sync *testedSync) mustPut(path, data string) int64 {
+	resp, err := sync.etcdClient.Put(sync.ctx, path, data)
+	if err != nil {
+		sync.t.Fatalf("unexpected error on putting %s with %s: %s", path, data, err)
+	}
+
+	return resp.Header.Revision
+}
+
+func (sync *testedSync) mustCompact(revision int64) {
+	if err := sync.Compact(sync.ctx, revision); err != nil {
+		sync.t.Fatalf("unexpected error on compacting to rev. %d: %s", revision, err)
+	}
+}
+
+func (sync *testedSync) mustFetch(path string) *gohan_sync.Node {
+	node, err := sync.Fetch(sync.ctx, path)
+	if err != nil {
+		sync.t.Fatalf("unexpected error on fetching %s failed: %s", path, err)
+	}
+
+	return node
+}
+
+func (sync *testedSync) mustDelete(path string, prefix bool) {
+	if err := sync.Delete(sync.ctx, path, prefix); err != nil {
+		sync.t.Fatalf("unexpected error on deleting %s, prefix: %v: %s", path, prefix, err)
+	}
+}
+
+func (sync *testedSync) compareAndSwap(path, data string, conds ...gohan_sync.CASCondition) bool {
+	swapped, err := sync.CompareAndSwap(sync.ctx, path, data, conds...)
+	if err != nil {
+		sync.t.Fatalf("CAS failed: %s", err)
+	}
+
+	return swapped
+}
+
+func (sync *testedSync) mustNotExist(path string) {
+	node, err := sync.Fetch(sync.ctx, path)
+	if err == nil || err != KeyNotFound {
+		sync.t.Fatalf("path %s should not exist, error: %s, value: %+v", path, err, node)
+	}
+}
+
+func (sync *testedSync) mustExist(path, value string, children int) *gohan_sync.Node {
+	node := sync.mustFetch(path)
+	checkNode(node, path, value, children, sync.t)
+
+	return node
+}
+
+func newSync(t *testing.T, ctx context.Context) *testedSync {
 	sync, err := NewSync(endpoints, time.Millisecond*100)
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	}
-	return sync
+	return &testedSync{
+		sync, t, ctx,
+	}
 }

@@ -26,10 +26,12 @@ import (
 	syn "sync"
 	"time"
 
+	"github.com/cloudwan/gohan/extension/goext"
 	"github.com/cloudwan/gohan/metrics"
 	"github.com/cloudwan/gohan/sync"
 	etcd "github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/clientv3/concurrency"
+	"github.com/coreos/etcd/etcdserver/api/v3rpc/rpctypes"
 	pb "github.com/coreos/etcd/mvcc/mvccpb"
 	cmap "github.com/streamrail/concurrent-map"
 	"github.com/twinj/uuid"
@@ -358,28 +360,34 @@ func eventsFromNode(ctx context.Context, action string, kvs []*pb.KeyValue, resp
 	}
 }
 
-//Watch keep watch update under the path
-func (s *Sync) watch(ctx context.Context, path string, responseChan chan *sync.Event, revision int64) error {
-	options := []etcd.OpOption{etcd.WithPrefix(), etcd.WithSort(etcd.SortByModRevision, etcd.SortAscend)}
-	if revision != sync.RevisionCurrent {
-		options = append(options, etcd.WithMinModRev(revision))
-	}
-
+func (s *Sync) getCurrentValue(ctx context.Context, path string, responseChan chan *sync.Event) (int64, error) {
 	var (
 		node *etcd.GetResponse
 		err  error
 	)
 
 	s.withTimeout(ctx, func(ctx context.Context) {
-		node, err = s.etcdClient.Get(ctx, path, options...)
+		node, err = s.etcdClient.Get(ctx, path, etcd.WithPrefix(), etcd.WithSort(etcd.SortByModRevision, etcd.SortAscend))
 	})
 
 	if err != nil {
 		updateCounter(1, "watch.get.error")
-		return err
+		return 0, err
 	}
+
 	eventsFromNode(ctx, "get", node.Kvs, responseChan)
-	revision = node.Header.Revision + 1
+	return node.Header.Revision + 1, nil
+}
+
+//Watch keep watch update under the path
+func (s *Sync) watch(ctx context.Context, path string, responseChan chan *sync.Event, revision int64) error {
+	if revision == goext.RevisionCurrent {
+		var err error
+		revision, err = s.getCurrentValue(ctx, path, responseChan)
+		if err != nil {
+			return err
+		}
+	}
 
 	ctx, cancel := context.WithCancel(ctx)
 	errorsCh := make(chan error, 1)
@@ -397,6 +405,9 @@ func (s *Sync) watch(ctx context.Context, path string, responseChan chan *sync.E
 				err := wresp.Err()
 				if err != nil {
 					updateCounter(1, "watch.client_watch.error")
+					if err == rpctypes.ErrCompacted {
+						err = goext.NewErrCompacted(err, wresp.CompactRevision)
+					}
 					return err
 				}
 				for _, ev := range wresp.Events {
@@ -470,6 +481,49 @@ func (s *Sync) Watch(ctx context.Context, path string, revision int64) <-chan *s
 		}
 	}()
 	return eventCh
+}
+
+func (s *Sync) Compact(ctx context.Context, revision int64) error {
+	var err error
+	s.withTimeout(ctx, func(ctx context.Context) {
+		_, err = s.etcdClient.Compact(ctx, revision, etcd.WithCompactPhysical())
+	})
+	return err
+}
+
+func (s *Sync) CompareAndSwap(ctx context.Context, path, data string, condition ...sync.CASCondition) (bool, error) {
+	var (
+		resp *etcd.TxnResponse
+		err  error
+	)
+
+	s.withTimeout(ctx, func(ctx context.Context) {
+		cmp := getComparators(path, condition...)
+		put := etcd.OpPut(path, data)
+		resp, err = s.etcdClient.Txn(ctx).If(cmp...).Then(put).Commit()
+	})
+
+	if err != nil {
+		return false, err
+	}
+
+	return resp.Succeeded, nil
+}
+
+func getComparators(path string, conditions ...sync.CASCondition) []etcd.Cmp {
+	comparators := make([]etcd.Cmp, 0, len(conditions))
+	for _, condition := range conditions {
+		cmp := condition.(func(path string) etcd.Cmp)(path)
+		comparators = append(comparators, cmp)
+	}
+
+	return comparators
+}
+
+func (sync *Sync) ByValue(value string) sync.CASCondition {
+	return func(path string) etcd.Cmp {
+		return etcd.Compare(etcd.Value(path), "=", value)
+	}
 }
 
 // Close closes etcd client

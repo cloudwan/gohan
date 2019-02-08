@@ -25,6 +25,7 @@ import (
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/pagination"
 	"github.com/cloudwan/gohan/db/transaction"
+	"github.com/cloudwan/gohan/extension/goext"
 	"github.com/cloudwan/gohan/metrics"
 	"github.com/cloudwan/gohan/schema"
 	gohan_sync "github.com/cloudwan/gohan/sync"
@@ -111,7 +112,7 @@ func (writer *SyncWriter) run(ctx context.Context) error {
 
 	watchCtx, watchCancel := context.WithCancel(ctx)
 	defer watchCancel()
-	triggerCh := writer.sync.Watch(watchCtx, SyncKeyTxCommitted, gohan_sync.RevisionCurrent)
+	triggerCh := writer.sync.Watch(watchCtx, SyncKeyTxCommitted, goext.RevisionCurrent)
 
 	for {
 		select {

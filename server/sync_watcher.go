@@ -20,14 +20,11 @@ import (
 	"errors"
 	"fmt"
 	"sort"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/cloudwan/gohan/extension"
-	l "github.com/cloudwan/gohan/log"
-	"github.com/cloudwan/gohan/metrics"
+	"github.com/cloudwan/gohan/extension/goext"
 	gohan_sync "github.com/cloudwan/gohan/sync"
 	"github.com/cloudwan/gohan/util"
 )
@@ -48,19 +45,16 @@ type SyncWatcher struct {
 	sync gohan_sync.Sync
 	// list of key names to watch
 	watchKeys []string
-	// list of event names
-	watchEvents []string
-	// map from event naems to VM environments
+	// map from event names to VM environments
 	watchExtensions map[string]extension.Environment
 	backoff         time.Duration
 }
 
 // NewSyncWatcher creates a new instance of syncWatcher
-func NewSyncWatcher(sync gohan_sync.Sync, keys []string, events []string, extensions map[string]extension.Environment) *SyncWatcher {
+func NewSyncWatcher(sync gohan_sync.Sync, keys []string, extensions map[string]extension.Environment) *SyncWatcher {
 	return &SyncWatcher{
 		sync:            sync,
 		watchKeys:       keys,
-		watchEvents:     events,
 		watchExtensions: extensions,
 		backoff:         time.Second * 5,
 	}
@@ -71,7 +65,7 @@ func NewSyncWatcherFromServer(server *Server) *SyncWatcher {
 	config := util.GetConfig()
 	keys := config.GetStringList("watch/keys", []string{})
 	events := config.GetStringList("watch/events", []string{})
-	extensions := map[string]extension.Environment{}
+	extensions := make(map[string]extension.Environment, len(events))
 	for _, event := range events {
 		path := "sync://" + event
 		env, err := server.NewEnvironmentForPath("sync."+event, path)
@@ -81,7 +75,7 @@ func NewSyncWatcherFromServer(server *Server) *SyncWatcher {
 		extensions[event] = env
 	}
 
-	return NewSyncWatcher(server.sync, keys, events, extensions)
+	return NewSyncWatcher(server.sync, keys, extensions)
 }
 
 // Run starts the main loop of the watcher.
@@ -106,7 +100,7 @@ func (watcher *SyncWatcher) Run(ctx context.Context, wg *sync.WaitGroup) error {
 
 			watchCtx, watchCancel := context.WithCancel(ctx)
 			defer watchCancel()
-			events := watcher.sync.Watch(watchCtx, processPathPrefix, int64(gohan_sync.RevisionCurrent))
+			events := watcher.sync.Watch(watchCtx, processPathPrefix, goext.RevisionCurrent)
 			watchErr := make(chan error, 1)
 			go func() {
 				watchErr <- watcher.processWatchLoop(events)
@@ -229,162 +223,10 @@ func (watcher *SyncWatcher) runSyncWatches(ctx context.Context, size int, positi
 		prio := (position - (idx % size) + size) % size
 		log.Debug("(SyncWatch) Priority of `%s`: `%d`", path, prio)
 
-		go func(ctx context.Context, idx int, path string, prio int) {
-			defer wg.Done()
+		pathWatcher := NewPathWatcher(watcher.sync, watcher.watchExtensions, path, prio)
 
-			select {
-			case <-time.After(time.Duration(prio*masterTTL) * time.Second):
-			case <-ctx.Done():
-				return
-			}
-
-			for {
-				err := watcher.processSyncWatch(ctx, path)
-
-				switch err {
-				case errLockFailed:
-					watcher.updateCounter(1, "lock.failed")
-					log.Debug("(SyncWatcher) failed to acquire lock, retrying...")
-				case context.Canceled:
-					// Do nothing, normal shutdown
-				default:
-					watcher.updateCounter(1, "error")
-					log.Error("(SyncWatcher) on `%s` aborted, retrying...: %s", path, err)
-				}
-
-				select {
-				case <-time.After(time.Duration(prio*masterTTL+1) * time.Second):
-				case <-ctx.Done():
-					return
-				}
-			}
-		}(ctx, idx, path, prio)
+		go func(ctx context.Context, wg *sync.WaitGroup, pw *PathWatcher) {
+			pw.Run(ctx, wg)
+		}(ctx, &wg, pathWatcher)
 	}
-}
-
-// processSyncWatch handles events on a path with a handler.
-// Returns any error or context cancel.
-// This method gets a lock on the sync backend and returns with an error when fails.
-func (watcher *SyncWatcher) processSyncWatch(ctx context.Context, path string) error {
-	watcher.updateCounter(1, "active")
-	defer watcher.updateCounter(-1, "active")
-
-	lockKey := lockPath + "/watch" + path
-	lost, err := watcher.sync.Lock(ctx, lockKey, false)
-	if err != nil {
-		return errLockFailed
-	}
-	defer func() {
-		// can't use the parent context, it may be already canceled
-		if err := watcher.sync.Unlock(context.Background(), lockKey); err != nil {
-			log.Warning("SyncWatcher: unlocking etcd failed on %s: %s", lockKey, err)
-		}
-	}()
-
-	watchCtx, watchCancel := context.WithCancel(ctx)
-	defer watchCancel()
-	fromRevision := watcher.fetchStoredRevision(ctx, path) + 1
-	respCh := watcher.sync.Watch(watchCtx, path, fromRevision)
-	watchErr := make(chan error, 1)
-	go func() {
-		watcher.updateCounter(1, "running")
-		defer watcher.updateCounter(-1, "running")
-		watchErr <- func() error {
-			for response := range respCh {
-				if response.Err != nil {
-					return response.Err
-				}
-				watcher.watchExtensionHandler(response)
-
-				err := watcher.storeRevision(ctx, path, response.Revision)
-				if err != nil {
-					return err
-				}
-			}
-			return nil
-		}()
-	}()
-
-	select {
-	case <-ctx.Done():
-		if err := <-watchErr; err != nil {
-			log.Error("(SyncWatcher) error after done: %s", err)
-		}
-		return ctx.Err()
-	case <-lost:
-		watcher.updateCounter(1, "lock.lost")
-		watchCancel()
-		if err := <-watchErr; err != nil {
-			log.Error("(SyncWatcher) error after lost lock: %s", err)
-		}
-		return fmt.Errorf("lock for path `%s` is lost", path)
-	case err := <-watchErr:
-		return err
-	}
-}
-
-func (watcher *SyncWatcher) watchExtensionHandler(response *gohan_sync.Event) {
-	defer l.Panic(log)
-	for _, event := range watcher.watchEvents {
-		//match extensions
-		if strings.HasPrefix(response.Key, "/"+event) {
-			env := watcher.watchExtensions[event]
-			watcher.runExtensionOnSync(response, env.Clone())
-			return
-		}
-	}
-}
-
-// fetchStoredRevision returns the revision number stored in the sync backend for a path.
-// When it's a new in the backend, returns sync.RevisionCurrent.
-func (watcher *SyncWatcher) fetchStoredRevision(ctx context.Context, path string) int64 {
-	fromRevision := int64(gohan_sync.RevisionCurrent)
-	lastSeen, err := watcher.sync.Fetch(ctx, SyncWatchRevisionPrefix+path)
-	if err == nil {
-		inStore, err := strconv.ParseInt(lastSeen.Value, 10, 64)
-		if err == nil {
-			log.Info("(SyncWatcher) Using last seen revision `%d` for watching path `%s`", inStore, path)
-			fromRevision = inStore
-		} else {
-			log.Warning("(SyncWatcher) Revision `%s` is not a valid int64 number, using the current one, which is %d (%s)", lastSeen.Value, fromRevision, err)
-		}
-	} else {
-		log.Warning("(SyncWatcher) Failed to fetch last seen revision number, using the current one, which is %d: (%s)", fromRevision, err)
-	}
-	return fromRevision
-}
-
-// storeRevision puts a revision number for a path to the sync backend.
-func (watcher *SyncWatcher) storeRevision(ctx context.Context, path string, revision int64) error {
-	err := watcher.sync.Update(ctx, SyncWatchRevisionPrefix+path, strconv.FormatInt(revision, 10))
-	if err != nil {
-		return fmt.Errorf("Failed to update revision number for watch path `%s` in sync storage", path)
-	}
-	return nil
-}
-
-func (watcher *SyncWatcher) measureSyncTime(timeStarted time.Time, action string) {
-	metrics.UpdateTimer(timeStarted, "sync.%s", action)
-}
-
-//Run extension on sync
-func (watcher *SyncWatcher) runExtensionOnSync(response *gohan_sync.Event, env extension.Environment) {
-	defer watcher.measureSyncTime(time.Now(), response.Action)
-
-	context := map[string]interface{}{
-		"action":   response.Action,
-		"data":     response.Data,
-		"key":      response.Key,
-		"context":  context.TODO(), // change to proper context after SyncWatcher refactoring towards contexts
-		"trace_id": util.NewTraceID(),
-	}
-	if err := env.HandleEvent("notification", context); err != nil {
-		log.Warning(fmt.Sprintf("(SyncWatcher) extension error: %s", err))
-		return
-	}
-	return
-}
-
-func (watcher *SyncWatcher) updateCounter(delta int64, metric string) {
-	metrics.UpdateCounter(delta, "sync_watcher.%s", metric)
 }

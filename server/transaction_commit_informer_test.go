@@ -25,6 +25,7 @@ import (
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/pagination"
 	"github.com/cloudwan/gohan/db/transaction"
+	"github.com/cloudwan/gohan/extension/goext"
 	"github.com/cloudwan/gohan/schema"
 	srv "github.com/cloudwan/gohan/server"
 	gohan_sync "github.com/cloudwan/gohan/sync"
@@ -161,7 +162,7 @@ var _ = Describe("Transaction Commit Informer", func() {
 
 	It("should update ETCD key once per transaction", func() {
 		startInformer(sync)
-		respCh := sync.Watch(ctx, srv.SyncKeyTxCommitted, gohan_sync.RevisionCurrent)
+		respCh := sync.Watch(ctx, srv.SyncKeyTxCommitted, goext.RevisionCurrent)
 
 		withinTx(func(tx transaction.Transaction) {
 			createNetwork(ctx, tx, "red")
@@ -175,7 +176,7 @@ var _ = Describe("Transaction Commit Informer", func() {
 	})
 
 	It("should update ETCD key once per a batch of transactions", func() {
-		respCh := sync.Watch(ctx, srv.SyncKeyTxCommitted, gohan_sync.RevisionCurrent)
+		respCh := sync.Watch(ctx, srv.SyncKeyTxCommitted, goext.RevisionCurrent)
 
 		withinTx(func(tx transaction.Transaction) {
 			createNetwork(ctx, tx, "red")
