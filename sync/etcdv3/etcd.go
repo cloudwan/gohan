@@ -472,16 +472,16 @@ func (s *Sync) Watch(ctx context.Context, path string, revision int64) <-chan *s
 	return eventCh
 }
 
-func (s *Sync) CompareAndSwap(ctx context.Context, path, data string, expectedRevision int64) (bool, error) {
+func (s *Sync) CompareAndSwap(ctx context.Context, path, data string, condition ...sync.CASCondition) (bool, error) {
 	var (
 		resp *etcd.TxnResponse
 		err  error
 	)
 
 	s.withTimeout(ctx, func(ctx context.Context) {
-		cmp := etcd.Compare(etcd.ModRevision(path), "=", expectedRevision)
+		cmp := getComparators(path, condition...)
 		put := etcd.OpPut(path, data)
-		resp, err = s.etcdClient.Txn(ctx).If(cmp).Then(put).Commit()
+		resp, err = s.etcdClient.Txn(ctx).If(cmp...).Then(put).Commit()
 	})
 
 	if err != nil {
@@ -489,6 +489,28 @@ func (s *Sync) CompareAndSwap(ctx context.Context, path, data string, expectedRe
 	}
 
 	return resp.Succeeded, nil
+}
+
+func getComparators(path string, conditions ...sync.CASCondition) []etcd.Cmp {
+	comparators := make([]etcd.Cmp, 0, len(conditions))
+	for _, condition := range conditions {
+		cmp := condition.(func(path string) etcd.Cmp)(path)
+		comparators = append(comparators, cmp)
+	}
+
+	return comparators
+}
+
+func (sync *Sync) ByValue(value string) sync.CASCondition {
+	return func(path string) etcd.Cmp {
+		return etcd.Compare(etcd.Value(path), "=", value)
+	}
+}
+
+func (sync *Sync) ByRevision(revision int64) sync.CASCondition {
+	return func(path string) etcd.Cmp {
+		return etcd.Compare(etcd.ModRevision(path), "=", revision)
+	}
 }
 
 // Close closes etcd client
