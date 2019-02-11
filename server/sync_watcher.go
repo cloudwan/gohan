@@ -229,47 +229,71 @@ func (watcher *SyncWatcher) runSyncWatches(ctx context.Context, size int, positi
 		prio := (position - (idx % size) + size) % size
 		log.Debug("(SyncWatch) Priority of `%s`: `%d`", path, prio)
 
-		go func(ctx context.Context, idx int, path string, prio int) {
-			defer wg.Done()
+		pathWatcher := NewPathWatcher(watcher, path, prio)
 
-			select {
-			case <-time.After(time.Duration(prio*masterTTL) * time.Second):
-			case <-ctx.Done():
-				return
-			}
+		go func(ctx context.Context, wg *sync.WaitGroup, pw *PathWatcher) {
+			pw.Run(ctx, wg)
+		}(ctx, &wg, pathWatcher)
+	}
+}
 
-			for {
-				err := watcher.processSyncWatch(ctx, path)
+type PathWatcher struct {
+	sync          gohan_sync.Sync
+	priority      int
+	path          string
+	watchedEvents []string
+	extensions    map[string]extension.Environment
+}
 
-				switch err {
-				case errLockFailed:
-					watcher.updateCounter(1, "lock.failed")
-					log.Debug("(SyncWatcher) failed to acquire lock, retrying...")
-				case context.Canceled:
-					// Do nothing, normal shutdown
-				default:
-					watcher.updateCounter(1, "error")
-					log.Error("(SyncWatcher) on `%s` aborted, retrying...: %s", path, err)
-				}
+func NewPathWatcher(parent *SyncWatcher, path string, priority int) *PathWatcher {
+	return &PathWatcher{
+		sync:          parent.sync,
+		watchedEvents: parent.watchEvents,
+		extensions:    parent.watchExtensions,
+		priority:      priority,
+		path:          path,
+	}
+}
 
-				select {
-				case <-time.After(time.Duration(prio*masterTTL+1) * time.Second):
-				case <-ctx.Done():
-					return
-				}
-			}
-		}(ctx, idx, path, prio)
+func (watcher *PathWatcher) Run(ctx context.Context, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	select {
+	case <-time.After(time.Duration(watcher.priority*masterTTL) * time.Second):
+	case <-ctx.Done():
+		return
+	}
+
+	for {
+		err := watcher.processSyncWatch(ctx)
+
+		switch err {
+		case errLockFailed:
+			watcher.updateCounter(1, "lock.failed")
+			log.Debug("(SyncWatcher) failed to acquire lock, retrying...")
+		case context.Canceled:
+			// Do nothing, normal shutdown
+		default:
+			watcher.updateCounter(1, "error")
+			log.Error("(SyncWatcher) on `%s` aborted, retrying...: %s", watcher.path, err)
+		}
+
+		select {
+		case <-time.After(time.Duration(watcher.priority*masterTTL+1) * time.Second):
+		case <-ctx.Done():
+			return
+		}
 	}
 }
 
 // processSyncWatch handles events on a path with a handler.
 // Returns any error or context cancel.
 // This method gets a lock on the sync backend and returns with an error when fails.
-func (watcher *SyncWatcher) processSyncWatch(ctx context.Context, path string) error {
+func (watcher *PathWatcher) processSyncWatch(ctx context.Context) error {
 	watcher.updateCounter(1, "active")
 	defer watcher.updateCounter(-1, "active")
 
-	lockKey := lockPath + "/watch" + path
+	lockKey := lockPath + "/watch" + watcher.path
 	lost, err := watcher.sync.Lock(ctx, lockKey, false)
 	if err != nil {
 		return errLockFailed
@@ -283,11 +307,11 @@ func (watcher *SyncWatcher) processSyncWatch(ctx context.Context, path string) e
 
 	watchCtx, watchCancel := context.WithCancel(ctx)
 	defer watchCancel()
-	fromRevision := watcher.fetchStoredRevision(ctx, path) + 1
-	eventsCh := watcher.sync.Watch(watchCtx, path, fromRevision)
+	fromRevision := watcher.fetchStoredRevision(ctx) + 1
+	eventsCh := watcher.sync.Watch(watchCtx, watcher.path, fromRevision)
 	doneCh := make(chan error, 1)
 
-	go watcher.consumeEvents(ctx, path, eventsCh, doneCh)
+	go watcher.consumeEvents(ctx, eventsCh, doneCh)
 
 	select {
 	case <-ctx.Done():
@@ -301,13 +325,13 @@ func (watcher *SyncWatcher) processSyncWatch(ctx context.Context, path string) e
 		if err := <-doneCh; err != nil {
 			log.Error("(SyncWatcher) error after lost lock: %s", err)
 		}
-		return fmt.Errorf("lock for path `%s` is lost", path)
+		return fmt.Errorf("lock for path `%s` is lost", watcher.path)
 	case err := <-doneCh:
 		return err
 	}
 }
 
-func (watcher *SyncWatcher) consumeEvents(ctx context.Context, path string, eventCh <-chan *gohan_sync.Event, watchErr chan<- error) {
+func (watcher *PathWatcher) consumeEvents(ctx context.Context, eventCh <-chan *gohan_sync.Event, watchErr chan<- error) {
 	watcher.updateCounter(1, "running")
 	defer watcher.updateCounter(-1, "running")
 
@@ -317,27 +341,27 @@ func (watcher *SyncWatcher) consumeEvents(ctx context.Context, path string, even
 	}()
 
 	for event := range eventCh {
-		if err = watcher.consumeEvent(ctx, path, event); err != nil {
+		if err = watcher.consumeEvent(ctx, event); err != nil {
 			return
 		}
 	}
 }
 
-func (watcher *SyncWatcher) consumeEvent(ctx context.Context, path string, event *gohan_sync.Event) error {
+func (watcher *PathWatcher) consumeEvent(ctx context.Context, event *gohan_sync.Event) error {
 	if event.Err != nil {
 		return event.Err
 	}
 	watcher.watchExtensionHandler(ctx, event)
 
-	return watcher.storeRevision(ctx, path, event.Revision)
+	return watcher.storeRevision(ctx, event.Revision)
 }
 
-func (watcher *SyncWatcher) watchExtensionHandler(ctx context.Context, response *gohan_sync.Event) {
+func (watcher *PathWatcher) watchExtensionHandler(ctx context.Context, response *gohan_sync.Event) {
 	defer l.Panic(log)
-	for _, event := range watcher.watchEvents {
+	for _, event := range watcher.watchedEvents {
 		//match extensions
 		if strings.HasPrefix(response.Key, "/"+event) {
-			env := watcher.watchExtensions[event]
+			env := watcher.extensions[event]
 			watcher.runExtensionOnSync(ctx, response, env.Clone())
 			return
 		}
@@ -346,13 +370,13 @@ func (watcher *SyncWatcher) watchExtensionHandler(ctx context.Context, response 
 
 // fetchStoredRevision returns the revision number stored in the sync backend for a path.
 // When it's a new in the backend, returns sync.RevisionCurrent.
-func (watcher *SyncWatcher) fetchStoredRevision(ctx context.Context, path string) int64 {
+func (watcher *PathWatcher) fetchStoredRevision(ctx context.Context) int64 {
 	fromRevision := int64(gohan_sync.RevisionCurrent)
-	lastSeen, err := watcher.sync.Fetch(ctx, SyncWatchRevisionPrefix+path)
+	lastSeen, err := watcher.sync.Fetch(ctx, SyncWatchRevisionPrefix+watcher.path)
 	if err == nil {
 		inStore, err := strconv.ParseInt(lastSeen.Value, 10, 64)
 		if err == nil {
-			log.Info("(SyncWatcher) Using last seen revision `%d` for watching path `%s`", inStore, path)
+			log.Info("(SyncWatcher) Using last seen revision `%d` for watching path `%s`", inStore, watcher.path)
 			fromRevision = inStore
 		} else {
 			log.Warning("(SyncWatcher) Revision `%s` is not a valid int64 number, using the current one, which is %d (%s)", lastSeen.Value, fromRevision, err)
@@ -364,20 +388,20 @@ func (watcher *SyncWatcher) fetchStoredRevision(ctx context.Context, path string
 }
 
 // storeRevision puts a revision number for a path to the sync backend.
-func (watcher *SyncWatcher) storeRevision(ctx context.Context, path string, revision int64) error {
-	err := watcher.sync.Update(ctx, SyncWatchRevisionPrefix+path, strconv.FormatInt(revision, 10))
+func (watcher *PathWatcher) storeRevision(ctx context.Context, revision int64) error {
+	err := watcher.sync.Update(ctx, SyncWatchRevisionPrefix+watcher.path, strconv.FormatInt(revision, 10))
 	if err != nil {
-		return fmt.Errorf("Failed to update revision number for watch path `%s` in sync storage", path)
+		return fmt.Errorf("Failed to update revision number for watch path `%s` in sync storage", watcher.path)
 	}
 	return nil
 }
 
-func (watcher *SyncWatcher) measureSyncTime(timeStarted time.Time, action string) {
+func (watcher *PathWatcher) measureSyncTime(timeStarted time.Time, action string) {
 	metrics.UpdateTimer(timeStarted, "sync.%s", action)
 }
 
 //Run extension on sync
-func (watcher *SyncWatcher) runExtensionOnSync(ctx context.Context, response *gohan_sync.Event, env extension.Environment) {
+func (watcher *PathWatcher) runExtensionOnSync(ctx context.Context, response *gohan_sync.Event, env extension.Environment) {
 	defer watcher.measureSyncTime(time.Now(), response.Action)
 
 	context := map[string]interface{}{
@@ -394,6 +418,6 @@ func (watcher *SyncWatcher) runExtensionOnSync(ctx context.Context, response *go
 	return
 }
 
-func (watcher *SyncWatcher) updateCounter(delta int64, metric string) {
+func (watcher *PathWatcher) updateCounter(delta int64, metric string) {
 	metrics.UpdateCounter(delta, "sync_watcher.%s", metric)
 }
