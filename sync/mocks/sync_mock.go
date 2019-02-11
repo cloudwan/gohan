@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	"github.com/cloudwan/gohan/sync"
-	"github.com/golang/mock/gomock"
+	gomock "github.com/golang/mock/gomock"
 )
 
 // MockSync is a mock of Sync interface
@@ -97,19 +97,6 @@ func (mr *MockSyncMockRecorder) Update(ctx, path, json interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockSync)(nil).Update), ctx, path, json)
 }
 
-// CompareAndSwap mocks base method
-func (m *MockSync) CompareAndSwap(ctx context.Context, path, data string, expectedRevision int64) (bool, error) {
-	ret := m.ctrl.Call(m, "CompareAndSwap", ctx, path, data, expectedRevision)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CompareAndSwap indicates an expected call of CompareAndSwap
-func (mr *MockSyncMockRecorder) CompareAndSwap(ctx, path, data, expectedRevision interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CompareAndSwap", reflect.TypeOf((*MockSync)(nil).CompareAndSwap), ctx, path, data, expectedRevision)
-}
-
 // Delete mocks base method
 func (m *MockSync) Delete(ctx context.Context, path string, prefix bool) error {
 	ret := m.ctrl.Call(m, "Delete", ctx, path, prefix)
@@ -134,6 +121,48 @@ func (mr *MockSyncMockRecorder) Watch(ctx, path, revision interface{}) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Watch", reflect.TypeOf((*MockSync)(nil).Watch), ctx, path, revision)
 }
 
+// CompareAndSwap mocks base method
+func (m *MockSync) CompareAndSwap(ctx context.Context, path, data string, condition ...sync.CASCondition) (bool, error) {
+	varargs := []interface{}{ctx, path, data}
+	for _, a := range condition {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "CompareAndSwap", varargs...)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CompareAndSwap indicates an expected call of CompareAndSwap
+func (mr *MockSyncMockRecorder) CompareAndSwap(ctx, path, data interface{}, condition ...interface{}) *gomock.Call {
+	varargs := append([]interface{}{ctx, path, data}, condition...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CompareAndSwap", reflect.TypeOf((*MockSync)(nil).CompareAndSwap), varargs...)
+}
+
+// ByValue mocks base method
+func (m *MockSync) ByValue(value string) sync.CASCondition {
+	ret := m.ctrl.Call(m, "ByValue", value)
+	ret0, _ := ret[0].(sync.CASCondition)
+	return ret0
+}
+
+// ByValue indicates an expected call of ByValue
+func (mr *MockSyncMockRecorder) ByValue(value interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ByValue", reflect.TypeOf((*MockSync)(nil).ByValue), value)
+}
+
+// ByRevision mocks base method
+func (m *MockSync) ByRevision(revision int64) sync.CASCondition {
+	ret := m.ctrl.Call(m, "ByRevision", revision)
+	ret0, _ := ret[0].(sync.CASCondition)
+	return ret0
+}
+
+// ByRevision indicates an expected call of ByRevision
+func (mr *MockSyncMockRecorder) ByRevision(revision interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ByRevision", reflect.TypeOf((*MockSync)(nil).ByRevision), revision)
+}
+
 // GetProcessID mocks base method
 func (m *MockSync) GetProcessID() string {
 	ret := m.ctrl.Call(m, "GetProcessID")
@@ -154,4 +183,27 @@ func (m *MockSync) Close() {
 // Close indicates an expected call of Close
 func (mr *MockSyncMockRecorder) Close() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockSync)(nil).Close))
+}
+
+// MockCASCondition is a mock of CASCondition interface
+type MockCASCondition struct {
+	ctrl     *gomock.Controller
+	recorder *MockCASConditionMockRecorder
+}
+
+// MockCASConditionMockRecorder is the mock recorder for MockCASCondition
+type MockCASConditionMockRecorder struct {
+	mock *MockCASCondition
+}
+
+// NewMockCASCondition creates a new mock instance
+func NewMockCASCondition(ctrl *gomock.Controller) *MockCASCondition {
+	mock := &MockCASCondition{ctrl: ctrl}
+	mock.recorder = &MockCASConditionMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockCASCondition) EXPECT() *MockCASConditionMockRecorder {
+	return m.recorder
 }

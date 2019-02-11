@@ -426,7 +426,7 @@ func TestSubstr(t *testing.T) {
 	expectToEqual(substrN("/a/b/c/d", "/", 5), "/a/b/c/d")
 }
 
-func TestCASShouldUpdateWhenNoChanges(t *testing.T) {
+func TestCASShouldUpdateWhenRevisionDidNotChange(t *testing.T) {
 	ctx := context.Background()
 
 	sync := newSync(t)
@@ -442,7 +442,7 @@ func TestCASShouldUpdateWhenNoChanges(t *testing.T) {
 	currentRev := getCurrentRevision(t, sync, ctx, path)
 
 	newData := "new_data"
-	swapped, err := sync.CompareAndSwap(ctx, path, newData, currentRev)
+	swapped, err := sync.CompareAndSwap(ctx, path, newData, sync.ByRevision(currentRev))
 	if err != nil {
 		t.Fatalf("CAS failed: %s", err)
 	}
@@ -460,7 +460,7 @@ func TestCASShouldUpdateWhenNoChanges(t *testing.T) {
 	}
 }
 
-func TestCASShouldNowUpdateWhenRevisionChanged(t *testing.T) {
+func TestCASShouldNotUpdateWhenRevisionChanged(t *testing.T) {
 	ctx := context.Background()
 
 	sync := newSync(t)
@@ -482,7 +482,7 @@ func TestCASShouldNowUpdateWhenRevisionChanged(t *testing.T) {
 	}
 
 	newData := "new_data"
-	swapped, err := sync.CompareAndSwap(ctx, path, newData, initialRev)
+	swapped, err := sync.CompareAndSwap(ctx, path, newData, sync.ByRevision(initialRev))
 	if err != nil {
 		t.Fatalf("CAS failed: %s", err)
 	}
@@ -496,6 +496,110 @@ func TestCASShouldNowUpdateWhenRevisionChanged(t *testing.T) {
 		t.Fatalf("Fetch failed %s", err)
 	}
 	if node.Key != path || node.Value != updatedData || len(node.Children) != 0 {
+		t.Fatalf("unexpected node: %+v", node)
+	}
+}
+
+func TestCASShouldUpdateWhenValueDidNotChange(t *testing.T) {
+	ctx := context.Background()
+
+	sync := newSync(t)
+	sync.etcdClient.Delete(ctx, "/", etcd.WithPrefix())
+
+	path := "/path/to/cas"
+	data := "initial_data"
+	err := sync.Update(ctx, path, data)
+	if err != nil {
+		t.Fatalf("Update failed: %s", err)
+	}
+
+	newData := "new_data"
+	swapped, err := sync.CompareAndSwap(ctx, path, newData, sync.ByValue(data))
+	if err != nil {
+		t.Fatalf("CAS failed: %s", err)
+	}
+
+	if !swapped {
+		t.Fatalf("Value was not swapped")
+	}
+
+	node, err := sync.Fetch(ctx, path)
+	if err != nil {
+		t.Fatalf("Fetch failed %s", err)
+	}
+	if node.Key != path || node.Value != newData || len(node.Children) != 0 {
+		t.Fatalf("unexpected node: %+v", node)
+	}
+}
+
+func TestCASShouldNotUpdateWhenValueChanged(t *testing.T) {
+	ctx := context.Background()
+
+	sync := newSync(t)
+	sync.etcdClient.Delete(ctx, "/", etcd.WithPrefix())
+
+	path := "/path/to/cas"
+	data := "initial_data"
+	err := sync.Update(ctx, path, data)
+	if err != nil {
+		t.Fatalf("Update failed: %s", err)
+	}
+
+	updatedData := "updated_data"
+	err = sync.Update(ctx, path, updatedData)
+	if err != nil {
+		t.Fatalf("Update failed: %s", err)
+	}
+
+	newData := "new_data"
+	swapped, err := sync.CompareAndSwap(ctx, path, newData, sync.ByValue(data))
+	if err != nil {
+		t.Fatalf("CAS failed: %s", err)
+	}
+
+	if swapped {
+		t.Fatalf("Value was unexpectedly swapped")
+	}
+
+	node, err := sync.Fetch(ctx, path)
+	if err != nil {
+		t.Fatalf("Fetch failed %s", err)
+	}
+	if node.Key != path || node.Value != updatedData || len(node.Children) != 0 {
+		t.Fatalf("unexpected node: %+v", node)
+	}
+}
+
+func TestCASShouldUpdateWhenValueAndRevisionDidNotChange(t *testing.T) {
+	ctx := context.Background()
+
+	sync := newSync(t)
+	sync.etcdClient.Delete(ctx, "/", etcd.WithPrefix())
+
+	path := "/path/to/cas"
+	data := "initial_data"
+	err := sync.Update(ctx, path, data)
+	if err != nil {
+		t.Fatalf("Update failed: %s", err)
+	}
+
+	initialRev := getCurrentRevision(t, sync, ctx, path)
+
+	newData := "new_data"
+	swapped, err := sync.CompareAndSwap(ctx, path, newData, sync.ByValue(data), sync.ByRevision(initialRev))
+	if err != nil {
+		t.Fatalf("CAS failed: %s", err)
+	}
+
+	if !swapped {
+		t.Fatalf("Value was not swapped")
+	}
+
+	node, err := sync.Fetch(ctx, path)
+	if err != nil {
+		t.Fatalf("Fetch failed %s", err)
+	}
+	if node.Key != path || node.Value != newData || len(node.Children) != 0 {
 		t.Fatalf("unexpected node: %+v", node)
 	}
 }
