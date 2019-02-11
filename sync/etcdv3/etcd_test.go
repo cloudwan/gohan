@@ -36,21 +36,10 @@ func TestNonEmptyUpdate(t *testing.T) {
 	path := "/path/to/somewhere"
 	data := "blabla"
 	sync.mustUpdate(path, data)
+	sync.mustExist(path, data, 0)
 
-	node := sync.mustFetch(path)
-	if node.Key != path || node.Value != data || len(node.Children) != 0 {
-		t.Fatalf("unexpected node: %+v", node)
-	}
-
-	err := sync.Delete(ctx, path, false)
-	if err != nil {
-		t.Fatalf("unexpected error")
-	}
-
-	node, err = sync.Fetch(ctx, path)
-	if err == nil || err != KeyNotFound {
-		t.Fatalf("unexpected non error")
-	}
+	sync.mustDelete(path, false)
+	sync.mustNotExist(path)
 }
 
 func TestEmptyUpdate(t *testing.T) {
@@ -64,10 +53,7 @@ func TestEmptyUpdate(t *testing.T) {
 	sync.mustUpdate(path, data)
 
 	// not found because v3 doesn't support directories
-	_, err := sync.Fetch(ctx, path)
-	if err == nil {
-		t.Fatalf("unexpected error")
-	}
+	sync.mustNotExist(path)
 }
 
 func TestRecursiveUpdate(t *testing.T) {
@@ -315,12 +301,10 @@ func TestFetchMultipleNodes(t *testing.T) {
 
 func TestUpdateWithoutPath(t *testing.T) {
 	ctx := context.Background()
-
 	sync := newSync(t, ctx)
-	sync.mustUpdate("post-migration", "test")
 
-	nodes := sync.mustFetch("post-migration")
-	checkNode(nodes, "post-migration", "test", 0, t)
+	sync.mustUpdate("post-migration", "test")
+	sync.mustExist("post-migration", "test", 0)
 }
 
 func checkNode(node *gohan_sync.Node, key, value string, children int, t *testing.T) {
@@ -350,16 +334,10 @@ func TestNotIncludedPaths(t *testing.T) {
 	checkNode(pathTo, "/path/to", "", 1, t)
 	checkNode(pathTo.Children[0], "/path/to/somewhere", "test", 0, t)
 
-	_, err := sync.Fetch(ctx, "/path/not")
-	if err == nil || err != KeyNotFound {
-		t.Fatalf("unexpected error %s", err.Error())
-	}
+	sync.mustNotExist("/path/not")
 
 	sync.mustUpdate("/path/to/notbeincluded", "should not appear")
-	_, err = sync.Fetch(ctx, "/path/to/not")
-	if err == nil || err != KeyNotFound {
-		t.Fatalf("unexpected error %s", err.Error())
-	}
+	sync.mustNotExist("/path/to/not")
 }
 
 func TestSubstr(t *testing.T) {
@@ -397,10 +375,7 @@ func TestCASShouldUpdateWhenRevisionDidNotChange(t *testing.T) {
 		t.Fatalf("Value was not swapped")
 	}
 
-	node := sync.mustFetch(path)
-	if node.Key != path || node.Value != newData || len(node.Children) != 0 {
-		t.Fatalf("unexpected node: %+v", node)
-	}
+	sync.mustExist(path, newData, 0)
 }
 
 func TestCASShouldNotUpdateWhenRevisionChanged(t *testing.T) {
@@ -428,10 +403,7 @@ func TestCASShouldNotUpdateWhenRevisionChanged(t *testing.T) {
 		t.Fatalf("Value was unexpectedly swapped")
 	}
 
-	node := sync.mustFetch(path)
-	if node.Key != path || node.Value != updatedData || len(node.Children) != 0 {
-		t.Fatalf("unexpected node: %+v", node)
-	}
+	sync.mustExist(path, updatedData, 0)
 }
 
 func TestCASShouldUpdateWhenValueDidNotChange(t *testing.T) {
@@ -454,10 +426,7 @@ func TestCASShouldUpdateWhenValueDidNotChange(t *testing.T) {
 		t.Fatalf("Value was not swapped")
 	}
 
-	node := sync.mustFetch(path)
-	if node.Key != path || node.Value != newData || len(node.Children) != 0 {
-		t.Fatalf("unexpected node: %+v", node)
-	}
+	sync.mustExist(path, newData, 0)
 }
 
 func TestCASShouldNotUpdateWhenValueChanged(t *testing.T) {
@@ -483,10 +452,7 @@ func TestCASShouldNotUpdateWhenValueChanged(t *testing.T) {
 		t.Fatalf("Value was unexpectedly swapped")
 	}
 
-	node := sync.mustFetch(path)
-	if node.Key != path || node.Value != updatedData || len(node.Children) != 0 {
-		t.Fatalf("unexpected node: %+v", node)
-	}
+	sync.mustExist(path, updatedData, 0)
 }
 
 func TestCASShouldUpdateWhenValueAndRevisionDidNotChange(t *testing.T) {
@@ -511,10 +477,7 @@ func TestCASShouldUpdateWhenValueAndRevisionDidNotChange(t *testing.T) {
 		t.Fatalf("Value was not swapped")
 	}
 
-	node := sync.mustFetch(path)
-	if node.Key != path || node.Value != newData || len(node.Children) != 0 {
-		t.Fatalf("unexpected node: %+v", node)
-	}
+	sync.mustExist(path, newData, 0)
 }
 
 type testedSync struct {
@@ -550,6 +513,24 @@ func (sync *testedSync) mustFetch(path string) *gohan_sync.Node {
 	}
 
 	return node
+}
+
+func (sync *testedSync) mustDelete(path string, prefix bool) {
+	if err := sync.Delete(sync.ctx, path, prefix); err != nil {
+		sync.t.Fatalf("unexpected error on deleting %s, prefix: %v: %s", path, prefix, err)
+	}
+}
+
+func (sync *testedSync) mustNotExist(path string) {
+	node, err := sync.Fetch(sync.ctx, path)
+	if err == nil || err != KeyNotFound {
+		sync.t.Fatalf("path %s should not exist, error: %s, value: %+v", path, err, node)
+	}
+}
+
+func (sync *testedSync) mustExist(path, value string, children int) {
+	node := sync.mustFetch(path)
+	checkNode(node, path, value, children, sync.t)
 }
 
 func newSync(t *testing.T, ctx context.Context) *testedSync {
