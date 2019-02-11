@@ -69,9 +69,7 @@ func TestRecursiveUpdate(t *testing.T) {
 	sync.mustUpdate("/a/b/e/d/2", "test5")
 	sync.mustUpdate("/a/b/e/d/3", "test6")
 
-	node := sync.mustFetch("/a")
-
-	checkNode(node, "/a", "", 1, t)
+	node := sync.mustExist("/a", "", 1)
 	ab := node.Children[0]
 	checkNode(ab, "/a/b", "", 2, t)
 	abc := ab.Children[0]
@@ -90,8 +88,7 @@ func TestRecursiveUpdate(t *testing.T) {
 	checkNode(abed.Children[1], "/a/b/e/d/2", "test5", 0, t)
 	checkNode(abed.Children[2], "/a/b/e/d/3", "test6", 0, t)
 
-	abc = sync.mustFetch("/a/b/c")
-	checkNode(abc, "/a/b/c", "", 1, t)
+	sync.mustExist("/a/b/c", "", 1)
 }
 
 func TestLockUnblocking(t *testing.T) {
@@ -266,37 +263,15 @@ func TestFetchMultipleNodes(t *testing.T) {
 	sync.mustUpdate("/path/to/elsewhere", "test2")
 	sync.mustUpdate("/path/notto/elsewhere", "test3")
 
-	nodes := sync.mustFetch("/path")
-	if nodes.Key != "/path" {
-		t.Fatalf("expected node to has key /path has %s instead", nodes.Key)
-	}
-	if len(nodes.Children) != 2 {
-		t.Fatalf("expected 2 node has %d", len(nodes.Children))
-	}
-	if nodes.Children[0].Key != "/path/notto" {
-		t.Fatalf("expected node to has key /path/notto has %s instead", nodes.Children[0].Key)
-	}
-	if len(nodes.Children[0].Children) != 1 {
-		t.Fatalf("expected 1 node has %d", len(nodes.Children[0].Children))
-	}
-	node0 := nodes.Children[0].Children[0]
-	if node0.Value != "test3" || node0.Key != "/path/notto/elsewhere" || len(node0.Children) != 0 {
-		t.Fatalf("incorrect value for node %+v", node0)
-	}
-	if nodes.Children[1].Key != "/path/to" {
-		t.Fatalf("expected node to has key /path/to has %s instead", nodes.Children[1].Key)
-	}
-	if len(nodes.Children[1].Children) != 2 {
-		t.Fatalf("expected 2 nodes has %d", len(nodes.Children[1].Children))
-	}
-	node0 = nodes.Children[1].Children[0]
-	if node0.Value != "test2" || node0.Key != "/path/to/elsewhere" || len(node0.Children) != 0 {
-		t.Fatalf("incorrect value for node %+v", node0)
-	}
-	node1 := nodes.Children[1].Children[1]
-	if node1.Value != "test1" || node1.Key != "/path/to/somewhere" || len(node1.Children) != 0 {
-		t.Fatalf("incorrect value for node %+v", node1)
-	}
+	nodes := sync.mustExist("/path", "", 2)
+
+	checkNode(nodes.Children[0], "/path/notto", "", 1, t)
+	checkNode(nodes.Children[0].Children[0], "/path/notto/elsewhere", "test3", 0, t)
+
+	checkNode(nodes.Children[1], "/path/to", "", 2, t)
+	checkNode(nodes.Children[1].Children[0], "/path/to/elsewhere", "test2", 0, t)
+	checkNode(nodes.Children[1].Children[1], "/path/to/somewhere", "test1", 0, t)
+
 }
 
 func TestUpdateWithoutPath(t *testing.T) {
@@ -328,8 +303,7 @@ func TestNotIncludedPaths(t *testing.T) {
 	sync.mustUpdate("/path/to/somewhere", "test")
 	sync.mustUpdate("/pathnottobeincluded", "should not appear")
 
-	nodes := sync.mustFetch("/path")
-	checkNode(nodes, "/path", "", 1, t)
+	nodes := sync.mustExist("/path", "", 1)
 	pathTo := nodes.Children[0]
 	checkNode(pathTo, "/path/to", "", 1, t)
 	checkNode(pathTo.Children[0], "/path/to/somewhere", "test", 0, t)
@@ -366,11 +340,7 @@ func TestCASShouldUpdateWhenRevisionDidNotChange(t *testing.T) {
 	currentRev := sync.getCurrentRevision(path)
 
 	newData := "new_data"
-	swapped, err := sync.CompareAndSwap(ctx, path, newData, sync.ByRevision(currentRev))
-	if err != nil {
-		t.Fatalf("CAS failed: %s", err)
-	}
-
+	swapped := sync.compareAndSwap(path, newData, sync.ByRevision(currentRev))
 	if !swapped {
 		t.Fatalf("Value was not swapped")
 	}
@@ -394,10 +364,7 @@ func TestCASShouldNotUpdateWhenRevisionChanged(t *testing.T) {
 	sync.mustUpdate(path, updatedData)
 
 	newData := "new_data"
-	swapped, err := sync.CompareAndSwap(ctx, path, newData, sync.ByRevision(initialRev))
-	if err != nil {
-		t.Fatalf("CAS failed: %s", err)
-	}
+	swapped := sync.compareAndSwap(path, newData, sync.ByRevision(initialRev))
 
 	if swapped {
 		t.Fatalf("Value was unexpectedly swapped")
@@ -417,11 +384,7 @@ func TestCASShouldUpdateWhenValueDidNotChange(t *testing.T) {
 	sync.mustUpdate(path, data)
 
 	newData := "new_data"
-	swapped, err := sync.CompareAndSwap(ctx, path, newData, sync.ByValue(data))
-	if err != nil {
-		t.Fatalf("CAS failed: %s", err)
-	}
-
+	swapped := sync.compareAndSwap(path, newData, sync.ByValue(data))
 	if !swapped {
 		t.Fatalf("Value was not swapped")
 	}
@@ -443,11 +406,7 @@ func TestCASShouldNotUpdateWhenValueChanged(t *testing.T) {
 	sync.mustUpdate(path, updatedData)
 
 	newData := "new_data"
-	swapped, err := sync.CompareAndSwap(ctx, path, newData, sync.ByValue(data))
-	if err != nil {
-		t.Fatalf("CAS failed: %s", err)
-	}
-
+	swapped := sync.compareAndSwap(path, newData, sync.ByValue(data))
 	if swapped {
 		t.Fatalf("Value was unexpectedly swapped")
 	}
@@ -468,11 +427,7 @@ func TestCASShouldUpdateWhenValueAndRevisionDidNotChange(t *testing.T) {
 	initialRev := sync.getCurrentRevision(path)
 
 	newData := "new_data"
-	swapped, err := sync.CompareAndSwap(ctx, path, newData, sync.ByValue(data), sync.ByRevision(initialRev))
-	if err != nil {
-		t.Fatalf("CAS failed: %s", err)
-	}
-
+	swapped := sync.compareAndSwap(path, newData, sync.ByValue(data), sync.ByRevision(initialRev))
 	if !swapped {
 		t.Fatalf("Value was not swapped")
 	}
@@ -521,6 +476,15 @@ func (sync *testedSync) mustDelete(path string, prefix bool) {
 	}
 }
 
+func (sync *testedSync) compareAndSwap(path, data string, conds ...gohan_sync.CASCondition) bool {
+	swapped, err := sync.CompareAndSwap(sync.ctx, path, data, conds...)
+	if err != nil {
+		sync.t.Fatalf("CAS failed: %s", err)
+	}
+
+	return swapped
+}
+
 func (sync *testedSync) mustNotExist(path string) {
 	node, err := sync.Fetch(sync.ctx, path)
 	if err == nil || err != KeyNotFound {
@@ -528,9 +492,11 @@ func (sync *testedSync) mustNotExist(path string) {
 	}
 }
 
-func (sync *testedSync) mustExist(path, value string, children int) {
+func (sync *testedSync) mustExist(path, value string, children int) *gohan_sync.Node {
 	node := sync.mustFetch(path)
 	checkNode(node, path, value, children, sync.t)
+
+	return node
 }
 
 func newSync(t *testing.T, ctx context.Context) *testedSync {
