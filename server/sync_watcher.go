@@ -284,52 +284,61 @@ func (watcher *SyncWatcher) processSyncWatch(ctx context.Context, path string) e
 	watchCtx, watchCancel := context.WithCancel(ctx)
 	defer watchCancel()
 	fromRevision := watcher.fetchStoredRevision(ctx, path) + 1
-	respCh := watcher.sync.Watch(watchCtx, path, fromRevision)
-	watchErr := make(chan error, 1)
-	go func() {
-		watcher.updateCounter(1, "running")
-		defer watcher.updateCounter(-1, "running")
-		watchErr <- func() error {
-			for response := range respCh {
-				if response.Err != nil {
-					return response.Err
-				}
-				watcher.watchExtensionHandler(response)
+	eventsCh := watcher.sync.Watch(watchCtx, path, fromRevision)
+	doneCh := make(chan error, 1)
 
-				err := watcher.storeRevision(ctx, path, response.Revision)
-				if err != nil {
-					return err
-				}
-			}
-			return nil
-		}()
-	}()
+	go watcher.consumeEvents(ctx, path, eventsCh, doneCh)
 
 	select {
 	case <-ctx.Done():
-		if err := <-watchErr; err != nil {
+		if err := <-doneCh; err != nil {
 			log.Error("(SyncWatcher) error after done: %s", err)
 		}
 		return ctx.Err()
 	case <-lost:
 		watcher.updateCounter(1, "lock.lost")
 		watchCancel()
-		if err := <-watchErr; err != nil {
+		if err := <-doneCh; err != nil {
 			log.Error("(SyncWatcher) error after lost lock: %s", err)
 		}
 		return fmt.Errorf("lock for path `%s` is lost", path)
-	case err := <-watchErr:
+	case err := <-doneCh:
 		return err
 	}
 }
 
-func (watcher *SyncWatcher) watchExtensionHandler(response *gohan_sync.Event) {
+func (watcher *SyncWatcher) consumeEvents(ctx context.Context, path string, eventCh <-chan *gohan_sync.Event, watchErr chan<- error) {
+	watcher.updateCounter(1, "running")
+	defer watcher.updateCounter(-1, "running")
+
+	var err error
+	defer func() {
+		watchErr <- err
+	}()
+
+	for event := range eventCh {
+		if err = watcher.consumeEvent(ctx, path, event); err != nil {
+			return
+		}
+	}
+}
+
+func (watcher *SyncWatcher) consumeEvent(ctx context.Context, path string, event *gohan_sync.Event) error {
+	if event.Err != nil {
+		return event.Err
+	}
+	watcher.watchExtensionHandler(ctx, event)
+
+	return watcher.storeRevision(ctx, path, event.Revision)
+}
+
+func (watcher *SyncWatcher) watchExtensionHandler(ctx context.Context, response *gohan_sync.Event) {
 	defer l.Panic(log)
 	for _, event := range watcher.watchEvents {
 		//match extensions
 		if strings.HasPrefix(response.Key, "/"+event) {
 			env := watcher.watchExtensions[event]
-			watcher.runExtensionOnSync(response, env.Clone())
+			watcher.runExtensionOnSync(ctx, response, env.Clone())
 			return
 		}
 	}
@@ -368,14 +377,14 @@ func (watcher *SyncWatcher) measureSyncTime(timeStarted time.Time, action string
 }
 
 //Run extension on sync
-func (watcher *SyncWatcher) runExtensionOnSync(response *gohan_sync.Event, env extension.Environment) {
+func (watcher *SyncWatcher) runExtensionOnSync(ctx context.Context, response *gohan_sync.Event, env extension.Environment) {
 	defer watcher.measureSyncTime(time.Now(), response.Action)
 
 	context := map[string]interface{}{
 		"action":   response.Action,
 		"data":     response.Data,
 		"key":      response.Key,
-		"context":  context.TODO(), // change to proper context after SyncWatcher refactoring towards contexts
+		"context":  ctx,
 		"trace_id": util.NewTraceID(),
 	}
 	if err := env.HandleEvent("notification", context); err != nil {
