@@ -44,19 +44,16 @@ type SyncWatcher struct {
 	sync gohan_sync.Sync
 	// list of key names to watch
 	watchKeys []string
-	// list of event names
-	watchEvents []string
-	// map from event naems to VM environments
+	// map from event names to VM environments
 	watchExtensions map[string]extension.Environment
 	backoff         time.Duration
 }
 
 // NewSyncWatcher creates a new instance of syncWatcher
-func NewSyncWatcher(sync gohan_sync.Sync, keys []string, events []string, extensions map[string]extension.Environment) *SyncWatcher {
+func NewSyncWatcher(sync gohan_sync.Sync, keys []string, extensions map[string]extension.Environment) *SyncWatcher {
 	return &SyncWatcher{
 		sync:            sync,
 		watchKeys:       keys,
-		watchEvents:     events,
 		watchExtensions: extensions,
 		backoff:         time.Second * 5,
 	}
@@ -67,7 +64,7 @@ func NewSyncWatcherFromServer(server *Server) *SyncWatcher {
 	config := util.GetConfig()
 	keys := config.GetStringList("watch/keys", []string{})
 	events := config.GetStringList("watch/events", []string{})
-	extensions := map[string]extension.Environment{}
+	extensions := make(map[string]extension.Environment, len(events))
 	for _, event := range events {
 		path := "sync://" + event
 		env, err := server.NewEnvironmentForPath("sync."+event, path)
@@ -77,7 +74,7 @@ func NewSyncWatcherFromServer(server *Server) *SyncWatcher {
 		extensions[event] = env
 	}
 
-	return NewSyncWatcher(server.sync, keys, events, extensions)
+	return NewSyncWatcher(server.sync, keys, extensions)
 }
 
 // Run starts the main loop of the watcher.

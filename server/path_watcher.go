@@ -31,20 +31,18 @@ import (
 )
 
 type PathWatcher struct {
-	sync          gohan_sync.Sync
-	priority      int
-	path          string
-	watchedEvents []string
-	extensions    map[string]extension.Environment
+	sync       gohan_sync.Sync
+	priority   int
+	path       string
+	extensions map[string]extension.Environment
 }
 
 func NewPathWatcher(parent *SyncWatcher, path string, priority int) *PathWatcher {
 	return &PathWatcher{
-		sync:          parent.sync,
-		watchedEvents: parent.watchEvents,
-		extensions:    parent.watchExtensions,
-		priority:      priority,
-		path:          path,
+		sync:       parent.sync,
+		extensions: parent.watchExtensions,
+		priority:   priority,
+		path:       path,
 	}
 }
 
@@ -151,10 +149,8 @@ func (watcher *PathWatcher) consumeEvent(ctx context.Context, event *gohan_sync.
 
 func (watcher *PathWatcher) watchExtensionHandler(ctx context.Context, response *gohan_sync.Event) {
 	defer l.Panic(log)
-	for _, event := range watcher.watchedEvents {
-		//match extensions
+	for event, env := range watcher.extensions {
 		if strings.HasPrefix(response.Key, "/"+event) {
-			env := watcher.extensions[event]
 			watcher.runExtensionOnSync(ctx, response, env.Clone())
 			return
 		}
