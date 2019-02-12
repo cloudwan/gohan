@@ -37,10 +37,10 @@ type PathWatcher struct {
 	extensions map[string]extension.Environment
 }
 
-func NewPathWatcher(parent *SyncWatcher, path string, priority int) *PathWatcher {
+func NewPathWatcher(sync gohan_sync.Sync, extensions map[string]extension.Environment, path string, priority int) *PathWatcher {
 	return &PathWatcher{
-		sync:       parent.sync,
-		extensions: parent.watchExtensions,
+		sync:       sync,
+		extensions: extensions,
 		priority:   priority,
 		path:       path,
 	}

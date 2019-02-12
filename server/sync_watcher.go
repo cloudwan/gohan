@@ -222,7 +222,7 @@ func (watcher *SyncWatcher) runSyncWatches(ctx context.Context, size int, positi
 		prio := (position - (idx % size) + size) % size
 		log.Debug("(SyncWatch) Priority of `%s`: `%d`", path, prio)
 
-		pathWatcher := NewPathWatcher(watcher, path, prio)
+		pathWatcher := NewPathWatcher(watcher.sync, watcher.watchExtensions, path, prio)
 
 		go func(ctx context.Context, wg *sync.WaitGroup, pw *PathWatcher) {
 			pw.Run(ctx, wg)
