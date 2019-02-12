@@ -132,21 +132,9 @@ func (watcher *PathWatcher) consumeEvents(ctx context.Context, eventCh <-chan *g
 	}()
 
 	for event := range eventCh {
-		// On cancel(), stop processing immediately even if there are some pending events.
-		// The above sentence is not true. Before the "lock is lost" message propagates
-		// to ctx, we may process an arbitrary number of events. Still, an early exit
-		// lowers the number of events processed twice: on the old and new leader.
-		// This problem can't be fixed with etcd, we need a proper queue implementation.
-		select {
-		case <-ctx.Done():
-			return
-		default:
-		}
-
 		if err = watcher.consumeEvent(ctx, event); err != nil {
 			return
 		}
-
 	}
 }
 
