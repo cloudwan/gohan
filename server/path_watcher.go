@@ -80,12 +80,12 @@ func (watcher *PathWatcher) Run(ctx context.Context, wg *sync.WaitGroup) {
 // run handles events on a path with a handler.
 // Returns any error or context cancel.
 // This method gets a lock on the sync backend and returns with an error when fails.
-func (watcher *PathWatcher) run(ctx context.Context) error {
+func (watcher *PathWatcher) run(parentCtx context.Context) error {
 	watcher.updateCounter(1, "active")
 	defer watcher.updateCounter(-1, "active")
 
 	lockKey := lockPath + "/watch" + watcher.path
-	lost, err := watcher.sync.Lock(ctx, lockKey, false)
+	lost, err := watcher.sync.Lock(parentCtx, lockKey, false)
 	if err != nil {
 		return errLockFailed
 	}
@@ -96,10 +96,10 @@ func (watcher *PathWatcher) run(ctx context.Context) error {
 		}
 	}()
 
-	watchCtx, watchCancel := context.WithCancel(ctx)
-	defer watchCancel()
-	fromRevision := watcher.fetchStoredRevision(ctx) + 1
-	eventsCh := watcher.sync.Watch(watchCtx, watcher.path, fromRevision)
+	ctx, cancel := context.WithCancel(parentCtx)
+	defer cancel()
+	fromRevision := watcher.fetchStoredRevision(parentCtx) + 1
+	eventsCh := watcher.sync.Watch(ctx, watcher.path, fromRevision)
 	doneCh := make(chan error, 1)
 
 	go watcher.consumeEvents(ctx, eventsCh, doneCh)
@@ -107,12 +107,12 @@ func (watcher *PathWatcher) run(ctx context.Context) error {
 	select {
 	case <-ctx.Done():
 		if err := <-doneCh; err != nil {
-			log.Error("(PathWatcher) error after done: %s", err)
+			log.Error("(PathWatcher) consuming events failed: %s", err)
 		}
 		return ctx.Err()
 	case <-lost:
 		watcher.updateCounter(1, "lock.lost")
-		watchCancel()
+		cancel()
 		if err := <-doneCh; err != nil {
 			log.Error("(PathWatcher) error after lost lock: %s", err)
 		}
@@ -132,9 +132,21 @@ func (watcher *PathWatcher) consumeEvents(ctx context.Context, eventCh <-chan *g
 	}()
 
 	for event := range eventCh {
+		// On cancel(), stop processing immediately even if there are some pending events.
+		// The above sentence is not true. Before the "lock is lost" message propagates
+		// to ctx, we may process an arbitrary number of events. Still, an early exit
+		// lowers the number of events processed twice: on the old and new leader.
+		// This problem can't be fixed with etcd, we need a proper queue implementation.
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
 		if err = watcher.consumeEvent(ctx, event); err != nil {
 			return
 		}
+
 	}
 }
 
