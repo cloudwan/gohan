@@ -1372,6 +1372,30 @@ schemas:
       - accessibility
       - block_flag
   title: Target of attach
+
+- description: Owned resource
+  id: owned_resource
+  singular: owned_resource
+  plural: owned_resource
+  prefix: /v2.0
+  schema:
+    properties:
+      id:
+        description: ID
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: true
+      tenant_id:
+        description: Tenant ID
+        permission:
+          - create
+        title: TenantID
+        type: string
+        unique: false
+  title: Owned resource
+
 - description: Schema that is not synced
   id: not_synced
   singular: not_synced

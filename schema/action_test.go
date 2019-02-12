@@ -41,9 +41,11 @@ func emptyAction() Action {
 		"GET",
 		"/empty/",
 		"empty action",
+		"",
 		nil,
 		nil,
 		nil,
+		false,
 	)
 }
 
@@ -53,6 +55,7 @@ func noInputTypeAction() Action {
 		"GET",
 		"/noInputType/:id/",
 		"action with no input type",
+		"",
 		map[string]interface{}{
 			"properties": map[string]interface{}{
 				"a": map[string]interface{}{
@@ -63,6 +66,7 @@ func noInputTypeAction() Action {
 		},
 		nil,
 		nil,
+		false,
 	)
 }
 
@@ -72,11 +76,13 @@ func invalidInputTypeAction() Action {
 		"GET",
 		"/invalidType",
 		"action with invalid input type",
+		"",
 		map[string]interface{}{
 			"type": struct{}{},
 		},
 		nil,
 		nil,
+		false,
 	)
 }
 
@@ -86,12 +92,14 @@ func invalidPropertiesType() Action {
 		"GET",
 		"/invalidPropertiesType/",
 		"action with invalid input properties type",
+		"",
 		map[string]interface{}{
 			"type":       "object",
 			"properties": "abc",
 		},
 		nil,
 		nil,
+		false,
 	)
 }
 
@@ -101,6 +109,7 @@ func invalidProperties() Action {
 		"GET",
 		"/invalidProperties/",
 		"action with invalid input properties",
+		"",
 		map[string]interface{}{
 			"type": "object",
 			"properties": map[string]interface{}{
@@ -115,6 +124,7 @@ func invalidProperties() Action {
 		},
 		nil,
 		nil,
+		false,
 	)
 }
 
@@ -124,6 +134,7 @@ func validAction() Action {
 		"GET",
 		"/valid/:id/action/",
 		"valid action",
+		"",
 		map[string]interface{}{
 			"type": "object",
 			"properties": map[string]interface{}{
@@ -145,6 +156,7 @@ func validAction() Action {
 		},
 		nil,
 		nil,
+		false,
 	)
 }
 

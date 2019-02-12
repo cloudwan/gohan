@@ -90,6 +90,7 @@ func Logging() martini.Handler {
 		log.Info("[%s] Started %s %s for client %s data: %s",
 			requestContext["trace_id"], req.Method, req.URL.String(), addr, string(reqData))
 		log.Debug("[%s] Request headers: %v", requestContext["trace_id"], filterHeaders(req.Header))
+		log.Debug("[%s] Request cookies: %v", requestContext["trace_id"], filterCookies(req.Cookies()))
 		log.Debug("[%s] Request body: %s", requestContext["trace_id"], string(reqData))
 
 		rh := newResponseHijacker(rw.(martini.ResponseWriter))
@@ -123,11 +124,27 @@ func Metrics() martini.Handler {
 func filterHeaders(headers http.Header) http.Header {
 	filtered := http.Header{}
 	for k, v := range headers {
-		if k == "X-Auth-Token" {
+		if k == "X-Auth-Token" || k == "Cookie" {
 			filtered[k] = []string{"***"}
 			continue
 		}
 		filtered[k] = v
+	}
+
+	return filtered
+}
+
+func filterCookies(cookies []*http.Cookie) []*http.Cookie {
+	filtered := make([]*http.Cookie, 0, len(cookies))
+	for _, cookie := range cookies {
+		if cookie.Name == "Auth-Token" {
+			newCookie := &http.Cookie{}
+			*newCookie = *cookie
+			cookie = newCookie
+
+			cookie.Value = "***"
+		}
+		filtered = append(filtered, cookie)
 	}
 	return filtered
 }
@@ -321,7 +338,6 @@ func Authentication() martini.Handler {
 		}
 
 		auth, err := authenticate(req, identityService, nobodyResourceService)
-
 		if err != nil {
 			HTTPJSONError(res, err.Error(), http.StatusUnauthorized)
 			return
@@ -360,7 +376,13 @@ func hasAuthToken(req *http.Request) bool {
 }
 
 func getAuthToken(req *http.Request) string {
-	return req.Header.Get("X-Auth-Token")
+	authToken := req.Header.Get("X-Auth-Token")
+	if authToken == "" {
+		if authTokenCookie, err := req.Cookie("Auth-Token"); err == nil {
+			authToken = authTokenCookie.Value
+		}
+	}
+	return authToken
 }
 
 //Context type
