@@ -5,6 +5,8 @@ jobs:
     docker:
       - image: circleci/golang:1.11.4
     working_directory: /go/src/github.com/cloudwan/gohan
+    environment:
+        GO111MODULE: 'on'
     steps:
       - checkout
       - run: go version
@@ -13,6 +15,8 @@ jobs:
     docker:
       - image: circleci/golang:1.11.4
     working_directory: /go/src/github.com/cloudwan/gohan
+    environment:
+        GO111MODULE: 'on'
     steps:
       - checkout
       - run: curl -L https://github.com/coreos/etcd/releases/download/v3.1.7/etcd-v3.1.7-linux-amd64.tar.gz -o etcd-v3.1.7-linux-amd64.tar.gz
