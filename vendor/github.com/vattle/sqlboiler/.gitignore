@@ -1,6 +1,0 @@
-/sqlboiler
-/cmd/sqlboiler/sqlboiler
-sqlboiler.toml
-models/
-testschema.sql
-.cover
