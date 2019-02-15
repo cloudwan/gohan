@@ -1384,7 +1384,7 @@ schemas:
 - description: Owned resource
   id: owned_resource
   singular: owned_resource
-  plural: owned_resource
+  plural: owned_resources
   prefix: /v2.0
   schema:
     properties:
