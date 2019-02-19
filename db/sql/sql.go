@@ -567,7 +567,8 @@ func (db *DB) DropTable(s *schema.Schema) error {
 }
 
 func (tx *Transaction) logQuery(sql string, args ...interface{}) {
-	sqlFormat := strings.Replace(sql, "?", "%s", -1)
+	sqlFormat := strings.Replace(sql, "%", "%%", -1)
+	sqlFormat = strings.Replace(sqlFormat, "?", "%s", -1)
 	query := fmt.Sprintf(sqlFormat, args...)
 	tx.log.Debug("[%p] Executing SQL query '%s'", tx.transaction, query)
 }
@@ -962,7 +963,7 @@ func (tx *Transaction) Query(ctx context.Context, s *schema.Schema, query string
 	tx.logQuery(query, arguments...)
 	rows, err := tx.transaction.QueryxContext(safeMysqlContext(ctx), query, arguments...)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to run query: %s", query)
+		return nil, fmt.Errorf("Failed to run query: %s, %s", query, err)
 	}
 
 	defer rows.Close()
