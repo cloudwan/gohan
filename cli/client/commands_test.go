@@ -27,9 +27,11 @@ func idAction() schema.Action {
 		"GET",
 		"/id/:id/",
 		"action with id",
+		"",
 		nil,
 		nil,
 		nil,
+		false,
 	)
 }
 
@@ -39,11 +41,13 @@ func inputAction() schema.Action {
 		"GET",
 		"/input/",
 		"action with input",
+		"",
 		map[string]interface{}{
 			"type": "boolean",
 		},
 		nil,
 		nil,
+		false,
 	)
 }
 
@@ -53,6 +57,7 @@ func idInputAction() schema.Action {
 		"GET",
 		"/input/:id/",
 		"action with input and id",
+		"",
 		map[string]interface{}{
 			"type": "object",
 			"properties": map[string]interface{}{
@@ -66,6 +71,7 @@ func idInputAction() schema.Action {
 		},
 		nil,
 		nil,
+		false,
 	)
 }
 

@@ -385,7 +385,7 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 			addJSONContentTypeHeader(w)
 			id := p["id"]
 			input := make(map[string]interface{})
-			if action.InputSchema != nil {
+			if action.InputSchema != nil && action.Protocol == "" {
 				var err error
 				input, err = middleware.ReadJSON(r)
 				if err != nil {
@@ -400,7 +400,7 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 			path := r.URL.Path
 			policy, role := manager.PolicyValidate(action.ID, s.GetPluralURL(), auth)
 			if policy == nil {
-				middleware.HTTPJSONError(w, fmt.Sprintf("No matching policy: %s %s %s", action, path, s.Actions), http.StatusUnauthorized)
+				middleware.HTTPJSONError(w, fmt.Sprintf("No matching policy: %s %s %v", action.ID, path, s.Actions), http.StatusUnauthorized)
 				return
 			}
 			context["policy"] = policy
@@ -412,7 +412,10 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 				handleError(w, err)
 				return
 			}
-			routes.ServeJson(w, context["response"])
+
+			if response, ok := context["response"]; ok {
+				routes.ServeJson(w, response)
+			}
 		}
 		route.AddRoute(action.Method, s.GetActionURL(action.Path), ActionFunc)
 		if s.ParentSchema != nil {
