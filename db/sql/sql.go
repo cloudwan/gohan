@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	sq "github.com/Masterminds/squirrel"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/pagination"
 	"github.com/cloudwan/gohan/db/transaction"
@@ -34,14 +35,11 @@ import (
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
 	"github.com/jmoiron/sqlx"
-	sq "github.com/lann/squirrel"
 
 	// Import mysql lib
 	_ "github.com/go-sql-driver/mysql"
 	// Import go-sqlite3 lib
 	_ "github.com/mattn/go-sqlite3"
-	// Import go-fakedb lib
-	_ "github.com/nati/go-fakedb"
 	"github.com/pkg/errors"
 )
 

@@ -82,7 +82,7 @@ var _ = Describe("Error", func() {
 		It("Should capture correct stack", func() {
 			error := goext.NewErrorInternalServerError(errors.New("test error"))
 			_, _, line, _ := runtime.Caller(0)
-			Expect(error.Origin).To(HaveSuffix(fmt.Sprintf("github.com/cloudwan/gohan/extension/goext/error_test.go:%d", line-1)))
+			Expect(error.Origin).To(HaveSuffix(fmt.Sprintf("/extension/goext/error_test.go:%d", line-1)))
 		})
 
 		It("Should capture full stack for wrapped errors", func() {
