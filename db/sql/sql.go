@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	sq "github.com/Masterminds/squirrel"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/pagination"
 	"github.com/cloudwan/gohan/db/transaction"
@@ -34,14 +35,11 @@ import (
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
 	"github.com/jmoiron/sqlx"
-	sq "github.com/lann/squirrel"
 
 	// Import mysql lib
 	_ "github.com/go-sql-driver/mysql"
 	// Import go-sqlite3 lib
 	_ "github.com/mattn/go-sqlite3"
-	// Import go-fakedb lib
-	_ "github.com/nati/go-fakedb"
 	"github.com/pkg/errors"
 )
 
@@ -567,7 +565,8 @@ func (db *DB) DropTable(s *schema.Schema) error {
 }
 
 func (tx *Transaction) logQuery(sql string, args ...interface{}) {
-	sqlFormat := strings.Replace(sql, "?", "%s", -1)
+	sqlFormat := strings.Replace(sql, "%", "%%", -1)
+	sqlFormat = strings.Replace(sqlFormat, "?", "%s", -1)
 	query := fmt.Sprintf(sqlFormat, args...)
 	tx.log.Debug("[%p] Executing SQL query '%s'", tx.transaction, query)
 }
@@ -962,7 +961,7 @@ func (tx *Transaction) Query(ctx context.Context, s *schema.Schema, query string
 	tx.logQuery(query, arguments...)
 	rows, err := tx.transaction.QueryxContext(safeMysqlContext(ctx), query, arguments...)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to run query: %s", query)
+		return nil, fmt.Errorf("Failed to run query: %s, %s", query, err)
 	}
 
 	defer rows.Close()

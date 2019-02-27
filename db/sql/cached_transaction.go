@@ -23,14 +23,12 @@ import (
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
 
+	"github.com/cloudwan/gohan/metrics"
 	// Import mysql lib
 	_ "github.com/go-sql-driver/mysql"
 	// Import go-sqlite3 lib
 	_ "github.com/mattn/go-sqlite3"
-	// Import go-fakedb lib
-	"github.com/cloudwan/gohan/metrics"
 	"github.com/mitchellh/hashstructure"
-	_ "github.com/nati/go-fakedb"
 )
 
 type CachedState struct {

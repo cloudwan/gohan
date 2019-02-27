@@ -2108,8 +2108,8 @@ var _ = Describe("Resource manager", func() {
 					},
 				},
 			}
-			fakeAction = schema.NewAction("fake_action", "GET", "/:id/whatever", "", inputSchema, nil, nil)
-			fakeActionWithoutInput = schema.NewAction("fake_action", "GET", "/:id/whatever", "", nil, nil, nil)
+			fakeAction = schema.NewAction("fake_action", "GET", "/:id/whatever", "", "", inputSchema, nil, nil, false)
+			fakeActionWithoutInput = schema.NewAction("fake_action", "GET", "/:id/whatever", "", "", nil, nil, nil, false)
 		})
 
 		// Actions do not care resource existence or tenant ownership

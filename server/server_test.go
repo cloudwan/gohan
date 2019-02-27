@@ -31,14 +31,14 @@ import (
 
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/dbutil"
-	"github.com/cloudwan/gohan/db/mocks"
+	mock_db "github.com/cloudwan/gohan/db/mocks"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
 	srv "github.com/cloudwan/gohan/server"
 	"github.com/cloudwan/gohan/server/middleware"
 	"github.com/cloudwan/gohan/sync"
-	"github.com/cloudwan/gohan/sync/mocks"
+	mock_sync "github.com/cloudwan/gohan/sync/mocks"
 	sync_util "github.com/cloudwan/gohan/sync/util"
 	"github.com/cloudwan/gohan/util"
 	"github.com/cloudwan/gohan/version"
@@ -74,6 +74,7 @@ const (
 	attacherWildcardPluralURL          = baseURL + "/v2.0/wildcard_attachers"
 	attacherNestedPluralURL            = baseURL + "/v2.0/nested_attachers"
 	attachTargetPluralURL              = baseURL + "/v2.0/attach_targets"
+	ownedResourcePluralURL             = baseURL + "/v2.0/owned_resources"
 )
 
 var _ = Describe("Server package test", func() {
@@ -456,7 +457,7 @@ var _ = Describe("Server package test", func() {
 			Expect(result).To(HaveKeyWithValue("network", networkExpected))
 
 			result = testURL("GET", baseURL+"/_all", memberTokenID, nil, http.StatusOK)
-			Expect(result).To(HaveLen(13))
+			Expect(result).To(HaveLen(14))
 			Expect(result).To(HaveKeyWithValue("networks", []interface{}{networkExpected}))
 			Expect(result).To(HaveKey("schemas"))
 			Expect(result).To(HaveKey("tests"))
@@ -466,6 +467,7 @@ var _ = Describe("Server package test", func() {
 			Expect(result).To(HaveKey("attach_targets"))
 			Expect(result).To(HaveKey("blacklisted_tenant_ids"))
 			Expect(result).To(HaveKey("domain_owner_tests"))
+			Expect(result).To(HaveKey("owned_resources"))
 
 			testURL("GET", baseURL+"/v2.0/network/unknownID", memberTokenID, nil, http.StatusNotFound)
 
@@ -755,6 +757,44 @@ var _ = Describe("Server package test", func() {
 				}
 				testURL("POST", visibilityTestPluralURL, adminTokenID, resource, http.StatusCreated)
 				testURL("DELETE", visibilityTestPluralURL+"/test", memberTokenID, nil, http.StatusUnauthorized)
+			})
+		})
+
+		Describe("Authorization token provision methods", func() {
+			var (
+				resourcePath string
+			)
+
+			BeforeEach(func() {
+				resourceData := map[string]interface{}{
+					"id":        "test_resource",
+					"tenant_id": memberTenantID,
+				}
+				testURL("POST", ownedResourcePluralURL, adminTokenID, resourceData, http.StatusCreated)
+
+				s, _ := schema.GetManager().Schema("owned_resource")
+				resourcePath = baseURL + s.URL + "/test_resource"
+			})
+
+			It("should not authenticate if no token is provided", func() {
+				testURLWithCustomOptions("GET", resourcePath, nil, http.StatusUnauthorized)
+			})
+
+			It("should authorize if token is provided through X-Auth-Token header", func() {
+				testURLWithCustomOptions("GET", resourcePath, nil, http.StatusOK,
+					withTokenPassedByHeader(memberTokenID))
+			})
+
+			It("should authorize if token is provided through Auth-Token cookie", func() {
+				testURLWithCustomOptions("GET", resourcePath, nil, http.StatusOK,
+					withTokenPassedByCookie(memberTokenID))
+			})
+
+			It("should give precedence to the header-provided token", func() {
+				testURLWithCustomOptions("GET", resourcePath, nil, http.StatusNotFound,
+					withTokenPassedByHeader(powerUserTokenID), withTokenPassedByCookie(memberTokenID))
+				testURLWithCustomOptions("GET", resourcePath, nil, http.StatusOK,
+					withTokenPassedByHeader(memberTokenID), withTokenPassedByCookie(powerUserTokenID))
 			})
 		})
 	})
@@ -1781,7 +1821,11 @@ func getSubnetFullPluralURL(networkColor string) string {
 }
 
 func testURL(method, url, token string, postData interface{}, expectedCode int) interface{} {
-	data, resp := httpRequest(method, url, token, postData)
+	return testURLWithCustomOptions(method, url, postData, expectedCode, withTokenPassedByHeader(token))
+}
+
+func testURLWithCustomOptions(method, url string, postData interface{}, expectedCode int, options ...httpRequestOption) interface{} {
+	data, resp := httpRequestWithCustomOptions(method, url, postData, options...)
 	jsonData, _ := json.MarshalIndent(data, "", "    ")
 	ExpectWithOffset(1, resp.StatusCode).To(Equal(expectedCode), string(jsonData))
 	return data
@@ -1795,7 +1839,29 @@ func testURLErrorMessage(method, url, token string, postData interface{}, expect
 	return data
 }
 
+type httpRequestOption func(request *http.Request)
+
+func withTokenPassedByHeader(token string) httpRequestOption {
+	return func(request *http.Request) {
+		request.Header.Set("X-Auth-Token", token)
+	}
+}
+
+func withTokenPassedByCookie(token string) httpRequestOption {
+	return func(request *http.Request) {
+		cookie := &http.Cookie{
+			Name:  "Auth-Token",
+			Value: token,
+		}
+		request.AddCookie(cookie)
+	}
+}
+
 func httpRequest(method, url, token string, postData interface{}) (interface{}, *http.Response) {
+	return httpRequestWithCustomOptions(method, url, postData, withTokenPassedByHeader(token))
+}
+
+func httpRequestWithCustomOptions(method, url string, postData interface{}, options ...httpRequestOption) (interface{}, *http.Response) {
 	client := &http.Client{}
 	var reader io.Reader
 	if postData != nil {
@@ -1805,7 +1871,11 @@ func httpRequest(method, url, token string, postData interface{}) (interface{}, 
 	}
 	request, err := http.NewRequest(method, url, reader)
 	Expect(err).ToNot(HaveOccurred())
-	request.Header.Set("X-Auth-Token", token)
+
+	for _, op := range options {
+		op(request)
+	}
+
 	var data interface{}
 	resp, err := client.Do(request)
 	Expect(err).ToNot(HaveOccurred())

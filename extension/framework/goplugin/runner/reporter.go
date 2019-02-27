@@ -24,6 +24,7 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/onsi/ginkgo/config"
 	"github.com/onsi/ginkgo/reporters/stenographer"
+	"github.com/onsi/ginkgo/reporters/stenographer/support/go-colorable"
 	"github.com/onsi/ginkgo/types"
 )
 
@@ -114,7 +115,7 @@ func (reporter *Reporter) Report() {
 	fmt.Println("Failures:")
 	fmt.Println()
 
-	steno := stenographer.New(true, true)
+	steno := stenographer.New(true, true, colorable.NewColorableStdout())
 
 	for _, spec := range reporter.specs {
 		steno.AnnounceCapturedOutput(spec.CapturedOutput)

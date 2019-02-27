@@ -23,25 +23,29 @@ import (
 
 // Action struct
 type Action struct {
-	ID           string
-	Method       string
-	Path         string
-	Description  string
-	InputSchema  map[string]interface{}
-	OutputSchema map[string]interface{}
-	Parameters   map[string]interface{}
+	ID                   string
+	Method               string
+	Path                 string
+	Description          string
+	InputSchema          map[string]interface{}
+	OutputSchema         map[string]interface{}
+	Parameters           map[string]interface{}
+	HasResponseOwnership bool
+	Protocol             string
 }
 
 // NewAction create Action
-func NewAction(id, method, path, description string, inputSchema, outputSchema, parameters map[string]interface{}) Action {
+func NewAction(id, method, path, description, protocol string, inputSchema, outputSchema, parameters map[string]interface{}, hasResponseOwnership bool) Action {
 	return Action{
-		ID:           id,
-		Method:       method,
-		Path:         path,
-		Description:  description,
-		InputSchema:  inputSchema,
-		OutputSchema: outputSchema,
-		Parameters:   parameters,
+		ID:                   id,
+		Method:               method,
+		Path:                 path,
+		Description:          description,
+		InputSchema:          inputSchema,
+		OutputSchema:         outputSchema,
+		Parameters:           parameters,
+		HasResponseOwnership: hasResponseOwnership,
+		Protocol:             protocol,
 	}
 }
 
@@ -54,7 +58,9 @@ func NewActionFromObject(id string, rawData interface{}) (Action, error) {
 	inputSchema, _ := actionData["input"].(map[string]interface{})
 	outputSchema, _ := actionData["output"].(map[string]interface{})
 	parameters, _ := actionData["parameters"].(map[string]interface{})
-	return NewAction(id, method, path, description, inputSchema, outputSchema, parameters), nil
+	hasResponseOwnership, _ := actionData["has_response_ownership"].(bool)
+	protocol, _ := actionData["protocol"].(string)
+	return NewAction(id, method, path, description, protocol, inputSchema, outputSchema, parameters, hasResponseOwnership), nil
 }
 
 // TakesID checks if action takes ID as a parameter

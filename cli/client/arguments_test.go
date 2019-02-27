@@ -35,11 +35,13 @@ func getBoolAction() schema.Action {
 		"GET",
 		"/bool/",
 		"action with input type bool",
+		"",
 		map[string]interface{}{
 			"type": "boolean",
 		},
 		nil,
 		nil,
+		false,
 	)
 }
 
@@ -49,6 +51,7 @@ func getObjectAction() schema.Action {
 		"GET",
 		"/object/",
 		"action with input type object",
+		"",
 		map[string]interface{}{
 			"type": "object",
 			"properties": map[string]interface{}{
@@ -62,6 +65,7 @@ func getObjectAction() schema.Action {
 		},
 		nil,
 		nil,
+		false,
 	)
 }
 

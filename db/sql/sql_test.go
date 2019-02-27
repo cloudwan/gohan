@@ -22,6 +22,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Masterminds/squirrel"
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/dbutil"
 	"github.com/cloudwan/gohan/db/initializer"
@@ -30,7 +31,6 @@ import (
 	. "github.com/cloudwan/gohan/db/sql"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
-	"github.com/lann/squirrel"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
