@@ -1214,7 +1214,7 @@ func AddFilterToQuery(s *schema.Schema, q sq.SelectBuilder, filter map[string]in
 			}
 			q = q.Where(sq.Eq{column: v})
 		} else {
-			q = q.Where(sq.Eq{column: value})
+			q = q.Where(sq.Like{column: string("%"+value.([]string)[0]+"%")})
 		}
 	}
 	return q, nil
