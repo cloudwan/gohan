@@ -894,11 +894,8 @@ func UpdateResourceInTransaction(
 		return ResourceError{err, "", Unauthorized}
 	}
 
-	err = resource.Update(dataMap)
-	if err != nil {
-		return ResourceError{err, err.Error(), WrongData}
-	}
-	context["resource"] = resource.Data()
+	data := resource.Update(dataMap)
+	context["resource"] = data
 
 	if err := extension.HandleEvent(context, environment, "pre_update_in_transaction", resourceSchema.ID); err != nil {
 		return err

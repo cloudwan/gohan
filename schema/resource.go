@@ -117,8 +117,11 @@ func (resource *Resource) String() string {
 }
 
 //Update resource data
-func (resource *Resource) Update(updateData map[string]interface{}) error {
-	data := resource.properties
+func (resource *Resource) Update(updateData map[string]interface{}) map[string]interface{} {
+	data := make(map[string]interface{}, len(resource.properties))
+	for key, value := range resource.properties {
+		data[key] = value
+	}
 	for _, property := range resource.schema.Properties {
 		id := property.ID
 
@@ -126,7 +129,7 @@ func (resource *Resource) Update(updateData map[string]interface{}) error {
 			data[id] = updateResourceRecursion(val, data[id])
 		}
 	}
-	return nil
+	return data
 }
 
 //Data already validated
