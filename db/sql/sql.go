@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -1213,7 +1214,9 @@ func AddFilterToQuery(s *schema.Schema, q sq.SelectBuilder, filter map[string]in
 				v[i], _ = strconv.ParseBool(j)
 			}
 			q = q.Where(sq.Eq{column: v})
-		} else {
+		} else if reflect.TypeOf(value).String() == "[]string"{
+			q = q.Where(sq.Like{column: "%"+value.([]string)[0]+"%"})
+		} else{
 			q = q.Where(sq.Eq{column: value})
 		}
 	}
