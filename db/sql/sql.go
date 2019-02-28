@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"reflect"
 	"strings"
 	"time"
 
@@ -1213,7 +1214,9 @@ func AddFilterToQuery(s *schema.Schema, q sq.SelectBuilder, filter map[string]in
 				v[i], _ = strconv.ParseBool(j)
 			}
 			q = q.Where(sq.Eq{column: v})
-		} else {
+		} else if reflect.TypeOf(value).String() == "string" {
+			q = q.Where(sq.Like{column: value})
+		}  else{
 			q = q.Where(sq.Like{column: string("%"+value.([]string)[0]+"%")})
 		}
 	}
