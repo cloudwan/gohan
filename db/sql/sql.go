@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"math"
 	"strconv"
-	"reflect"
 	"strings"
 	"time"
 
@@ -1214,11 +1213,8 @@ func AddFilterToQuery(s *schema.Schema, q sq.SelectBuilder, filter map[string]in
 				v[i], _ = strconv.ParseBool(j)
 			}
 			q = q.Where(sq.Eq{column: v})
-		//} else if reflect.TypeOf(value).String() == "string" || reflect.TypeOf(value).String() == "bool"{
-		//	q = q.Where(sq.Like{column: value})
-		//}  
-		}else{
-			q = q.Where(sq.Like{column: value})
+		} else {
+			q = q.Where(sq.Eq{column: value})
 		}
 	}
 	return q, nil
