@@ -250,7 +250,6 @@ func TestWatchWithRevision(t *testing.T) {
 	if resp.Key != path+"/third" || resp.Data["existing"].(bool) != false || resp.Revision != thirdRevision {
 		t.Fatalf("mismatch response: %+v, expecting /third, existing==false, revision==%d", resp, thirdRevision)
 	}
-
 }
 
 func TestFetchMultipleNodes(t *testing.T) {

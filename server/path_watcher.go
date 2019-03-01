@@ -99,6 +99,7 @@ func (watcher *PathWatcher) run(parentCtx context.Context) error {
 	ctx, cancel := context.WithCancel(parentCtx)
 	defer cancel()
 	fromRevision := watcher.fetchStoredRevision(parentCtx) + 1
+	log.Warning("will start at %d", fromRevision)
 	eventsCh := watcher.sync.Watch(ctx, watcher.path, fromRevision)
 	doneCh := make(chan error, 1)
 
@@ -132,13 +133,17 @@ func (watcher *PathWatcher) consumeEvents(ctx context.Context, eventCh <-chan *g
 	}()
 
 	for event := range eventCh {
+		log.Warning("[for] got %+v", event)
 		if err = watcher.consumeEvent(ctx, event); err != nil {
 			return
 		}
 	}
+
+	log.Warning("[for] done")
 }
 
 func (watcher *PathWatcher) consumeEvent(ctx context.Context, event *gohan_sync.Event) error {
+	log.Warning("[consume] got %+v", event)
 	if event.Err != nil {
 		return event.Err
 	}
@@ -148,6 +153,8 @@ func (watcher *PathWatcher) consumeEvent(ctx context.Context, event *gohan_sync.
 }
 
 func (watcher *PathWatcher) watchExtensionHandler(ctx context.Context, response *gohan_sync.Event) {
+	log.Warning("[watch] got %+v", response)
+
 	defer l.Panic(log)
 	for event, env := range watcher.extensions {
 		if strings.HasPrefix(response.Key, "/"+event) {
@@ -191,6 +198,8 @@ func (watcher *PathWatcher) measureTime(timeStarted time.Time, action string) {
 
 //Run extension on sync
 func (watcher *PathWatcher) runExtensionOnSync(ctx context.Context, response *gohan_sync.Event, env extension.Environment) {
+	log.Warning("[run] got %+v", response)
+
 	defer watcher.measureTime(time.Now(), response.Action)
 
 	context := map[string]interface{}{
@@ -201,8 +210,7 @@ func (watcher *PathWatcher) runExtensionOnSync(ctx context.Context, response *go
 		"trace_id": util.NewTraceID(),
 	}
 	if err := env.HandleEvent("notification", context); err != nil {
-		log.Error(fmt.Sprintf("(PathWatcher) extension error, last processed event may be lost: %s", err))
-		return
+		log.Error("(PathWatcher) extension error, last processed event may be lost: %s", err)
 	}
 	return
 }

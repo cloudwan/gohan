@@ -374,6 +374,8 @@ func (s *Sync) watch(ctx context.Context, path string, responseChan chan *sync.E
 		node, err = s.etcdClient.Get(ctx, path, options...)
 	})
 
+	log.Warning("got %+v", node)
+
 	if err != nil {
 		updateCounter(1, "watch.get.error")
 		return err
@@ -445,6 +447,7 @@ func (s *Sync) watch(ctx context.Context, path string, responseChan chan *sync.E
 
 // Watch keep watch update under the path until context is canceled
 func (s *Sync) Watch(ctx context.Context, path string, revision int64) <-chan *sync.Event {
+	log.Warning("starting with %d", revision)
 	eventCh := make(chan *sync.Event, 32)
 	watchDoneCh := make(chan error, 1)
 	go func() {

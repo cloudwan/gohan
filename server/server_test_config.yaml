@@ -34,8 +34,8 @@ profiling:
 
 logging:
   stderr:
-    enabled: false
-    level: ERROR
+    enabled: true
+    level: INFO
 
 watch:
   keys:
