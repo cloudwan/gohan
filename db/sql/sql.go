@@ -1214,7 +1214,7 @@ func AddFilterToQuery(s *schema.Schema, q sq.SelectBuilder, filter map[string]in
 				v[i], _ = strconv.ParseBool(j)
 			}
 			q = q.Where(sq.Eq{column: v})
-		} else if reflect.TypeOf(value).String() == "[]string" && len(queryValues) ==1{
+		} else if reflect.TypeOf(value).String() == "[]string" && len(queryValues) ==1 && !s.SearchLikeDisabled(){
 			q = q.Where(sq.Like{column: "%"+value.([]string)[0]+"%"})
 		} else{
 			q = q.Where(sq.Eq{column: value})

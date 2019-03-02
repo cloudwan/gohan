@@ -483,6 +483,19 @@ func (schema *Schema) StateVersioning() bool {
 	return stateful
 }
 
+//Disable like search wheter to use substring search or full string search on column values
+func (schema *Schema) SearchLikeDisabled() bool {
+	likeDisabled, ok := schema.Metadata["disable_substr_search"]
+	if !ok {
+		return false
+	}
+	disabled, ok := likeDisabled.(bool)
+	if !ok {
+		return false
+	}
+	return disabled
+}
+
 //SyncKeyTemplate - for custom paths in etcd
 func (schema *Schema) SyncKeyTemplate() (syncKeyTemplate string, ok bool) {
 	syncKeyTemplateRaw, ok := schema.Metadata["sync_key_template"]
@@ -496,6 +509,7 @@ func (schema *Schema) SyncKeyTemplate() (syncKeyTemplate string, ok bool) {
 //SkipConfigPrefix - whether to skip /config/ prefix to pushed paths, defaults to false
 func (schema *Schema) SkipConfigPrefix() bool {
 	syncKeyTemplateRaw, ok := schema.Metadata["sync_skip_config_prefix"]
+
 	if !ok {
 		return false
 	}
