@@ -256,22 +256,13 @@ func TestShouldStartWatchingAtSpecifiedRevision(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	sync := newSync(t)
-	sync.etcdClient.Delete(ctx, "/", etcd.WithPrefix())
+	sync := newSync(t, ctx)
+	sync.cleanup()
 
 	path := "/path/to/watch/with/starting/revision"
 
-	putResponse, err := sync.etcdClient.Put(ctx, path, `{"version": "1"}`)
-	if err != nil {
-		t.Fatalf("failed to update key: %s", err)
-	}
-	firstRevision := putResponse.Header.Revision
-
-	putResponse, err = sync.etcdClient.Put(ctx, path, `{"version": "2"}`)
-	if err != nil {
-		t.Fatalf("failed to update key: %s", err)
-	}
-	secondRevision := putResponse.Header.Revision
+	firstRevision := sync.mustPut(path, `{"version": "1"}`)
+	secondRevision := sync.mustPut(path, `{"version": "2"}`)
 
 	responseChan := sync.Watch(ctx, path, firstRevision-1)
 
@@ -492,6 +483,15 @@ func (sync *testedSync) mustUpdate(path, data string) {
 	if err != nil {
 		sync.t.Fatalf("unexpected error on updating %s with %s: %s", path, data, err)
 	}
+}
+
+func (sync *testedSync) mustPut(path, data string) int64 {
+	resp, err := sync.etcdClient.Put(sync.ctx, path, data)
+	if err != nil {
+		sync.t.Fatalf("unexpected error on putting %s with %s: %s", path, data, err)
+	}
+
+	return resp.Header.Revision
 }
 
 func (sync *testedSync) mustFetch(path string) *gohan_sync.Node {
