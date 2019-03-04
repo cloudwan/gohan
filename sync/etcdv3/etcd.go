@@ -358,28 +358,34 @@ func eventsFromNode(ctx context.Context, action string, kvs []*pb.KeyValue, resp
 	}
 }
 
-//Watch keep watch update under the path
-func (s *Sync) watch(ctx context.Context, path string, responseChan chan *sync.Event, revision int64) error {
-	options := []etcd.OpOption{etcd.WithPrefix(), etcd.WithSort(etcd.SortByModRevision, etcd.SortAscend)}
-	if revision != sync.RevisionCurrent {
-		options = append(options, etcd.WithMinModRev(revision))
-	}
-
+func (s *Sync) getCurrentValue(ctx context.Context, path string, responseChan chan *sync.Event) (int64, error) {
 	var (
 		node *etcd.GetResponse
 		err  error
 	)
 
 	s.withTimeout(ctx, func(ctx context.Context) {
-		node, err = s.etcdClient.Get(ctx, path, options...)
+		node, err = s.etcdClient.Get(ctx, path, etcd.WithPrefix(), etcd.WithSort(etcd.SortByModRevision, etcd.SortAscend))
 	})
 
 	if err != nil {
 		updateCounter(1, "watch.get.error")
-		return err
+		return 0, err
 	}
+
 	eventsFromNode(ctx, "get", node.Kvs, responseChan)
-	revision = node.Header.Revision + 1
+	return node.Header.Revision + 1, nil
+}
+
+//Watch keep watch update under the path
+func (s *Sync) watch(ctx context.Context, path string, responseChan chan *sync.Event, revision int64) error {
+	if revision == sync.RevisionCurrent {
+		var err error
+		revision, err = s.getCurrentValue(ctx, path, responseChan)
+		if err != nil {
+			return err
+		}
+	}
 
 	ctx, cancel := context.WithCancel(ctx)
 	errorsCh := make(chan error, 1)
