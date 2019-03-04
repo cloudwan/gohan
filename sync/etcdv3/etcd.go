@@ -368,8 +368,6 @@ func (s *Sync) getCurrentValue(ctx context.Context, path string, responseChan ch
 		node, err = s.etcdClient.Get(ctx, path, etcd.WithPrefix(), etcd.WithSort(etcd.SortByModRevision, etcd.SortAscend))
 	})
 
-	log.Warning("got %+v", node)
-
 	if err != nil {
 		updateCounter(1, "watch.get.error")
 		return 0, err

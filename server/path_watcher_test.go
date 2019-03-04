@@ -29,7 +29,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = FDescribe("Sync watcher test", func() {
+var _ = Describe("Sync watcher test", func() {
 	const watchedKey = "/path_watcher/test"
 
 	var (
