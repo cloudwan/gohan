@@ -110,14 +110,19 @@ var _ = FDescribe("Sync watcher test", func() {
 		Expect(node.Value).To(Equal(expectedValue))
 	}
 
-	It("Runs registered extensions", func() {
-		defer wg.Wait()
-
+	synchronizeTest := func() (context.Context, func()) {
 		testCtx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+		return testCtx, func() {
+			cancel()
+			wg.Wait()
+		}
+	}
+
+	It("Runs registered extensions", func() {
+		testCtx, waitForDone := synchronizeTest()
+		defer waitForDone()
 
 		calledCh := make(chan struct{}, 1)
-
 		givenEventHandler(func() {
 			calledCh <- struct{}{}
 		})
@@ -131,10 +136,8 @@ var _ = FDescribe("Sync watcher test", func() {
 	})
 
 	It("Stops processing when conflict detected", func() {
-		defer wg.Wait()
-
-		testCtx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+		testCtx, waitForDone := synchronizeTest()
+		defer waitForDone()
 
 		firstEventRevision := givenWatchedKeySet(`{"index": 1}`)
 		givenWatchedKeySet(`{"index": 2}`)
@@ -155,24 +158,23 @@ var _ = FDescribe("Sync watcher test", func() {
 	})
 
 	It("Triggers a refresh using last seen value", func() {
-		defer wg.Wait()
-
-		testCtx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+		testCtx, waitForDone := synchronizeTest()
+		defer waitForDone()
 
 		firstEventRevision := givenWatchedKeySet(`{"index": 1}`)
 		givenWatchedKeySet(`{"index": 2}`)
-		thirdEventRevision := givenWatchedKeySet(`{"index": 3}`)
 
 		givenLastSeenRevisionForcedTo(firstEventRevision - 1)
 
+		thirdEventRevision := make(chan int64, 1)
 		givenEventHandler(func() {
 			givenLastSeenRevisionForcedTo(firstEventRevision + 1)
+			thirdEventRevision <- givenWatchedKeySet(`{"index": 3}`)
 		})
 
 		whenPathWatcherStarted(testCtx)
 
-		expectedRevision := thirdEventRevision + 1 //1 for update of the value
+		expectedRevision := <-thirdEventRevision + 1 //1 for update of the value
 		thenWatchedKeyUpdatedTo(expectedRevision, `{"index": 3}`)
 	})
 })

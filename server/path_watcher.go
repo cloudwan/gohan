@@ -28,6 +28,7 @@ import (
 	"github.com/cloudwan/gohan/metrics"
 	gohan_sync "github.com/cloudwan/gohan/sync"
 	"github.com/cloudwan/gohan/util"
+	"github.com/pkg/errors"
 )
 
 type PathWatcher struct {
@@ -37,6 +38,10 @@ type PathWatcher struct {
 	extensions                map[string]extension.Environment
 	previousProcessedRevision int64
 }
+
+var (
+	errInconsistentCluster = errors.New("inconsistent cluster state detected")
+)
 
 func NewPathWatcher(sync gohan_sync.Sync, extensions map[string]extension.Environment, path string, priority int) *PathWatcher {
 	return &PathWatcher{
@@ -135,8 +140,27 @@ func (watcher *PathWatcher) consumeEvents(ctx context.Context, eventCh <-chan *g
 
 	for event := range eventCh {
 		if err = watcher.consumeEvent(ctx, event); err != nil {
+			if err == errInconsistentCluster {
+				watcher.tryRecoverInconsistentCluster(ctx, event)
+			}
 			return
 		}
+	}
+}
+
+func (watcher *PathWatcher) tryRecoverInconsistentCluster(ctx context.Context, event *gohan_sync.Event) {
+	node, err := watcher.sync.Fetch(ctx, event.Key)
+	if err != nil {
+		log.Error("Can't recover from inconsistent cluster state on %s: Fetch() failed: %s", event.Key, err)
+		return
+	}
+
+	if recovered, err := watcher.sync.CompareAndSwap(ctx, event.Key, node.Value, watcher.sync.ByValue(node.Value)); err != nil {
+		log.Error("Can't recover from inconsistent cluster state on %s: notifying the current master failed: %s", event.Key, err)
+	} else if recovered {
+		log.Info("Successfully recovered from inconsistency on %s", event.Key)
+	} else {
+		log.Info("Inconsistency on %s detected, but further events are already scheduled, the cluster will recover itself soon", event.Key)
 	}
 }
 
@@ -190,7 +214,8 @@ func (watcher *PathWatcher) storeRevision(ctx context.Context, revision int64) e
 	if swapped, err := watcher.sync.CompareAndSwap(ctx, path, value, opts...); err != nil {
 		return fmt.Errorf("failed to update revision number for watch path `%s` in sync storage", watcher.path)
 	} else if !swapped {
-		return fmt.Errorf("cluster inconsistency detected: other node in the cluster already made progress on %s", watcher.path)
+		log.Warning("Cluster inconsistency detected: other node in the cluster already made progress on %s, broken revision is %d", watcher.path, revision)
+		return errInconsistentCluster
 	}
 
 	watcher.previousProcessedRevision = revision
