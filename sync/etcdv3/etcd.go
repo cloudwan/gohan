@@ -453,7 +453,6 @@ func (s *Sync) watch(ctx context.Context, path string, responseChan chan *sync.E
 
 // Watch keep watch update under the path until context is canceled
 func (s *Sync) Watch(ctx context.Context, path string, revision int64) <-chan *sync.Event {
-	log.Warning("starting with %d", revision)
 	eventCh := make(chan *sync.Event, 32)
 	watchDoneCh := make(chan error, 1)
 	go func() {

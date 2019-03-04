@@ -29,37 +29,27 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Sync watcher test", func() {
+var _ = FDescribe("Sync watcher test", func() {
 	const watchedKey = "/path_watcher/test"
 
 	var (
-		ctrl *gomock.Controller
+		ctrl    *gomock.Controller
+		ctx     context.Context
+		pw      *srv.PathWatcher
+		mockEnv *mock_extension.MockEnvironment
+		wg      *sync.WaitGroup
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-	})
+		ctx = context.Background()
+		wg = &sync.WaitGroup{}
 
-	It("Runs registered extensions", func() {
-		calledCh := make(chan struct{}, 1)
+		Expect(server.GetSync().Delete(ctx, "/", true)).To(Succeed())
 
-		mockEnv := mock_extension.NewMockEnvironment(ctrl)
-		mockEnv.EXPECT().Clone().Return(mockEnv)
-		mockEnv.EXPECT().HandleEvent("notification", gomock.Any()).DoAndReturn(func(interface{}, interface{}) error {
-			calledCh <- struct{}{}
-			return nil
-		})
+		mockEnv = mock_extension.NewMockEnvironment(ctrl)
 
-		wg := sync.WaitGroup{}
-		defer wg.Wait()
-
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-
-		Expect(server.GetSync().Delete(ctx, watchedKey, true)).To(Succeed())
-		Expect(server.GetSync().Update(ctx, watchedKey, "{}")).To(Succeed())
-
-		pw := srv.NewPathWatcher(
+		pw = srv.NewPathWatcher(
 			server.GetSync(),
 			map[string]extension.Environment{
 				"path_watcher/test": mockEnv,
@@ -67,71 +57,122 @@ var _ = Describe("Sync watcher test", func() {
 			watchedKey,
 			0,
 		)
+	})
 
+	AfterEach(func() {
+		ctrl.Finish()
+	})
+
+	getRevision := func(path string) int64 {
+		node, err := server.GetSync().Fetch(ctx, path)
+		Expect(err).NotTo(HaveOccurred())
+		return node.Revision
+	}
+
+	givenWatchedKeySet := func(value string) int64 {
+		Expect(server.GetSync().Update(ctx, watchedKey, value)).To(Succeed())
+		return getRevision(watchedKey)
+	}
+
+	givenLastSeenRevisionForcedTo := func(revision int64) {
+		Expect(server.GetSync().Update(ctx, srv.SyncWatchRevisionPrefix+watchedKey, strconv.FormatInt(revision, 10))).To(Succeed())
+	}
+
+	givenEventHandler := func(fn func()) {
+		mockEnv.EXPECT().Clone().AnyTimes().Return(mockEnv)
+		mockEnv.EXPECT().HandleEvent("notification", gomock.Any()).AnyTimes().DoAndReturn(func(interface{}, interface{}) error {
+			fn()
+			return nil
+		})
+	}
+
+	whenPathWatcherStarted := func(ctx context.Context) {
 		wg.Add(1)
 		go func() {
 			defer GinkgoRecover()
-			pw.Run(ctx, &wg)
+			pw.Run(ctx, wg)
 		}()
+	}
 
-		Eventually(calledCh).Should(Receive())
-	})
-
-	shouldReceiveExactlyOnce := func(ch <-chan struct{}) {
+	thenExactlyOneEventProcessed := func(ch <-chan struct{}) {
 		Eventually(ch).Should(Receive(), "the channel did not receive anything")
 		Consistently(ch, time.Second).ShouldNot(Receive(), "the channel received twice")
 	}
 
-	It("Stops processing when conflict detected", func() {
-		wg := sync.WaitGroup{}
-		defer wg.Wait()
-
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-
-		Expect(server.GetSync().Delete(ctx, watchedKey, true)).To(Succeed())
-		Expect(server.GetSync().Update(ctx, watchedKey, `{"index": 1}`)).To(Succeed())
+	thenWatchedKeyUpdatedTo := func(expectedRevision int64, expectedValue string) {
+		Eventually(func() (int64, error) {
+			node, err := server.GetSync().Fetch(ctx, watchedKey)
+			return node.Revision, err
+		}).Should(Equal(expectedRevision))
 
 		node, err := server.GetSync().Fetch(ctx, watchedKey)
 		Expect(err).NotTo(HaveOccurred())
-		firstEventRevision := node.Revision
+		Expect(node.Value).To(Equal(expectedValue))
+	}
 
-		Expect(server.GetSync().Update(ctx, watchedKey, `{"index": 2}`)).To(Succeed())
-		node, err = server.GetSync().Fetch(ctx, watchedKey)
-		Expect(err).NotTo(HaveOccurred())
+	It("Runs registered extensions", func() {
+		defer wg.Wait()
 
-		Expect(server.GetSync().Update(ctx, watchedKey, `{"index": 3}`)).To(Succeed())
-		node, err = server.GetSync().Fetch(ctx, watchedKey)
-		Expect(err).NotTo(HaveOccurred())
+		testCtx, cancel := context.WithCancel(context.Background())
+		defer cancel()
 
-		Expect(server.GetSync().Update(ctx, srv.SyncWatchRevisionPrefix+watchedKey, strconv.FormatInt(firstEventRevision-1, 10))).To(Succeed())
+		calledCh := make(chan struct{}, 1)
 
-		calledCh := make(chan struct{}, 2)
-
-		mockEnv := mock_extension.NewMockEnvironment(ctrl)
-		mockEnv.EXPECT().Clone().Return(mockEnv).AnyTimes()
-		mockEnv.EXPECT().HandleEvent("notification", gomock.Any()).AnyTimes().DoAndReturn(func(interface{}, interface{}) error {
-			// simulate other node already made progress
-			Expect(server.GetSync().Update(ctx, srv.SyncWatchRevisionPrefix+watchedKey, strconv.FormatInt(firstEventRevision+1, 10))).To(Succeed())
+		givenEventHandler(func() {
 			calledCh <- struct{}{}
-			return nil
 		})
 
-		pw := srv.NewPathWatcher(
-			server.GetSync(),
-			map[string]extension.Environment{
-				"path_watcher/test": mockEnv,
-			},
-			watchedKey,
-			0,
-		)
+		revision := givenWatchedKeySet("{}")
+		givenLastSeenRevisionForcedTo(revision - 1)
 
-		wg.Add(1)
-		go func() {
-			defer GinkgoRecover()
-			pw.Run(ctx, &wg)
-		}()
+		whenPathWatcherStarted(testCtx)
 
-		shouldReceiveExactlyOnce(calledCh)
+		thenExactlyOneEventProcessed(calledCh)
+	})
+
+	It("Stops processing when conflict detected", func() {
+		defer wg.Wait()
+
+		testCtx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		firstEventRevision := givenWatchedKeySet(`{"index": 1}`)
+		givenWatchedKeySet(`{"index": 2}`)
+		givenWatchedKeySet(`{"index": 3}`)
+
+		givenLastSeenRevisionForcedTo(firstEventRevision - 1)
+
+		calledCh := make(chan struct{}, 2)
+		givenEventHandler(func() {
+			// simulate other node already made progress
+			givenLastSeenRevisionForcedTo(firstEventRevision + 1)
+			calledCh <- struct{}{}
+		})
+
+		whenPathWatcherStarted(testCtx)
+
+		thenExactlyOneEventProcessed(calledCh)
+	})
+
+	It("Triggers a refresh using last seen value", func() {
+		defer wg.Wait()
+
+		testCtx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		firstEventRevision := givenWatchedKeySet(`{"index": 1}`)
+		givenWatchedKeySet(`{"index": 2}`)
+		thirdEventRevision := givenWatchedKeySet(`{"index": 3}`)
+
+		givenLastSeenRevisionForcedTo(firstEventRevision - 1)
+
+		givenEventHandler(func() {
+			givenLastSeenRevisionForcedTo(firstEventRevision + 1)
+		})
+
+		whenPathWatcherStarted(testCtx)
+
+		expectedRevision := thirdEventRevision + 1 //1 for update of the value
+		thenWatchedKeyUpdatedTo(expectedRevision, `{"index": 3}`)
 	})
 })
