@@ -23,7 +23,6 @@ import (
 
 	"github.com/cloudwan/gohan/extension"
 	mock_extension "github.com/cloudwan/gohan/extension/mocks"
-	l "github.com/cloudwan/gohan/log"
 	srv "github.com/cloudwan/gohan/server"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
@@ -39,16 +38,6 @@ var _ = Describe("Sync watcher test", func() {
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-
-		//Expect(server.GetSync().Delete(
-		//	context.Background(),
-		//	srv.SyncWatchRevisionPrefix+watchedKey,
-		//	false),
-		//).To(Succeed())
-	})
-
-	AfterEach(func() {
-		ctrl.Finish()
 	})
 
 	It("Runs registered extensions", func() {
@@ -88,16 +77,12 @@ var _ = Describe("Sync watcher test", func() {
 		Eventually(calledCh).Should(Receive())
 	})
 
-	shouldReceiveExactlyOnce := func(log l.Logger, ch <-chan struct{}) {
-		log.Error("1")
+	shouldReceiveExactlyOnce := func(ch <-chan struct{}) {
 		Eventually(ch).Should(Receive(), "the channel did not receive anything")
 		Consistently(ch, time.Second).ShouldNot(Receive(), "the channel received twice")
-		log.Error("2")
 	}
 
-	FIt("Stops processing when conflict detected", func() {
-		log := l.NewLogger()
-		log.Error("start")
+	It("Stops processing when conflict detected", func() {
 		wg := sync.WaitGroup{}
 		defer wg.Wait()
 
@@ -110,31 +95,25 @@ var _ = Describe("Sync watcher test", func() {
 		node, err := server.GetSync().Fetch(ctx, watchedKey)
 		Expect(err).NotTo(HaveOccurred())
 		firstEventRevision := node.Revision
-		log.Info("first: %d", firstEventRevision)
 
 		Expect(server.GetSync().Update(ctx, watchedKey, `{"index": 2}`)).To(Succeed())
 		node, err = server.GetSync().Fetch(ctx, watchedKey)
 		Expect(err).NotTo(HaveOccurred())
-		log.Info("second: %d", node.Revision)
 
 		Expect(server.GetSync().Update(ctx, watchedKey, `{"index": 3}`)).To(Succeed())
 		node, err = server.GetSync().Fetch(ctx, watchedKey)
 		Expect(err).NotTo(HaveOccurred())
-		log.Info("third: %d", node.Revision)
 
 		Expect(server.GetSync().Update(ctx, srv.SyncWatchRevisionPrefix+watchedKey, strconv.FormatInt(firstEventRevision-1, 10))).To(Succeed())
 
 		calledCh := make(chan struct{}, 2)
 
 		mockEnv := mock_extension.NewMockEnvironment(ctrl)
-		mockEnv.EXPECT().Clone().Return(mockEnv).Times(2)
-		mockEnv.EXPECT().HandleEvent("notification", gomock.Any()).DoAndReturn(func(interface{}, interface{}) error {
-			log.Notice("executing ext 1")
+		mockEnv.EXPECT().Clone().Return(mockEnv).AnyTimes()
+		mockEnv.EXPECT().HandleEvent("notification", gomock.Any()).AnyTimes().DoAndReturn(func(interface{}, interface{}) error {
 			// simulate other node already made progress
 			Expect(server.GetSync().Update(ctx, srv.SyncWatchRevisionPrefix+watchedKey, strconv.FormatInt(firstEventRevision+1, 10))).To(Succeed())
-			log.Notice("executing ext 2")
 			calledCh <- struct{}{}
-			log.Notice("executing ext 3")
 			return nil
 		})
 
@@ -153,8 +132,6 @@ var _ = Describe("Sync watcher test", func() {
 			pw.Run(ctx, &wg)
 		}()
 
-		shouldReceiveExactlyOnce(log, calledCh)
-
-		log.Error("done")
+		shouldReceiveExactlyOnce(calledCh)
 	})
 })

@@ -31,10 +31,11 @@ import (
 )
 
 type PathWatcher struct {
-	sync       gohan_sync.Sync
-	priority   int
-	path       string
-	extensions map[string]extension.Environment
+	sync                      gohan_sync.Sync
+	priority                  int
+	path                      string
+	extensions                map[string]extension.Environment
+	previousProcessedRevision int64
 }
 
 func NewPathWatcher(sync gohan_sync.Sync, extensions map[string]extension.Environment, path string, priority int) *PathWatcher {
@@ -98,9 +99,9 @@ func (watcher *PathWatcher) run(parentCtx context.Context) error {
 
 	ctx, cancel := context.WithCancel(parentCtx)
 	defer cancel()
-	fromRevision := watcher.fetchStoredRevision(parentCtx) + 1
-	log.Warning("will start at %d", fromRevision)
-	eventsCh := watcher.sync.Watch(ctx, watcher.path, fromRevision)
+
+	watcher.previousProcessedRevision = watcher.fetchStoredRevision(parentCtx)
+	eventsCh := watcher.sync.Watch(ctx, watcher.path, watcher.previousProcessedRevision+1)
 	doneCh := make(chan error, 1)
 
 	go watcher.consumeEvents(ctx, eventsCh, doneCh)
@@ -133,17 +134,13 @@ func (watcher *PathWatcher) consumeEvents(ctx context.Context, eventCh <-chan *g
 	}()
 
 	for event := range eventCh {
-		log.Warning("[for] got %+v", event)
 		if err = watcher.consumeEvent(ctx, event); err != nil {
 			return
 		}
 	}
-
-	log.Warning("[for] done")
 }
 
 func (watcher *PathWatcher) consumeEvent(ctx context.Context, event *gohan_sync.Event) error {
-	log.Warning("[consume] got %+v", event)
 	if event.Err != nil {
 		return event.Err
 	}
@@ -153,8 +150,6 @@ func (watcher *PathWatcher) consumeEvent(ctx context.Context, event *gohan_sync.
 }
 
 func (watcher *PathWatcher) watchExtensionHandler(ctx context.Context, response *gohan_sync.Event) {
-	log.Warning("[watch] got %+v", response)
-
 	defer l.Panic(log)
 	for event, env := range watcher.extensions {
 		if strings.HasPrefix(response.Key, "/"+event) {
@@ -185,10 +180,20 @@ func (watcher *PathWatcher) fetchStoredRevision(ctx context.Context) int64 {
 
 // storeRevision puts a revision number for a path to the sync backend.
 func (watcher *PathWatcher) storeRevision(ctx context.Context, revision int64) error {
-	err := watcher.sync.Update(ctx, SyncWatchRevisionPrefix+watcher.path, strconv.FormatInt(revision, 10))
-	if err != nil {
-		return fmt.Errorf("Failed to update revision number for watch path `%s` in sync storage", watcher.path)
+	path := SyncWatchRevisionPrefix + watcher.path
+	value := strconv.FormatInt(revision, 10)
+	opts := make([]gohan_sync.CASCondition, 0, 1)
+	if watcher.previousProcessedRevision != int64(gohan_sync.RevisionCurrent) {
+		opts = append(opts, watcher.sync.ByValue(strconv.FormatInt(watcher.previousProcessedRevision, 10)))
 	}
+
+	if swapped, err := watcher.sync.CompareAndSwap(ctx, path, value, opts...); err != nil {
+		return fmt.Errorf("failed to update revision number for watch path `%s` in sync storage", watcher.path)
+	} else if !swapped {
+		return fmt.Errorf("cluster inconsistency detected: other node in the cluster already made progress on %s", watcher.path)
+	}
+
+	watcher.previousProcessedRevision = revision
 	return nil
 }
 
@@ -198,8 +203,6 @@ func (watcher *PathWatcher) measureTime(timeStarted time.Time, action string) {
 
 //Run extension on sync
 func (watcher *PathWatcher) runExtensionOnSync(ctx context.Context, response *gohan_sync.Event, env extension.Environment) {
-	log.Warning("[run] got %+v", response)
-
 	defer watcher.measureTime(time.Now(), response.Action)
 
 	context := map[string]interface{}{
