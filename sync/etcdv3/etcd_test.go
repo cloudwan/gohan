@@ -252,6 +252,40 @@ func TestWatchWithRevision(t *testing.T) {
 	}
 }
 
+func TestShouldStartWatchingAtSpecifiedRevision(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	sync := newSync(t)
+	sync.etcdClient.Delete(ctx, "/", etcd.WithPrefix())
+
+	path := "/path/to/watch/with/starting/revision"
+
+	putResponse, err := sync.etcdClient.Put(ctx, path, `{"version": "1"}`)
+	if err != nil {
+		t.Fatalf("failed to update key: %s", err)
+	}
+	firstRevision := putResponse.Header.Revision
+
+	putResponse, err = sync.etcdClient.Put(ctx, path, `{"version": "2"}`)
+	if err != nil {
+		t.Fatalf("failed to update key: %s", err)
+	}
+	secondRevision := putResponse.Header.Revision
+
+	responseChan := sync.Watch(ctx, path, firstRevision-1)
+
+	resp := <-responseChan
+	if resp.Key != path || resp.Data["version"].(string) != "1" || resp.Revision != firstRevision {
+		t.Fatalf("mismatch response: %+v, expecting version==1, revision==%d", resp, firstRevision)
+	}
+
+	resp = <-responseChan
+	if resp.Key != path || resp.Data["version"].(string) != "2" || resp.Revision != secondRevision {
+		t.Fatalf("mismatch response: %+v, expecting version==2, revision==%d", resp, secondRevision)
+	}
+}
+
 func TestFetchMultipleNodes(t *testing.T) {
 	ctx := context.Background()
 
