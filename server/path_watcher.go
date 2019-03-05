@@ -157,17 +157,21 @@ func (watcher *PathWatcher) tryRecover(ctx context.Context, err error, event *go
 func (watcher *PathWatcher) tryRecoverInconsistentCluster(ctx context.Context, event *gohan_sync.Event) {
 	node, err := watcher.sync.Fetch(ctx, event.Key)
 	if err != nil {
-		log.Error("Can't recover from inconsistent cluster state on %s: Fetch() failed: %s", event.Key, err)
+		watcher.updateCounter(1, "inconsistency_recovery.fetch_errors")
+		log.Critical("Can't recover from inconsistent cluster state on %s: Fetch() failed: %s", event.Key, err)
 		return
 	}
 
 	if recovered, err := watcher.sync.CompareAndSwap(ctx, event.Key, node.Value, watcher.sync.ByValue(node.Value)); err != nil {
 		// some sync events could have be processed out-of-order and the recovery failed.
 		// incorrect data could be stored in DB. a user has to recover (resync) manually
+		watcher.updateCounter(1, "inconsistency_recovery.cas_errors")
 		log.Critical("Can't recover from inconsistent cluster state on %s: notifying the current master failed: %s", event.Key, err)
 	} else if recovered {
+		watcher.updateCounter(1, "inconsistency_recovery.success")
 		log.Info("Successfully recovered from inconsistency on %s", event.Key)
 	} else {
+		watcher.updateCounter(1, "inconsistency_recovery.not_needed")
 		log.Info("Inconsistency on %s detected, but further events are already scheduled, the cluster will recover itself soon", event.Key)
 	}
 }
@@ -176,7 +180,12 @@ func (watcher *PathWatcher) tryRecoverCompaction(ctx context.Context, compactedR
 	// next watch should start at lastProcessed +1, so we're setting a known-good -1
 	if err := watcher.storeRevision(ctx, compactedRevision-1); err != nil && err != errInconsistentCluster {
 		// it's not fatal: the next leader will with again fail with errCompacted and retry the recovery
+		watcher.updateCounter(1, "compaction_recovery.failed")
 		log.Warning("Can't recover from etcd compaction on %s: %s", watcher.path, err)
+	} else if err == errInconsistentCluster {
+		watcher.updateCounter(1, "compaction_recovery.not_needed")
+	} else {
+		watcher.updateCounter(1, "compaction_recovery.success")
 	}
 }
 
@@ -230,10 +239,12 @@ func (watcher *PathWatcher) storeRevision(ctx context.Context, revision int64) e
 	if swapped, err := watcher.sync.CompareAndSwap(ctx, path, value, opts...); err != nil {
 		return fmt.Errorf("failed to update revision number for watch path `%s` in sync storage", watcher.path)
 	} else if !swapped {
+		watcher.updateCounter(1, "inconsistency_detected")
 		log.Warning("Cluster inconsistency detected: other node in the cluster already made progress on %s, broken revision is %d", watcher.path, revision)
 		return errInconsistentCluster
 	}
 
+	watcher.updateGauge(revision, "previous_processed_revision")
 	watcher.previousProcessedRevision = revision
 	return nil
 }
@@ -261,4 +272,8 @@ func (watcher *PathWatcher) runExtensionOnSync(ctx context.Context, response *go
 
 func (watcher *PathWatcher) updateCounter(delta int64, metric string) {
 	metrics.UpdateCounter(delta, "path_watcher.%s", metric)
+}
+
+func (watcher *PathWatcher) updateGauge(value int64, metric string) {
+	metrics.UpdateGauge(value, "path_watcher.%s", metric)
 }
