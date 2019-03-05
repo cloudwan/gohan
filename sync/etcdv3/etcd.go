@@ -30,6 +30,7 @@ import (
 	"github.com/cloudwan/gohan/sync"
 	etcd "github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/clientv3/concurrency"
+	"github.com/coreos/etcd/etcdserver/api/v3rpc/rpctypes"
 	pb "github.com/coreos/etcd/mvcc/mvccpb"
 	cmap "github.com/streamrail/concurrent-map"
 	"github.com/twinj/uuid"
@@ -403,6 +404,9 @@ func (s *Sync) watch(ctx context.Context, path string, responseChan chan *sync.E
 				err := wresp.Err()
 				if err != nil {
 					updateCounter(1, "watch.client_watch.error")
+					if err == rpctypes.ErrCompacted {
+						err = sync.NewErrCompacted(err, wresp.CompactRevision)
+					}
 					return err
 				}
 				for _, ev := range wresp.Events {
@@ -476,6 +480,14 @@ func (s *Sync) Watch(ctx context.Context, path string, revision int64) <-chan *s
 		}
 	}()
 	return eventCh
+}
+
+func (s *Sync) Compact(ctx context.Context, revision int64) error {
+	var err error
+	s.withTimeout(ctx, func(ctx context.Context) {
+		_, err = s.etcdClient.Compact(ctx, revision, etcd.WithCompactPhysical())
+	})
+	return err
 }
 
 func (s *Sync) CompareAndSwap(ctx context.Context, path, data string, condition ...sync.CASCondition) (bool, error) {

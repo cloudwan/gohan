@@ -86,6 +86,10 @@ var _ = Describe("Sync watcher test", func() {
 		})
 	}
 
+	givenCompaction := func(revision int64) {
+		Expect(server.GetSync().Compact(ctx, revision)).To(Succeed())
+	}
+
 	whenPathWatcherStarted := func(ctx context.Context) {
 		wg.Add(1)
 		go func() {
@@ -108,6 +112,16 @@ var _ = Describe("Sync watcher test", func() {
 		node, err := server.GetSync().Fetch(ctx, watchedKey)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(node.Value).To(Equal(expectedValue))
+	}
+
+	thenLastProcessedRevisionIs := func(expectedRevision int64) {
+		Eventually(func() (int64, error) {
+			node, err := server.GetSync().Fetch(ctx, srv.SyncWatchRevisionPrefix+watchedKey)
+			if err != nil {
+				return 0, err
+			}
+			return strconv.ParseInt(node.Value, 10, 64)
+		}).Should(Equal(expectedRevision))
 	}
 
 	synchronizeTest := func() (context.Context, func()) {
@@ -176,5 +190,19 @@ var _ = Describe("Sync watcher test", func() {
 
 		expectedRevision := <-thirdEventRevision + 1 //1 for update of the value
 		thenWatchedKeyUpdatedTo(expectedRevision, `{"index": 3}`)
+	})
+
+	It("Increments stored revision on compaction", func() {
+		testCtx, waitForDone := synchronizeTest()
+		defer waitForDone()
+
+		firstEventRevision := givenWatchedKeySet(`{"index": 1}`)
+		secondRevision := givenWatchedKeySet(`{"index": 2}`)
+		givenCompaction(secondRevision)
+		givenLastSeenRevisionForcedTo(firstEventRevision - 1)
+
+		whenPathWatcherStarted(testCtx)
+
+		thenLastProcessedRevisionIs(firstEventRevision)
 	})
 })

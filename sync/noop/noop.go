@@ -70,6 +70,10 @@ func (sync *Sync) Watch(ctx context.Context, path string, revision int64) <-chan
 	return nil
 }
 
+func (s *Sync) Compact(ctx context.Context, revision int64) error {
+	return nil
+}
+
 func (sync *Sync) CompareAndSwap(ctx context.Context, path, data string, condition ...sync.CASCondition) (bool, error) {
 	return true, nil
 }

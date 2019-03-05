@@ -140,11 +140,17 @@ func (watcher *PathWatcher) consumeEvents(ctx context.Context, eventCh <-chan *g
 
 	for event := range eventCh {
 		if err = watcher.consumeEvent(ctx, event); err != nil {
-			if err == errInconsistentCluster {
-				watcher.tryRecoverInconsistentCluster(ctx, event)
-			}
+			watcher.tryRecover(ctx, err, event)
 			return
 		}
+	}
+}
+
+func (watcher *PathWatcher) tryRecover(ctx context.Context, err error, event *gohan_sync.Event) {
+	if err == errInconsistentCluster {
+		watcher.tryRecoverInconsistentCluster(ctx, event)
+	} else if errCompacted, ok := err.(gohan_sync.ErrCompacted); ok {
+		watcher.tryRecoverCompaction(ctx, errCompacted.CompactRevision)
 	}
 }
 
@@ -156,11 +162,21 @@ func (watcher *PathWatcher) tryRecoverInconsistentCluster(ctx context.Context, e
 	}
 
 	if recovered, err := watcher.sync.CompareAndSwap(ctx, event.Key, node.Value, watcher.sync.ByValue(node.Value)); err != nil {
-		log.Error("Can't recover from inconsistent cluster state on %s: notifying the current master failed: %s", event.Key, err)
+		// some sync events could have be processed out-of-order and the recovery failed.
+		// incorrect data could be stored in DB. a user has to recover (resync) manually
+		log.Critical("Can't recover from inconsistent cluster state on %s: notifying the current master failed: %s", event.Key, err)
 	} else if recovered {
 		log.Info("Successfully recovered from inconsistency on %s", event.Key)
 	} else {
 		log.Info("Inconsistency on %s detected, but further events are already scheduled, the cluster will recover itself soon", event.Key)
+	}
+}
+
+func (watcher *PathWatcher) tryRecoverCompaction(ctx context.Context, compactedRevision int64) {
+	// next watch should start at lastProcessed +1, so we're setting a known-good -1
+	if err := watcher.storeRevision(ctx, compactedRevision-1); err != nil && err != errInconsistentCluster {
+		// it's not fatal: the next leader will with again fail with errCompacted and retry the recovery
+		log.Warning("Can't recover from etcd compaction on %s: %s", watcher.path, err)
 	}
 }
 

@@ -191,7 +191,7 @@ func TestWatch(t *testing.T) {
 	sync.cleanup()
 
 	path := "/path/to/watch/without/revision"
-	sync.etcdClient.Put(ctx, path+"/existing", `{"existing": true}`)
+	sync.mustPut(path+"/existing", `{"existing": true}`)
 
 	responseChan := sync.Watch(ctx, path, gohan_sync.RevisionCurrent)
 
@@ -200,7 +200,7 @@ func TestWatch(t *testing.T) {
 		t.Fatalf("mismatch response: %+v", resp)
 	}
 
-	sync.etcdClient.Put(ctx, path+"/new", `{"existing": false}`)
+	sync.mustPut(path+"/new", `{"existing": false}`)
 	resp = <-responseChan
 	if resp.Action != "set" || resp.Key != path+"/new" || resp.Data["existing"].(bool) != false {
 		t.Fatalf("mismatch response: %+v", resp)
@@ -222,17 +222,8 @@ func TestWatchWithRevision(t *testing.T) {
 
 	path := "/path/to/watch/with/revision"
 
-	putResponse, err := sync.etcdClient.Put(ctx, path+"/existing", `{"existing": true}`)
-	if err != nil {
-		t.Fatalf("failed to put key: %s", err)
-	}
-	startRev := putResponse.Header.Revision
-
-	putResponse, err = sync.etcdClient.Put(ctx, path+"/new", `{"existing": false}`)
-	if err != nil {
-		t.Fatalf("failed to update key: %s", err)
-	}
-	secondRevision := putResponse.Header.Revision
+	startRev := sync.mustPut(path+"/existing", `{"existing": true}`)
+	secondRevision := sync.mustPut(path+"/new", `{"existing": false}`)
 
 	responseChan := sync.Watch(ctx, path, startRev+1)
 
@@ -241,15 +232,36 @@ func TestWatchWithRevision(t *testing.T) {
 		t.Fatalf("mismatch response: %+v, expecting /new, existing==false, revision==%d", resp, secondRevision)
 	}
 
-	putResponse, err = sync.etcdClient.Put(ctx, path+"/third", `{"existing": false}`)
-	if err != nil {
-		t.Fatalf("failed to update key: %s", err)
-	}
-	thirdRevision := putResponse.Header.Revision
+	thirdRevision := sync.mustPut(path+"/third", `{"existing": false}`)
 
 	resp = <-responseChan
 	if resp.Key != path+"/third" || resp.Data["existing"].(bool) != false || resp.Revision != thirdRevision {
 		t.Fatalf("mismatch response: %+v, expecting /third, existing==false, revision==%d", resp, thirdRevision)
+	}
+}
+
+func TestShouldReturnAllValuesWhenWatchingAtCurrentRevision(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	sync := newSync(t, ctx)
+	sync.cleanup()
+
+	path := "/path/to/watch/with/revision"
+
+	firstRevision := sync.mustPut(path+"/first", `{"version": "1"}`)
+	secondRevision := sync.mustPut(path+"/second", `{"version": "2"}`)
+
+	responseChan := sync.Watch(ctx, path, gohan_sync.RevisionCurrent)
+
+	resp := <-responseChan
+	if resp.Key != path+"/first" || resp.Data["version"].(string) != "1" || resp.Revision != firstRevision {
+		t.Fatalf("mismatch response: %+v, expecting version==1, revision==%d", resp, firstRevision)
+	}
+
+	resp = <-responseChan
+	if resp.Key != path+"/second" || resp.Data["version"].(string) != "2" || resp.Revision != secondRevision {
+		t.Fatalf("mismatch response: %+v, expecting version==2, revision==%d", resp, secondRevision)
 	}
 }
 
@@ -297,6 +309,11 @@ func Test_ShouldReturnCompactedErr_WhenWatchingAtCompactedRevision(t *testing.T)
 	resp := <-responseChan
 	if resp.Err == nil || !strings.Contains(resp.Err.Error(), "required revision has been compacted") {
 		t.Fatalf("mismatch response: %+v, expecting a compaction error", resp)
+	}
+
+	errCompacted := resp.Err.(gohan_sync.ErrCompacted)
+	if errCompacted.CompactRevision != secondRevision {
+		t.Fatalf("expected compaction at %d, got %d", secondRevision, errCompacted.CompactRevision)
 	}
 }
 
@@ -540,7 +557,7 @@ func (sync *testedSync) mustPut(path, data string) int64 {
 }
 
 func (sync *testedSync) mustCompact(revision int64) {
-	if _, err := sync.etcdClient.Compact(sync.ctx, revision, etcd.WithCompactPhysical()); err != nil {
+	if err := sync.Compact(sync.ctx, revision); err != nil {
 		sync.t.Fatalf("unexpected error on compacting to rev. %d: %s", revision, err)
 	}
 }

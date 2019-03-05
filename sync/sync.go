@@ -36,6 +36,7 @@ type Sync interface {
 	Delete(ctx context.Context, path string, prefix bool) error
 	//Watch keep watch update under the path until context is canceled.
 	Watch(ctx context.Context, path string, revision int64) <-chan *Event
+	Compact(ctx context.Context, revision int64) error
 
 	//CompareAndSwap (CAS) values atomically. Returns true is value was swapped
 	CompareAndSwap(ctx context.Context, path, data string, condition ...CASCondition) (bool, error)
@@ -56,6 +57,16 @@ type Event struct {
 	Revision int64
 	// Err is used only by Sync.Watch()
 	Err error
+}
+
+type ErrCompacted struct {
+	error
+	// CompactRevision is the minimum revision a watcher may receive
+	CompactRevision int64
+}
+
+func NewErrCompacted(err error, revision int64) ErrCompacted {
+	return ErrCompacted{err, revision}
 }
 
 //Node is a struct for Fetch response
