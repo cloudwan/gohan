@@ -23,6 +23,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cloudwan/gohan/extension/goext"
+
 	"github.com/cloudwan/gohan/extension"
 	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/metrics"
@@ -149,7 +151,7 @@ func (watcher *PathWatcher) consumeEvents(ctx context.Context, eventCh <-chan *g
 func (watcher *PathWatcher) tryRecover(ctx context.Context, err error, event *gohan_sync.Event) {
 	if err == errInconsistentCluster {
 		watcher.tryRecoverInconsistentCluster(ctx, event)
-	} else if errCompacted, ok := err.(gohan_sync.ErrCompacted); ok {
+	} else if errCompacted, ok := err.(goext.ErrCompacted); ok {
 		watcher.tryRecoverCompaction(ctx, errCompacted.CompactRevision)
 	}
 }

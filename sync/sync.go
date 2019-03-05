@@ -59,16 +59,6 @@ type Event struct {
 	Err error
 }
 
-type ErrCompacted struct {
-	error
-	// CompactRevision is the minimum revision a watcher may receive
-	CompactRevision int64
-}
-
-func NewErrCompacted(err error, revision int64) ErrCompacted {
-	return ErrCompacted{err, revision}
-}
-
 //Node is a struct for Fetch response
 type Node struct {
 	Key      string

@@ -26,6 +26,7 @@ import (
 	syn "sync"
 	"time"
 
+	"github.com/cloudwan/gohan/extension/goext"
 	"github.com/cloudwan/gohan/metrics"
 	"github.com/cloudwan/gohan/sync"
 	etcd "github.com/coreos/etcd/clientv3"
@@ -405,7 +406,7 @@ func (s *Sync) watch(ctx context.Context, path string, responseChan chan *sync.E
 				if err != nil {
 					updateCounter(1, "watch.client_watch.error")
 					if err == rpctypes.ErrCompacted {
-						err = sync.NewErrCompacted(err, wresp.CompactRevision)
+						err = goext.NewErrCompacted(err, wresp.CompactRevision)
 					}
 					return err
 				}

@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cloudwan/gohan/extension/goext"
+
 	gohan_sync "github.com/cloudwan/gohan/sync"
 	etcd "github.com/coreos/etcd/clientv3"
 	"golang.org/x/net/context"
@@ -311,7 +313,7 @@ func Test_ShouldReturnCompactedErr_WhenWatchingAtCompactedRevision(t *testing.T)
 		t.Fatalf("mismatch response: %+v, expecting a compaction error", resp)
 	}
 
-	errCompacted := resp.Err.(gohan_sync.ErrCompacted)
+	errCompacted := resp.Err.(goext.ErrCompacted)
 	if errCompacted.CompactRevision != secondRevision {
 		t.Fatalf("expected compaction at %d, got %d", secondRevision, errCompacted.CompactRevision)
 	}
