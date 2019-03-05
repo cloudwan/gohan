@@ -634,6 +634,8 @@ schemas:
   on_parent_delete_cascade: false
   extends:
   - base
+  metadata:
+    disable_substr_search: true
   schema:
     properties:
       name:

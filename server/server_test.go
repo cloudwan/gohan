@@ -868,6 +868,82 @@ var _ = Describe("Server package test", func() {
 		})
 	})
 
+	Describe("SubstringSearchEnabled", func() {
+		It("should work", func() {
+			testURL("POST", networkPluralURL, adminTokenID, getNetwork("red", "red"), http.StatusCreated)
+			testURL("POST", networkPluralURL, adminTokenID, getNetwork("red1", "red"), http.StatusCreated)
+			testURL("POST", networkPluralURL, adminTokenID, getNetwork("red2", "blue"), http.StatusCreated)
+			testURL("POST", networkPluralURL, adminTokenID, getNetwork("red3", "blue"), http.StatusCreated)
+
+			result := testURL("GET", networkPluralURL, adminTokenID, nil, http.StatusOK)
+			Expect(result).To(HaveKeyWithValue("networks", ConsistOf(
+				util.MatchAsJSON(getNetwork("red", "red")),
+				util.MatchAsJSON(getNetwork("red1", "red")),
+				util.MatchAsJSON(getNetwork("red2", "blue")),
+				util.MatchAsJSON(getNetwork("red3", "blue")))))
+
+			result = testURL("GET", networkPluralURL+"?id=networkred", adminTokenID, nil, http.StatusOK)
+			Expect(result).To(HaveKeyWithValue("networks", ConsistOf(
+				util.MatchAsJSON(getNetwork("red", "red")),
+				util.MatchAsJSON(getNetwork("red1", "red")),
+				util.MatchAsJSON(getNetwork("red2", "blue")),
+				util.MatchAsJSON(getNetwork("red3", "blue")))))
+
+			result = testURL("GET", networkPluralURL+"?id=net", adminTokenID, nil, http.StatusOK)
+			Expect(result).To(HaveKeyWithValue("networks", ConsistOf(
+				util.MatchAsJSON(getNetwork("red", "red")),
+				util.MatchAsJSON(getNetwork("red1", "red")),
+				util.MatchAsJSON(getNetwork("red2", "blue")),
+				util.MatchAsJSON(getNetwork("red3", "blue")))))
+			
+			result = testURL("GET", networkPluralURL+"?id=work", adminTokenID, nil, http.StatusOK)
+			Expect(result).To(HaveKeyWithValue("networks", ConsistOf(
+				util.MatchAsJSON(getNetwork("red", "red")),
+				util.MatchAsJSON(getNetwork("red1", "red")),
+				util.MatchAsJSON(getNetwork("red2", "blue")),
+				util.MatchAsJSON(getNetwork("red3", "blue")))))
+
+			result = testURL("GET", networkPluralURL+"?id=red", adminTokenID, nil, http.StatusOK)
+			Expect(result).To(HaveKeyWithValue("networks", ConsistOf(
+				util.MatchAsJSON(getNetwork("red", "red")),
+				util.MatchAsJSON(getNetwork("red1", "red")),
+				util.MatchAsJSON(getNetwork("red2", "blue")),
+				util.MatchAsJSON(getNetwork("red3", "blue")))))
+
+			testURL("DELETE", getNetworkSingularURL("red"), adminTokenID, nil, http.StatusNoContent)
+			testURL("DELETE", getNetworkSingularURL("red1"), adminTokenID, nil, http.StatusNoContent)
+			testURL("DELETE", getNetworkSingularURL("red2"), adminTokenID, nil, http.StatusNoContent)
+			testURL("DELETE", getNetworkSingularURL("red3"), adminTokenID, nil, http.StatusNoContent)
+		})
+	})
+
+	Describe("SubstringSearchDisabled", func() {
+		It("should work", func() {
+			network := getNetwork("red", "red")
+			testURL("POST", networkPluralURL, adminTokenID, network, http.StatusCreated)
+
+			subnet1 := getSubnet("red", "red", "")
+			delete(subnet1, "network_id")
+			result := testURL("POST", getSubnetFullPluralURL("red"), adminTokenID, subnet1, http.StatusCreated)
+			subnet1["network_id"] = "networkred"
+			Expect(result).To(HaveKeyWithValue("subnet", util.MatchAsJSON(subnet1)))
+
+			subnet2 := getSubnet("redis", "red", "")
+			delete(subnet2, "network_id")
+			result = testURL("POST", getSubnetFullPluralURL("red"), adminTokenID, subnet2, http.StatusCreated)
+			subnet2["network_id"] = "networkred"
+			Expect(result).To(HaveKeyWithValue("subnet", util.MatchAsJSON(subnet2)))
+
+			result = testURL("GET", subnetPluralURL+"?id=subnetred", adminTokenID, nil, http.StatusOK)
+			Expect(result).To(HaveKeyWithValue("subnets",ConsistOf(
+				util.MatchAsJSON(subnet1))))
+
+			testURL("DELETE", getSubnetSingularURL("red"), adminTokenID, nil, http.StatusNoContent)
+			testURL("DELETE", getSubnetSingularURL("redis"), adminTokenID, nil, http.StatusNoContent)
+			testURL("DELETE", getNetworkSingularURL("red"), adminTokenID, nil, http.StatusNoContent)
+		})
+	})
+
 	Describe("FullParentPath", func() {
 		It("should work", func() {
 			networkRed := getNetwork("red", "red")
