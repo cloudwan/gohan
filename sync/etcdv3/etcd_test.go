@@ -1,6 +1,7 @@
 package etcdv3
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -277,6 +278,50 @@ func TestShouldStartWatchingAtSpecifiedRevision(t *testing.T) {
 	}
 }
 
+func Test_ShouldReturnCompactedErr_WhenWatchingAtCompactedRevision(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	sync := newSync(t, ctx)
+	sync.cleanup()
+
+	path := "/path/to/watch/with/starting/revision"
+
+	firstRevision := sync.mustPut(path, `{"version": "1"}`)
+	secondRevision := sync.mustPut(path, `{"version": "2"}`)
+
+	sync.mustCompact(secondRevision)
+
+	responseChan := sync.Watch(ctx, path, firstRevision)
+
+	resp := <-responseChan
+	if resp.Err == nil || !strings.Contains(resp.Err.Error(), "required revision has been compacted") {
+		t.Fatalf("mismatch response: %+v, expecting a compaction error", resp)
+	}
+}
+
+func Test_ShouldNotReturnCompactedErr_WhenWatchingAtCurrentRevision(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	sync := newSync(t, ctx)
+	sync.cleanup()
+
+	path := "/path/to/watch/with/starting/revision"
+
+	sync.mustPut(path, `{"version": "1"}`)
+	secondRevision := sync.mustPut(path, `{"version": "2"}`)
+
+	sync.mustCompact(secondRevision)
+
+	responseChan := sync.Watch(ctx, path, gohan_sync.RevisionCurrent)
+
+	resp := <-responseChan
+	if resp.Key != path || resp.Data["version"].(string) != "2" || resp.Revision != secondRevision {
+		t.Fatalf("mismatch response: %+v, expecting version==2, revision==%d", resp, secondRevision)
+	}
+}
+
 func TestFetchMultipleNodes(t *testing.T) {
 	ctx := context.Background()
 
@@ -492,6 +537,12 @@ func (sync *testedSync) mustPut(path, data string) int64 {
 	}
 
 	return resp.Header.Revision
+}
+
+func (sync *testedSync) mustCompact(revision int64) {
+	if _, err := sync.etcdClient.Compact(sync.ctx, revision, etcd.WithCompactPhysical()); err != nil {
+		sync.t.Fatalf("unexpected error on compacting to rev. %d: %s", revision, err)
+	}
 }
 
 func (sync *testedSync) mustFetch(path string) *gohan_sync.Node {
