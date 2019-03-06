@@ -23,9 +23,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cloudwan/gohan/extension/goext"
-
 	"github.com/cloudwan/gohan/extension"
+	"github.com/cloudwan/gohan/extension/goext"
 	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/metrics"
 	gohan_sync "github.com/cloudwan/gohan/sync"
@@ -140,12 +139,39 @@ func (watcher *PathWatcher) consumeEvents(ctx context.Context, eventCh <-chan *g
 		watchErr <- err
 	}()
 
-	for event := range eventCh {
-		if err = watcher.consumeEvent(ctx, event); err != nil {
-			watcher.tryRecover(ctx, err, event)
+	for {
+		select {
+		case event, ok := <-eventCh:
+			if !ok {
+				err = ctx.Err()
+				return
+			}
+			if err = watcher.consumeEvent(event); err != nil {
+				return
+			}
+		case <-ctx.Done():
+			err = ctx.Err()
 			return
 		}
 	}
+}
+
+func (watcher *PathWatcher) consumeEvent(event *gohan_sync.Event) (err error) {
+	// each event & recovery must not be interrupted,
+	// otherwise we could easily end up in an inconsistent state
+	// if ctx is canceled either in running extensions or just before recovery
+	ctx := context.Background()
+
+	defer func() {
+		watcher.tryRecover(ctx, err, event)
+	}()
+
+	if event.Err != nil {
+		return event.Err
+	}
+	watcher.watchExtensionHandler(ctx, event)
+
+	return watcher.storeRevision(ctx, event.Revision)
 }
 
 func (watcher *PathWatcher) tryRecover(ctx context.Context, err error, event *gohan_sync.Event) {
@@ -189,15 +215,6 @@ func (watcher *PathWatcher) tryRecoverCompaction(ctx context.Context, compactedR
 	} else {
 		watcher.updateCounter(1, "compaction_recovery.success")
 	}
-}
-
-func (watcher *PathWatcher) consumeEvent(ctx context.Context, event *gohan_sync.Event) error {
-	if event.Err != nil {
-		return event.Err
-	}
-	watcher.watchExtensionHandler(ctx, event)
-
-	return watcher.storeRevision(ctx, event.Revision)
 }
 
 func (watcher *PathWatcher) watchExtensionHandler(ctx context.Context, response *gohan_sync.Event) {
@@ -251,10 +268,6 @@ func (watcher *PathWatcher) storeRevision(ctx context.Context, revision int64) e
 	return nil
 }
 
-func (watcher *PathWatcher) measureTime(timeStarted time.Time, action string) {
-	metrics.UpdateTimer(timeStarted, "path_watcher.%s", action)
-}
-
 //Run extension on sync
 func (watcher *PathWatcher) runExtensionOnSync(ctx context.Context, response *gohan_sync.Event, env extension.Environment) {
 	defer watcher.measureTime(time.Now(), response.Action)
@@ -272,10 +285,14 @@ func (watcher *PathWatcher) runExtensionOnSync(ctx context.Context, response *go
 	return
 }
 
+func (watcher *PathWatcher) measureTime(timeStarted time.Time, action string) {
+	metrics.UpdateTimer(timeStarted, "path_watcher.%s.%s", watcher.path, action)
+}
+
 func (watcher *PathWatcher) updateCounter(delta int64, metric string) {
-	metrics.UpdateCounter(delta, "path_watcher.%s", metric)
+	metrics.UpdateCounter(delta, "path_watcher.%s.%s", watcher.path, metric)
 }
 
 func (watcher *PathWatcher) updateGauge(value int64, metric string) {
-	metrics.UpdateGauge(value, "path_watcher.%s", metric)
+	metrics.UpdateGauge(value, "path_watcher.%s.%s", watcher.path, metric)
 }

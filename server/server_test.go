@@ -1302,7 +1302,7 @@ var _ = Describe("Server package test", func() {
 			// Member creates attacher and attaches to their resource
 			// Should pass, because the target is owned by the member
 			attacherOfMember := map[string]interface{}{
-				"id": "attacher_member",
+				"id":                      "attacher_member",
 				"attach_if_accessible_id": attachTargetOfMember["id"],
 			}
 			testURL("POST", attacherPluralURL, memberTokenID, attacherOfMember, http.StatusCreated)
@@ -1324,7 +1324,7 @@ var _ = Describe("Server package test", func() {
 			// Power user tries to create attacher and attach it to member's attach target
 			// Should fail, because member's attach target is not accessible to the power user
 			attacherOfPowerUser := map[string]interface{}{
-				"id": "attacher_power_user",
+				"id":                      "attacher_power_user",
 				"attach_if_accessible_id": attachTargetOfMember["id"],
 			}
 			testURL("POST", attacherPluralURL, powerUserTokenID, attacherOfPowerUser, http.StatusBadRequest)
@@ -1332,7 +1332,7 @@ var _ = Describe("Server package test", func() {
 			// Power user creates attacher and attaches it to power user's attach target
 			// Should succeed, because they are the target's owner
 			attacherOfPowerUser = map[string]interface{}{
-				"id": "attacher_power_user",
+				"id":                      "attacher_power_user",
 				"attach_if_accessible_id": attachTargetOfPowerUser["id"],
 			}
 			testURL("POST", attacherPluralURL, powerUserTokenID, attacherOfPowerUser, http.StatusCreated)
@@ -1416,7 +1416,7 @@ var _ = Describe("Server package test", func() {
 			// Create a resource that breaks the attach policy
 			// It can happen when an admin or an extension decides to break tenant isolation
 			attacherOfMember := map[string]interface{}{
-				"id": "attacher_member",
+				"id":                      "attacher_member",
 				"attach_if_accessible_id": attachTargetOfPowerUser["id"],
 				"tenant_id":               memberTenantID,
 			}
