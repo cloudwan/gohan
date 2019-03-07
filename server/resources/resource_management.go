@@ -316,8 +316,8 @@ func GetMultipleResources(context middleware.Context, dataStore db.DB, resourceS
 	currCond := policy.GetCurrentResourceCondition()
 
 	filter := FilterFromQueryParameter(resourceSchema, queryParameters)
-	extendFilterByTenantAndDomain(resourceSchema, filter, schema.ActionRead, currCond, auth)
 	filter = policy.RemoveHiddenProperty(filter)
+	extendFilterByTenantAndDomain(resourceSchema, filter, schema.ActionRead, currCond, auth)
 	currCond.AddCustomFilters(resourceSchema, filter, auth)
 
 	paginator, err := pagination.FromURLQuery(resourceSchema, queryParameters)

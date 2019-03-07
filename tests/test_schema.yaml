@@ -198,6 +198,17 @@ policies:
     path: /v2.0/test.*
 - action: '*'
   condition:
+  - is_owner
+  effect: allow
+  id: member_statement_blacklisted_property_resource
+  principal: Member
+  resource:
+    path: /v2.0/blacklisted_property_resource.*
+    blacklistProperties:
+    - test_bool
+    - tenant_id
+- action: '*'
+  condition:
   - is_domain_owner
   effect: allow
   id: member_statement_domain_owner_test
@@ -790,6 +801,87 @@ schemas:
     type: object
   singular: test
   title: Test
+- description: Test Blacklist Properties
+  id: blacklisted_property_resource
+  plural: blacklisted_property_resources
+  prefix: /v2.0
+  schema:
+    properties:
+      id:
+        description: ID
+        permission:
+        - create
+        title: ID
+        type: string
+        unique: true
+      test_string:
+        default: ""
+        description: Test string
+        permission:
+        - create
+        - update
+        title: Test string
+        type:
+        - string
+        - "null"
+        unique: false
+        maxLength: 40
+      test_number:
+        default: 0.5
+        description: Test number
+        permission:
+        - create
+        - update
+        title: Test number
+        type:
+        - number
+        - "null"
+        unique: false
+      test_integer:
+        default: 0
+        description: Test integer
+        permission:
+        - create
+        - update
+        title: Test integer
+        type:
+        - integer
+        - "null"
+        unique: false
+      test_bool:
+        default: false
+        description: Test boolean
+        permission:
+        - create
+        - update
+        title: Test boolean
+        type:
+        - boolean
+        - "null"
+        unique: false
+      tenant_id:
+        description: Tenant ID
+        permission:
+        - create
+        title: TenantID
+        type: string
+        unique: false
+        indexed: true
+      domain_id:
+        description: Domain ID
+        permission:
+        - create
+        title: DomainID
+        type: string
+        unique: false
+        indexed: true
+    propertiesOrder:
+    - id
+    - tenant_id
+    - domain_id
+    type: object
+  singular: blacklisted_property_resource
+  title: blacklisted_property_resource
 - description: is_domain_owner test
   id: domain_owner_test
   metadata:
