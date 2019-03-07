@@ -36,21 +36,32 @@ type PathWatcher struct {
 	sync                      gohan_sync.Sync
 	priority                  int
 	path                      string
+	escapedPath               string
 	extensions                map[string]extension.Environment
 	previousProcessedRevision int64
 }
 
 var (
 	errInconsistentCluster = errors.New("inconsistent cluster state detected")
+	replacer               = strings.NewReplacer(".", "_", "/", "_")
 )
 
 func NewPathWatcher(sync gohan_sync.Sync, extensions map[string]extension.Environment, path string, priority int) *PathWatcher {
 	return &PathWatcher{
-		sync:       sync,
-		extensions: extensions,
-		priority:   priority,
-		path:       path,
+		sync:        sync,
+		extensions:  extensions,
+		priority:    priority,
+		path:        path,
+		escapedPath: replacer.Replace(path),
 	}
+}
+
+func (watcher PathWatcher) String() string {
+	sb := strings.Builder{}
+	sb.WriteString("(PathWatcher ")
+	sb.WriteString(watcher.path)
+	sb.WriteString(")")
+	return sb.String()
 }
 
 func (watcher *PathWatcher) Run(ctx context.Context, wg *sync.WaitGroup) {
@@ -68,12 +79,12 @@ func (watcher *PathWatcher) Run(ctx context.Context, wg *sync.WaitGroup) {
 		switch err {
 		case errLockFailed:
 			watcher.updateCounter(1, "lock.failed")
-			log.Debug("(PathWatcher) failed to acquire lock, retrying...")
+			log.Debug("%s failed to acquire lock, retrying...", watcher)
 		case context.Canceled:
 			// Do nothing, normal shutdown
 		default:
 			watcher.updateCounter(1, "error")
-			log.Error("(PathWatcher) on `%s` aborted, retrying...: %s", watcher.path, err)
+			log.Error("%s aborted, retrying...: %s", watcher, err)
 		}
 
 		select {
@@ -99,7 +110,7 @@ func (watcher *PathWatcher) run(parentCtx context.Context) error {
 	defer func() {
 		// can't use the parent context, it may be already canceled
 		if err := watcher.sync.Unlock(context.Background(), lockKey); err != nil {
-			log.Warning("PathWatcher: unlocking etcd failed on %s: %s", lockKey, err)
+			log.Warning("%s unlocking etcd failed on %s: %s", watcher, lockKey, err)
 		}
 	}()
 
@@ -115,14 +126,14 @@ func (watcher *PathWatcher) run(parentCtx context.Context) error {
 	select {
 	case <-ctx.Done():
 		if err := <-doneCh; err != nil {
-			log.Error("(PathWatcher) consuming events failed: %s", err)
+			log.Error("%s consuming events failed: %s", watcher, err)
 		}
 		return ctx.Err()
 	case <-lost:
 		watcher.updateCounter(1, "lock.lost")
 		cancel()
 		if err := <-doneCh; err != nil {
-			log.Error("(PathWatcher) error after lost lock: %s", err)
+			log.Error("%s error after lost lock: %s", watcher, err)
 		}
 		return fmt.Errorf("lock for path `%s` is lost", watcher.path)
 	case err := <-doneCh:
@@ -178,7 +189,7 @@ func (watcher *PathWatcher) tryRecover(ctx context.Context, err error, event *go
 	if err == errInconsistentCluster {
 		watcher.tryRecoverInconsistentCluster(ctx, event)
 	} else if errCompacted, ok := err.(goext.ErrCompacted); ok {
-		watcher.tryRecoverCompaction(ctx, errCompacted.CompactRevision)
+		watcher.tryRecoverCompaction(ctx, event, errCompacted.CompactRevision)
 	}
 }
 
@@ -186,7 +197,7 @@ func (watcher *PathWatcher) tryRecoverInconsistentCluster(ctx context.Context, e
 	node, err := watcher.sync.Fetch(ctx, event.Key)
 	if err != nil {
 		watcher.updateCounter(1, "inconsistency_recovery.fetch_errors")
-		log.Critical("Can't recover from inconsistent cluster state on %s: Fetch() failed: %s", event.Key, err)
+		log.Critical("%s can't recover from inconsistent cluster state on %s: Fetch() failed: %s", watcher, event.Key, err)
 		return
 	}
 
@@ -194,22 +205,22 @@ func (watcher *PathWatcher) tryRecoverInconsistentCluster(ctx context.Context, e
 		// some sync events could have be processed out-of-order and the recovery failed.
 		// incorrect data could be stored in DB. a user has to recover (resync) manually
 		watcher.updateCounter(1, "inconsistency_recovery.cas_errors")
-		log.Critical("Can't recover from inconsistent cluster state on %s: notifying the current master failed: %s", event.Key, err)
+		log.Critical("%s can't recover from inconsistent cluster state on %s: notifying the current master failed: %s", watcher, event.Key, err)
 	} else if recovered {
 		watcher.updateCounter(1, "inconsistency_recovery.success")
-		log.Info("Successfully recovered from inconsistency on %s", event.Key)
+		log.Info("%s successfully recovered from inconsistency on %s", watcher, event.Key)
 	} else {
 		watcher.updateCounter(1, "inconsistency_recovery.not_needed")
-		log.Info("Inconsistency on %s detected, but further events are already scheduled, the cluster will recover itself soon", event.Key)
+		log.Info("%s inconsistency on %s detected, but further events are already scheduled, the cluster will recover itself soon", watcher, event.Key)
 	}
 }
 
-func (watcher *PathWatcher) tryRecoverCompaction(ctx context.Context, compactedRevision int64) {
+func (watcher *PathWatcher) tryRecoverCompaction(ctx context.Context, event *gohan_sync.Event, compactedRevision int64) {
 	// next watch should start at lastProcessed +1, so we're setting a known-good -1
 	if err := watcher.storeRevision(ctx, compactedRevision-1); err != nil && err != errInconsistentCluster {
 		// it's not fatal: the next leader will with again fail with errCompacted and retry the recovery
 		watcher.updateCounter(1, "compaction_recovery.failed")
-		log.Warning("Can't recover from etcd compaction on %s: %s", watcher.path, err)
+		log.Warning("%s can't recover from etcd compaction on %s: %s", watcher, event.Key, err)
 	} else if err == errInconsistentCluster {
 		watcher.updateCounter(1, "compaction_recovery.not_needed")
 	} else {
@@ -235,13 +246,13 @@ func (watcher *PathWatcher) fetchStoredRevision(ctx context.Context) int64 {
 	if err == nil {
 		inStore, err := strconv.ParseInt(lastSeen.Value, 10, 64)
 		if err == nil {
-			log.Info("(PathWatcher) Using last seen revision `%d` for watching path `%s`", inStore, watcher.path)
+			log.Info("%s using last seen revision `%d`", watcher, inStore)
 			fromRevision = inStore
 		} else {
-			log.Warning("(PathWatcher) Revision `%s` is not a valid int64 number, using the current one, which is %d (%s)", lastSeen.Value, fromRevision, err)
+			log.Warning("%s revision `%s` is not a valid int64 number, using the current one, which is %d (%s)", watcher, lastSeen.Value, fromRevision, err)
 		}
 	} else {
-		log.Warning("(PathWatcher) Failed to fetch last seen revision number, using the current one, which is %d: (%s)", fromRevision, err)
+		log.Warning("%s failed to fetch last seen revision number, using the current one, which is %d: (%s)", watcher, fromRevision, err)
 	}
 	return fromRevision
 }
@@ -259,7 +270,7 @@ func (watcher *PathWatcher) storeRevision(ctx context.Context, revision int64) e
 		return fmt.Errorf("failed to update revision number for watch path `%s` in sync storage", watcher.path)
 	} else if !swapped {
 		watcher.updateCounter(1, "inconsistency_detected")
-		log.Warning("Cluster inconsistency detected: other node in the cluster already made progress on %s, broken revision is %d", watcher.path, revision)
+		log.Warning("%s cluster inconsistency detected: other node in the cluster already made progress, broken revision is %d", watcher, revision)
 		return errInconsistentCluster
 	}
 
@@ -280,19 +291,19 @@ func (watcher *PathWatcher) runExtensionOnSync(ctx context.Context, response *go
 		"trace_id": util.NewTraceID(),
 	}
 	if err := env.HandleEvent("notification", context); err != nil {
-		log.Error("(PathWatcher) extension error, last processed event may be lost: %s", err)
+		log.Error("%s extension error, last processed event may be lost: %s", watcher, err)
 	}
 	return
 }
 
 func (watcher *PathWatcher) measureTime(timeStarted time.Time, action string) {
-	metrics.UpdateTimer(timeStarted, "path_watcher.%s.%s", watcher.path, action)
+	metrics.UpdateTimer(timeStarted, "path_watcher.%s.%s", watcher.escapedPath, action)
 }
 
 func (watcher *PathWatcher) updateCounter(delta int64, metric string) {
-	metrics.UpdateCounter(delta, "path_watcher.%s.%s", watcher.path, metric)
+	metrics.UpdateCounter(delta, "path_watcher.%s.%s", watcher.escapedPath, metric)
 }
 
 func (watcher *PathWatcher) updateGauge(value int64, metric string) {
-	metrics.UpdateGauge(value, "path_watcher.%s.%s", watcher.path, metric)
+	metrics.UpdateGauge(value, "path_watcher.%s.%s", watcher.escapedPath, metric)
 }
