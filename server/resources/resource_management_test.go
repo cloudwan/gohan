@@ -41,30 +41,32 @@ var _ = Describe("Resource manager", func() {
 	const (
 		adminResourceID       = "6660fbf8-ca60-4cb0-a42e-9a913beafbaf"
 		memberResourceID      = "6660fbf8-ca60-4cb0-a42e-9a913beafbae"
+		memberResourceID2     = "6660fbf8-ca60-4cb0-a42e-9a913beafba0"
 		otherDomainResourceID = "6660fbf8-ca60-4cb0-a42e-9a913beafbad"
 	)
 
 	var (
-		manager                 *schema.Manager
-		adminAuth               schema.Authorization
-		memberAuth              schema.Authorization
-		domainScopedAuth        schema.Authorization
-		auth                    schema.Authorization
-		context                 middleware.Context
-		schemaID                string
-		path                    string
-		action                  string
-		currentSchema           *schema.Schema
-		extensions              []*schema.Extension
-		env                     extension.Environment
-		events                  map[string]string
-		timeLimit               time.Duration
-		timeLimits              []*schema.PathEventTimeLimit
-		ctx                     context_pkg.Context
-		adminResourceData       map[string]interface{}
-		memberResourceData      map[string]interface{}
-		otherDomainResourceData map[string]interface{}
-		fakeIdentity            middleware.IdentityService
+		manager                    *schema.Manager
+		adminAuth                  schema.Authorization
+		memberAuth                 schema.Authorization
+		domainScopedAuth           schema.Authorization
+		auth                       schema.Authorization
+		context                    middleware.Context
+		schemaID                   string
+		path                       string
+		action                     string
+		currentSchema              *schema.Schema
+		extensions                 []*schema.Extension
+		env                        extension.Environment
+		events                     map[string]string
+		timeLimit                  time.Duration
+		timeLimits                 []*schema.PathEventTimeLimit
+		ctx                        context_pkg.Context
+		adminResourceData          map[string]interface{}
+		memberResourceData         map[string]interface{}
+		memberResourceDataTrueBool map[string]interface{}
+		otherDomainResourceData    map[string]interface{}
+		fakeIdentity               middleware.IdentityService
 	)
 
 	BeforeEach(func() {
@@ -511,16 +513,20 @@ var _ = Describe("Resource manager", func() {
 		Describe("When there are resources in the database", func() {
 			JustBeforeEach(setupAndCreateTestResources)
 
-			getAndExpectResources := func(expectedResources ...interface{}) {
+			getAndExpectResourcesWithFilter := func(filter map[string][]string, expectedResources ...interface{}) {
 				schemaPluralName := schemaID + "s"
 
 				err := resources.GetMultipleResources(
-					context, testDB, currentSchema, map[string][]string{})
+					context, testDB, currentSchema, filter)
 				result := context["response"].(map[string]interface{})
 				number := context["total"].(uint64)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(number).To(Equal(uint64(len(expectedResources))))
 				Expect(result).To(HaveKeyWithValue(schemaPluralName, ConsistOf(expectedResources...)))
+			}
+
+			getAndExpectResources := func(expectedResources ...interface{}) {
+				getAndExpectResourcesWithFilter(map[string][]string{}, expectedResources...)
 			}
 
 			Context("As an admin", func() {
@@ -541,6 +547,58 @@ var _ = Describe("Resource manager", func() {
 
 					It("Should return a only owned resources", func() {
 						getAndExpectResources(memberResourceData)
+					})
+				})
+
+				Context("Resources restricted with is_owner but not for test_bool", func() {
+					BeforeEach(func() {
+						schemaID = "blacklisted_property_resource"
+
+						memberResourceDataTrueBool = map[string]interface{}{
+							"id":           memberResourceID2,
+							"tenant_id":    memberTenantID,
+							"domain_id":    domainAID,
+							"test_string":  "Mi estas la pordo, mi estas la sxlosilo.",
+							"test_number":  0.5,
+							"test_integer": 1,
+							"test_bool":    true,
+						}
+						memberResource, err := manager.LoadResource(schemaID, memberResourceDataTrueBool)
+						Expect(err).NotTo(HaveOccurred())
+
+						tx, err := testDB.BeginTx()
+						Expect(err).NotTo(HaveOccurred())
+						defer tx.Close()
+						create(tx, memberResource)
+						Expect(tx.Commit()).To(Succeed())
+					})
+
+					var (
+						removeFields = func(resource map[string]interface{}, fieldsToRemove []string) map[string]interface{} {
+							for _, field := range fieldsToRemove {
+								delete(resource, field)
+							}
+							return resource
+						}
+
+						schemaBlacklistedFields = []string{"tenant_id", "test_bool"}
+					)
+
+					It("Should return only two owned resources", func() {
+						getAndExpectResources(
+							removeFields(memberResourceData, schemaBlacklistedFields),
+							removeFields(memberResourceDataTrueBool, schemaBlacklistedFields),
+						)
+					})
+
+					It("Should return two owned resources regardless of test_bool filter", func() {
+						filter := map[string][]string{
+							"test_bool": []string{"false"},
+						}
+						getAndExpectResourcesWithFilter(filter,
+							removeFields(memberResourceData, schemaBlacklistedFields),
+							removeFields(memberResourceDataTrueBool, schemaBlacklistedFields),
+						)
 					})
 				})
 
