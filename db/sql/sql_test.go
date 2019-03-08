@@ -94,12 +94,17 @@ var _ = Describe("Sql", func() {
 
 	Describe("Select Pagination", func() {
 		var s *schema.Schema
+		var totalBefore uint64
 
 		BeforeEach(func() {
 			manager := schema.GetManager()
 			var ok bool
 			s, ok = manager.Schema("test")
 			Expect(ok).To(BeTrue())
+
+			var err error
+			totalBefore, err = tx.Count(ctx, s, nil)
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("Empty key doesn't exclude limit/offset pagination", func() {
@@ -109,9 +114,10 @@ var _ = Describe("Sql", func() {
 
 			pg, err := pagination.NewPaginator(pagination.OptionLimit(1))
 			Expect(err).To(Succeed())
-			results, _, err := tx.List(ctx, s, map[string]interface{}{}, nil, pg)
+			results, total, err := tx.List(ctx, s, map[string]interface{}{}, nil, pg)
 			Expect(err).To(Succeed())
 			Expect(len(results)).To(Equal(1))
+			Expect(total).To(Equal(totalBefore + 2))
 		})
 
 	})

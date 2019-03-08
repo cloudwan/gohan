@@ -870,7 +870,12 @@ func (tx *Transaction) executeSelect(ctx context.Context, sc *selectContext, sql
 	if err != nil {
 		return nil, 0, err
 	}
-	total, err = tx.Count(ctx, sc.schema, sc.filter)
+
+	if sc.paginator != nil && (sc.paginator.Offset != 0 || sc.paginator.Limit != 0) {
+		total, err = tx.Count(ctx, sc.schema, sc.filter)
+	} else {
+		total = uint64(len(list))
+	}
 	return
 }
 
