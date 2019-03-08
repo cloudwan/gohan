@@ -107,19 +107,38 @@ var _ = Describe("Sql", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("Empty key doesn't exclude limit/offset pagination", func() {
-
+		insertTwoRecords := func() {
 			Expect(tx.Exec(ctx, "INSERT INTO `tests` (`id`, `tenant_id`) values ('id1', 'tenant1')")).To(Succeed())
 			Expect(tx.Exec(ctx, "INSERT INTO `tests` (`id`, `tenant_id`) values ('id2', 'tenant2')")).To(Succeed())
+		}
+
+		listWithPaginator := func(pg *pagination.Paginator) ([]*schema.Resource, uint64) {
+			results, total, err := tx.List(ctx, s, map[string]interface{}{}, nil, pg)
+			Expect(err).To(Succeed())
+			return results, total
+		}
+
+		It("Empty key doesn't exclude limit/offset pagination", func() {
+			insertTwoRecords()
 
 			pg, err := pagination.NewPaginator(pagination.OptionLimit(1))
 			Expect(err).To(Succeed())
-			results, total, err := tx.List(ctx, s, map[string]interface{}{}, nil, pg)
-			Expect(err).To(Succeed())
+			results, total := listWithPaginator(pg)
+
 			Expect(len(results)).To(Equal(1))
 			Expect(total).To(Equal(totalBefore + 2))
 		})
 
+		It("If Limit is set to 0, total is still returned correctly", func() {
+			insertTwoRecords()
+
+			pg, err := pagination.NewPaginator(pagination.OptionLimit(0))
+			Expect(err).To(Succeed())
+			results, total := listWithPaginator(pg)
+
+			Expect(results).To(BeEmpty())
+			Expect(total).To(Equal(totalBefore + 2))
+		})
 	})
 
 	Describe("MakeColumns", func() {
