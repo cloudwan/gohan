@@ -17,9 +17,6 @@ package server
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"sort"
 	"sync"
 	"time"
 
@@ -34,8 +31,6 @@ const (
 	processPathPrefix       = "/gohan/cluster/process"
 	masterTTL               = 10
 )
-
-var errLockFailed = errors.New("failed to lock on sync backend")
 
 // SyncWatcher runs extensions when it detects a change on the sync.
 // The watcher implements a load balancing mechanism that uses
@@ -82,150 +77,24 @@ func NewSyncWatcherFromServer(server *Server) *SyncWatcher {
 func (watcher *SyncWatcher) Run(ctx context.Context, wg *sync.WaitGroup) error {
 	defer wg.Done()
 
-	for {
-		err := func() error {
-			// register self process to the cluster
-			lockKey := processPathPrefix + "/" + watcher.sync.GetProcessID()
-			lost, err := watcher.sync.Lock(ctx, lockKey, true)
-			if err != nil {
-				return err
-			}
-			defer func() {
-				// can't use the parent context, it may be already canceled
-				if err := watcher.sync.Unlock(context.Background(), lockKey); err != nil {
-					log.Warning("SyncWatcher: unlocking etcd failed on %s: %s", lockKey, err)
-				}
-			}()
+	childrenWg := sync.WaitGroup{}
+	watcher.runSyncWatches(ctx, &childrenWg)
 
-			watchCtx, watchCancel := context.WithCancel(ctx)
-			defer watchCancel()
-			events := watcher.sync.Watch(watchCtx, processPathPrefix, int64(gohan_sync.RevisionCurrent))
-			watchErr := make(chan error, 1)
-			go func() {
-				watchErr <- watcher.processWatchLoop(events)
-			}()
-
-			select {
-			case err := <-watchErr:
-				return err
-			case <-ctx.Done():
-				return <-watchErr
-			case <-lost:
-				watchCancel()
-				err := <-watchErr
-				if err != nil {
-					return fmt.Errorf("lock is lost: %s", err)
-				}
-				return fmt.Errorf("lock is lost")
-			}
-		}()
-
-		if err != nil {
-			log.Error("process watch interrupted: %s", err)
-		}
-
-		select {
-		case <-time.After(watcher.backoff):
-			continue
-		case <-ctx.Done():
-			return ctx.Err()
-		}
-	}
-}
-
-// processWatchLoop handles events from the watch on the process list.
-// When this method detects a change, spawns new goroutines for sync event handling.
-// This method blocks until the events channel is closed by the caller or
-// an error event is given from the channel.
-func (watcher *SyncWatcher) processWatchLoop(events <-chan *gohan_sync.Event) error {
-	processList := []string{}
-
-	previousCancel := func() {}
-	previousDone := make(chan struct{})
-	close(previousDone)
-	defer func() {
-		previousCancel()
-		<-previousDone
-	}()
-
-	for event := range events {
-		previousCancel()
-		<-previousDone
-
-		if event.Err != nil {
-			return event.Err
-		}
-
-		log.Debug("cluster change detected: %s process %s", event.Action, event.Key)
-
-		// modify gohan process list
-		pos := -1
-		for p, v := range processList {
-			if v == event.Key {
-				pos = p
-			}
-		}
-		switch event.Action {
-		case "delete":
-			// remove detected process from list
-			if pos > -1 {
-				processList = append((processList)[:pos], (processList)[pos+1:]...)
-			} else {
-				log.Warning("unknown process was deleted from watch list: `%s`", event.Key)
-			}
-		default:
-			// add detected process from list
-			if pos == -1 {
-				processList = append(processList, event.Key)
-				sort.Sort(sort.StringSlice(processList))
-			} else {
-				log.Warning("process `%s` is already on the list", event.Key)
-			}
-		}
-
-		myPosition := -1
-		myValue := processPathPrefix + "/" + watcher.sync.GetProcessID()
-		for p, v := range processList {
-			if v == myValue {
-				myPosition = p
-				break
-			}
-		}
-
-		if myPosition >= 0 && len(processList) > 0 {
-			log.Debug("Current cluster consists of following processes: %s, my position: %d", processList, myPosition)
-
-			var cctx context.Context
-			cctx, previousCancel = context.WithCancel(context.Background())
-			previousDone = make(chan struct{})
-
-			go func() {
-				defer close(previousDone)
-				watcher.runSyncWatches(cctx, len(processList), myPosition)
-			}()
-		} else {
-			log.Error("Current cluster consists of following processes: %s, my position not found: %d", processList, myPosition)
-		}
-	}
-
-	return nil
+	childrenWg.Wait()
+	return ctx.Err()
 }
 
 // runSyncWatches starts goroutines to watch changes on the sync and run extensions for them.
 // This method block until the context ctx is canceled and returns once all the goroutines are closed.
-func (watcher *SyncWatcher) runSyncWatches(ctx context.Context, size int, position int) {
-	var wg sync.WaitGroup
-	defer wg.Wait()
-
-	for idx, path := range watcher.watchKeys {
+func (watcher *SyncWatcher) runSyncWatches(ctx context.Context, wg *sync.WaitGroup) {
+	for _, path := range watcher.watchKeys {
 		wg.Add(1)
-		prio := (position - (idx % size) + size) % size
-		log.Debug("(SyncWatch) Priority of `%s`: `%d`", path, prio)
+		log.Debug("(SyncWatch) Priority of `%s` starting", path)
 
-		pathWatcher := NewPathWatcher(watcher.sync, watcher.watchExtensions, path, prio)
+		pathWatcher := NewPathWatcher(watcher.sync, watcher.watchExtensions, path)
 
 		go func(ctx context.Context, wg *sync.WaitGroup, pw *PathWatcher) {
 			pw.Run(ctx, wg)
-		}(ctx, &wg, pathWatcher)
+		}(ctx, wg, pathWatcher)
 	}
 }

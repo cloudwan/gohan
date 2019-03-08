@@ -17,42 +17,39 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/cloudwan/gohan/extension"
-	"github.com/cloudwan/gohan/extension/goext"
 	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/metrics"
 	gohan_sync "github.com/cloudwan/gohan/sync"
 	"github.com/cloudwan/gohan/util"
-	"github.com/pkg/errors"
+	stan "github.com/nats-io/go-nats-streaming"
 )
 
 type PathWatcher struct {
-	sync                      gohan_sync.Sync
-	priority                  int
-	path                      string
-	escapedPath               string
-	extensions                map[string]extension.Environment
-	previousProcessedRevision int64
+	nats        stan.Conn
+	sync        gohan_sync.Sync
+	path        string
+	escapedPath string
+	extensions  map[string]extension.Environment
 }
 
 var (
-	errInconsistentCluster = errors.New("inconsistent cluster state detected")
-	replacer               = strings.NewReplacer(".", "_", "/", "_")
+	replacer = strings.NewReplacer(".", "_", "/", "_")
 )
 
-func NewPathWatcher(sync gohan_sync.Sync, extensions map[string]extension.Environment, path string, priority int) *PathWatcher {
+func NewPathWatcher(sync gohan_sync.Sync, extensions map[string]extension.Environment, path string, nats stan.Conn) *PathWatcher {
 	return &PathWatcher{
 		sync:        sync,
 		extensions:  extensions,
-		priority:    priority,
 		path:        path,
 		escapedPath: replacer.Replace(path),
+		nats:        nats,
 	}
 }
 
@@ -67,19 +64,10 @@ func (watcher PathWatcher) String() string {
 func (watcher *PathWatcher) Run(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	select {
-	case <-time.After(time.Duration(watcher.priority*masterTTL) * time.Second):
-	case <-ctx.Done():
-		return
-	}
-
 	for {
 		err := watcher.run(ctx)
 
 		switch err {
-		case errLockFailed:
-			watcher.updateCounter(1, "lock.failed")
-			log.Debug("%s failed to acquire lock, retrying...", watcher)
 		case context.Canceled:
 			// Do nothing, normal shutdown
 		default:
@@ -88,7 +76,7 @@ func (watcher *PathWatcher) Run(ctx context.Context, wg *sync.WaitGroup) {
 		}
 
 		select {
-		case <-time.After(time.Duration(watcher.priority*masterTTL+1) * time.Second):
+		case <-time.After(time.Second):
 		case <-ctx.Done():
 			return
 		}
@@ -98,137 +86,38 @@ func (watcher *PathWatcher) Run(ctx context.Context, wg *sync.WaitGroup) {
 // run handles events on a path with a handler.
 // Returns any error or context cancel.
 // This method gets a lock on the sync backend and returns with an error when fails.
-func (watcher *PathWatcher) run(parentCtx context.Context) error {
+func (watcher *PathWatcher) run(ctx context.Context) error {
 	watcher.updateCounter(1, "active")
 	defer watcher.updateCounter(-1, "active")
 
-	lockKey := lockPath + "/watch" + watcher.path
-	lost, err := watcher.sync.Lock(parentCtx, lockKey, false)
+	_, err := watcher.nats.QueueSubscribe(watcher.path, "gohan-group", func(msg *stan.Msg) {
+		watcher.watchExtensionHandler(msg)
+
+		if ackErr := msg.Ack(); ackErr != nil {
+			log.Error("ACKing failed: %s", ackErr)
+		}
+
+		watcher.storeRevision(msg.Sequence)
+
+	}, stan.DurableName("durable-gohan-queue"), stan.SetManualAckMode(), stan.DeliverAllAvailable())
+
 	if err != nil {
-		return errLockFailed
+		return fmt.Errorf("subscription failed: %s", err)
 	}
-	defer func() {
-		// can't use the parent context, it may be already canceled
-		if err := watcher.sync.Unlock(context.Background(), lockKey); err != nil {
-			log.Warning("%s unlocking etcd failed on %s: %s", watcher, lockKey, err)
-		}
-	}()
 
-	ctx, cancel := context.WithCancel(parentCtx)
-	defer cancel()
-
-	watcher.previousProcessedRevision = watcher.fetchStoredRevision(parentCtx)
-	eventsCh := watcher.sync.Watch(ctx, watcher.path, watcher.previousProcessedRevision+1)
-	doneCh := make(chan error, 1)
-
-	go watcher.consumeEvents(ctx, eventsCh, doneCh)
-
-	select {
-	case <-ctx.Done():
-		if err := <-doneCh; err != nil {
-			log.Error("%s consuming events failed: %s", watcher, err)
-		}
-		return ctx.Err()
-	case <-lost:
-		watcher.updateCounter(1, "lock.lost")
-		cancel()
-		if err := <-doneCh; err != nil {
-			log.Error("%s error after lost lock: %s", watcher, err)
-		}
-		return fmt.Errorf("lock for path `%s` is lost", watcher.path)
-	case err := <-doneCh:
-		return err
-	}
+	<-ctx.Done()
+	return ctx.Err()
 }
 
-func (watcher *PathWatcher) consumeEvents(ctx context.Context, eventCh <-chan *gohan_sync.Event, watchErr chan<- error) {
-	watcher.updateCounter(1, "running")
-	defer watcher.updateCounter(-1, "running")
-
-	var err error
-	defer func() {
-		watchErr <- err
-	}()
-
-	for {
-		select {
-		case event, ok := <-eventCh:
-			if !ok {
-				err = ctx.Err()
-				return
-			}
-			if err = watcher.consumeEvent(event); err != nil {
-				return
-			}
-		case <-ctx.Done():
-			err = ctx.Err()
-			return
-		}
-	}
-}
-
-func (watcher *PathWatcher) consumeEvent(event *gohan_sync.Event) (err error) {
-	// each event & recovery must not be interrupted,
-	// otherwise we could easily end up in an inconsistent state
-	// if ctx is canceled either in running extensions or just before recovery
+func (watcher *PathWatcher) watchExtensionHandler(msg *stan.Msg) {
 	ctx := context.Background()
 
-	defer func() {
-		watcher.tryRecover(ctx, err, event)
-	}()
-
-	if event.Err != nil {
-		return event.Err
-	}
-	watcher.watchExtensionHandler(ctx, event)
-
-	return watcher.storeRevision(ctx, event.Revision)
-}
-
-func (watcher *PathWatcher) tryRecover(ctx context.Context, err error, event *gohan_sync.Event) {
-	if err == errInconsistentCluster {
-		watcher.tryRecoverInconsistentCluster(ctx, event)
-	} else if errCompacted, ok := err.(goext.ErrCompacted); ok {
-		watcher.tryRecoverCompaction(ctx, event, errCompacted.CompactRevision)
-	}
-}
-
-func (watcher *PathWatcher) tryRecoverInconsistentCluster(ctx context.Context, event *gohan_sync.Event) {
-	node, err := watcher.sync.Fetch(ctx, event.Key)
+	response, err := parse(msg)
 	if err != nil {
-		watcher.updateCounter(1, "inconsistency_recovery.fetch_errors")
-		log.Critical("%s can't recover from inconsistent cluster state on %s: Fetch() failed: %s", watcher, event.Key, err)
+		log.Error("parsing failed: %s", err)
 		return
 	}
 
-	if recovered, err := watcher.sync.CompareAndSwap(ctx, event.Key, node.Value, watcher.sync.ByValue(node.Value)); err != nil {
-		// some sync events could have be processed out-of-order and the recovery failed.
-		// incorrect data could be stored in DB. a user has to recover (resync) manually
-		watcher.updateCounter(1, "inconsistency_recovery.cas_errors")
-		log.Critical("%s can't recover from inconsistent cluster state on %s: notifying the current master failed: %s", watcher, event.Key, err)
-	} else if recovered {
-		watcher.updateCounter(1, "inconsistency_recovery.success")
-		log.Info("%s successfully recovered from inconsistency on %s", watcher, event.Key)
-	} else {
-		watcher.updateCounter(1, "inconsistency_recovery.not_needed")
-		log.Info("%s inconsistency on %s detected, but further events are already scheduled, the cluster will recover itself soon", watcher, event.Key)
-	}
-}
-
-func (watcher *PathWatcher) tryRecoverCompaction(ctx context.Context, event *gohan_sync.Event, compactedRevision int64) {
-	// next watch should start at lastProcessed +1, so we're setting a known-good -1
-	if err := watcher.storeRevision(ctx, compactedRevision-1); err != nil && err != errInconsistentCluster {
-		// it's not fatal: the next leader will with again fail with errCompacted and retry the recovery
-		watcher.updateCounter(1, "compaction_recovery.failed")
-		log.Warning("%s can't recover from etcd compaction on %s: %s", watcher, event.Key, err)
-	} else if err == errInconsistentCluster {
-		watcher.updateCounter(1, "compaction_recovery.not_needed")
-	} else {
-		watcher.updateCounter(1, "compaction_recovery.success")
-	}
-}
-
-func (watcher *PathWatcher) watchExtensionHandler(ctx context.Context, response *gohan_sync.Event) {
 	defer l.Panic(log)
 	for event, env := range watcher.extensions {
 		if strings.HasPrefix(response.Key, "/"+event) {
@@ -238,45 +127,35 @@ func (watcher *PathWatcher) watchExtensionHandler(ctx context.Context, response 
 	}
 }
 
-// fetchStoredRevision returns the revision number stored in the sync backend for a path.
-// When it's a new in the backend, returns sync.RevisionCurrent.
-func (watcher *PathWatcher) fetchStoredRevision(ctx context.Context) int64 {
-	fromRevision := int64(gohan_sync.RevisionCurrent)
-	lastSeen, err := watcher.sync.Fetch(ctx, SyncWatchRevisionPrefix+watcher.path)
-	if err == nil {
-		inStore, err := strconv.ParseInt(lastSeen.Value, 10, 64)
-		if err == nil {
-			log.Info("%s using last seen revision `%d`", watcher, inStore)
-			fromRevision = inStore
-		} else {
-			log.Warning("%s revision `%s` is not a valid int64 number, using the current one, which is %d (%s)", watcher, lastSeen.Value, fromRevision, err)
-		}
-	} else {
-		log.Warning("%s failed to fetch last seen revision number, using the current one, which is %d: (%s)", watcher, fromRevision, err)
+type natsMessage struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+func parse(rawMsg *stan.Msg) (*gohan_sync.Event, error) {
+	var msg natsMessage
+	if err := json.Unmarshal(rawMsg.Data, &msg); err != nil {
+		return nil, err
 	}
-	return fromRevision
+
+	ev := gohan_sync.Event{
+		Action:   "set",
+		Key:      msg.Key,
+		Revision: 0,
+		Err:      nil,
+	}
+
+	err := json.Unmarshal([]byte(msg.Value), &ev.Data)
+	if err != nil {
+		log.Warning("failed to unmarshal watch response value %s: %s", msg.Value, err)
+	}
+
+	return &ev, nil
 }
 
 // storeRevision puts a revision number for a path to the sync backend.
-func (watcher *PathWatcher) storeRevision(ctx context.Context, revision int64) error {
-	path := SyncWatchRevisionPrefix + watcher.path
-	value := strconv.FormatInt(revision, 10)
-	opts := make([]gohan_sync.CASCondition, 0, 1)
-	if watcher.previousProcessedRevision != int64(gohan_sync.RevisionCurrent) {
-		opts = append(opts, watcher.sync.ByValue(strconv.FormatInt(watcher.previousProcessedRevision, 10)))
-	}
-
-	if swapped, err := watcher.sync.CompareAndSwap(ctx, path, value, opts...); err != nil {
-		return fmt.Errorf("failed to update revision number for watch path `%s` in sync storage", watcher.path)
-	} else if !swapped {
-		watcher.updateCounter(1, "inconsistency_detected")
-		log.Warning("%s cluster inconsistency detected: other node in the cluster already made progress, broken revision is %d", watcher, revision)
-		return errInconsistentCluster
-	}
-
+func (watcher *PathWatcher) storeRevision(revision uint64) {
 	watcher.updateGauge(revision, "previous_processed_revision")
-	watcher.previousProcessedRevision = revision
-	return nil
 }
 
 //Run extension on sync
@@ -304,6 +183,6 @@ func (watcher *PathWatcher) updateCounter(delta int64, metric string) {
 	metrics.UpdateCounter(delta, "path_watcher.%s.%s", watcher.escapedPath, metric)
 }
 
-func (watcher *PathWatcher) updateGauge(value int64, metric string) {
-	metrics.UpdateGauge(value, "path_watcher.%s.%s", watcher.escapedPath, metric)
+func (watcher *PathWatcher) updateGauge(value uint64, metric string) {
+	metrics.UpdateGauge(int64(value), "path_watcher.%s.%s", watcher.escapedPath, metric)
 }
