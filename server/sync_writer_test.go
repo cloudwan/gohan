@@ -18,6 +18,7 @@ package server_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	sync_lib "sync"
 	"time"
 
@@ -35,14 +36,16 @@ import (
 var _ = Describe("Server package test", func() {
 	var (
 		ctx                       context.Context
+		cancel                    context.CancelFunc
 		rawRed, rawBlue, rawGreen map[string]interface{}
 		red, blue, green          *schema.Resource
 		syncedDb                  db.DB
 		sync                      *gohan_etcd.Sync
+		done                      sync_lib.WaitGroup
 	)
 
 	BeforeEach(func() {
-		ctx = context.Background()
+		ctx, cancel = context.WithCancel(context.Background())
 		syncedDb = srv.NewDbSyncWrapper(testDB)
 
 		var err error
@@ -51,7 +54,9 @@ var _ = Describe("Server package test", func() {
 	})
 
 	AfterEach(func() {
+		cancel()
 		sync.Close()
+		done.Wait()
 	})
 
 	checkIsSynced := func(rawResource map[string]interface{}, resource *schema.Resource) {
@@ -90,6 +95,26 @@ var _ = Describe("Server package test", func() {
 
 	deleteNetwork := func(network *schema.Resource) {
 		deleteResource("network", network)
+	}
+
+	startInformer := func() {
+		informer := srv.NewTransactionCommitInformer(sync)
+
+		done.Add(1)
+		go func() {
+			defer GinkgoRecover()
+			Expect(informer.Run(ctx, &done)).To(Equal(context.Canceled))
+		}()
+	}
+
+	startWriter := func() {
+		writer := srv.NewSyncWriterFromServer(server)
+
+		done.Add(1)
+		go func() {
+			defer GinkgoRecover()
+			Expect(writer.Run(ctx, &done)).To(Equal(context.Canceled))
+		}()
 	}
 
 	Describe("Sync", func() {
@@ -234,36 +259,45 @@ var _ = Describe("Server package test", func() {
 
 	})
 
+	It("Unordered event id", func() {
+		startInformer()
+
+		withinTx(func(tx transaction.Transaction) {
+			rawRed, red = createNetwork(ctx, tx, "red")
+		})
+
+		withinTx(func(tx transaction.Transaction) {
+			_, err := tx.RawTransaction().ExecContext(ctx, "UPDATE events SET id = 1234;")
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		type syncedEvent struct {
+			EventId int64 `json:"event_id"`
+		}
+
+		data, err := json.Marshal(syncedEvent{1234})
+		if err != nil {
+			panic(fmt.Sprintf("Can't marshall data: %s", err))
+		}
+
+		Expect(sync.Update(ctx, srv.SyncKeyTxCommitted, string(data))).To(Succeed())
+
+		startWriter()
+
+		checkIsSynced(rawRed, red)
+
+		withinTx(func(tx transaction.Transaction) {
+			rawBlue, blue = createNetwork(ctx, tx, "blue")
+			rawGreen, green = createNetwork(ctx, tx, "green")
+		})
+
+		checkIsSynced(rawBlue, blue)
+		checkIsSynced(rawGreen, green)
+	})
+
 	Describe("Interactions with TransactionCommitInformer", func() {
-		var (
-			cancel context.CancelFunc
-			done   sync_lib.WaitGroup
-		)
-
-		startInformer := func() {
-			informer := srv.NewTransactionCommitInformer(sync)
-
-			done.Add(1)
-			go func() {
-				defer GinkgoRecover()
-				Expect(informer.Run(ctx, &done)).To(Equal(context.Canceled))
-			}()
-		}
-
-		startWriter := func() {
-			writer := srv.NewSyncWriterFromServer(server)
-
-			done.Add(1)
-			go func() {
-				defer GinkgoRecover()
-				Expect(writer.Run(ctx, &done)).To(Equal(context.Canceled))
-			}()
-		}
 
 		BeforeEach(func() {
-			// go vet complains about cancel(), but it's called in AfterEach
-			ctx, cancel = context.WithCancel(ctx)
-
 			startWriter()
 			startInformer()
 		})
@@ -272,9 +306,6 @@ var _ = Describe("Server package test", func() {
 			deleteNetwork(red)
 			deleteNetwork(green)
 			deleteNetwork(blue)
-
-			cancel()
-			done.Wait()
 		})
 
 		It("writes all events from a single transaction", func() {
