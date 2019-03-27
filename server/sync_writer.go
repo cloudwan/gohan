@@ -39,8 +39,6 @@ const (
 
 	defaultBackoff       = 5 * time.Second
 	defaultUnlockTimeout = 3 * time.Second
-
-	notSyncedYet = -1
 )
 
 // SyncWriter copies data from the RDBMS to the sync layer.
@@ -48,21 +46,19 @@ const (
 // sync layer by SyncWriter.
 // SyncWriter gets items to sync from the event table.
 type SyncWriter struct {
-	sync            gohan_sync.Sync
-	db              db.DB
-	backoff         time.Duration
-	unlockTimeout   time.Duration
-	lastSyncedEvent int
+	sync          gohan_sync.Sync
+	db            db.DB
+	backoff       time.Duration
+	unlockTimeout time.Duration
 }
 
 // NewSyncWriter creates a new instance of SyncWriter.
 func NewSyncWriter(sync gohan_sync.Sync, db db.DB) *SyncWriter {
 	return &SyncWriter{
-		sync:            sync,
-		db:              db,
-		backoff:         getBackoff(),
-		unlockTimeout:   getUnlockTimeout(),
-		lastSyncedEvent: notSyncedYet,
+		sync:          sync,
+		db:            db,
+		backoff:       getBackoff(),
+		unlockTimeout: getUnlockTimeout(),
 	}
 }
 
@@ -155,12 +151,6 @@ func getEventId(event *gohan_sync.Event) int {
 
 func (writer *SyncWriter) triggerSync(ctx context.Context, eventId int) error {
 	writer.updateCounter(1, "wake_up.on_trigger")
-
-	if eventId <= writer.lastSyncedEvent {
-		writer.updateCounter(1, "skipped_syncs")
-		return nil
-	}
-
 	_, err := writer.Sync(ctx)
 	return err
 }
@@ -179,7 +169,6 @@ func (writer *SyncWriter) Sync(ctx context.Context) (synced int, err error) {
 			return
 		}
 		synced++
-		writer.lastSyncedEvent = resource.Get("id").(int)
 	}
 
 	if synced == 0 {
