@@ -21,9 +21,6 @@ import (
 	l "github.com/cloudwan/gohan/log"
 )
 
-// RevisionCurrent is current sync revision
-const RevisionCurrent = -1
-
 var log = l.NewLogger()
 
 //Sync is a interface for sync servers
@@ -36,6 +33,13 @@ type Sync interface {
 	Delete(ctx context.Context, path string, prefix bool) error
 	//Watch keep watch update under the path until context is canceled.
 	Watch(ctx context.Context, path string, revision int64) <-chan *Event
+	Compact(ctx context.Context, revision int64) error
+
+	//CompareAndSwap (CAS) values atomically. Returns true is value was swapped
+	CompareAndSwap(ctx context.Context, path, data string, condition ...CASCondition) (bool, error)
+	//CAS when value matches
+	ByValue(value string) CASCondition
+
 	GetProcessID() string
 	Close()
 }
@@ -57,3 +61,6 @@ type Node struct {
 	Revision int64
 	Children []*Node
 }
+
+//Implementation-defined helper type for CAS conditions
+type CASCondition interface{}

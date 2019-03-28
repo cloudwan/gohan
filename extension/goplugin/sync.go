@@ -23,17 +23,17 @@ import (
 	gohan_sync "github.com/cloudwan/gohan/sync"
 )
 
-func convertEvent(event *gohan_sync.Event) *goext.Event {
+func convertEvent(event *gohan_sync.Event) ([]*goext.Event, error) {
 	if event == nil {
-		return nil
+		return nil, nil
 	}
 
-	return &goext.Event{
+	return []*goext.Event{{
 		Action:   event.Action,
 		Key:      event.Key,
 		Data:     event.Data,
 		Revision: event.Revision,
-	}
+	}}, event.Err
 }
 
 func convertNode(node *gohan_sync.Node) *goext.Node {
@@ -85,7 +85,7 @@ func (sync *Sync) Watch(ctx context.Context, path string, timeout time.Duration,
 	eventChan := sync.raw.Watch(ctx, path, revision)
 	select {
 	case event := <-eventChan:
-		return []*goext.Event{convertEvent(event)}, nil
+		return convertEvent(event)
 	case <-time.After(timeout):
 		return nil, nil
 	case <-ctx.Done():

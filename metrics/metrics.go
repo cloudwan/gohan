@@ -6,11 +6,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/cyberdelia/go-metrics-graphite"
-	"github.com/rcrowley/go-metrics"
-
 	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/util"
+	graphite "github.com/cyberdelia/go-metrics-graphite"
+	"github.com/rcrowley/go-metrics"
 )
 
 var (
@@ -94,5 +93,12 @@ func UpdateCounter(delta int64, format string, args ...interface{}) {
 	if monitoringEnabled {
 		m := metrics.GetOrRegisterCounter(fmt.Sprintf(format, args...), metrics.DefaultRegistry)
 		m.Inc(delta)
+	}
+}
+
+func UpdateGauge(value int64, format string, args ...interface{}) {
+	if monitoringEnabled {
+		m := metrics.GetOrRegisterGauge(fmt.Sprintf(format, args...), metrics.DefaultRegistry)
+		m.Update(value)
 	}
 }
