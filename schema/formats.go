@@ -20,6 +20,7 @@ import (
 	"net"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/Masterminds/semver"
 	"github.com/twinj/uuid"
@@ -42,7 +43,7 @@ type textFormatChecker struct{}
 type versionFormatChecker struct{}
 type versionConstraintFormatChecker struct{}
 
-var yangIPv4FormatRegexp = regexp.MustCompile(`^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(%[\p{N}\p{L}]+)?`)
+var yangIPv4FormatRegexp = regexp.MustCompile(`^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(%[\p{N}\p{L}]+)?$`)
 
 func (f macFormatChecker) IsFormat(input string) bool {
 	match, _ := regexp.MatchString(`^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$`, input)
@@ -75,7 +76,8 @@ func (f cidrFormatChecker) IsFormat(input string) bool {
 		return false
 	}
 	if isV4(ip) {
-		return matchYangIPv4AddressPattern(input)
+		inputIp := extractIpFromCidrFormattedString(input)
+		return matchYangIPv4AddressPattern(inputIp)
 	}
 	return true
 }
@@ -93,7 +95,8 @@ func (f ipv4NetworkFormatChecker) IsFormat(input string) bool {
 		return false
 	}
 
-	if !matchYangIPv4AddressPattern(input) {
+	inputIp := extractIpFromCidrFormattedString(input)
+	if !matchYangIPv4AddressPattern(inputIp) {
 		return false
 	}
 	return hostIP.Equal(netIP)
@@ -109,10 +112,15 @@ func (f ipv4AddressWithCidrFormatChecker) IsFormat(input string) bool {
 		return false
 	}
 
-	if !matchYangIPv4AddressPattern(input) {
+	inputIp := extractIpFromCidrFormattedString(input)
+	if !matchYangIPv4AddressPattern(inputIp) {
 		return false
 	}
 	return !hostIP.Equal(netIP)
+}
+
+func extractIpFromCidrFormattedString(input string) string {
+	return strings.Split(input, "/")[0]
 }
 
 func extractHostAndNet(input string) (hostIP net.IP, netIP net.IP, mask net.IPMask, err error) {
