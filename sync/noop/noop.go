@@ -82,10 +82,6 @@ func (sync *Sync) ByValue(value string) sync.CASCondition {
 	return nil
 }
 
-func (sync *Sync) ByRevision(revision int64) sync.CASCondition {
-	return nil
-}
-
 // Close sync
 func (sync *Sync) Close() {
 

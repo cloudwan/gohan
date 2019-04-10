@@ -55,7 +55,9 @@ var _ = Describe("format checkers", func() {
 			func(input string) {
 				Expect(formatChecker.IsFormat(input)).To(Equal(true))
 			},
-			Entry("IPv4", "127.0.0.1/16"),
+			Entry("IPv4 with 1 in the last octet", "127.0.0.1/16"),
+			Entry("IPv4 with 100 in the last octet", "127.0.0.100/16"),
+			Entry("IPv4 with 20 in the last octet", "127.0.0.20/16"),
 			Entry("IPv6", "::1/16"),
 		)
 
@@ -64,6 +66,8 @@ var _ = Describe("format checkers", func() {
 				Expect(formatChecker.IsFormat(input)).To(Equal(false))
 			},
 			Entry("IPv4 only", "127.0.0.1"),
+			Entry("IPv4 only with one redundant zero in the last octet", "127.0.0.01"),
+			Entry("IPv4 only with two redundant zeros in the last octet", "127.0.0.001"),
 			Entry("IPv6 only", "::1"),
 			Entry("wrong IPv4", "218.108.149.379/16"),
 			Entry("wrong IPv6", "134:g/16"),
@@ -73,6 +77,8 @@ var _ = Describe("format checkers", func() {
 			Entry("IPv4 with three zeros in octet", "127.000.0.1/24"),
 			Entry("IPv4 with two zeros in the first octet", "00.0.0.1/24"),
 			Entry("IPv4 with three zeros in the first octet", "000.0.0.1/24"),
+			Entry("IPv4 with one redundant zero in the last octet ", "1.4.0.01/24"),
+			Entry("IPv4 with two redundant zeros in the last octet ", "1.4.0.001/24"),
 		)
 	})
 
@@ -86,7 +92,10 @@ var _ = Describe("format checkers", func() {
 			func(input string) {
 				Expect(formatChecker.IsFormat(input)).To(Equal(true))
 			},
-			Entry("IPv4", "127.0.0.1"),
+			Entry("IPv4 with 1 in last octet", "127.0.0.1"),
+			Entry("IPv4 with 10 in last octet", "127.0.0.10"),
+			Entry("IPv4 with 100 in last octet", "127.0.0.100"),
+
 		)
 
 		DescribeTable("should fail",
@@ -104,6 +113,8 @@ var _ = Describe("format checkers", func() {
 			Entry("IPv4 with three zeros in octet ", "127.000.0.1"),
 			Entry("IPv4 with two zeros in the first octet ", "00.3.0.1"),
 			Entry("IPv4 with three zeros in the first octet ", "000.4.0.1"),
+			Entry("IPv4 with one redundant zero in the last octet ", "1.4.0.01"),
+			Entry("IPv4 with two redundant zeros in the last octet ", "1.4.0.001"),
 		)
 	})
 
@@ -117,8 +128,10 @@ var _ = Describe("format checkers", func() {
 			func(input string) {
 				Expect(formatChecker.IsFormat(input)).To(Equal(true))
 			},
-			Entry("IPv4", "127.0.0.1"),
-			Entry("IPv4 cidr", "127.0.0.1/16"),
+			Entry("IPv4 with 1 in the last octet", "127.0.0.1"),
+			Entry("IPv4 with 100 in the last octet", "127.0.0.100"),
+			Entry("IPv4 cidr with 1 in the last octet", "127.0.0.1/16"),
+			Entry("IPv4 cidr with 100 in the last octet", "127.0.0.100/16"),
 			Entry("IPv4 network", "127.0.0.0/24"),
 		)
 
@@ -141,6 +154,14 @@ var _ = Describe("format checkers", func() {
 			Entry("IPv4 cidr with three zeros in the first octet", "000.0.0.1/24"),
 			Entry("IPv4 with two zeros in the first octet", "00.0.0.1"),
 			Entry("IPv4 with three zeros in first octet", "000.0.0.1"),
+			Entry("IPv4 with one redundant zero in the last octet ", "1.4.0.01"),
+			Entry("IPv4 with two redundant zeros in the last octet ", "1.4.0.001"),
+			Entry("IPv4 with one redundant zero in the last octet ", "1.4.0.01"),
+			Entry("IPv4 with two redundant zeros in the last octet ", "1.4.0.001"),
+			Entry("IPv4 cidr and one redundant zero in the last octet ", "1.4.0.01/24"),
+			Entry("IPv4 cidr and two redundant zeros in the last octet ", "1.4.0.001/24"),
+			Entry("IPv4 network with one redundant zero in the last octet ", "1.4.0.00/24"),
+			Entry("IPv4 network with two redundant zeros in the last octet ", "1.4.0.000/24"),
 		)
 	})
 
@@ -169,6 +190,8 @@ var _ = Describe("format checkers", func() {
 			Entry("IPv4 network with three zeros in octet", "192.168.000.0/24"),
 			Entry("IPv4 network with two zeros in the first octet ", "00.168.0.0/24"),
 			Entry("IPv4 network with three zeros in the first octet ", "000.168.0.0/24"),
+			Entry("IPv4 network with one redundant zero in the last octet ", "1.168.0.00/24"),
+			Entry("IPv4 network with two redundant zeros in the last octet ", "1.168.0.000/24"),
 		)
 	})
 
@@ -199,6 +222,8 @@ var _ = Describe("format checkers", func() {
 			Entry("IPv4 with three zeros in octet", "192.168.000.2/24"),
 			Entry("IPv4 with two zeros in the first octet", "00.168.0.2/24"),
 			Entry("IPv4 with three zeros in the first octet ", "000.168.0.2/24"),
+			Entry("IPv4 with one redundant zero in the last octet", "00.168.0.02/24"),
+			Entry("IPv4 with two redundant zeros in the last octet ", "000.168.0.002/24"),
 		)
 	})
 

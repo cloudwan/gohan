@@ -381,7 +381,7 @@ func (s *Sync) getCurrentValue(ctx context.Context, path string, responseChan ch
 
 //Watch keep watch update under the path
 func (s *Sync) watch(ctx context.Context, path string, responseChan chan *sync.Event, revision int64) error {
-	if revision == sync.RevisionCurrent {
+	if revision == goext.RevisionCurrent {
 		var err error
 		revision, err = s.getCurrentValue(ctx, path, responseChan)
 		if err != nil {
@@ -523,12 +523,6 @@ func getComparators(path string, conditions ...sync.CASCondition) []etcd.Cmp {
 func (sync *Sync) ByValue(value string) sync.CASCondition {
 	return func(path string) etcd.Cmp {
 		return etcd.Compare(etcd.Value(path), "=", value)
-	}
-}
-
-func (sync *Sync) ByRevision(revision int64) sync.CASCondition {
-	return func(path string) etcd.Cmp {
-		return etcd.Compare(etcd.ModRevision(path), "=", revision)
 	}
 }
 

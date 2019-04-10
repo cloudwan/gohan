@@ -22,7 +22,6 @@ import (
 	"runtime/debug"
 	"strings"
 
-	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/util"
 	"github.com/robfig/cron"
 )
@@ -35,8 +34,7 @@ func startCRONProcess(server *Server) {
 		return
 	}
 	if server.sync == nil {
-		log.Fatalf(fmt.Sprintf("Could not start CRON process because of sync backend misconfiguration."))
-		l.FatalPanic(log)
+		log.Fatalf("Could not start CRON process because of sync backend misconfiguration.")
 	}
 	log.Info("Started CRON process")
 	c := cron.New()

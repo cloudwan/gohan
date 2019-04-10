@@ -21,9 +21,6 @@ import (
 	l "github.com/cloudwan/gohan/log"
 )
 
-// RevisionCurrent is current sync revision
-const RevisionCurrent = -1
-
 var log = l.NewLogger()
 
 //Sync is a interface for sync servers
@@ -42,8 +39,6 @@ type Sync interface {
 	CompareAndSwap(ctx context.Context, path, data string, condition ...CASCondition) (bool, error)
 	//CAS when value matches
 	ByValue(value string) CASCondition
-	//CAS when modification revision matches
-	ByRevision(revision int64) CASCondition
 
 	GetProcessID() string
 	Close()

@@ -183,20 +183,6 @@ func (mr *MockSyncMockRecorder) ByValue(value interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ByValue", reflect.TypeOf((*MockSync)(nil).ByValue), value)
 }
 
-// ByRevision mocks base method
-func (m *MockSync) ByRevision(revision int64) sync.CASCondition {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ByRevision", revision)
-	ret0, _ := ret[0].(sync.CASCondition)
-	return ret0
-}
-
-// ByRevision indicates an expected call of ByRevision
-func (mr *MockSyncMockRecorder) ByRevision(revision interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ByRevision", reflect.TypeOf((*MockSync)(nil).ByRevision), revision)
-}
-
 // GetProcessID mocks base method
 func (m *MockSync) GetProcessID() string {
 	m.ctrl.T.Helper()

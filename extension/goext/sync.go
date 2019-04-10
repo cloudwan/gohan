@@ -57,3 +57,6 @@ type ErrCompacted struct {
 func NewErrCompacted(err error, revision int64) ErrCompacted {
 	return ErrCompacted{err, revision}
 }
+
+// RevisionCurrent is current sync revision
+const RevisionCurrent int64 = -1

@@ -11,7 +11,10 @@ import (
 	"golang.org/x/net/context"
 )
 
-var endpoints = []string{"localhost:2379"}
+var (
+	endpoints   = []string{"localhost:2379"}
+	testTimeout = 10 * time.Second
+)
 
 func TestNewSyncTimeout(t *testing.T) {
 	done := make(chan struct{})
@@ -23,7 +26,7 @@ func TestNewSyncTimeout(t *testing.T) {
 		close(done)
 	}()
 	select {
-	case <-time.NewTimer(time.Millisecond * 200).C:
+	case <-time.After(time.Millisecond * 200):
 		t.Fatalf("timeout didn't work")
 	case <-done:
 	}
@@ -185,7 +188,7 @@ func TestLockBlocking(t *testing.T) {
 }
 
 func TestWatch(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 	defer cancel()
 
 	sync := newSync(t, ctx)
@@ -194,7 +197,7 @@ func TestWatch(t *testing.T) {
 	path := "/path/to/watch/without/revision"
 	sync.mustPut(path+"/existing", `{"existing": true}`)
 
-	responseChan := sync.Watch(ctx, path, gohan_sync.RevisionCurrent)
+	responseChan := sync.Watch(ctx, path, goext.RevisionCurrent)
 
 	resp := <-responseChan
 	if resp.Action != "get" || resp.Key != path+"/existing" || resp.Data["existing"].(bool) != true {
@@ -215,7 +218,7 @@ func TestWatch(t *testing.T) {
 }
 
 func TestWatchWithRevision(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 	defer cancel()
 
 	sync := newSync(t, ctx)
@@ -242,7 +245,7 @@ func TestWatchWithRevision(t *testing.T) {
 }
 
 func TestShouldReturnAllValuesWhenWatchingAtCurrentRevision(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 	defer cancel()
 
 	sync := newSync(t, ctx)
@@ -253,21 +256,14 @@ func TestShouldReturnAllValuesWhenWatchingAtCurrentRevision(t *testing.T) {
 	firstRevision := sync.mustPut(path+"/first", `{"version": "1"}`)
 	secondRevision := sync.mustPut(path+"/second", `{"version": "2"}`)
 
-	responseChan := sync.Watch(ctx, path, gohan_sync.RevisionCurrent)
+	responseChan := sync.Watch(ctx, path, goext.RevisionCurrent)
 
-	resp := <-responseChan
-	if resp.Key != path+"/first" || resp.Data["version"].(string) != "1" || resp.Revision != firstRevision {
-		t.Fatalf("mismatch response: %+v, expecting version==1, revision==%d", resp, firstRevision)
-	}
-
-	resp = <-responseChan
-	if resp.Key != path+"/second" || resp.Data["version"].(string) != "2" || resp.Revision != secondRevision {
-		t.Fatalf("mismatch response: %+v, expecting version==2, revision==%d", resp, secondRevision)
-	}
+	verifyResponse(<-responseChan, path+"/first", "1", firstRevision, t)
+	verifyResponse(<-responseChan, path+"/second", "2", secondRevision, t)
 }
 
 func TestShouldStartWatchingAtSpecifiedRevision(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 	defer cancel()
 
 	sync := newSync(t, ctx)
@@ -280,19 +276,24 @@ func TestShouldStartWatchingAtSpecifiedRevision(t *testing.T) {
 
 	responseChan := sync.Watch(ctx, path, firstRevision-1)
 
-	resp := <-responseChan
-	if resp.Key != path || resp.Data["version"].(string) != "1" || resp.Revision != firstRevision {
-		t.Fatalf("mismatch response: %+v, expecting version==1, revision==%d", resp, firstRevision)
-	}
+	verifyResponse(<-responseChan, path, "1", firstRevision, t)
+	verifyResponse(<-responseChan, path, "2", secondRevision, t)
+}
 
-	resp = <-responseChan
-	if resp.Key != path || resp.Data["version"].(string) != "2" || resp.Revision != secondRevision {
-		t.Fatalf("mismatch response: %+v, expecting version==2, revision==%d", resp, secondRevision)
+func verifyResponse(event *gohan_sync.Event, expectedKey string, expectedVersion string, expectedRevision int64, t *testing.T) {
+	if event.Key != expectedKey {
+		t.Fatalf("expected key %s, got %s instead", expectedKey, event.Key)
+	}
+	if event.Data["version"].(string) != expectedVersion {
+		t.Fatalf("expected version %s, got %s instead", event.Data["version"], expectedVersion)
+	}
+	if event.Revision != expectedRevision {
+		t.Fatalf("expected revision %d, got %d instead", event.Revision, expectedRevision)
 	}
 }
 
 func Test_ShouldReturnCompactedErr_WhenWatchingAtCompactedRevision(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 	defer cancel()
 
 	sync := newSync(t, ctx)
@@ -319,7 +320,7 @@ func Test_ShouldReturnCompactedErr_WhenWatchingAtCompactedRevision(t *testing.T)
 }
 
 func Test_ShouldNotReturnCompactedErr_WhenWatchingAtCurrentRevision(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 	defer cancel()
 
 	sync := newSync(t, ctx)
@@ -332,12 +333,9 @@ func Test_ShouldNotReturnCompactedErr_WhenWatchingAtCurrentRevision(t *testing.T
 
 	sync.mustCompact(secondRevision)
 
-	responseChan := sync.Watch(ctx, path, gohan_sync.RevisionCurrent)
+	responseChan := sync.Watch(ctx, path, goext.RevisionCurrent)
 
-	resp := <-responseChan
-	if resp.Key != path || resp.Data["version"].(string) != "2" || resp.Revision != secondRevision {
-		t.Fatalf("mismatch response: %+v, expecting version==2, revision==%d", resp, secondRevision)
-	}
+	verifyResponse(<-responseChan, path, "2", secondRevision, t)
 }
 
 func TestFetchMultipleNodes(t *testing.T) {
@@ -414,52 +412,6 @@ func TestSubstr(t *testing.T) {
 	expectToEqual(substrN("/a/b/c/d", "/", 5), "/a/b/c/d")
 }
 
-func TestCASShouldUpdateWhenRevisionDidNotChange(t *testing.T) {
-	ctx := context.Background()
-
-	sync := newSync(t, ctx)
-	sync.cleanup()
-
-	path := "/path/to/cas"
-	data := "initial_data"
-	sync.mustUpdate(path, data)
-
-	currentRev := sync.getCurrentRevision(path)
-
-	newData := "new_data"
-	swapped := sync.compareAndSwap(path, newData, sync.ByRevision(currentRev))
-	if !swapped {
-		t.Fatalf("Value was not swapped")
-	}
-
-	sync.mustExist(path, newData, 0)
-}
-
-func TestCASShouldNotUpdateWhenRevisionChanged(t *testing.T) {
-	ctx := context.Background()
-
-	sync := newSync(t, ctx)
-	sync.cleanup()
-
-	path := "/path/to/cas"
-	data := "initial_data"
-	sync.mustUpdate(path, data)
-
-	initialRev := sync.getCurrentRevision(path)
-
-	updatedData := "updated_data"
-	sync.mustUpdate(path, updatedData)
-
-	newData := "new_data"
-	swapped := sync.compareAndSwap(path, newData, sync.ByRevision(initialRev))
-
-	if swapped {
-		t.Fatalf("Value was unexpectedly swapped")
-	}
-
-	sync.mustExist(path, updatedData, 0)
-}
-
 func TestCASShouldUpdateWhenValueDidNotChange(t *testing.T) {
 	ctx := context.Background()
 
@@ -499,27 +451,6 @@ func TestCASShouldNotUpdateWhenValueChanged(t *testing.T) {
 	}
 
 	sync.mustExist(path, updatedData, 0)
-}
-
-func TestCASShouldUpdateWhenValueAndRevisionDidNotChange(t *testing.T) {
-	ctx := context.Background()
-
-	sync := newSync(t, ctx)
-	sync.cleanup()
-
-	path := "/path/to/cas"
-	data := "initial_data"
-	sync.mustUpdate(path, data)
-
-	initialRev := sync.getCurrentRevision(path)
-
-	newData := "new_data"
-	swapped := sync.compareAndSwap(path, newData, sync.ByValue(data), sync.ByRevision(initialRev))
-	if !swapped {
-		t.Fatalf("Value was not swapped")
-	}
-
-	sync.mustExist(path, newData, 0)
 }
 
 type testedSync struct {
