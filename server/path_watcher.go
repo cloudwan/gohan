@@ -19,12 +19,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/cloudwan/gohan/extension"
-	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/metrics"
 	gohan_sync "github.com/cloudwan/gohan/sync"
 	"github.com/cloudwan/gohan/util"
@@ -33,7 +33,6 @@ import (
 
 type PathWatcher struct {
 	nats        stan.Conn
-	sync        gohan_sync.Sync
 	path        string
 	escapedPath string
 	extensions  map[string]extension.Environment
@@ -43,13 +42,12 @@ var (
 	replacer = strings.NewReplacer(".", "_", "/", "_")
 )
 
-func NewPathWatcher(sync gohan_sync.Sync, extensions map[string]extension.Environment, path string, nats stan.Conn) *PathWatcher {
+func NewPathWatcher(nats stan.Conn, extensions map[string]extension.Environment, path string) *PathWatcher {
 	return &PathWatcher{
-		sync:        sync,
+		nats:        nats,
 		extensions:  extensions,
 		path:        path,
 		escapedPath: replacer.Replace(path),
-		nats:        nats,
 	}
 }
 
@@ -90,11 +88,11 @@ func (watcher *PathWatcher) run(ctx context.Context) error {
 	watcher.updateCounter(1, "active")
 	defer watcher.updateCounter(-1, "active")
 
-	_, err := watcher.nats.QueueSubscribe(watcher.path, "gohan-group", func(msg *stan.Msg) {
+	subscription, err := watcher.nats.QueueSubscribe(watcher.path, "gohan-group", func(msg *stan.Msg) {
 		watcher.watchExtensionHandler(msg)
 
 		if ackErr := msg.Ack(); ackErr != nil {
-			log.Error("ACKing failed: %s", ackErr)
+			log.Error("%s ACKing failed: %s", watcher, ackErr)
 		}
 
 		watcher.storeRevision(msg.Sequence)
@@ -106,6 +104,11 @@ func (watcher *PathWatcher) run(ctx context.Context) error {
 	}
 
 	<-ctx.Done()
+
+	if err := subscription.Close(); err != nil {
+		log.Error("%s closing subscription failed: %s", watcher, err)
+	}
+
 	return ctx.Err()
 }
 
@@ -118,7 +121,7 @@ func (watcher *PathWatcher) watchExtensionHandler(msg *stan.Msg) {
 		return
 	}
 
-	defer l.Panic(log)
+	defer watcher.recoverPanic()
 	for event, env := range watcher.extensions {
 		if strings.HasPrefix(response.Key, "/"+event) {
 			watcher.runExtensionOnSync(ctx, response, env.Clone())
@@ -151,6 +154,13 @@ func parse(rawMsg *stan.Msg) (*gohan_sync.Event, error) {
 	}
 
 	return &ev, nil
+}
+
+func (watcher *PathWatcher) recoverPanic() {
+	err := recover()
+	if err != nil {
+		log.Error("%s panicked: %s: %s", watcher, err, debug.Stack())
+	}
 }
 
 // storeRevision puts a revision number for a path to the sync backend.

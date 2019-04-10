@@ -18,39 +18,34 @@ package server
 import (
 	"context"
 	"sync"
-	"time"
 
 	"github.com/cloudwan/gohan/extension"
-	gohan_sync "github.com/cloudwan/gohan/sync"
 	"github.com/cloudwan/gohan/util"
+	stan "github.com/nats-io/go-nats-streaming"
 )
 
 // SyncWatchRevisionPrefix
 const (
 	SyncWatchRevisionPrefix = "/gohan/watch/revision"
-	processPathPrefix       = "/gohan/cluster/process"
-	masterTTL               = 10
 )
 
 // SyncWatcher runs extensions when it detects a change on the sync.
 // The watcher implements a load balancing mechanism that uses
 // entries on the sync.
 type SyncWatcher struct {
-	sync gohan_sync.Sync
+	nats stan.Conn
 	// list of key names to watch
 	watchKeys []string
 	// map from event names to VM environments
 	watchExtensions map[string]extension.Environment
-	backoff         time.Duration
 }
 
 // NewSyncWatcher creates a new instance of syncWatcher
-func NewSyncWatcher(sync gohan_sync.Sync, keys []string, extensions map[string]extension.Environment) *SyncWatcher {
+func NewSyncWatcher(nats stan.Conn, keys []string, extensions map[string]extension.Environment) *SyncWatcher {
 	return &SyncWatcher{
-		sync:            sync,
+		nats:            nats,
 		watchKeys:       keys,
 		watchExtensions: extensions,
-		backoff:         time.Second * 5,
 	}
 }
 
@@ -69,7 +64,7 @@ func NewSyncWatcherFromServer(server *Server) *SyncWatcher {
 		extensions[event] = env
 	}
 
-	return NewSyncWatcher(server.sync, keys, extensions)
+	return NewSyncWatcher(server.nats, keys, extensions)
 }
 
 // Run starts the main loop of the watcher.
@@ -91,7 +86,7 @@ func (watcher *SyncWatcher) runSyncWatches(ctx context.Context, wg *sync.WaitGro
 		wg.Add(1)
 		log.Debug("(SyncWatch) Priority of `%s` starting", path)
 
-		pathWatcher := NewPathWatcher(watcher.sync, watcher.watchExtensions, path)
+		pathWatcher := NewPathWatcher(watcher.nats, watcher.watchExtensions, path)
 
 		go func(ctx context.Context, wg *sync.WaitGroup, pw *PathWatcher) {
 			pw.Run(ctx, wg)

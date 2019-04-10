@@ -51,6 +51,8 @@ import (
 	"github.com/go-martini/martini"
 	"github.com/lestrrat/go-server-starter/listener"
 	"github.com/martini-contrib/staticbin"
+	"github.com/nats-io/go-nats"
+	stan "github.com/nats-io/go-nats-streaming"
 )
 
 type tlsConfig struct {
@@ -65,6 +67,7 @@ type Server struct {
 	documentRoot     string
 	db               db.DB
 	sync             sync.Sync
+	nats             stan.Conn
 	running          bool
 	martini          *martini.ClassicMartini
 	extensions       []string
@@ -271,6 +274,22 @@ func NewServer(configFile string) (*Server, error) {
 		return nil, err
 	}
 
+	nc, err := nats.Connect(config.GetString("nats/url", ""))
+	if err != nil {
+		log.Error("Connecting to NATS failed: %s", err)
+		return nil, err
+	}
+
+	server.nats, err = stan.Connect(
+		"test-cluster",
+		server.sync.GetProcessID(),
+		stan.NatsConn(nc),
+	)
+	if err != nil {
+		log.Error("Upgrading connection to NATS-streaming failed: %s", err)
+		return nil, err
+	}
+
 	if dbErr := server.connectDB(); dbErr != nil {
 		log.Fatalf("Error while connecting to DB: %s", dbErr)
 	}
@@ -460,6 +479,9 @@ func (server *Server) Stop() {
 	stopCRONProcess(server)
 	manners.Close()
 	server.done.Wait()
+	if err := server.nats.Close(); err != nil {
+		log.Error("Closing connection to NATS failed: %s", err)
+	}
 }
 
 //RunServer runs gohan api server

@@ -43,8 +43,8 @@ require (
 	github.com/mitchellh/hashstructure v0.0.0-20170609045927-2bca23e0e452
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/myesui/uuid v1.0.0 // indirect
-	github.com/nats-io/go-nats v1.7.2 // indirect
-	github.com/nats-io/go-nats-streaming v0.4.0 // indirect
+	github.com/nats-io/go-nats v1.7.2
+	github.com/nats-io/go-nats-streaming v0.4.0
 	github.com/nats-io/nkeys v0.0.2 // indirect
 	github.com/nats-io/nuid v1.0.0 // indirect
 	github.com/nullbio/inflect v0.0.0-20170731032957-3edb4592a77b // indirect

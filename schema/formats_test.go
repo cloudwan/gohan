@@ -95,7 +95,6 @@ var _ = Describe("format checkers", func() {
 			Entry("IPv4 with 1 in last octet", "127.0.0.1"),
 			Entry("IPv4 with 10 in last octet", "127.0.0.10"),
 			Entry("IPv4 with 100 in last octet", "127.0.0.100"),
-
 		)
 
 		DescribeTable("should fail",

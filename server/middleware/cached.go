@@ -73,4 +73,3 @@ func NewCachedIdentityService(inner IdentityService, ttl time.Duration) Identity
 		cache: cache.New(ttl, cleanupInterval),
 	}
 }
-
