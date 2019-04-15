@@ -49,6 +49,7 @@ type Event struct {
 	Action   string
 	Key      string
 	Data     map[string]interface{}
+	ClientID string
 	Revision int64
 	// Err is used only by Sync.Watch()
 	Err error

@@ -131,8 +131,9 @@ func (watcher *PathWatcher) watchExtensionHandler(msg *stan.Msg) {
 }
 
 type natsMessage struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
+	ClientID string `json:"client_id"`
+	Key      string `json:"key"`
+	Value    string `json:"value"`
 }
 
 func parse(rawMsg *stan.Msg) (*gohan_sync.Event, error) {
@@ -144,6 +145,7 @@ func parse(rawMsg *stan.Msg) (*gohan_sync.Event, error) {
 	ev := gohan_sync.Event{
 		Action:   "set",
 		Key:      msg.Key,
+		ClientID: msg.ClientID,
 		Revision: 0,
 		Err:      nil,
 	}
@@ -173,11 +175,12 @@ func (watcher *PathWatcher) runExtensionOnSync(ctx context.Context, response *go
 	defer watcher.measureTime(time.Now(), response.Action)
 
 	context := map[string]interface{}{
-		"action":   response.Action,
-		"data":     response.Data,
-		"key":      response.Key,
-		"context":  ctx,
-		"trace_id": util.NewTraceID(),
+		"action":    response.Action,
+		"data":      response.Data,
+		"key":       response.Key,
+		"client_id": response.ClientID,
+		"context":   ctx,
+		"trace_id":  util.NewTraceID(),
 	}
 	if err := env.HandleEvent("notification", context); err != nil {
 		log.Error("%s extension error, last processed event may be lost: %s", watcher, err)

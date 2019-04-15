@@ -32,6 +32,7 @@ func convertEvent(event *gohan_sync.Event) ([]*goext.Event, error) {
 		Action:   event.Action,
 		Key:      event.Key,
 		Data:     event.Data,
+		ClientId: event.ClientID,
 		Revision: event.Revision,
 	}}, event.Err
 }

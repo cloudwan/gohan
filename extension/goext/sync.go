@@ -24,6 +24,7 @@ import (
 type Event struct {
 	Action   string
 	Key      string
+	ClientId string
 	Data     map[string]interface{}
 	Revision int64
 }
