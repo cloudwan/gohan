@@ -774,6 +774,12 @@ func (p *Policy) RemoveHiddenProperty(data map[string]interface{}) map[string]in
 	return p.resource.PropertiesFilter.RemoveHiddenKeysFromMap(data)
 }
 
+//RemoveHiddenPropertyID removes hidden data from data by Policy
+// This method returns empty list if all data get filtered out
+func (p *Policy) RemoveHiddenPropertyID(data []string) []string {
+	return p.resource.PropertiesFilter.RemoveHiddenKeysFromSlice(data)
+}
+
 //FilterSchema filters properties in the schema itself
 func (p *Policy) FilterSchema(
 	properties map[string]interface{},

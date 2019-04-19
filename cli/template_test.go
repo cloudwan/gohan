@@ -23,12 +23,13 @@ import (
 
 var _ = Describe("Templates", func() {
 	var (
+		manager  *schema.Manager
 		schemas  []*schema.Schema
 		policies []*schema.Policy
 	)
 
 	BeforeEach(func() {
-		manager := schema.GetManager()
+		manager = schema.GetManager()
 		schemaPath := "../tests/test_schema.json"
 		Expect(manager.LoadSchemaFromFile(schemaPath)).To(Succeed())
 		schemas = manager.OrderedSchemas()
@@ -56,9 +57,9 @@ var _ = Describe("Templates", func() {
 		shouldReturnMemberSchemas := func(filteredSchemas []*SchemaWithPolicy) {
 			Expect(filteredSchemas).To(HaveLen(2))
 			Expect(filteredSchemas[0].Schema.URL).To(Equal("/v2.0/nets"))
-			Expect(filteredSchemas[0].Policies).To(Equal([]string{"read"}))
+			Expect(filteredSchemas[0].Policies).To(Equal([]string{"create", "read", "delete"}))
 			Expect(filteredSchemas[1].Schema.URL).To(Equal("/v2.0/networks"))
-			Expect(filteredSchemas[1].Policies).To(Equal([]string{"create"}))
+			Expect(filteredSchemas[1].Policies).To(Equal([]string{"create", "update"}))
 		}
 
 		shouldReturnDomainAdminSchemas := func(filteredSchemas []*SchemaWithPolicy) {
@@ -148,6 +149,41 @@ var _ = Describe("Templates", func() {
 				Expect(resources).To(ContainElement("a"))
 				Expect(resources).To(ContainElement("b"))
 			})
+		})
+	})
+
+	Describe("Filtering properties for specific resource", func() {
+		It("should return properties written in the policy", func() {
+			role := "Member"
+			filteredSchemas := filterSchemasForPolicy(role, schema.AllTokenTypes, policies, schemas)
+			calculateAllowedProperties(filteredSchemas, role, manager)
+
+			networkSchema := filteredSchemas[1]
+			Expect(networkSchema.JSONSchemaOnCreate).ToNot(BeNil())
+			Expect(networkSchema.JSONSchemaOnCreate).To(HaveKey("properties"))
+
+			JSONProperties := networkSchema.JSONSchemaOnCreate["properties"].(map[string]interface{})
+			Expect(JSONProperties).To(HaveLen(3))
+			Expect(JSONProperties).To(HaveKey("id"))
+			Expect(JSONProperties).To(HaveKey("description"))
+			Expect(JSONProperties).To(HaveKey("name"))
+		})
+
+		It("should not return properties blacklisted in the policy", func() {
+			role := "Member"
+			filteredSchemas := filterSchemasForPolicy(role, schema.AllTokenTypes, policies, schemas)
+			calculateAllowedProperties(filteredSchemas, role, manager)
+
+			networkSchema := filteredSchemas[1]
+			Expect(networkSchema.JSONSchemaOnUpdate).ToNot(BeNil())
+			Expect(networkSchema.JSONSchemaOnUpdate).To(HaveKey("properties"))
+
+			JSONProperties := networkSchema.JSONSchemaOnUpdate["properties"].(map[string]interface{})
+			Expect(JSONProperties).To(HaveLen(3))
+			Expect(JSONProperties).ToNot(HaveKey("id"))
+			Expect(JSONProperties).ToNot(HaveKey("tenant_id"))
+			Expect(JSONProperties).ToNot(HaveKey("providor_networks"))
+			Expect(JSONProperties).ToNot(HaveKey("route_targets"))
 		})
 	})
 })

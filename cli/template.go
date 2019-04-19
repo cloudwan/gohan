@@ -13,6 +13,7 @@ import (
 	"github.com/cloudwan/gohan/util"
 	"github.com/codegangsta/cli"
 	"github.com/flosch/pongo2"
+	"github.com/mohae/deepcopy"
 	"github.com/vattle/sqlboiler/strmangle"
 )
 
@@ -164,6 +165,20 @@ func init() {
 type SchemaWithPolicy struct {
 	Schema   *schema.Schema
 	Policies []string
+
+	JSONSchema         map[string]interface{}
+	JSONSchemaOnCreate map[string]interface{}
+	JSONSchemaOnUpdate map[string]interface{}
+}
+
+func NewSchemaWithPolicy(schema *schema.Schema, policies []string) *SchemaWithPolicy {
+	return &SchemaWithPolicy{
+		schema,
+		policies,
+		nil,
+		nil,
+		nil,
+	}
 }
 
 func doTemplate(c *cli.Context) {
@@ -213,12 +228,13 @@ func doTemplate(c *cli.Context) {
 	}
 
 	policies := manager.Policies()
-	policy := c.String(policyFlagName)
+	role := c.String(policyFlagName)
 	title := c.String(titleFlagName)
 	version := c.String(versionFlagName)
 	description := c.String(descriptionFlagName)
 	outputPath := c.String(outputPathFlagName)
-	schemasWithPolicy := filterSchemasForPolicy(policy, scopes, policies, schemas)
+	schemasWithPolicy := filterSchemasForPolicy(role, scopes, policies, schemas)
+	calculateAllowedProperties(schemasWithPolicy, role, manager)
 	convertCustomActionOutput(schemasWithPolicy)
 	if c.IsSet(splitByResourceGroupFlagName) {
 		applyTemplateForEachResourceGroup(schemasWithPolicy, schemasMap, tpl, version, description, outputPath)
@@ -227,6 +243,53 @@ func doTemplate(c *cli.Context) {
 	} else {
 		applyTemplateForAll(schemasWithPolicy, schemasMap, tpl, title, version, description, outputPath)
 	}
+}
+
+func calculateAllowedProperties(schemas []*SchemaWithPolicy, role string, manager *schema.Manager) {
+	// TODO: API document for domain scoped
+	auth := schema.NewAuthorizationBuilder().
+		WithRoleIDs(role).
+		WithKeystoneV2Compatibility().
+		BuildScopedToTenant()
+
+	for _, sch := range schemas {
+		for _, action := range sch.Policies {
+			switch action {
+			case schema.ActionRead:
+				filteredProperties := calculateFilteredPropertiesByAction(action, sch.Schema, auth, manager)
+				sch.JSONSchema = filterJSONSchemaByProperties(sch.Schema.JSONSchema, filteredProperties)
+			case schema.ActionCreate:
+				filteredProperties := calculateFilteredPropertiesByAction(action, sch.Schema, auth, manager)
+				sch.JSONSchemaOnCreate = filterJSONSchemaByProperties(sch.Schema.JSONSchemaOnCreate, filteredProperties)
+			case schema.ActionUpdate:
+				filteredProperties := calculateFilteredPropertiesByAction(action, sch.Schema, auth, manager)
+				sch.JSONSchemaOnUpdate = filterJSONSchemaByProperties(sch.Schema.JSONSchemaOnUpdate, filteredProperties)
+			}
+		}
+	}
+}
+
+func calculateFilteredPropertiesByAction(action string, schema *schema.Schema, auth schema.Authorization, manager *schema.Manager) []string {
+	p, _ := manager.PolicyValidate(action, schema.GetPluralURL(), auth)
+	return p.RemoveHiddenPropertyID(schema.PropertyIDs())
+}
+
+func filterJSONSchemaByProperties(jsonSchema map[string]interface{}, filterProperty []string) map[string]interface{} {
+	resultJSONSchema := deepcopy.Copy(jsonSchema).(map[string]interface{})
+	resultJSONSchemaProperties := make(map[string]interface{})
+
+	if jsonSchema["properties"] == nil {
+		return resultJSONSchema
+	}
+
+	jsonSchemaProperties := jsonSchema["properties"].(map[string]interface{})
+	for property, value := range jsonSchemaProperties {
+		if util.ContainsString(filterProperty, property) {
+			resultJSONSchemaProperties[property] = value
+		}
+	}
+	resultJSONSchema["properties"] = resultJSONSchemaProperties
+	return resultJSONSchema
 }
 
 func convertCustomActionOutput(schemas []*SchemaWithPolicy) {
@@ -309,10 +372,9 @@ func filerSchemasByResourceGroup(resource string, schemas []*SchemaWithPolicy) [
 
 func filterSchemasForPolicy(principal string, scopes []schema.Scope, policies []*schema.Policy, schemas []*schema.Schema) []*SchemaWithPolicy {
 	var schemasWithPolicy []*SchemaWithPolicy
-	allPoliciesNames := []string{"create", "read", "update", "delete"}
 	if principal == "" {
-		for _, schema := range schemas {
-			schemasWithPolicy = append(schemasWithPolicy, &SchemaWithPolicy{schema, allPoliciesNames})
+		for _, sch := range schemas {
+			schemasWithPolicy = append(schemasWithPolicy, NewSchemaWithPolicy(sch, schema.AllActions))
 		}
 		return schemasWithPolicy
 	}
@@ -329,17 +391,34 @@ func filterSchemasForPolicy(principal string, scopes []schema.Scope, policies []
 		}
 		schemaCopy := *schemaOriginal
 		schemaCopy.Actions = filterActions(schemaOriginal, nobodyPolicies, matchedPolicies)
-		var matchedPoliciesNames []string
-		for _, policy := range matchedPolicies {
-			if policy.Action == "*" {
-				matchedPoliciesNames = allPoliciesNames
-				break
-			}
-			matchedPoliciesNames = append(matchedPoliciesNames, policy.Action)
-		}
-		schemasWithPolicy = append(schemasWithPolicy, &SchemaWithPolicy{&schemaCopy, matchedPoliciesNames})
+		matchedPoliciesNames := getListOfPoliciesNames(matchedPolicies)
+		schemasWithPolicy = append(schemasWithPolicy, NewSchemaWithPolicy(&schemaCopy, matchedPoliciesNames))
 	}
 	return schemasWithPolicy
+}
+
+func getListOfPoliciesNames(policies []*schema.Policy) []string {
+	var allowedPoliciesNames []string
+	var deniedPoliciesNames []string
+	for _, policy := range policies {
+		addPolicyNames := schema.AllActions
+		if policy.Action != "*" {
+			addPolicyNames = []string{policy.Action}
+		}
+		if policy.IsDeny() {
+			deniedPoliciesNames = append(deniedPoliciesNames, addPolicyNames...)
+		} else {
+			allowedPoliciesNames = append(allowedPoliciesNames, addPolicyNames...)
+		}
+	}
+
+	var matchedPoliciesNames []string
+	for _, policyName := range allowedPoliciesNames {
+		if !util.ContainsString(deniedPoliciesNames, policyName) && !util.ContainsString(matchedPoliciesNames, policyName) {
+			matchedPoliciesNames = append(matchedPoliciesNames, policyName)
+		}
+	}
+	return matchedPoliciesNames
 }
 
 func getMatchingPolicy(schemaUsed *schema.Schema, policies []*schema.Policy) []*schema.Policy {

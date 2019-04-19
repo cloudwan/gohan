@@ -341,7 +341,7 @@ func (schema *Schema) GetParentURL() string {
 
 func filterSchemaByPermission(schema map[string]interface{}, permission string) map[string]interface{} {
 	filteredSchema := map[string]interface{}{"type": "object"}
-	filteredProperties := map[string]map[string]interface{}{}
+	filteredProperties := make(map[string]interface{})
 	filteredRequirements := []string{}
 	for id, property := range util.MaybeMap(schema["properties"]) {
 		propertyMap := util.MaybeMap(property)
@@ -648,6 +648,15 @@ func (schema *Schema) Titles() []string {
 		titles = append(titles, property.Title)
 	}
 	return titles
+}
+
+//PropertyIDs returns list of Property ID
+func (schema *Schema) PropertyIDs() []string {
+	ids := make([]string, 0, len(schema.Properties))
+	for _, property := range schema.Properties {
+		ids = append(ids, property.ID)
+	}
+	return ids
 }
 
 //JSON returns json format of schema
