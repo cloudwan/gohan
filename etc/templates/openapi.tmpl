@@ -65,7 +65,7 @@
                     "201": {
                         "description": "{{ schema.ID }} created",
                         "schema": {
-                            "$ref": "#/definitions/{{ schema.ID }}"
+                            "$ref": "#/definitions/{{ schema.ID }}Input"
                         }
                     },
                     "default": {
@@ -137,9 +137,9 @@
                 }],
                 "responses": {
                     "200": {
-                        "description": "{{ schema.ID }} created",
+                        "description": "{{ schema.ID }} updated",
                         "schema": {
-                            "$ref": "#/definitions/{{ schema.ID }}"
+                            "$ref": "#/definitions/{{ schema.ID }}Update"
                         }
                     },
                     "default": {
@@ -216,7 +216,7 @@
                     "description": "{{ action.ID }} request object",
                     "required": true,
                     "schema":
-                    {% with schema=action.Parameters | swagger: "                    " %}
+                    {% with schema=action.InputSchema | swagger: "                    " %}
                     {% if schema == "null" %}
                     {} {% else %} {{schema}} {% endif %}{% endwith %}
                 }{% endif %} {% endwith %}
@@ -239,15 +239,15 @@
 {% endif %}{% endwith %}{% endfor %}
     },
     "definitions": { {% for schemaPolicy in schemas %}{% with schema=schemaPolicy.Schema %}{% if schema.Metadata.type != "metaschema" %}
-        {% with jsonSchema=schema.JSONSchema | swagger: "        " %}
+        {% with jsonSchema=schemaPolicy.JSONSchema | swagger: "        " %}
         {% if jsonSchema != "null"  %}
         "{{ schema.ID }}" :
         {{ jsonSchema }}, {% endif %} {% endwith %}
-        {% with jsonSchemaInput=schema.JSONSchemaOnCreate | swagger: "        " %}
+        {% with jsonSchemaInput=schemaPolicy.JSONSchemaOnCreate | swagger: "        " %}
         {% if jsonSchemaInput != "null" %}
         "{{ schema.ID }}Input" :
         {{ jsonSchemaInput }}, {% endif %}{% endwith %}
-        {% with jsonSchemaUpdate=schema.JSONSchemaOnUpdate | swagger: "        " %}
+        {% with jsonSchemaUpdate=schemaPolicy.JSONSchemaOnUpdate | swagger: "        " %}
         {% if jsonSchemaUpdate != "null"  %}
         "{{ schema.ID }}Update" :
         {{ jsonSchemaUpdate }}, {% endif %}{% endwith %}

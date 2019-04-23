@@ -35,7 +35,7 @@
                 "is_owner"
             ],
             "effect": "allow",
-            "id": "member_statement2",
+            "id": "member_create_statement2",
             "principal": "Member",
             "scope": ["tenant"],
             "resource": {
@@ -48,7 +48,24 @@
             }
         },
         {
-            "action": "read",
+            "action": "update",
+            "condition": [
+                "is_owner"
+            ],
+            "effect": "allow",
+            "id": "member_update_statement2",
+            "principal": "Member",
+            "scope": ["tenant"],
+            "resource": {
+                "path": "/v2.0/networks/?$",
+                "blacklistProperties": [
+                    "providor_networks",
+                    "route_targets"
+                ]
+            }
+        },
+        {
+            "action": "*",
             "condition": [
                 "is_owner"
             ],
@@ -63,6 +80,19 @@
                     "description",
                     "name"
                 ]
+            }
+        },
+        {
+            "action": "update",
+            "condition": [
+                "is_owner"
+            ],
+            "effect": "deny",
+            "id": "member_deny_statement3",
+            "principal": "Member",
+            "scope": ["tenant"],
+            "resource": {
+                "path": "/v2.0/nets/?$"
             }
         },
         {
@@ -169,6 +199,9 @@
                         "description": "Config",
                         "title": "Config",
                         "type": "object",
+                        "permission": [
+                            "update"
+                        ],
                         "properties": {
                             "default_vlan": {
                                 "description": "Default VLAN",
