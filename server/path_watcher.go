@@ -146,7 +146,7 @@ func parse(rawMsg *stan.Msg) (*gohan_sync.Event, error) {
 		Action:   "set",
 		Key:      msg.Key,
 		ClientID: msg.ClientID,
-		Revision: 0,
+		Revision: int64(rawMsg.Sequence),
 		Err:      nil,
 	}
 
@@ -179,6 +179,7 @@ func (watcher *PathWatcher) runExtensionOnSync(ctx context.Context, response *go
 		"data":      response.Data,
 		"key":       response.Key,
 		"client_id": response.ClientID,
+		"revision":  response.Revision,
 		"context":   ctx,
 		"trace_id":  util.NewTraceID(),
 	}
