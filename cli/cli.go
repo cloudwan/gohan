@@ -33,7 +33,7 @@ import (
 	"github.com/cloudwan/gohan/server"
 	sync_util "github.com/cloudwan/gohan/sync/util"
 	"github.com/cloudwan/gohan/util"
-	"github.com/codegangsta/cli"
+	"github.com/urfave/cli"
 	"github.com/lestrrat/go-server-starter"
 )
 

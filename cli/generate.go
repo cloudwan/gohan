@@ -10,7 +10,7 @@ import (
 
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
-	"github.com/codegangsta/cli"
+	"github.com/urfave/cli"
 	yaml "gopkg.in/yaml.v2"
 )
 
