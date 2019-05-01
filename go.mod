@@ -1,19 +1,21 @@
 module github.com/cloudwan/gohan
 
 require (
+	github.com/Bowery/prompt v0.0.0-20190419144237-972d0ceb96f5 // indirect
 	github.com/Juniper/go-netconf v0.1.1
 	github.com/Masterminds/semver v0.0.0-20180410205147-3c5608371304
 	github.com/Masterminds/squirrel v1.1.0
 	github.com/braintree/manners v0.0.0-20150503212558-0b5e6b2c2843
+	github.com/client9/misspell v0.3.4 // indirect
 	github.com/cloudwan/goose v0.0.0-20170411125245-c2d7eac2343d
-	github.com/codegangsta/cli v1.20.0
-	github.com/codegangsta/inject v0.0.0-20140425184007-37d7f8432a3e // indirect
+	github.com/codegangsta/inject v0.0.0-20150114235600-33e0aa1cb7c0 // indirect
 	github.com/coreos/bbolt v1.3.2 // indirect
 	github.com/coreos/etcd v3.3.8+incompatible
 	github.com/coreos/go-semver v0.2.0 // indirect
 	github.com/coreos/go-systemd v0.0.0-20190204112023-081494f7ee4f // indirect
 	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f // indirect
 	github.com/cyberdelia/go-metrics-graphite v0.0.0-20161219230853-39f87cc3b432
+	github.com/dchest/safefile v0.0.0-20151022103144-855e8d98f185 // indirect
 	github.com/ddliu/motto v0.3.0
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
 	github.com/drone/routes v0.0.0-20130816182705-853bef2b2311
@@ -26,15 +28,19 @@ require (
 	github.com/golang/groupcache v0.0.0-20190129154638-5b532d6fd5ef // indirect
 	github.com/golang/mock v1.2.0
 	github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c // indirect
+	github.com/google/shlex v0.0.0-20181106134648-c34317bd91bf // indirect
 	github.com/gophercloud/gophercloud v0.0.0-20190126172459-c818fa66e4c8
+	github.com/gordonklaus/ineffassign v0.0.0-20180909121442-1003c8bd00dc // indirect
 	github.com/gorilla/websocket v1.4.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.7.0 // indirect
 	github.com/jmoiron/sqlx v0.0.0-20180614180643-0dae4fefe7c0
 	github.com/jonboulle/clockwork v0.1.0 // indirect
+	github.com/jteeuwen/go-bindata v3.0.7+incompatible // indirect
 	github.com/juju/errors v0.0.0-20170703010042-c7d06af17c68 // indirect
 	github.com/juju/loggo v0.0.0-20180524022052-584905176618 // indirect
 	github.com/juju/testing v0.0.0-20180920084828-472a3e8b2073 // indirect
+	github.com/kardianos/govendor v1.0.9 // indirect
 	github.com/lestrrat/go-server-starter v0.0.0-20180220115249-6ac0b358431b
 	github.com/lib/pq v1.0.0 // indirect
 	github.com/martini-contrib/staticbin v0.0.0-20140517153916-b9631fb8c188
@@ -65,6 +71,7 @@ require (
 	github.com/tylerb/gls v0.0.0-20150407001822-e606233f194d
 	github.com/tylerb/is v2.1.3+incompatible // indirect
 	github.com/ugorji/go/codec v0.0.0-20190204201341-e444a5086c43 // indirect
+	github.com/urfave/cli v1.20.0
 	github.com/vattle/sqlboiler v2.5.0+incompatible
 	github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
@@ -72,11 +79,13 @@ require (
 	github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 // indirect
 	github.com/ziutek/telnet v0.0.0-20180329124119-c3b780dc415b // indirect
 	go.etcd.io/bbolt v1.3.2 // indirect
-	golang.org/x/crypto v0.0.0-20190131182504-b8fe1690c613
-	golang.org/x/net v0.0.0-20181201002055-351d144fa1fc
-	golang.org/x/sync v0.0.0-20181221193216-37e7f081c4d4 // indirect
-	golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a // indirect
+	golang.org/x/crypto v0.0.0-20190424203555-c05e17bb3b2d
+	golang.org/x/lint v0.0.0-20190409202823-959b441ac422 // indirect
+	golang.org/x/net v0.0.0-20190424112056-4829fb13d2c6
+	golang.org/x/sys v0.0.0-20190425145619-16072639606e // indirect
+	golang.org/x/text v0.3.1 // indirect
 	golang.org/x/time v0.0.0-20181108054448-85acf8d2951c // indirect
+	golang.org/x/tools v0.0.0-20190425185235-bb8aefc696b9 // indirect
 	google.golang.org/appengine v1.1.0 // indirect
 	google.golang.org/genproto v0.0.0-20180621235812-80063a038e33 // indirect
 	google.golang.org/grpc v1.13.0 // indirect

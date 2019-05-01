@@ -28,7 +28,7 @@ import (
 	"github.com/cloudwan/gohan/sync/etcdv3"
 	sync_util "github.com/cloudwan/gohan/sync/util"
 	"github.com/cloudwan/gohan/util"
-	"github.com/codegangsta/cli"
+	"github.com/urfave/cli"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

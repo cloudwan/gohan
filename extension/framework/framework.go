@@ -30,7 +30,7 @@ import (
 	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/singleton"
 	"github.com/cloudwan/gohan/util"
-	"github.com/codegangsta/cli"
+	"github.com/urfave/cli"
 )
 
 var (

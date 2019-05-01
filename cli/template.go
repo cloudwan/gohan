@@ -11,9 +11,9 @@ import (
 
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/util"
-	"github.com/codegangsta/cli"
 	"github.com/flosch/pongo2"
 	"github.com/mohae/deepcopy"
+	"github.com/urfave/cli"
 	"github.com/vattle/sqlboiler/strmangle"
 )
 
@@ -225,6 +225,11 @@ func doTemplate(c *cli.Context) {
 	scopes := []schema.Scope{}
 	for _, scope := range c.StringSlice(scopeFlagName) {
 		scopes = append(scopes, schema.Scope(scope))
+	}
+	if len(scopes) == 0 {
+		// default scopes. Cannot use cli "Value" due to the library bug
+		// See: https://github.com/urfave/cli/issues/160
+		scopes = schema.AllTokenTypes
 	}
 
 	policies := manager.Policies()
@@ -511,7 +516,7 @@ func getTemplateCommand() cli.Command {
 			cli.StringFlag{Name: splitByResourceFlagName, Value: "", Usage: "Split output file for each resources"},
 			cli.StringFlag{Name: outputPathFlagName, Value: "__resource__.json", Usage: "Output Path. You can use __resource__ as a resource name"},
 			cli.StringFlag{Name: policyFlagName, Value: "", Usage: "Policy"},
-			cli.StringSliceFlag{Name: scopeFlagName, Value: &defaultScope, Usage: "Scope"},
+			cli.StringSliceFlag{Name: scopeFlagName, Usage: "Scope"},
 		},
 		Action: doTemplate,
 	}
@@ -528,7 +533,7 @@ func getOpenAPICommand() cli.Command {
 			cli.StringFlag{Name: templateFlagWithShortName, Value: "embed://etc/templates/openapi.tmpl", Usage: "Template File"},
 			cli.StringFlag{Name: splitByResourceGroupFlagName, Value: "", Usage: "Group by resource"},
 			cli.StringFlag{Name: policyFlagName, Value: "admin", Usage: "Policy"},
-			cli.StringSliceFlag{Name: scopeFlagName, Value: &defaultScope, Usage: "Scope"},
+			cli.StringSliceFlag{Name: scopeFlagName, Usage: "Scope"},
 			cli.StringFlag{Name: versionFlagName, Value: "0.1", Usage: "API version"},
 			cli.StringFlag{Name: titleFlagName, Value: "gohan API", Usage: "API title"},
 			cli.StringFlag{Name: descriptionFlagName, Value: "", Usage: "API description"},
@@ -548,7 +553,7 @@ func getMarkdownCommand() cli.Command {
 			cli.StringFlag{Name: templateFlagWithShortName, Value: "embed://etc/templates/markdown.tmpl", Usage: "Template File"},
 			cli.StringFlag{Name: splitByResourceGroupFlagName, Value: "", Usage: "Group by resource"},
 			cli.StringFlag{Name: policyFlagName, Value: "admin", Usage: "Policy"},
-			cli.StringSliceFlag{Name: scopeFlagName, Value: &defaultScope, Usage: "Scope"},
+			cli.StringSliceFlag{Name: scopeFlagName, Usage: "Scope"},
 		},
 		Action: doTemplate,
 	}
@@ -565,7 +570,7 @@ func getDotCommand() cli.Command {
 			cli.StringFlag{Name: templateFlagWithShortName, Value: "embed://etc/templates/dot.tmpl", Usage: "Template File"},
 			cli.StringFlag{Name: splitByResourceGroupFlagName, Value: "", Usage: "Group by resource"},
 			cli.StringFlag{Name: policyFlagName, Value: "admin", Usage: "Policy"},
-			cli.StringSliceFlag{Name: scopeFlagName, Value: &defaultScope, Usage: "Scope"},
+			cli.StringSliceFlag{Name: scopeFlagName, Usage: "Scope"},
 		},
 		Action: doTemplate,
 	}

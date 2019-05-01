@@ -39,7 +39,7 @@ import (
 	"github.com/cloudwan/gohan/sync"
 	sync_util "github.com/cloudwan/gohan/sync/util"
 	"github.com/cloudwan/gohan/util"
-	"github.com/codegangsta/cli"
+	"github.com/urfave/cli"
 )
 
 const (
