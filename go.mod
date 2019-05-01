@@ -26,7 +26,7 @@ require (
 	github.com/gogo/protobuf v1.0.0 // indirect
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
 	github.com/golang/groupcache v0.0.0-20190129154638-5b532d6fd5ef // indirect
-	github.com/golang/mock v1.2.0
+	github.com/golang/mock v1.3.0
 	github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c // indirect
 	github.com/google/shlex v0.0.0-20181106134648-c34317bd91bf // indirect
 	github.com/gophercloud/gophercloud v0.0.0-20190126172459-c818fa66e4c8
@@ -79,14 +79,13 @@ require (
 	github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 // indirect
 	github.com/ziutek/telnet v0.0.0-20180329124119-c3b780dc415b // indirect
 	go.etcd.io/bbolt v1.3.2 // indirect
-	golang.org/x/crypto v0.0.0-20190424203555-c05e17bb3b2d
+	golang.org/x/crypto v0.0.0-20190426145343-a29dc8fdc734
 	golang.org/x/lint v0.0.0-20190409202823-959b441ac422 // indirect
-	golang.org/x/net v0.0.0-20190424112056-4829fb13d2c6
-	golang.org/x/sys v0.0.0-20190425145619-16072639606e // indirect
-	golang.org/x/text v0.3.1 // indirect
+	golang.org/x/net v0.0.0-20190502183928-7f726cade0ab
+	golang.org/x/sys v0.0.0-20190502175342-a43fa875dd82 // indirect
+	golang.org/x/text v0.3.2 // indirect
 	golang.org/x/time v0.0.0-20181108054448-85acf8d2951c // indirect
-	golang.org/x/tools v0.0.0-20190425185235-bb8aefc696b9 // indirect
-	google.golang.org/appengine v1.1.0 // indirect
+	golang.org/x/tools v0.0.0-20190501045030-23463209683d // indirect
 	google.golang.org/genproto v0.0.0-20180621235812-80063a038e33 // indirect
 	google.golang.org/grpc v1.13.0 // indirect
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce // indirect

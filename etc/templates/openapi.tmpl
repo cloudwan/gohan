@@ -65,7 +65,7 @@
                     "201": {
                         "description": "{{ schema.ID }} created",
                         "schema": {
-                            "$ref": "#/definitions/{{ schema.ID }}Input"
+                            "$ref": "#/definitions/{{ schema.ID }}"
                         }
                     },
                     "default": {
@@ -139,7 +139,7 @@
                     "200": {
                         "description": "{{ schema.ID }} updated",
                         "schema": {
-                            "$ref": "#/definitions/{{ schema.ID }}Update"
+                            "$ref": "#/definitions/{{ schema.ID }}"
                         }
                     },
                     "default": {
@@ -238,7 +238,7 @@
         }{% endfor %}{% if not forloop.Last %},{% endif %}
 {% endif %}{% endwith %}{% endfor %}
     },
-    "definitions": { {% for schemaPolicy in schemas %}{% with schema=schemaPolicy.Schema %}{% if schema.Metadata.type != "metaschema" %}
+    "definitions": { {% for schemaPolicy in schemas %}{% with schema=schemaPolicy.Schema %}{% if schema.Metadata.type != "metaschema" && schema.Type != "abstract" %}
         {% with jsonSchema=schemaPolicy.JSONSchema | swagger: "        " %}
         {% if jsonSchema != "null"  %}
         "{{ schema.ID }}" :
