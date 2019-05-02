@@ -15,12 +15,32 @@
     "produces": [
         "application/json"
     ],
-    "paths": { {% for schemaPolicy in schemas %}{% with schema=schemaPolicy.Schema policies=schemaPolicy.Policies %}{% if schema.Metadata.type != "metaschema" && schema.Type != "abstract" %}
+    "paths": { {% for schemaPolicy in schemas %}{% with schema=schemaPolicy.Schema policies=schemaPolicy.Policies jsonSchema=schemaPolicy.JSONSchema %}{% if schema.Metadata.type != "metaschema" && schema.Type != "abstract" %}
         "{{ schema.GetPluralURL() }}": {
             {% if "read" in policies %}"get": {
                 "description" : "Get list of {{ schema.ID}} resources",
                 "produces": [
                     "application/json"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/parameters/sortKeyParam"
+                    },
+                    {
+                        "$ref": "#/parameters/sortOrderParam"
+                    },
+                    {
+                        "$ref": "#/parameters/limitParam"
+                    },
+                    {
+                        "$ref": "#/parameters/offsetParam"
+                    }{% for key, prop in jsonSchema.properties %}{% with str_type=prop.type | to_non_null_type %}{% if str_type != "object" and str_type != "array" %},
+                    {
+                        "name": "{{ key }}",
+                        "in": "query",
+                        "description": "Filter results with {{ key }} value",
+                        "type": "{{ str_type }}"
+                    }{% endif %}{% endwith %}{% endfor %}
                 ],{% if schema.Metadata.resource_group | length != 0 %}
                 "tags": [
                     "{{ schema.Metadata.resource_group }}"
@@ -32,6 +52,12 @@
                             "type": "array",
                             "items": {
                                 "$ref": "#/definitions/{{ schema.ID }}"
+                            }
+                        },
+                        "headers": {
+                            "X-Total-Count": {
+                                "description": "The number of {{ schema.ID }} elements",
+                                "type": "integer"
                             }
                         }
                     },
@@ -261,6 +287,38 @@
                     "type": "string"
                 }
             }
+        }
+    },
+    "parameters": {
+        "sortKeyParam": {
+            "name": "sort_key",
+            "in": "query",
+            "description": "Property key name to sort results",
+            "type": "string",
+            "default": "id"
+        },
+        "sortOrderParam": {
+            "name": "sort_order",
+            "in": "query",
+            "description": "Sort order",
+            "type": "string",
+            "enum": [
+                "asc",
+                "desc"
+            ],
+            "default": "asc"
+        },
+        "limitParam": {
+            "name": "limit",
+            "in": "query",
+            "description": "Maximum number of results",
+            "type": "integer"
+        },
+        "offsetParam": {
+            "name": "offset",
+            "in": "query",
+            "description": "Number of results to be skipped",
+            "type": "integer"
         }
     }
 }

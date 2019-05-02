@@ -126,6 +126,27 @@ func hasIDParam(in *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.E
 	return pongo2.AsValue(strings.Contains(i, ":id")), nil
 }
 
+func toNonNullType(in *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
+	i := in.Interface()
+	s, ok := i.(string)
+	if ok {
+		return pongo2.AsValue(s), nil
+	}
+
+	iSlice, ok := i.([]interface{})
+	if !ok {
+		return nil, &pongo2.Error{OrigError: fmt.Errorf("Type is not string or array type")}
+	}
+	for _, item := range iSlice {
+		t := item.(string)
+		if t != "null" {
+			return pongo2.AsValue(t), nil
+		}
+	}
+
+	return nil, &pongo2.Error{OrigError: fmt.Errorf("Type is only null")}
+}
+
 // SnakeToCamel  changes value from snake case to camel case
 func SnakeToCamel(in *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
 	i := in.String()
@@ -158,6 +179,7 @@ func init() {
 	pongo2.RegisterFilter("swagger_path", toSwaggerPath)
 	pongo2.RegisterFilter("swagger_has_id_param", hasIDParam)
 	pongo2.RegisterFilter("to_go_type", toGoType)
+	pongo2.RegisterFilter("to_non_null_type", toNonNullType)
 	pongo2.RegisterFilter("snake_to_camel", SnakeToCamel)
 }
 

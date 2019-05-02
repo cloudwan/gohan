@@ -85,7 +85,7 @@ require (
 	golang.org/x/sys v0.0.0-20190502175342-a43fa875dd82 // indirect
 	golang.org/x/text v0.3.2 // indirect
 	golang.org/x/time v0.0.0-20181108054448-85acf8d2951c // indirect
-	golang.org/x/tools v0.0.0-20190501045030-23463209683d // indirect
+	golang.org/x/tools v0.0.0-20190503030157-5cec639030af // indirect
 	google.golang.org/genproto v0.0.0-20180621235812-80063a038e33 // indirect
 	google.golang.org/grpc v1.13.0 // indirect
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce // indirect
