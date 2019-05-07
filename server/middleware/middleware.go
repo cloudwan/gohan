@@ -423,6 +423,7 @@ func Tracing() martini.Handler {
 func Authorization(action string) martini.Handler {
 	return func(res http.ResponseWriter, req *http.Request, auth schema.Authorization, context Context) {
 		context["tenant_id"] = auth.TenantID()
+		context["domain_id"] = auth.DomainID()
 		context["auth"] = auth
 	}
 }
