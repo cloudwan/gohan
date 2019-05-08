@@ -204,6 +204,8 @@ Each context contains following items:
 - request_data - map[string]interface{} - API request body
 - schema - schema.Schema - schema defining given path
 - schema_id - string - schema ID
+- tenant_id - string - tenant ID (empty when scoped to domain)
+- domain_id - string - domain ID
 - params - map[string]interface{} - HTTP request parameters
 - sync - sync.Sync - Sync client
 - DB - db.DB - DB client
