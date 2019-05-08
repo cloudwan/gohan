@@ -145,6 +145,10 @@ Developers can make a schema as abstract schema specifying type=abstract. The de
 
   We don't sync this resource for sync backend when this option is true.
 
+- enable_substring_search (boolean)
+
+  can be used to block substring matches while fetching data in GET API request calls. By default substring search is enabled for all schemas
+
 - state_versioning (boolean)
 
   whether to support state versioning <subsection-state-update>, defaults to false.
@@ -590,6 +594,7 @@ List supports pagination by optional GET query parameters ``sort_key`` and ``sor
 Query Parameter   Style       Type           Default           Description
 sort_key          query       xsd:string     id                Sort key for results
 sort_order        query       xsd:string     asc               Sort order - allowed values are ``asc`` or ``desc``
+search_field      query       xsd:string     N/A               specifies the fields where substring search (like query) should be performed.
 limit             query       xsd:int        0                 Specifies maximum number of results.
                                                                Unlimited for non-positive values
 offset            query       xsd:int        0                 Specifies number of results to be skipped
@@ -652,6 +657,23 @@ HTTP Status Code: 200
       "attr1": XX,
       "attr2": XX
     }
+  }
+```
+GET http://$GOHAN/[$namespace_prefix/]$prefix/$plural?$column_name=XX&search_field=$column_name
+
+Response will be
+
+HTTP Status Code: 200
+
+```json
+  {
+    "$plural": [{
+      "attr1": XX,
+      "attr2": XX
+    },{
+      "attr1": XX,
+      "attr2": XX
+    }]
   }
 ```
 

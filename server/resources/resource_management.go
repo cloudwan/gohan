@@ -27,6 +27,7 @@ import (
 
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/pagination"
+	"github.com/cloudwan/gohan/db/search"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/extension/goext"
@@ -270,6 +271,22 @@ func GetResourcesInTransaction(context middleware.Context, resourceSchema *schem
 	return nil
 }
 
+//modify search fields to build like queries
+func modifySearchFields(resourceSchema *schema.Schema, queryParameters map[string][]string, filter transaction.Filter) (transaction.Filter, error) {
+	if search_filter, ok := queryParameters["search_field"]; ok && resourceSchema.IsSubstringSearchEnabled() {
+		for _, column := range search_filter {
+			if search_value, ok := queryParameters[column]; ok {
+				delete(filter, column)
+				filter[column] = search.NewSearchField(search_value[0])
+			} else {
+				err := fmt.Errorf("search value for `%s` not available in URL ", column)
+				return nil, ResourceError{err, err.Error(), WrongQuery}
+			}
+		}
+	}
+	return filter, nil
+}
+
 //FilterFromQueryParameter makes list filter from query.
 func FilterFromQueryParameter(resourceSchema *schema.Schema, queryParameters map[string][]string) transaction.Filter {
 	filter := transaction.Filter{}
@@ -316,6 +333,11 @@ func GetMultipleResources(context middleware.Context, dataStore db.DB, resourceS
 	currCond := policy.GetCurrentResourceCondition()
 
 	filter := FilterFromQueryParameter(resourceSchema, queryParameters)
+	filter, err = modifySearchFields(resourceSchema, queryParameters, filter)
+	if err != nil {
+		return err
+	}
+
 	filter = policy.RemoveHiddenProperty(filter)
 	extendFilterByTenantAndDomain(resourceSchema, filter, schema.ActionRead, currCond, auth)
 	currCond.AddCustomFilters(resourceSchema, filter, auth)
@@ -368,6 +390,8 @@ func verifyQueryParams(resourceSchema *schema.Schema, queryParameters map[string
 	delete(queryParameters, "sort_order")
 	delete(queryParameters, "limit")
 	delete(queryParameters, "offset")
+
+	delete(queryParameters, "search_field")
 
 	delete(queryParameters, "_details")
 	delete(queryParameters, "_fields")

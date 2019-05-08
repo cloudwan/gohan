@@ -28,6 +28,7 @@ import (
 	"github.com/cloudwan/gohan/db/initializer"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/pagination"
+	"github.com/cloudwan/gohan/db/search"
 	. "github.com/cloudwan/gohan/db/sql"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
@@ -370,6 +371,7 @@ var _ = Describe("Sql", func() {
 			query         squirrel.SelectBuilder
 			expectedQuery squirrel.SelectBuilder
 		)
+
 		BeforeEach(func() {
 			t := testSchema.GetDbTableName()
 			query = squirrel.Select("*").From(quote(t))
@@ -383,6 +385,21 @@ var _ = Describe("Sql", func() {
 			Expect(resSql).To(ContainSubstring(first))
 			Expect(resSql).To(ContainSubstring(second))
 			Expect(params).To(ConsistOf(expectedParams))
+		}
+
+		checkLikeQueries := func(searchString string, queryString string) {
+			search_value := search.NewSearchField(searchString)
+			filter := map[string]interface{}{"test_string": search_value}
+
+			res, err := AddFilterToQuery(testSchema, query, filter, false)
+
+			Expect(err).ToNot(HaveOccurred())
+			resSql, param, err := res.ToSql()
+			Expect(err).ToNot(HaveOccurred())
+			expectedQuery = expectedQuery.Where(Like{"`test_string`": queryString})
+			expectedSql, expectedParam, _ := expectedQuery.ToSql()
+			Expect(resSql).To(Equal(expectedSql))
+			Expect(param).To(Equal(expectedParam))
 		}
 
 		Context("Basic select query", func() {
@@ -411,6 +428,35 @@ var _ = Describe("Sql", func() {
 				Expect(resSql).To(Equal(expectedSql))
 				Expect(param).To(Equal(expectedParam))
 			})
+			It("should create LIKE query with one parameter", func() {
+				checkLikeQueries("123", "%123%")
+			})
+			It("should create LIKE query with one parameter and escape special characters", func() {
+				checkLikeQueries("\\1%2_3_a\\b%c", "%\\\\1\\%2\\_3\\_a\\\\b\\%c%")
+			})
+			It("should create LIKE query with two parameter", func() {
+				string_search := search.NewSearchField("123")
+				number_search := search.NewSearchField("42")
+				filter := map[string]interface{}{"test_string": string_search, "test_number": number_search}
+
+				res, err := AddFilterToQuery(testSchema, query, filter, false)
+
+				Expect(err).ToNot(HaveOccurred())
+				resSql, param, err := res.ToSql()
+				Expect(err).ToNot(HaveOccurred())
+				checkAndStatement(resSql, "`test_string` LIKE ?", "`test_number` LIKE ?", param, []interface{}{"%123%", "%42%"})
+			})
+			It("should create LIKE query with one parameter and IN query with the other", func() {
+				string_search := search.NewSearchField("one")
+				filter := map[string]interface{}{"test_string": string_search, "test_number": 54}
+
+				res, err := AddFilterToQuery(testSchema, query, filter, false)
+
+				Expect(err).ToNot(HaveOccurred())
+				resSql, param, err := res.ToSql()
+				Expect(err).ToNot(HaveOccurred())
+				checkAndStatement(resSql, "`test_string` LIKE ?", "`test_number` = ?", param, []interface{}{"%one%", 54})
+			})
 			It("should create conjunction for more than one parameter by default", func() {
 				filter := map[string]interface{}{"test_string": "123", "test_number": 42}
 
@@ -422,6 +468,35 @@ var _ = Describe("Sql", func() {
 				checkAndStatement(resSql, "`test_string` = ?", "`test_number` = ?", param, []interface{}{42, "123"})
 			})
 		})
+		checkLikeDisjunctionAndConjunction := func(searchString string, numberString string, filterType string, convertedString string, convertedNumber string) {
+			string_search := search.NewSearchField(searchString)
+			number_search := search.NewSearchField(numberString)
+			filter := map[string]interface{}{filterType: []map[string]interface{}{
+				{
+					"property": "test_string",
+					"value":    string_search,
+				},
+				{
+					"property": "test_number",
+					"value":    number_search,
+				},
+			}}
+
+			res, err := AddFilterToQuery(testSchema, query, filter, false)
+
+			Expect(err).ToNot(HaveOccurred())
+			resSql, param, err := res.ToSql()
+			Expect(err).ToNot(HaveOccurred())
+			switch filterType {
+			case "__or__":
+				expectedQuery = expectedQuery.Where(squirrel.Or{Like{"`test_string`": convertedString}, Like{"`test_number`": convertedNumber}})
+			case "__and__":
+				expectedQuery = expectedQuery.Where(squirrel.And{Like{"`test_string`": convertedString}, Like{"`test_number`": convertedNumber}})
+			}
+			expectedSql, expectedParam, _ := expectedQuery.ToSql()
+			Expect(resSql).To(Equal(expectedSql))
+			Expect(param).To(Equal(expectedParam))
+		}
 		Context("Disjunction and conjunction", func() {
 			It("should create disjunction for more then one parameter", func() {
 				filter := map[string]interface{}{"__or__": []map[string]interface{}{
@@ -448,6 +523,9 @@ var _ = Describe("Sql", func() {
 				Expect(resSql).To(Equal(expectedSql))
 				Expect(param).To(Equal(expectedParam))
 			})
+			It("should create disjunction for more than one parameter with like queries", func() {
+				checkLikeDisjunctionAndConjunction("123", "42", "__or__", "%123%", "%42%")
+			})
 			It("should create conjunction for more then one parameter", func() {
 				filter := map[string]interface{}{"__and__": []map[string]interface{}{
 					{
@@ -472,6 +550,9 @@ var _ = Describe("Sql", func() {
 				expectedSql, expectedParam, _ := expectedQuery.ToSql()
 				Expect(resSql).To(Equal(expectedSql))
 				Expect(param).To(Equal(expectedParam))
+			})
+			It("should create conjunction for more than one parameter with like queries", func() {
+				checkLikeDisjunctionAndConjunction("123", "42", "__and__", "%123%", "%42%")
 			})
 			It("should create disjunction of conjunctions for more then one parameter", func() {
 				filter := map[string]interface{}{
@@ -580,6 +661,10 @@ var _ = Describe("Sql", func() {
 							"value":    "123",
 						},
 						{
+							"property": "test_string",
+							"value":    search.NewSearchField("123"),
+						},
+						{
 							"property": "test_number",
 							"type":     "eq",
 							"value":    []int{0, 1, 2},
@@ -606,6 +691,7 @@ var _ = Describe("Sql", func() {
 				expectedQuery = expectedQuery.Where(
 					squirrel.Or{
 						squirrel.Eq{"`test_string`": "123"},
+						Like{"`test_string`": "%123%"},
 						squirrel.Eq{"`test_number`": []int{0, 1, 2}},
 						squirrel.NotEq{"`test_bool`": true},
 						squirrel.NotEq{"`test_integer`": []int{0, 1, 2}},
