@@ -1273,6 +1273,139 @@ var _ = Describe("Server package test", func() {
 		})
 	})
 
+	Describe("Substring Search ", func() {
+		BeforeEach(func() {
+			testURL("POST", networkPluralURL, adminTokenID, getNetwork("red", "red"), http.StatusCreated)
+			testURL("POST", networkPluralURL, adminTokenID, getNetwork("red1", "red"), http.StatusCreated)
+			testURL("POST", networkPluralURL, adminTokenID, getNetwork("red2", "blue"), http.StatusCreated)
+			testURL("POST", networkPluralURL, adminTokenID, getNetwork("red3", "blue"), http.StatusCreated)
+		})
+
+		AfterEach(func() {
+			testURL("DELETE", getNetworkSingularURL("red"), adminTokenID, nil, http.StatusNoContent)
+			testURL("DELETE", getNetworkSingularURL("red1"), adminTokenID, nil, http.StatusNoContent)
+			testURL("DELETE", getNetworkSingularURL("red2"), adminTokenID, nil, http.StatusNoContent)
+			testURL("DELETE", getNetworkSingularURL("red3"), adminTokenID, nil, http.StatusNoContent)
+		})
+
+		DescribeTable("match all rows by substring search", func(query string) {
+			result := testURL("GET", networkPluralURL+query, adminTokenID, nil, http.StatusOK)
+			Expect(result).To(HaveKeyWithValue("networks", ConsistOf(
+				util.MatchAsJSON(getNetwork("red", "red")),
+				util.MatchAsJSON(getNetwork("red1", "red")),
+				util.MatchAsJSON(getNetwork("red2", "blue")),
+				util.MatchAsJSON(getNetwork("red3", "blue")))))
+		},
+			Entry("empty query", ""),
+			Entry("long prefix", "?id=networkred&search_field=id"),
+			Entry("substring at the start", "?id=net&search_field=id"),
+			Entry("substring at the middle", "?id=work&search_field=id"),
+			Entry("substring at the last", "?id=red&search_field=id"),
+			Entry("search on one parameter", "?description=red&search_field=description"),
+			Entry("search on both parameters", "?id=red&search_field=id&description=red&search_field=description"),
+		)
+
+		DescribeTable("match and search combinations return single rows", func(query string) {
+			result := testURL("GET", networkPluralURL+query, adminTokenID, nil, http.StatusOK)
+			Expect(result).To(HaveKeyWithValue("networks", ConsistOf(
+				util.MatchAsJSON(getNetwork("red2", "blue")))))
+		},
+			Entry("match on id and search on description", "?id=networkred2&description=red&search_field=description"),
+			Entry("match on tenant and search on id", "?id=red2&tenant_id=blue&search_field=id"),
+		)
+
+		DescribeTable("match and search combinations return two rows", func(query string) {
+			result := testURL("GET", networkPluralURL+query, adminTokenID, nil, http.StatusOK)
+			Expect(result).To(HaveKeyWithValue("networks", ConsistOf(
+				util.MatchAsJSON(getNetwork("red3", "blue")),
+				util.MatchAsJSON(getNetwork("red2", "blue")))))
+		},
+			Entry("match on id and search on description", "?id=networkred2&id=networkred3&description=red&search_field=description"),
+			Entry("match on tenant and search on id", "?id=red&tenant_id=blue&search_field=id"),
+			Entry("search on tenant", "?tenant_id=blue&search_field=tenant_id"),
+			Entry("non exclusive parameters", "?id=re&search_field=id&tenant_id=bl&search_field=tenant_id"),
+		)
+
+		DescribeTable("must return empty rows", func(query string) {
+			result := testURL("GET", networkPluralURL+query, adminTokenID, nil, http.StatusOK)
+			Expect(result).To(HaveKeyWithValue("networks", ConsistOf()))
+		},
+			Entry("search on mutually exclusive parameters", "?id=red1&search_field=id&tenant_id=blue&search_field=tenant_id"),
+		)
+
+		DescribeTable("must return error for incorrect search fields", func(query string) {
+			result := testURL("GET", networkPluralURL+query, adminTokenID, nil, http.StatusBadRequest)
+			Expect(result).To(HaveKey("error"))
+		},
+			Entry("error on one parameter", "?id=red1&search_field=ids&tenant_id=blue&search_field=tenant_id"),
+			Entry("error on single parameter", "?id=red1&search_field=ids"),
+			Entry("error on both parameters", "?id=red1&search_field=ids&tenant_id=blue&search_field=tenants_id"),
+		)
+	})
+
+	//will pass only with mysql config and will fail with sqllite3 config in test DB...marking testcases as pending until resolution
+	Describe("Substring Search with special characters", func() {
+		BeforeEach(func() {
+			testURL("POST", networkPluralURL, adminTokenID, getNetwork("_apple", "apple"), http.StatusCreated)
+			testURL("POST", networkPluralURL, adminTokenID, getNetwork("\\ball", "ball"), http.StatusCreated)
+			testURL("POST", networkPluralURL, adminTokenID, getNetwork("%cats", "cats"), http.StatusCreated)
+			testURL("POST", networkPluralURL, adminTokenID, getNetwork("a\\x%y_z", "xyz"), http.StatusCreated)
+		})
+
+		AfterEach(func() {
+			testURL("DELETE", getNetworkSingularURL("_apple"), adminTokenID, nil, http.StatusNoContent)
+			testURL("DELETE", getNetworkSingularURL("\\ball"), adminTokenID, nil, http.StatusNoContent)
+			testURL("DELETE", getNetworkSingularURL("%25cats"), adminTokenID, nil, http.StatusNoContent)
+			testURL("DELETE", getNetworkSingularURL("a\\x%25y_z"), adminTokenID, nil, http.StatusNoContent)
+		})
+
+		DescribeTable("match all rows by substring search", func(query string) {
+			result := testURL("GET", networkPluralURL+query, adminTokenID, nil, http.StatusOK)
+			Expect(result).To(HaveKeyWithValue("networks", ConsistOf(
+				util.MatchAsJSON(getNetwork("_apple", "apple")),
+				util.MatchAsJSON(getNetwork("\\ball", "ball")),
+				util.MatchAsJSON(getNetwork("%cats", "cats")),
+				util.MatchAsJSON(getNetwork("a\\x%y_z", "xyz")))))
+		},
+			Entry("empty query", ""),
+			Entry("common occuring character", "?id=a&search_field=id"),
+		)
+
+		DescribeTable("search should return single row with _", func(query string) {
+			result := testURL("GET", networkPluralURL+query, adminTokenID, nil, http.StatusOK)
+			Expect(result).To(HaveKeyWithValue("networks", ConsistOf(
+				util.MatchAsJSON(getNetwork("_apple", "apple")))))
+		},
+			Entry("search on _", "?id=_a&search_field=id"),
+		)
+
+		DescribeTable("search should return single row with \\", func(query string) {
+			result := testURL("GET", networkPluralURL+query, adminTokenID, nil, http.StatusOK)
+			Expect(result).To(HaveKeyWithValue("networks", ConsistOf(
+				util.MatchAsJSON(getNetwork("\\ball", "ball")))))
+		},
+			Entry("search on \\", "?id=\\b&search_field=id"),
+		)
+
+		DescribeTable("search should return single row with %", func(query string) {
+			result := testURL("GET", networkPluralURL+query, adminTokenID, nil, http.StatusOK)
+			Expect(result).To(HaveKeyWithValue("networks", ConsistOf(
+				util.MatchAsJSON(getNetwork("%cats", "cats")))))
+		},
+			Entry("search on %", "?id=%25c&search_field=id"),
+		)
+
+		DescribeTable("search should return single row with %, \\ & _", func(query string) {
+			result := testURL("GET", networkPluralURL+query, adminTokenID, nil, http.StatusOK)
+			Expect(result).To(HaveKeyWithValue("networks", ConsistOf(
+				util.MatchAsJSON(getNetwork("a\\x%y_z", "xyz")))))
+		},
+			Entry("search on \\", "?id=\\x&search_field=id"),
+			Entry("search on %", "?id=%25y&search_field=id"),
+			Entry("search on _", "?id=_z&search_field=id"),
+		)
+	})
+
 	Describe("Attach policy tests", func() {
 		getResourceURL := func(schemaID, id string) string {
 			s, _ := schema.GetManager().Schema(schemaID)

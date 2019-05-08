@@ -274,8 +274,15 @@ func (schema *Schema) Init() error {
 		}
 	}
 	jsonSchema["propertiesOrder"] = propertiesOrder
-
 	return nil
+}
+
+//Is substring search enabled for the schema
+func (schema *Schema) IsSubstringSearchEnabled() bool {
+	if enabled, hasValue := schema.Metadata["substr_search_enabled"].(bool); hasValue {
+		return enabled
+	}
+	return true
 }
 
 // IsAbstract checks if this schema is abstract or not

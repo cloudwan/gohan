@@ -18,9 +18,11 @@ package sql
 import (
 	"context"
 	"database/sql"
+	"database/sql/driver"
 	"encoding/json"
 	"fmt"
 	"math"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -28,6 +30,7 @@ import (
 	sq "github.com/Masterminds/squirrel"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/pagination"
+	"github.com/cloudwan/gohan/db/search"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/extension/goext"
 	l "github.com/cloudwan/gohan/log"
@@ -1202,6 +1205,7 @@ func AddFilterToQuery(s *schema.Schema, q sq.SelectBuilder, filter map[string]in
 			}
 			continue
 		}
+
 		property, err := s.GetPropertyByID(key)
 
 		if err != nil {
@@ -1213,6 +1217,12 @@ func AddFilterToQuery(s *schema.Schema, q sq.SelectBuilder, filter map[string]in
 			column = makeColumn(s.GetDbTableName(), *property)
 		} else {
 			column = quote(key)
+		}
+
+		substr, ok := value.(search.Search)
+		if ok {
+			q = q.Where(Like{column: substr.Value})
+			continue
 		}
 
 		queryValues, ok := value.([]string)
@@ -1274,6 +1284,12 @@ func addToFilter(s *schema.Schema, q sq.SelectBuilder, filter interface{}, join 
 
 			// TODO: add other operators
 			value := filter["value"]
+			substr, ok := value.(search.Search)
+			if ok {
+				sqlizer = append(sqlizer, Like{column: substr.Value})
+				continue
+			}
+
 			switch filter["type"] {
 			case "eq":
 				sqlizer = append(sqlizer, sq.Eq{column: value})
@@ -1298,4 +1314,49 @@ func (db *DB) SetMaxOpenConns(maxIdleConns int) {
 // https://github.com/go-sql-driver/mysql/issues/731
 func safeMysqlContext(_ context.Context) context.Context {
 	return context.Background()
+}
+
+type Like map[string]interface{}
+
+func (lk Like) ToSql() (sql string, args []interface{}, err error) {
+	var (
+		exprs = make([]string, 0, len(lk))
+		opr   = "LIKE"
+	)
+
+	for key, val := range lk {
+		expr := ""
+
+		switch v := val.(type) {
+		case driver.Valuer:
+			if val, err = v.Value(); err != nil {
+				return
+			}
+		}
+
+		if val == nil {
+			err = fmt.Errorf("cannot use null with like operators")
+			return
+		}
+		if isListType(val) {
+			err = fmt.Errorf("cannot use array or slice with like operators")
+			return
+		}
+
+		expr = fmt.Sprintf("%s %s ? ESCAPE '\\'", key, opr)
+		args = append(args, val)
+
+		exprs = append(exprs, expr)
+
+	}
+	sql = strings.Join(exprs, " AND ")
+	return
+}
+
+func isListType(val interface{}) bool {
+	if driver.IsValue(val) {
+		return false
+	}
+	valVal := reflect.ValueOf(val)
+	return valVal.Kind() == reflect.Array || valVal.Kind() == reflect.Slice
 }
