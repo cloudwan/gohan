@@ -70,6 +70,19 @@
                 "is_owner"
             ],
             "effect": "allow",
+            "id": "domain_admin_statement",
+            "principal": "admin",
+            "scope": ["domain", "tenant"],
+            "resource": {
+                "path": "/v2.0/networks/?$"
+            }
+        },
+        {
+            "action": "*",
+            "condition": [
+                "is_owner"
+            ],
+            "effect": "allow",
             "id": "member_statement3",
             "principal": "Member",
             "scope": ["tenant"],

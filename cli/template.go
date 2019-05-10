@@ -245,6 +245,7 @@ func doTemplate(c *cli.Context) {
 	}
 
 	scopes := []schema.Scope{}
+	keystoneV2Compatible := false
 	for _, scope := range c.StringSlice(scopeFlagName) {
 		scopes = append(scopes, schema.Scope(scope))
 	}
@@ -252,6 +253,7 @@ func doTemplate(c *cli.Context) {
 		// default scopes. Cannot use cli "Value" due to the library bug
 		// See: https://github.com/urfave/cli/issues/160
 		scopes = schema.AllTokenTypes
+		keystoneV2Compatible = true
 	}
 
 	policies := manager.Policies()
@@ -261,7 +263,7 @@ func doTemplate(c *cli.Context) {
 	description := c.String(descriptionFlagName)
 	outputPath := c.String(outputPathFlagName)
 	schemasWithPolicy := filterSchemasForPolicy(role, scopes, policies, schemas)
-	calculateAllowedProperties(schemasWithPolicy, role, manager)
+	calculateAllowedProperties(schemasWithPolicy, scopes, role, manager, keystoneV2Compatible)
 	convertCustomActionOutput(schemasWithPolicy)
 	if c.IsSet(splitByResourceGroupFlagName) {
 		applyTemplateForEachResourceGroup(schemasWithPolicy, schemasMap, tpl, version, description, outputPath)
@@ -272,25 +274,63 @@ func doTemplate(c *cli.Context) {
 	}
 }
 
-func calculateAllowedProperties(schemas []*SchemaWithPolicy, role string, manager *schema.Manager) {
-	// TODO: API document for domain scoped
-	auth := schema.NewAuthorizationBuilder().
-		WithRoleIDs(role).
-		WithKeystoneV2Compatibility().
-		BuildScopedToTenant()
+func calculateAllowedProperties(schemas []*SchemaWithPolicy, scopes []schema.Scope, role string, manager *schema.Manager, keystoneV2Compatible bool) {
+	if keystoneV2Compatible {
+		auth := schema.NewAuthorizationBuilder().
+			WithRoleIDs(role).
+			WithKeystoneV2Compatibility().
+			BuildScopedToTenant()
 
+		calculateAllowedPropertiesForAuth(schemas, auth, manager)
+		return
+	}
+
+	for _, scope := range scopes {
+		var auth schema.Authorization
+		switch scope {
+		case schema.AdminScope:
+			auth = schema.NewAuthorizationBuilder().
+				WithRoleIDs(role).
+				BuildAdmin()
+		case schema.DomainScope:
+			auth = schema.NewAuthorizationBuilder().
+				WithRoleIDs(role).
+				BuildScopedToDomain()
+		case schema.TenantScope:
+			auth = schema.NewAuthorizationBuilder().
+				WithRoleIDs(role).
+				BuildScopedToTenant()
+		}
+		if auth == nil {
+			continue
+		}
+
+		calculateAllowedPropertiesForAuth(schemas, auth, manager)
+	}
+}
+
+func calculateAllowedPropertiesForAuth(schemas []*SchemaWithPolicy, auth schema.Authorization, manager *schema.Manager) {
 	for _, sch := range schemas {
 		for _, action := range sch.Policies {
 			switch action {
 			case schema.ActionRead:
+				if sch.JSONSchema == nil {
+					sch.JSONSchema = sch.Schema.JSONSchema
+				}
 				filteredProperties := calculateFilteredPropertiesByAction(action, sch.Schema, auth, manager)
-				sch.JSONSchema = filterJSONSchemaByProperties(sch.Schema.JSONSchema, filteredProperties)
+				sch.JSONSchema = filterJSONSchemaByProperties(sch.JSONSchema, filteredProperties)
 			case schema.ActionCreate:
+				if sch.JSONSchemaOnCreate == nil {
+					sch.JSONSchemaOnCreate = sch.Schema.JSONSchemaOnCreate
+				}
 				filteredProperties := calculateFilteredPropertiesByAction(action, sch.Schema, auth, manager)
-				sch.JSONSchemaOnCreate = filterJSONSchemaByProperties(sch.Schema.JSONSchemaOnCreate, filteredProperties)
+				sch.JSONSchemaOnCreate = filterJSONSchemaByProperties(sch.JSONSchemaOnCreate, filteredProperties)
 			case schema.ActionUpdate:
+				if sch.JSONSchemaOnUpdate == nil {
+					sch.JSONSchemaOnUpdate = sch.Schema.JSONSchemaOnUpdate
+				}
 				filteredProperties := calculateFilteredPropertiesByAction(action, sch.Schema, auth, manager)
-				sch.JSONSchemaOnUpdate = filterJSONSchemaByProperties(sch.Schema.JSONSchemaOnUpdate, filteredProperties)
+				sch.JSONSchemaOnUpdate = filterJSONSchemaByProperties(sch.JSONSchemaOnUpdate, filteredProperties)
 			}
 		}
 	}
@@ -418,16 +458,31 @@ func filterSchemasForPolicy(principal string, scopes []schema.Scope, policies []
 		}
 		schemaCopy := *schemaOriginal
 		schemaCopy.Actions = filterActions(schemaOriginal, nobodyPolicies, matchedPolicies)
-		matchedPoliciesNames := getListOfPoliciesNames(matchedPolicies)
+		matchedPoliciesNames := getListOfPoliciesNames(scopes, matchedPolicies)
+		if len(matchedPoliciesNames) == 0 {
+			continue
+		}
 		schemasWithPolicy = append(schemasWithPolicy, NewSchemaWithPolicy(&schemaCopy, matchedPoliciesNames))
 	}
 	return schemasWithPolicy
 }
 
-func getListOfPoliciesNames(policies []*schema.Policy) []string {
+func getListOfPoliciesNames(scopes []schema.Scope, policies []*schema.Policy) []string {
 	var allowedPoliciesNames []string
 	var deniedPoliciesNames []string
 	for _, policy := range policies {
+		var matchScope bool
+		for _, scope := range scopes {
+			if policy.HasScope(scope) {
+				matchScope = true
+				break
+			}
+		}
+
+		if !matchScope {
+			continue
+		}
+
 		addPolicyNames := schema.AllActions
 		if policy.Action != "*" {
 			addPolicyNames = []string{policy.Action}
@@ -538,7 +593,7 @@ func getTemplateCommand() cli.Command {
 			cli.StringFlag{Name: splitByResourceFlagName, Value: "", Usage: "Split output file for each resources"},
 			cli.StringFlag{Name: outputPathFlagName, Value: "__resource__.json", Usage: "Output Path. You can use __resource__ as a resource name"},
 			cli.StringFlag{Name: policyFlagName, Value: "", Usage: "Policy"},
-			cli.StringSliceFlag{Name: scopeFlagName, Usage: "Scope"},
+			cli.StringSliceFlag{Name: scopeFlagName, Usage: "Token Scope"},
 		},
 		Action: doTemplate,
 	}
@@ -555,7 +610,7 @@ func getOpenAPICommand() cli.Command {
 			cli.StringFlag{Name: templateFlagWithShortName, Value: "embed://etc/templates/openapi.tmpl", Usage: "Template File"},
 			cli.StringFlag{Name: splitByResourceGroupFlagName, Value: "", Usage: "Group by resource"},
 			cli.StringFlag{Name: policyFlagName, Value: "admin", Usage: "Policy"},
-			cli.StringSliceFlag{Name: scopeFlagName, Usage: "Scope"},
+			cli.StringSliceFlag{Name: scopeFlagName, Usage: "Token Scope"},
 			cli.StringFlag{Name: versionFlagName, Value: "0.1", Usage: "API version"},
 			cli.StringFlag{Name: titleFlagName, Value: "gohan API", Usage: "API title"},
 			cli.StringFlag{Name: descriptionFlagName, Value: "", Usage: "API description"},
@@ -575,7 +630,7 @@ func getMarkdownCommand() cli.Command {
 			cli.StringFlag{Name: templateFlagWithShortName, Value: "embed://etc/templates/markdown.tmpl", Usage: "Template File"},
 			cli.StringFlag{Name: splitByResourceGroupFlagName, Value: "", Usage: "Group by resource"},
 			cli.StringFlag{Name: policyFlagName, Value: "admin", Usage: "Policy"},
-			cli.StringSliceFlag{Name: scopeFlagName, Usage: "Scope"},
+			cli.StringSliceFlag{Name: scopeFlagName, Usage: "Token Scope"},
 		},
 		Action: doTemplate,
 	}
@@ -592,7 +647,7 @@ func getDotCommand() cli.Command {
 			cli.StringFlag{Name: templateFlagWithShortName, Value: "embed://etc/templates/dot.tmpl", Usage: "Template File"},
 			cli.StringFlag{Name: splitByResourceGroupFlagName, Value: "", Usage: "Group by resource"},
 			cli.StringFlag{Name: policyFlagName, Value: "admin", Usage: "Policy"},
-			cli.StringSliceFlag{Name: scopeFlagName, Usage: "Scope"},
+			cli.StringSliceFlag{Name: scopeFlagName, Usage: "Token Scope"},
 		},
 		Action: doTemplate,
 	}

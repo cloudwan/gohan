@@ -85,6 +85,7 @@ GLOBAL OPTIONS:
         --template, -t "embed://etc/templates/openapi.tmpl"	Template File
         --split-by-resource-group ""                           Group by resource
         --policy "admin"                                       Show only schema with chosen policy
+        --scope	["tenant", "domain", "admin"]				           Show only schema with chosen token scopes. No scope flag will convert API with Keystone v2 policy.
         --version "0.1"					Version of the API
         --title "gohan API"					Title of the API
         --description ""					Description of the API
