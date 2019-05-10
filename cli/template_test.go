@@ -63,9 +63,11 @@ var _ = Describe("Templates", func() {
 		}
 
 		shouldReturnDomainAdminSchemas := func(filteredSchemas []*SchemaWithPolicy) {
-			Expect(filteredSchemas).To(HaveLen(1))
-			Expect(filteredSchemas[0].Schema.URL).To(Equal("/v2.0/network/:network/subnets"))
-			Expect(filteredSchemas[0].Policies).To(Equal([]string{"read"}))
+			Expect(filteredSchemas).To(HaveLen(2))
+			Expect(filteredSchemas[0].Schema.URL).To(Equal("/v2.0/networks"))
+			Expect(filteredSchemas[0].Policies).To(Equal(allPermissions))
+			Expect(filteredSchemas[1].Schema.URL).To(Equal("/v2.0/network/:network/subnets"))
+			Expect(filteredSchemas[1].Policies).To(Equal([]string{"read"}))
 		}
 
 		Context("With policy set to admin", func() {
@@ -156,7 +158,7 @@ var _ = Describe("Templates", func() {
 		It("should return properties written in the policy", func() {
 			role := "Member"
 			filteredSchemas := filterSchemasForPolicy(role, schema.AllTokenTypes, policies, schemas)
-			calculateAllowedProperties(filteredSchemas, role, manager)
+			calculateAllowedProperties(filteredSchemas, schema.AllTokenTypes, role, manager, true)
 
 			networkSchema := filteredSchemas[1]
 			Expect(networkSchema.JSONSchemaOnCreate).ToNot(BeNil())
@@ -169,10 +171,30 @@ var _ = Describe("Templates", func() {
 			Expect(JSONProperties).To(HaveKey("name"))
 		})
 
+		It("should return properties written in the policy for domain admin", func() {
+			role := "admin"
+			domainAdminScope := []schema.Scope{schema.DomainScope}
+			filteredSchemas := filterSchemasForPolicy(role, domainAdminScope, policies, schemas)
+			calculateAllowedProperties(filteredSchemas, domainAdminScope, role, manager, false)
+
+			networkSchema := filteredSchemas[0]
+			Expect(networkSchema.JSONSchemaOnCreate).ToNot(BeNil())
+			Expect(networkSchema.JSONSchemaOnCreate).To(HaveKey("properties"))
+
+			JSONProperties := networkSchema.JSONSchemaOnCreate["properties"].(map[string]interface{})
+			Expect(JSONProperties).To(HaveLen(6))
+			Expect(JSONProperties).To(HaveKey("id"))
+			Expect(JSONProperties).To(HaveKey("description"))
+			Expect(JSONProperties).To(HaveKey("name"))
+			Expect(JSONProperties).To(HaveKey("providor_networks"))
+			Expect(JSONProperties).To(HaveKey("route_targets"))
+			Expect(JSONProperties).To(HaveKey("tenant_id"))
+		})
+
 		It("should not return properties blacklisted in the policy", func() {
 			role := "Member"
 			filteredSchemas := filterSchemasForPolicy(role, schema.AllTokenTypes, policies, schemas)
-			calculateAllowedProperties(filteredSchemas, role, manager)
+			calculateAllowedProperties(filteredSchemas, schema.AllTokenTypes, role, manager, true)
 
 			networkSchema := filteredSchemas[1]
 			Expect(networkSchema.JSONSchemaOnUpdate).ToNot(BeNil())
