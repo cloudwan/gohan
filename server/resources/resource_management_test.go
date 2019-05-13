@@ -1624,30 +1624,6 @@ var _ = Describe("Resource manager", func() {
 
 			})
 		})
-		Describe("Whether old data is not overridden in update_in_transaction", func() {
-			BeforeEach(func() {
-				javascriptCode := fmt.Sprintf(`
-					tx = context.transaction;
-					res = gohan_db_fetch(tx, "%s", "%s", "");
-					if (res.test_string !== "%s") {
-						throw res.test_string;
-					}
-				`, schemaID, adminResourceID, adminResourceData["test_string"])
-
-				events["pre_update_in_transaction"] = javascriptCode
-			})
-			It("Should fetch previous value in pre_update", func() {
-				err := resources.CreateResource(
-					context, testDB, fakeIdentity, currentSchema, adminResourceData)
-				Expect(err).To(Succeed())
-				data := map[string]interface{}{"test_string": "another string"}
-
-				err = resources.UpdateResource(
-					context, testDB, fakeIdentity, currentSchema, adminResourceID, data)
-				Expect(err).NotTo(HaveOccurred())
-
-			})
-		})
 
 		Describe("When there are resources in the database", func() {
 			JustBeforeEach(setupAndCreateTestResources)

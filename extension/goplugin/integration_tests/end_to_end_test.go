@@ -218,6 +218,7 @@ var _ = Describe("Environment", func() {
 			Expect(result).To(HaveKeyWithValue("error", "Validation error: Json validation error:\n\tname: String length must be greater than or equal to 3,"))
 			resource["name"] = "abcd"
 			expectedResponse["name"] = "abcd"
+			delete(expectedResponse, "subobject")
 			result = testURL("PUT", baseURL+"/v0.1/tests/testId", adminTokenID, resource, http.StatusOK)
 			Expect(result).To(HaveKeyWithValue("test", expectedResponse))
 		})
