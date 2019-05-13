@@ -49,6 +49,40 @@ var _ = Describe("Keystone client", func() {
 		server.Close()
 	})
 
+	Describe("Tenant ID validation", func() {
+
+		setupKeystone := func() {
+			server.AppendHandlers(
+				ghttp.RespondWithJSONEncoded(201, getV3TokensScopedToTenantResponse()),
+				ghttp.RespondWithJSONEncoded(200, getV3TenantsResponse()),
+			)
+			setupV3Client()
+		}
+
+		It("Returns false when tenant id is not known", func() {
+			setupKeystone()
+
+			valid, err := client.ValidateTenantID("some-random-id")
+			Expect(valid).To(BeFalse())
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("Returns true when tenant id is known", func() {
+			setupKeystone()
+
+			valid, err := client.ValidateTenantID("1234")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(valid).To(BeTrue())
+		})
+
+		It("Returns error when keystone is not operational", func() {
+			valid, err := client.ValidateTenantID("1234")
+			Expect(err).To(HaveOccurred())
+			Expect(valid).To(BeFalse())
+		})
+
+	})
+
 	Describe("Match version from auth URL", func() {
 		It("Should match v3 version successfully", func() {
 			res := matchVersionFromAuthURL("http://example.com:5000/v3")

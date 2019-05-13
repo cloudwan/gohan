@@ -37,6 +37,7 @@ type KeystoneIdentity interface {
 	VerifyToken(string) (schema.Authorization, error)
 	GetServiceAuthorization() (schema.Authorization, error)
 	GetServiceTokenID() string
+	ValidateTenantID(string) (bool, error)
 }
 
 type keystoneV3Client struct {
@@ -248,4 +249,15 @@ func (client *keystoneV3Client) updateCounter(delta int64, action string) {
 
 func (client *keystoneV3Client) measureTime(timeStarted time.Time, action string) {
 	metrics.UpdateTimer(timeStarted, "auth.v3.%s", action)
+}
+
+func (client *keystoneV3Client) ValidateTenantID(id string) (bool, error) {
+	defer client.measureTime(time.Now(), "validate_tenant_id")
+
+	tenant, err := client.getTenant(func(tenant *v3tenants.Project) bool { return tenant.ID == id })
+	if err != nil {
+		return false, err
+	}
+
+	return tenant != nil, nil
 }

@@ -23,4 +23,6 @@ type IAuth interface {
 	GetTenantName(context Context) string
 	// IsAdmin reports whether context belongs to admin
 	IsAdmin(context Context) bool
+	// ValidateTenantID checks whether given tenant_id exists in backend.
+	ValidateTenantID(ctx Context, id string) (bool, error)
 }
