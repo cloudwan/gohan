@@ -26,8 +26,7 @@ jobs:
       - run: sudo apt-get install mysql-server
       - run: sudo apt-get install mysql-client
       - run: sudo service mysql restart
-      - run:
-          command: |-
+      - run:|
           sudo mysql \
           -u root \
           -p \
