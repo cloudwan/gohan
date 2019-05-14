@@ -46,7 +46,7 @@ var _ = Describe("Mocks", func() {
 	BeforeEach(func() {
 		var dbType string
 		if os.Getenv("MYSQL_TEST") == "true" {
-			dbFile = "root@/gohan_test"
+			dbFile = "gohan:gohan@tcp(localhost:3306)/gohan_test"
 			dbType = "mysql"
 		} else {
 			dbFile = "test.db"
