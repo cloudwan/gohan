@@ -129,7 +129,7 @@ func handlePreUpdateTx(requestContext goext.Context, res goext.Resource, env goe
 		return &goext.Error{Err: err}
 	}
 	fetchedTest := fetchRes.(*test.Test)
-	if fetchedTest.Name == testRes.Name {
+	if skip, ok := requestContext["skipCheckName"].(bool); (!ok || !skip) && fetchedTest.Name == testRes.Name {
 		return goext.NewErrorBadRequest(errors.New("Name should not be changed in fetched data"))
 	}
 	return nil
