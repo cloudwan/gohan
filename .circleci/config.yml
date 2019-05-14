@@ -26,9 +26,7 @@ jobs:
       - run: sudo apt-get install mysql-server
       - run: sudo apt-get install mysql-client
       - run: sudo service mysql restart
-      - run: |
-          mysql -u root -h 127.0.0.1\
-          -c "CREATE DATABASE gohan_test;"
+      - run: sudo mysql -u root -e "CREATE DATABASE gohan_test;"
       - run: go get github.com/mattn/goveralls
       - run: make test
 
