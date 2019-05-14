@@ -92,6 +92,21 @@ func (mr *MockIdentityServiceMockRecorder) GetTenantName(arg0 interface{}) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTenantName", reflect.TypeOf((*MockIdentityService)(nil).GetTenantName), arg0)
 }
 
+// ValidateDomainID mocks base method
+func (m *MockIdentityService) ValidateDomainID(arg0 string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateDomainID", arg0)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ValidateDomainID indicates an expected call of ValidateDomainID
+func (mr *MockIdentityServiceMockRecorder) ValidateDomainID(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateDomainID", reflect.TypeOf((*MockIdentityService)(nil).ValidateDomainID), arg0)
+}
+
 // ValidateTenantID mocks base method
 func (m *MockIdentityService) ValidateTenantID(arg0 string) (bool, error) {
 	m.ctrl.T.Helper()

@@ -25,4 +25,6 @@ type IAuth interface {
 	IsAdmin(context Context) bool
 	// ValidateTenantID checks whether given tenant_id exists in backend.
 	ValidateTenantID(ctx Context, id string) (bool, error)
+	// ValidateDomainID checks whether given domain_id exists in backend.
+	ValidateDomainID(ctx Context, id string) (bool, error)
 }
