@@ -27,6 +27,9 @@ jobs:
       - run: sudo apt-get install mysql-client
       - run: sudo service mysql restart
       - run: sudo mysql -u root -e "CREATE DATABASE gohan_test;"
+      - run: sudo mysql -u root -e "CREATE USER 'gohan'@'%' IDENTIFIED BY 'gohan';"
+      - run: sudo mysql -u root -e "GRANT ALL PRIVILEGES ON *.* TO 'gohan'@'%' WITH GRANT OPTION;"
+      - run: sudo mysql -u root -e "FLUSH PRIVILEGES;"
       - run: go get github.com/mattn/goveralls
       - run: make test
 
