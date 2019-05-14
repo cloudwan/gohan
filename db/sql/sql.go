@@ -712,7 +712,7 @@ func makeColumnID(tableName string, property schema.Property) string {
 }
 
 func makeColumn(tableName string, property schema.Property) string {
-	return fmt.Sprintf("%s.%s", tableName, quote(property.ID))
+	return fmt.Sprintf("%s.%s", quote(tableName), quote(property.ID))
 }
 
 func makeAliasTableName(tableName string, property schema.Property) string {
@@ -1343,7 +1343,7 @@ func (lk Like) ToSql() (sql string, args []interface{}, err error) {
 			return
 		}
 
-		expr = fmt.Sprintf("%s %s ? ESCAPE '\\'", key, opr)
+		expr = fmt.Sprintf("%s %s ? ESCAPE '\\\\'", key, opr)
 		args = append(args, val)
 
 		exprs = append(exprs, expr)

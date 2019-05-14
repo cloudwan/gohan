@@ -43,7 +43,7 @@ var _ = Describe("Mysql", func() {
 		if os.Getenv("MYSQL_TEST") != "true" {
 			Skip("Test possible only on MySQL DB")
 		}
-		conn = "gohan:gohan@/gohan_test"
+		conn = "root@/gohan_test"
 		dbType := "mysql"
 
 		manager := schema.GetManager()

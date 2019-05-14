@@ -45,6 +45,7 @@ var _ = Describe("Database operation test", func() {
 
 		manager          *schema.Manager
 		networkSchema    *schema.Schema
+		subnetSchema     *schema.Schema
 		serverSchema     *schema.Schema
 		networkResource1 *schema.Resource
 		networkResource2 *schema.Resource
@@ -141,10 +142,6 @@ var _ = Describe("Database operation test", func() {
 		})
 
 		AfterEach(func() {
-			tx.Delete(ctx, networkSchema, "networkRed")
-			tx.Delete(ctx, networkSchema, "networkBlue")
-			tx.Delete(ctx, subnetSchema, "subnetRed")
-			tx.Delete(ctx, serverSchema, "serverRed")
 			tx.Close()
 		})
 
@@ -205,6 +202,12 @@ var _ = Describe("Database operation test", func() {
 
 			Describe("When the database is not empty", func() {
 				JustBeforeEach(func() {
+					tx.Delete(ctx, subnetSchema, subnetResource.ID())
+					tx.Delete(ctx, serverSchema, serverResource.ID())
+
+					tx.Delete(ctx, networkSchema, networkResource1.ID())
+					tx.Delete(ctx, networkSchema, networkResource2.ID())
+					
 					create(networkResource1)
 					create(networkResource2)
 					create(serverResource)

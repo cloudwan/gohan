@@ -510,9 +510,9 @@ var _ = Describe("GohanDb", func() {
 
 				context := map[string]interface{}{}
 				Expect(env.HandleEvent("test_event", context)).To(Succeed())
-				Expect(context["resp"]).To(ContainElement("tests.`id` as `tests__id`"))
-				Expect(context["resp"]).To(ContainElement("tests.`tenant_id` as `tests__tenant_id`"))
-				Expect(context["resp"]).To(ContainElement("tests.`test_string` as `tests__test_string`"))
+				Expect(context["resp"]).To(ContainElement("`tests`.`id` as `tests__id`"))
+				Expect(context["resp"]).To(ContainElement("`tests`.`tenant_id` as `tests__tenant_id`"))
+				Expect(context["resp"]).To(ContainElement("`tests`.`test_string` as `tests__test_string`"))
 			})
 		})
 

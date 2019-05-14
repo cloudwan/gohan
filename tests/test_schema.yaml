@@ -741,6 +741,7 @@ schemas:
         type: string
         unique: false
         indexed: true
+        sql: varchar(255) not null
       domain_id:
         description: Domain ID
         permission:
@@ -749,6 +750,7 @@ schemas:
         type: string
         unique: false
         indexed: true
+        sql: varchar(255) not null
       test_string:
         default: ""
         description: Test string
@@ -912,6 +914,7 @@ schemas:
         type: string
         unique: false
         indexed: true
+        sql: varchar(255) not null
       domain_id:
         description: Domain ID
         permission:
@@ -920,6 +923,7 @@ schemas:
         type: string
         unique: false
         indexed: true
+        sql: varchar(255) not null
       test_string:
         default: ""
         description: Test string
@@ -1284,6 +1288,7 @@ schemas:
         - string
         - "null"
         unique: false
+        sql: varchar(255) null
         description: A property that can attach to 'attach_target' iff it is accessible
       attach_if_same_owner_id:
         permission:
@@ -1296,6 +1301,7 @@ schemas:
         - string
         - "null"
         unique: false
+        sql: varchar(255) null
         description: A property that can attach to 'attach_target' iff it has the same owner
       not_a_relation:
         permission:
@@ -1339,6 +1345,7 @@ schemas:
         - "null"
         unique: false
         description: Attach point
+        sql: varchar(255) null
       attach_b_id:
         permission:
         - create
@@ -1351,6 +1358,7 @@ schemas:
         - "null"
         unique: false
         description: Attach point
+        sql: varchar(255) null
       container_object:
         description: Container object for attacher
         permission:
