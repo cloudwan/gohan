@@ -41,7 +41,6 @@
                         "title": "ID",
                         "type": "string",
                         "unique": true,
-                        "sql": "varchar(255) not null"
                     },
                     "type": {
                         "description": "Schema Type",
@@ -204,8 +203,7 @@
                                             },
                                             "id": {
                                                 "title": "ID",
-                                                "type": "string",
-                                                "sql": "varchar(255) not null"
+                                                "type": "string"
                                             },
                                             "items": {
                                                 "format": "yaml",
@@ -515,8 +513,7 @@
                             "create"
                         ],
                         "title": "ID",
-                        "type": "string",
-                        "sql": "varchar(255) not null"
+                        "type": "string"
                     },
                     "principal": {
                         "description": "principal",
@@ -600,8 +597,7 @@
                             "create"
                         ],
                         "title": "ID",
-                        "type": "string",
-                        "sql": "varchar(255) not null"
+                        "type": "string"
                     },
                     "path": {
                         "description": "path",
@@ -690,8 +686,7 @@
                         ],
                         "sql": "integer primary key auto_increment ",
                         "title": "ID",
-                        "type": "integer",
-                        "sql": "varchar(255) not null"
+                        "type": "integer"
                     },
                     "path": {
                         "default": "",
@@ -758,8 +753,7 @@
                             "update"
                         ],
                         "title": "Description",
-                        "type": "string",
-                        "sql": "varchar(255) not null"
+                        "type": "string"
                     },
                     "id": {
                         "description": "id",
@@ -767,8 +761,7 @@
                             "create"
                         ],
                         "title": "ID",
-                        "type": "string",
-                        "sql": "varchar(255) not null"
+                        "type": "string"
                     },
                     "metadata": {
                         "default": {},
@@ -789,8 +782,7 @@
                             "update"
                         ],
                         "title": "Name",
-                        "type": "string",
-                        "sql": "varchar(255) not null"
+                        "type": "string"
                     },
                     "parent": {
                         "default": "",
@@ -850,22 +842,19 @@
                         "description": "Version of Gohan (git commit id)",
                         "permission": [],
                         "title": "Core version",
-                        "type": "string",
-                        "sql": "varchar(255) not null"
+                        "type": "string"
                     },
                     "app": {
                         "description": "Version of the application",
                         "permission": [],
                         "title": "Application version",
-                        "type": "string",
-                        "sql": "varchar(255) not null"
+                        "type": "string"
                     },
                     "id": {
                         "description": "Should never be used, just for framework compatibility",
                         "permission": [],
                         "title": "ID",
-                        "type": "string",
-                        "sql": "varchar(255) not null"
+                        "type": "string"
                     }
                 },
                 "propertiesOrder": [

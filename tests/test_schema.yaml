@@ -733,7 +733,6 @@ schemas:
         title: ID
         type: string
         unique: true
-        sql: varchar(255) not null
       tenant_id:
         description: Tenant ID
         permission:
@@ -815,7 +814,6 @@ schemas:
         title: ID
         type: string
         unique: true
-        sql: varchar(255) not null
       test_string:
         default: ""
         description: Test string
@@ -906,13 +904,13 @@ schemas:
         title: ID
         type: string
         unique: true
-        sql: varchar(255) not null
       tenant_id:
         description: Tenant ID
         permission:
         - create
         title: TenantID
         type: string
+        sql: varchar(255) not null
         unique: false
         indexed: true
       domain_id:
@@ -921,6 +919,7 @@ schemas:
         - create
         title: DomainID
         type: string
+        sql: varchar(255) not null
         unique: false
         indexed: true
       test_string:
@@ -1029,7 +1028,6 @@ schemas:
         title: ID
         type: string
         unique: true
-        sql: varchar(255) not null
     propertiesOrder:
     - id
     type: object
@@ -1049,7 +1047,6 @@ schemas:
         title: ID
         type: string
         unique: true
-        sql: varchar(255) not null
       pattern:
         description: Pattern
         permission:
@@ -1136,7 +1133,6 @@ schemas:
         title: ID
         type: string
         unique: true
-        sql: varchar(255) not null
     propertiesOrder:
     - id
     type: object
@@ -1155,7 +1151,6 @@ schemas:
         title: ID
         type: string
         unique: true
-        sql: varchar(255) not null
       tenant_id:
         description: Tenant ID
         permission:
@@ -1196,7 +1191,6 @@ schemas:
         title: ID
         type: string
         unique: true
-        sql: varchar(255) not null
       tenant_id:
         description: Tenant ID
         permission:
@@ -1241,7 +1235,6 @@ schemas:
         title: ID
         type: string
         unique: true
-        sql: varchar(255) not null
       a:
         description: A
         permission:
@@ -1283,7 +1276,6 @@ schemas:
         title: ID
         type: string
         unique: true
-        sql: varchar(255) not null
       attach_if_accessible_id:
         permission:
         - create
@@ -1412,7 +1404,6 @@ schemas:
         title: ID
         type: string
         unique: true
-        sql: varchar(255) not null
       container_object:
         description: Container object for attacher
         permission:
@@ -1456,7 +1447,6 @@ schemas:
         title: ID
         type: string
         unique: true
-        sql: varchar(255) not null
       tenant_id:
         description: Tenant ID
         permission:
@@ -1500,7 +1490,6 @@ schemas:
         title: ID
         type: string
         unique: true
-        sql: varchar(255) not null
       tenant_id:
         description: Tenant ID
         permission:
@@ -1526,7 +1515,6 @@ schemas:
         title: ID
         type: string
         unique: true
-        sql: varchar(255) not null
   title: Not synced
 
 - description: Schema with int primary key
