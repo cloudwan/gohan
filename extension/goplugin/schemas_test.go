@@ -623,9 +623,9 @@ var _ = Describe("Schemas", func() {
 		)
 
 		BeforeEach(func() {
-			if os.Getenv("MYSQL_TEST") != "true" {
-				Skip("Locks are only valid in MySQL")
-			}
+			// if os.Getenv("MYSQL_TEST") != "true" {
+			Skip("Locks are only valid in MySQL")
+			// }
 
 			createdResource = test.Test{
 				ID:          "some-id",
