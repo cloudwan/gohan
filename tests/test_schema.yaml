@@ -1323,7 +1323,6 @@ schemas:
         title: TenantID
         type: string
         unique: false
-        sql: varchar(255) not null
   title: Attacher
 - description: Resource that attaches to "attach_target", and has attachments regulated via a wildcard policy
   id: wildcard_attacher
