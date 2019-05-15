@@ -14,6 +14,7 @@ jobs:
   test:
     docker:
       - image: circleci/golang:1.11.4
+      - image: circleci/mariadb:10.2.24-ram
     working_directory: /go/src/github.com/cloudwan/gohan
     environment:
         GO111MODULE: 'on'
@@ -23,7 +24,6 @@ jobs:
       - run: curl -L https://github.com/coreos/etcd/releases/download/v3.1.7/etcd-v3.1.7-linux-amd64.tar.gz -o etcd-v3.1.7-linux-amd64.tar.gz
       - run: tar xzvf etcd-v3.1.7-linux-amd64.tar.gz
       - run: sudo install etcd-v3.1.7-linux-amd64/etcd /usr/bin
-      - run: sudo apt-get install mysql-server
       - run: sudo apt-get install mysql-client
       - run: sudo service mysql restart
       - run: sudo mysql -u root -e "CREATE DATABASE gohan_test;"
