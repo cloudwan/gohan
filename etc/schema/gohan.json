@@ -753,7 +753,8 @@
                             "update"
                         ],
                         "title": "Description",
-                        "type": "string"
+                        "type": "string",
+                        "sql": "varchar(255) not null"
                     },
                     "id": {
                         "description": "id",
@@ -761,7 +762,8 @@
                             "create"
                         ],
                         "title": "ID",
-                        "type": "string"
+                        "type": "string",
+                        "sql": "varchar(255) not null"
                     },
                     "metadata": {
                         "default": {},
@@ -782,7 +784,8 @@
                             "update"
                         ],
                         "title": "Name",
-                        "type": "string"
+                        "type": "string",
+                        "sql": "varchar(255) not null"
                     },
                     "parent": {
                         "default": "",
