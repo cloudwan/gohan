@@ -1338,7 +1338,6 @@ schemas:
         title: ID
         type: string
         unique: true
-        sql: varchar(255) not null
       attach_a_id:
         permission:
         - create
