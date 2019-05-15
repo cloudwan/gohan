@@ -24,8 +24,6 @@ jobs:
       - run: curl -L https://github.com/coreos/etcd/releases/download/v3.1.7/etcd-v3.1.7-linux-amd64.tar.gz -o etcd-v3.1.7-linux-amd64.tar.gz
       - run: tar xzvf etcd-v3.1.7-linux-amd64.tar.gz
       - run: sudo install etcd-v3.1.7-linux-amd64/etcd /usr/bin
-      - run: sudo apt-get install mysql-client
-      - run: sudo service mysql restart
       - run: sudo mysql -u root -e "CREATE DATABASE gohan_test;"
       - run: sudo mysql -u root -e "CREATE USER 'gohan'@'%' IDENTIFIED BY 'gohan';"
       - run: sudo mysql -u root -e "GRANT ALL PRIVILEGES ON *.* TO 'gohan'@'%' WITH GRANT OPTION;"
