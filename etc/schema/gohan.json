@@ -843,21 +843,21 @@
                         "permission": [],
                         "title": "Core version",
                         "type": "string",
-                        "maxLength": 255
+                        "sql": "varchar(255) not null"
                     },
                     "app": {
                         "description": "Version of the application",
                         "permission": [],
                         "title": "Application version",
                         "type": "string",
-                        "maxLength": 255
+                        "sql": "varchar(255) not null"
                     },
                     "id": {
                         "description": "Should never be used, just for framework compatibility",
                         "permission": [],
                         "title": "ID",
                         "type": "string",
-                        "maxLength": 255
+                        "sql": "varchar(255) not null"
                     }
                 },
                 "propertiesOrder": [
