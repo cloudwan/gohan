@@ -83,6 +83,38 @@ var _ = Describe("Keystone client", func() {
 
 	})
 
+	Describe("Domain ID validation", func() {
+		setupKeystone := func() {
+			server.AppendHandlers(
+				ghttp.RespondWithJSONEncoded(201, getV3TokensScopedToDomainResponse()),
+				ghttp.RespondWithJSONEncoded(200, getV3DomainsResponse()),
+			)
+			setupV3Client()
+		}
+
+		It("Returns false when domain id is not known", func() {
+			setupKeystone()
+
+			valid, err := client.ValidateDomainID("some-random-id")
+			Expect(valid).To(BeFalse())
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("Returns true when domain id is known", func() {
+			setupKeystone()
+
+			valid, err := client.ValidateDomainID("default")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(valid).To(BeTrue())
+		})
+
+		It("Returns error when keystone is not operational", func() {
+			valid, err := client.ValidateDomainID("default")
+			Expect(err).To(HaveOccurred())
+			Expect(valid).To(BeFalse())
+		})
+	})
+
 	Describe("Match version from auth URL", func() {
 		It("Should match v3 version successfully", func() {
 			res := matchVersionFromAuthURL("http://example.com:5000/v3")
