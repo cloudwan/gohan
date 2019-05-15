@@ -52,7 +52,7 @@ var _ = Describe("Sql", func() {
 	BeforeEach(func() {
 		var dbType string
 		if os.Getenv("MYSQL_TEST") == "true" {
-			conn = "gohan:gohan@/gohan_test"
+			conn = "root@/gohan_test"
 			dbType = "mysql"
 		} else {
 			conn = "./test.db"

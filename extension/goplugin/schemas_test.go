@@ -52,7 +52,7 @@ var _ = Describe("Schemas", func() {
 
 	BeforeEach(func() {
 		if os.Getenv("MYSQL_TEST") == "true" {
-			dbFile = "gohan:gohan@tcp(localhost:3306)/gohan_test"
+			dbFile = "root@tcp(localhost:3306)/gohan_test"
 			dbType = "mysql"
 		} else {
 			dbFile = "test.db"

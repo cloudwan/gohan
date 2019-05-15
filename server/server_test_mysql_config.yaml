@@ -1,6 +1,6 @@
 database:
     type: "mysql"
-    connection: "gohan:gohan@tcp(localhost:3306)/gohan_test"
+    connection: "root@tcp(localhost:3306)/gohan_test"
     drop_on_create: true
     deadlock_retry_tx:
       count: 3
