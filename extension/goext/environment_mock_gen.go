@@ -917,6 +917,21 @@ func (mr *MockIAuthMockRecorder) IsAdmin(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsAdmin", reflect.TypeOf((*MockIAuth)(nil).IsAdmin), arg0)
 }
 
+// ValidateDomainID mocks base method
+func (m *MockIAuth) ValidateDomainID(arg0 Context, arg1 string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateDomainID", arg0, arg1)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ValidateDomainID indicates an expected call of ValidateDomainID
+func (mr *MockIAuthMockRecorder) ValidateDomainID(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateDomainID", reflect.TypeOf((*MockIAuth)(nil).ValidateDomainID), arg0, arg1)
+}
+
 // ValidateTenantID mocks base method
 func (m *MockIAuth) ValidateTenantID(arg0 Context, arg1 string) (bool, error) {
 	m.ctrl.T.Helper()
