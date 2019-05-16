@@ -29,6 +29,7 @@ jobs:
           name: Wait for DB
           # preinstalled in circleci/* docker image
           command: dockerize -wait tcp://127.0.0.1:3306 -timeout 120s
+      - run: echo $MYSQL_TEST
       - run: curl -L https://github.com/coreos/etcd/releases/download/v3.1.7/etcd-v3.1.7-linux-amd64.tar.gz -o etcd-v3.1.7-linux-amd64.tar.gz
       - run: tar xzvf etcd-v3.1.7-linux-amd64.tar.gz
       - run: sudo install etcd-v3.1.7-linux-amd64/etcd /usr/bin
