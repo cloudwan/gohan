@@ -1221,7 +1221,7 @@ func AddFilterToQuery(s *schema.Schema, q sq.SelectBuilder, filter map[string]in
 
 		substr, ok := value.(search.Search)
 		if ok {
-			q = q.Where(Like{column: substr.Value})
+			q = q.Where(sq.Like{column: substr.Value})
 			continue
 		}
 
@@ -1286,7 +1286,7 @@ func addToFilter(s *schema.Schema, q sq.SelectBuilder, filter interface{}, join 
 			value := filter["value"]
 			substr, ok := value.(search.Search)
 			if ok {
-				sqlizer = append(sqlizer, Like{column: substr.Value})
+				sqlizer = append(sqlizer, sq.Like{column: substr.Value})
 				continue
 			}
 
