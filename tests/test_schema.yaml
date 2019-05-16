@@ -741,6 +741,7 @@ schemas:
         type: string
         unique: false
         indexed: true
+        sql: varchar(255) not null
       domain_id:
         description: Domain ID
         permission:
@@ -749,6 +750,7 @@ schemas:
         type: string
         unique: false
         indexed: true
+        sql: varchar(255) not null
       test_string:
         default: ""
         description: Test string
