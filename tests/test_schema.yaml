@@ -1289,6 +1289,7 @@ schemas:
         - string
         - "null"
         unique: false
+        sql: varchar(255) not null
         description: A property that can attach to 'attach_target' iff it is accessible
       attach_if_same_owner_id:
         permission:
