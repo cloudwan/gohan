@@ -40,7 +40,7 @@
                         ],
                         "title": "ID",
                         "type": "string",
-                        "unique": true,
+                        "unique": true
                     },
                     "type": {
                         "description": "Schema Type",
