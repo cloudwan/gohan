@@ -270,12 +270,12 @@ var _ = Describe("Schemas", func() {
 			c, err := testSchema.Count(goext.Filter{}, context)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(c).To(Equal(uint64(0)))
-			for i := 0; i < 2; i++ {
+			for i := 10; i < 12; i++ {
 				createdResource.ID = string(i)
 				createdResource.Name = goext.MakeString("test1")
 				Expect(testSchema.CreateRaw(&createdResource, context)).To(Succeed())
 			}
-			for i := 2; i < 5; i++ {
+			for i := 12; i < 15; i++ {
 				createdResource.ID = string(i)
 				createdResource.Name = goext.MakeString("test2")
 				Expect(testSchema.CreateRaw(&createdResource, context)).To(Succeed())
