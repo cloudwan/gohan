@@ -699,6 +699,7 @@ schemas:
         type: string
         unique: false
         description: Network ID
+        sql: varchar(255) not null
       status:
         permission: ["create", "update"]
         title: Status
@@ -1289,7 +1290,7 @@ schemas:
         - string
         - "null"
         unique: false
-        sql: varchar(255) not null
+        sql: varchar(255) null
         description: A property that can attach to 'attach_target' iff it is accessible
       attach_if_same_owner_id:
         permission:
@@ -1302,6 +1303,7 @@ schemas:
         - string
         - "null"
         unique: false
+        sql: varchar(255) null
         description: A property that can attach to 'attach_target' iff it has the same owner
       not_a_relation:
         permission:
@@ -1345,6 +1347,7 @@ schemas:
         - "null"
         unique: false
         description: Attach point
+        sql: varchar(255) null
       attach_b_id:
         permission:
         - create
@@ -1357,6 +1360,7 @@ schemas:
         - "null"
         unique: false
         description: Attach point
+        sql: varchar(255) null
       container_object:
         description: Container object for attacher
         permission:
