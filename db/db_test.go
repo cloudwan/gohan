@@ -45,6 +45,7 @@ var _ = Describe("Database operation test", func() {
 
 		manager          *schema.Manager
 		networkSchema    *schema.Schema
+		subnetSchema     *schema.Schema
 		serverSchema     *schema.Schema
 		networkResource1 *schema.Resource
 		networkResource2 *schema.Resource
