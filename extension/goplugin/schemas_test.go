@@ -108,7 +108,7 @@ var _ = Describe("Schemas", func() {
 
 	Context("Make columns", func() {
 		It("Should get correct column names", func() {
-			Expect(testSuiteSchema.ColumnNames()).To(Equal([]string{"test_suites.`id` as `test_suites__id`"}))
+			Expect(testSuiteSchema.ColumnNames()).To(Equal([]string{"`test_suites`.`id` as `test_suites__id`"}))
 		})
 	})
 
