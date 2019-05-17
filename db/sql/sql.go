@@ -1343,7 +1343,7 @@ func (lk Like) ToSql() (sql string, args []interface{}, err error) {
 			return
 		}
 
-		expr = fmt.Sprintf("%s %s ? ESCAPE '\\'", key, opr)
+		expr = fmt.Sprintf("%s %s ? ESCAPE '\\\\'", key, opr)
 		args = append(args, val)
 
 		exprs = append(exprs, expr)
