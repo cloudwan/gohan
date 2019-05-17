@@ -142,10 +142,10 @@ var _ = Describe("Database operation test", func() {
 		})
 
 		AfterEach(func() {
-			tx.Delete(ctx, networkSchema, "`networkRed`")
-			tx.Delete(ctx, networkSchema, "`networkBlue`")
-			tx.Delete(ctx, subnetSchema, "`subnetRed`")
-			tx.Delete(ctx, serverSchema, "`serverRed`")
+			tx.Delete(ctx, networkSchema, networkResource1.ID())
+			tx.Delete(ctx, networkSchema, networkResource2.ID())
+			tx.Delete(ctx, subnetSchema, subnetResource.ID())
+			tx.Delete(ctx, serverSchema, serverResource.ID())
 			tx.Close()
 		})
 
