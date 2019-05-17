@@ -712,7 +712,7 @@ func makeColumnID(tableName string, property schema.Property) string {
 }
 
 func makeColumn(tableName string, property schema.Property) string {
-	return fmt.Sprintf("%s.%s", tableName, quote(property.ID))
+	return fmt.Sprintf("%s.%s", quote(tableName), quote(property.ID))
 }
 
 func makeAliasTableName(tableName string, property schema.Property) string {

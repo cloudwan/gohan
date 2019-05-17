@@ -6,7 +6,7 @@ database:
       count: 3
       interval_msec: 100
 schemas:
-    - "../etc/schema/gohan.json"
+    - "embed://etc/schema/gohan.json"
     - "../tests/test_abstract_schema.yaml"
     - "../tests/test_schema.yaml"
     - "../tests/test_schema_sync.yaml"
@@ -14,6 +14,9 @@ schemas:
     - "../tests/test_sync_watch_extension.yaml"
     - "../tests/test_blacklisted_tenant_id_schema.yaml"
 address: ":19090"
+healthcheck:
+  address: ":19091"
+  enabled: true
 document_root: "embed"
 sync: etcdv3
 etcd:
@@ -26,6 +29,9 @@ keystone:
     tenant_name: "admin"
     password: "gohan"
 cors: "*"
+
+profiling:
+  enabled: true
 # allowed levels  "CRITICAL", "ERROR", "WARNING", "NOTICE", "INFO", "DEBUG",
 logging:
     stderr:

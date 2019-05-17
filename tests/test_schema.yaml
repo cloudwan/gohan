@@ -916,6 +916,7 @@ schemas:
         sql: varchar(255) not null
         unique: false
         indexed: true
+        sql: varchar(255) not null
       domain_id:
         description: Domain ID
         permission:
@@ -925,6 +926,7 @@ schemas:
         sql: varchar(255) not null
         unique: false
         indexed: true
+        sql: varchar(255) not null
       test_string:
         default: ""
         description: Test string
@@ -1064,7 +1066,7 @@ schemas:
         title: TenantID
         type: string
         unique: false
-        sql: varchar(255) not null
+        # sql: varchar(255) not null
     propertiesOrder:
     - id
     - pattern
