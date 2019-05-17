@@ -78,7 +78,7 @@ var _ = Describe("Database operation test", func() {
 			Expect(manager.LoadSchemaFromFile("../tests/test_schema.yaml")).To(Succeed())
 			networkSchema, ok = manager.Schema("network")
 			Expect(ok).To(BeTrue())
-			_, ok = manager.Schema("subnet")
+			subnetSchema, ok = manager.Schema("subnet")
 			Expect(ok).To(BeTrue())
 			serverSchema, ok = manager.Schema("server")
 			Expect(ok).To(BeTrue())
@@ -141,6 +141,10 @@ var _ = Describe("Database operation test", func() {
 		})
 
 		AfterEach(func() {
+			tx.Delete(ctx, networkSchema, "networkRed")
+			tx.Delete(ctx, networkSchema, "networkBlue")
+			tx.Delete(ctx, subnetSchema, "subnetRed")
+			tx.Delete(ctx, serverSchema, "serverRed")
 			tx.Close()
 		})
 
