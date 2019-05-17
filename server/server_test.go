@@ -24,6 +24,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"os"
 	"regexp"
 	"strconv"
 	"testing"
@@ -1275,6 +1276,9 @@ var _ = Describe("Server package test", func() {
 
 	Describe("Substring Search ", func() {
 		BeforeEach(func() {
+			if os.Getenv("MYSQL_TEST") != "true" {
+				Skip("Test possible only on MySQL DB")
+			}
 			testURL("POST", networkPluralURL, adminTokenID, getNetwork("red", "red"), http.StatusCreated)
 			testURL("POST", networkPluralURL, adminTokenID, getNetwork("red1", "red"), http.StatusCreated)
 			testURL("POST", networkPluralURL, adminTokenID, getNetwork("red2", "blue"), http.StatusCreated)
@@ -1346,6 +1350,9 @@ var _ = Describe("Server package test", func() {
 	//will pass only with mysql config and will fail with sqllite3 config in test DB...marking testcases as pending until resolution
 	Describe("Substring Search with special characters", func() {
 		BeforeEach(func() {
+			if os.Getenv("MYSQL_TEST") != "true" {
+				Skip("Test possible only on MySQL DB")
+			}
 			testURL("POST", networkPluralURL, adminTokenID, getNetwork("_apple", "apple"), http.StatusCreated)
 			testURL("POST", networkPluralURL, adminTokenID, getNetwork("\\ball", "ball"), http.StatusCreated)
 			testURL("POST", networkPluralURL, adminTokenID, getNetwork("%cats", "cats"), http.StatusCreated)

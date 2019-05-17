@@ -45,6 +45,7 @@ var _ = Describe("Database operation test", func() {
 
 		manager          *schema.Manager
 		networkSchema    *schema.Schema
+		subnetSchema     *schema.Schema
 		serverSchema     *schema.Schema
 		networkResource1 *schema.Resource
 		networkResource2 *schema.Resource
@@ -78,7 +79,7 @@ var _ = Describe("Database operation test", func() {
 			Expect(manager.LoadSchemaFromFile("../tests/test_schema.yaml")).To(Succeed())
 			networkSchema, ok = manager.Schema("network")
 			Expect(ok).To(BeTrue())
-			_, ok = manager.Schema("subnet")
+			subnetSchema, ok = manager.Schema("subnet")
 			Expect(ok).To(BeTrue())
 			serverSchema, ok = manager.Schema("server")
 			Expect(ok).To(BeTrue())
@@ -132,7 +133,7 @@ var _ = Describe("Database operation test", func() {
 			dataStore, err = dbutil.ConnectDB(dbType, conn, db.DefaultMaxOpenConn, options.Default())
 			Expect(err).ToNot(HaveOccurred())
 
-			for _, s := range manager.Schemas() {
+			for _, s := range manager.OrderedSchemas() {
 				Expect(dataStore.RegisterTable(s, false, true)).To(Succeed())
 			}
 
@@ -147,7 +148,7 @@ var _ = Describe("Database operation test", func() {
 		Describe("Using sql", func() {
 			BeforeEach(func() {
 				if os.Getenv("MYSQL_TEST") == "true" {
-					conn = "root@/gohan_test"
+					conn = "root@tcp(localhost:3306)/gohan_test"
 					dbType = "mysql"
 				} else {
 					conn = "./test.db"
@@ -201,6 +202,12 @@ var _ = Describe("Database operation test", func() {
 
 			Describe("When the database is not empty", func() {
 				JustBeforeEach(func() {
+					tx.Delete(ctx, subnetSchema, subnetResource.ID())
+					tx.Delete(ctx, serverSchema, serverResource.ID())
+
+					tx.Delete(ctx, networkSchema, networkResource1.ID())
+					tx.Delete(ctx, networkSchema, networkResource2.ID())
+
 					create(networkResource1)
 					create(networkResource2)
 					create(serverResource)

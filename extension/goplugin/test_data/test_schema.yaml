@@ -196,7 +196,6 @@ schemas:
         - update
         title: Name
         type: string
-        maxLength: 255
     propertiesOrder:
     - id
     - name
