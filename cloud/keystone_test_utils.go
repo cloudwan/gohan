@@ -186,3 +186,16 @@ func getV3TenantsResponse() interface{} {
 		},
 	}
 }
+
+func getV3DomainsResponse() interface{} {
+	return map[string]interface{}{
+		"domains": []interface{}{
+			map[string]interface{}{
+				"id":          "default",
+				"name":        "Default",
+				"description": "default domain",
+				"enabled":     true,
+			},
+		},
+	}
+}

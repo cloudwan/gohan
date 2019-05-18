@@ -243,6 +243,14 @@ func (identity *FakeIdentity) GetServiceTokenID() string {
 	return "admin_token"
 }
 
+func (identity *FakeIdentity) ValidateTenantID(id string) (bool, error) {
+	return true, nil
+}
+
+func (identity *FakeIdentity) ValidateDomainID(id string) (bool, error) {
+	return true, nil
+}
+
 //FakeKeystone server for only test purpose
 func FakeKeystone(martini *martini.ClassicMartini) {
 	//mocking keystone v2.0 API

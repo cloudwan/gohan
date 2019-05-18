@@ -25,6 +25,7 @@ import (
 	"github.com/cloudwan/gohan/schema"
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
+	v3domains "github.com/gophercloud/gophercloud/openstack/identity/v3/domains"
 	v3tenants "github.com/gophercloud/gophercloud/openstack/identity/v3/projects"
 	v3tokens "github.com/gophercloud/gophercloud/openstack/identity/v3/tokens"
 	"github.com/gophercloud/gophercloud/pagination"
@@ -37,6 +38,8 @@ type KeystoneIdentity interface {
 	VerifyToken(string) (schema.Authorization, error)
 	GetServiceAuthorization() (schema.Authorization, error)
 	GetServiceTokenID() string
+	ValidateTenantID(string) (bool, error)
+	ValidateDomainID(string) (bool, error)
 }
 
 type keystoneV3Client struct {
@@ -217,7 +220,10 @@ func isTokenScopedToAdminProject(result *v3tokens.GetResult) bool {
 }
 
 func (client *keystoneV3Client) getTenant(filter func(*v3tenants.Project) bool) (*v3tenants.Project, error) {
-	opts := v3tenants.ListOpts{}
+	enabled := true
+	opts := v3tenants.ListOpts{
+		Enabled: &enabled,
+	}
 	pager := v3tenants.List(client.client, opts)
 	var result *v3tenants.Project
 	err := pager.EachPage(func(page pagination.Page) (bool, error) {
@@ -242,10 +248,61 @@ func (client *keystoneV3Client) getTenant(filter func(*v3tenants.Project) bool) 
 	return result, nil
 }
 
+func (client *keystoneV3Client) getDomain(filter func(domain *v3domains.Domain) bool) (*v3domains.Domain, error) {
+	enabled := true
+	opts := v3domains.ListOpts{
+		Enabled: &enabled,
+	}
+	pager := v3domains.List(client.client, opts)
+	var result *v3domains.Domain
+	err := pager.EachPage(func(page pagination.Page) (bool, error) {
+		domainsList, err := v3domains.ExtractDomains(page)
+		if err != nil {
+			return false, err
+		}
+
+		for _, domain := range domainsList {
+			if filter(&domain) {
+				result = &domain
+				return false, nil
+			}
+		}
+
+		return true, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
 func (client *keystoneV3Client) updateCounter(delta int64, action string) {
 	metrics.UpdateCounter(delta, "auth.v3.%s", action)
 }
 
 func (client *keystoneV3Client) measureTime(timeStarted time.Time, action string) {
 	metrics.UpdateTimer(timeStarted, "auth.v3.%s", action)
+}
+
+func (client *keystoneV3Client) ValidateTenantID(id string) (bool, error) {
+	defer client.measureTime(time.Now(), "validate_tenant_id")
+
+	tenant, err := client.getTenant(func(tenant *v3tenants.Project) bool { return tenant.ID == id })
+	if err != nil {
+		return false, err
+	}
+
+	return tenant != nil, nil
+}
+
+func (client *keystoneV3Client) ValidateDomainID(id string) (bool, error) {
+	defer client.measureTime(time.Now(), "validate_domain_id")
+
+	domain, err := client.getDomain(func(domain *v3domains.Domain) bool { return domain.ID == id })
+	if err != nil {
+		return false, err
+	}
+
+	return domain != nil, nil
 }

@@ -16,9 +16,11 @@
 package goplugin
 
 import (
+	"fmt"
+
 	"github.com/cloudwan/gohan/extension/goext"
 	"github.com/cloudwan/gohan/schema"
-	"errors"
+	"github.com/cloudwan/gohan/server/middleware"
 )
 
 // Auth is an implementation of IAuth
@@ -55,32 +57,80 @@ func (a *Auth) IsAdmin(context goext.Context) bool {
 	return auth.IsAdmin()
 }
 
-func getRoleFromContext(context goext.Context) (*schema.Role, error) {
-	roleRaw, ok := context["role"]
+func (a *Auth) ValidateTenantID(ctx goext.Context, id string) (bool, error) {
+	identityService, err := getIdentityServiceFromContext(ctx)
+	if err != nil {
+		return false, err
+	}
+	return identityService.ValidateTenantID(id)
+}
+
+func (a *Auth) ValidateDomainID(ctx goext.Context, id string) (bool, error) {
+	identityService, err := getIdentityServiceFromContext(ctx)
+	if err != nil {
+		return false, err
+	}
+	return identityService.ValidateDomainID(id)
+}
+
+func getIdentityServiceFromContext(ctx goext.Context) (middleware.IdentityService, error) {
+	rawIdentityService, err := getFromContext(ctx, "identity_service")
+	if err != nil {
+		return nil, err
+	}
+
+	identityService, ok := rawIdentityService.(middleware.IdentityService)
 	if !ok {
-		log.Warning("missing 'role' field in context")
-		return nil, errors.New("missing 'role' field in context")
+		return nil, logWarnAndReturnErr(newInvalidTypeErr("identity_service"))
+	}
+	return identityService, nil
+}
+
+func getFromContext(ctx goext.Context, key string) (interface{}, error) {
+	raw, ok := ctx[key]
+	if !ok {
+		return nil, logWarnAndReturnErr(newMissingInContextErr(key))
+	}
+	return raw, nil
+}
+
+func getRoleFromContext(context goext.Context) (*schema.Role, error) {
+	roleRaw, err := getFromContext(context, "role")
+	if err != nil {
+		return nil, err
 	}
 
 	role, ok := roleRaw.(*schema.Role)
 	if !ok {
-		log.Warning("invalid type of 'role' field in context")
-		return nil, errors.New("invalid type of 'role' field in context")
+		return nil, logWarnAndReturnErr(newInvalidTypeErr("role"))
 	}
 
 	return role, nil
 }
 
 func getAuthFromContext(context goext.Context) (schema.Authorization, error) {
-	authRaw, ok := context["auth"]
-	if !ok {
-		return nil, errors.New("missing 'auth' field in context")
+	authRaw, err := getFromContext(context, "auth")
+	if err != nil {
+		return nil, err
 	}
 
 	auth, ok := authRaw.(schema.Authorization)
 	if !ok {
-		return nil, errors.New("invalid type of 'auth' field in context")
+		return nil, logWarnAndReturnErr(newInvalidTypeErr("auth"))
 	}
 
 	return auth, nil
+}
+
+func logWarnAndReturnErr(err error) error {
+	log.Warning("%s", err)
+	return err
+}
+
+func newMissingInContextErr(field string) error {
+	return fmt.Errorf("missing '%s' field in context", field)
+}
+
+func newInvalidTypeErr(field string) error {
+	return fmt.Errorf("invalid type of '%s' field in context", field)
 }

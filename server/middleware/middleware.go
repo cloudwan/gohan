@@ -156,6 +156,8 @@ type IdentityService interface {
 	VerifyToken(string) (schema.Authorization, error)
 	GetServiceAuthorization() (schema.Authorization, error)
 	GetServiceTokenID() string
+	ValidateTenantID(string) (bool, error)
+	ValidateDomainID(string) (bool, error)
 }
 
 // CreateIdentityServiceFromConfig creates keystone identity from config
@@ -293,6 +295,14 @@ func (i *NobodyIdentityService) GetClient() *gophercloud.ServiceClient {
 
 func (i *NobodyIdentityService) GetServiceTokenID() string {
 	return ""
+}
+
+func (i *NobodyIdentityService) ValidateTenantID(id string) (bool, error) {
+	return false, fmt.Errorf("invalid operation")
+}
+
+func (i *NobodyIdentityService) ValidateDomainID(id string) (bool, error) {
+	return false, fmt.Errorf("invalid operation")
 }
 
 //HTTPJSONError helper for returning JSON errors

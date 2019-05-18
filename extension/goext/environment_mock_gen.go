@@ -6,10 +6,9 @@ package goext
 
 import (
 	context "context"
+	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 	time "time"
-
-	gomock "github.com/golang/mock/gomock"
 )
 
 // MockICore is a mock of ICore interface
@@ -37,6 +36,7 @@ func (m *MockICore) EXPECT() *MockICoreMockRecorder {
 
 // HandleEvent mocks base method
 func (m *MockICore) HandleEvent(arg0 string, arg1 Context) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "HandleEvent", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -44,31 +44,37 @@ func (m *MockICore) HandleEvent(arg0 string, arg1 Context) error {
 
 // HandleEvent indicates an expected call of HandleEvent
 func (mr *MockICoreMockRecorder) HandleEvent(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleEvent", reflect.TypeOf((*MockICore)(nil).HandleEvent), arg0, arg1)
 }
 
 // RegisterEventHandler mocks base method
 func (m *MockICore) RegisterEventHandler(arg0 string, arg1 Handler, arg2 int) {
+	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "RegisterEventHandler", arg0, arg1, arg2)
 }
 
 // RegisterEventHandler indicates an expected call of RegisterEventHandler
 func (mr *MockICoreMockRecorder) RegisterEventHandler(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterEventHandler", reflect.TypeOf((*MockICore)(nil).RegisterEventHandler), arg0, arg1, arg2)
 }
 
 // RegisterSchemaEventHandler mocks base method
 func (m *MockICore) RegisterSchemaEventHandler(arg0 SchemaID, arg1 string, arg2 SchemaHandler, arg3 int) {
+	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "RegisterSchemaEventHandler", arg0, arg1, arg2, arg3)
 }
 
 // RegisterSchemaEventHandler indicates an expected call of RegisterSchemaEventHandler
 func (mr *MockICoreMockRecorder) RegisterSchemaEventHandler(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterSchemaEventHandler", reflect.TypeOf((*MockICore)(nil).RegisterSchemaEventHandler), arg0, arg1, arg2, arg3)
 }
 
 // TriggerEvent mocks base method
 func (m *MockICore) TriggerEvent(arg0 string, arg1 Context) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "TriggerEvent", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -76,6 +82,7 @@ func (m *MockICore) TriggerEvent(arg0 string, arg1 Context) error {
 
 // TriggerEvent indicates an expected call of TriggerEvent
 func (mr *MockICoreMockRecorder) TriggerEvent(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TriggerEvent", reflect.TypeOf((*MockICore)(nil).TriggerEvent), arg0, arg1)
 }
 
@@ -104,16 +111,19 @@ func (m *MockILogger) EXPECT() *MockILoggerMockRecorder {
 
 // Critical mocks base method
 func (m *MockILogger) Critical(arg0 string) {
+	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Critical", arg0)
 }
 
 // Critical indicates an expected call of Critical
 func (mr *MockILoggerMockRecorder) Critical(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Critical", reflect.TypeOf((*MockILogger)(nil).Critical), arg0)
 }
 
 // Criticalf mocks base method
 func (m *MockILogger) Criticalf(arg0 string, arg1 ...interface{}) {
+	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0}
 	for _, a := range arg1 {
 		varargs = append(varargs, a)
@@ -123,22 +133,26 @@ func (m *MockILogger) Criticalf(arg0 string, arg1 ...interface{}) {
 
 // Criticalf indicates an expected call of Criticalf
 func (mr *MockILoggerMockRecorder) Criticalf(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0}, arg1...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Criticalf", reflect.TypeOf((*MockILogger)(nil).Criticalf), varargs...)
 }
 
 // Debug mocks base method
 func (m *MockILogger) Debug(arg0 string) {
+	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Debug", arg0)
 }
 
 // Debug indicates an expected call of Debug
 func (mr *MockILoggerMockRecorder) Debug(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Debug", reflect.TypeOf((*MockILogger)(nil).Debug), arg0)
 }
 
 // Debugf mocks base method
 func (m *MockILogger) Debugf(arg0 string, arg1 ...interface{}) {
+	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0}
 	for _, a := range arg1 {
 		varargs = append(varargs, a)
@@ -148,22 +162,26 @@ func (m *MockILogger) Debugf(arg0 string, arg1 ...interface{}) {
 
 // Debugf indicates an expected call of Debugf
 func (mr *MockILoggerMockRecorder) Debugf(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0}, arg1...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Debugf", reflect.TypeOf((*MockILogger)(nil).Debugf), varargs...)
 }
 
 // Error mocks base method
 func (m *MockILogger) Error(arg0 string) {
+	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Error", arg0)
 }
 
 // Error indicates an expected call of Error
 func (mr *MockILoggerMockRecorder) Error(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Error", reflect.TypeOf((*MockILogger)(nil).Error), arg0)
 }
 
 // Errorf mocks base method
 func (m *MockILogger) Errorf(arg0 string, arg1 ...interface{}) {
+	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0}
 	for _, a := range arg1 {
 		varargs = append(varargs, a)
@@ -173,22 +191,26 @@ func (m *MockILogger) Errorf(arg0 string, arg1 ...interface{}) {
 
 // Errorf indicates an expected call of Errorf
 func (mr *MockILoggerMockRecorder) Errorf(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0}, arg1...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Errorf", reflect.TypeOf((*MockILogger)(nil).Errorf), varargs...)
 }
 
 // Info mocks base method
 func (m *MockILogger) Info(arg0 string) {
+	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Info", arg0)
 }
 
 // Info indicates an expected call of Info
 func (mr *MockILoggerMockRecorder) Info(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Info", reflect.TypeOf((*MockILogger)(nil).Info), arg0)
 }
 
 // Infof mocks base method
 func (m *MockILogger) Infof(arg0 string, arg1 ...interface{}) {
+	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0}
 	for _, a := range arg1 {
 		varargs = append(varargs, a)
@@ -198,22 +220,26 @@ func (m *MockILogger) Infof(arg0 string, arg1 ...interface{}) {
 
 // Infof indicates an expected call of Infof
 func (mr *MockILoggerMockRecorder) Infof(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0}, arg1...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Infof", reflect.TypeOf((*MockILogger)(nil).Infof), varargs...)
 }
 
 // Notice mocks base method
 func (m *MockILogger) Notice(arg0 string) {
+	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Notice", arg0)
 }
 
 // Notice indicates an expected call of Notice
 func (mr *MockILoggerMockRecorder) Notice(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Notice", reflect.TypeOf((*MockILogger)(nil).Notice), arg0)
 }
 
 // Noticef mocks base method
 func (m *MockILogger) Noticef(arg0 string, arg1 ...interface{}) {
+	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0}
 	for _, a := range arg1 {
 		varargs = append(varargs, a)
@@ -223,22 +249,26 @@ func (m *MockILogger) Noticef(arg0 string, arg1 ...interface{}) {
 
 // Noticef indicates an expected call of Noticef
 func (mr *MockILoggerMockRecorder) Noticef(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0}, arg1...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Noticef", reflect.TypeOf((*MockILogger)(nil).Noticef), varargs...)
 }
 
 // Warning mocks base method
 func (m *MockILogger) Warning(arg0 string) {
+	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Warning", arg0)
 }
 
 // Warning indicates an expected call of Warning
 func (mr *MockILoggerMockRecorder) Warning(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Warning", reflect.TypeOf((*MockILogger)(nil).Warning), arg0)
 }
 
 // Warningf mocks base method
 func (m *MockILogger) Warningf(arg0 string, arg1 ...interface{}) {
+	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0}
 	for _, a := range arg1 {
 		varargs = append(varargs, a)
@@ -248,6 +278,7 @@ func (m *MockILogger) Warningf(arg0 string, arg1 ...interface{}) {
 
 // Warningf indicates an expected call of Warningf
 func (mr *MockILoggerMockRecorder) Warningf(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0}, arg1...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Warningf", reflect.TypeOf((*MockILogger)(nil).Warningf), varargs...)
 }
@@ -277,6 +308,7 @@ func (m *MockISchemas) EXPECT() *MockISchemasMockRecorder {
 
 // Find mocks base method
 func (m *MockISchemas) Find(arg0 SchemaID) ISchema {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Find", arg0)
 	ret0, _ := ret[0].(ISchema)
 	return ret0
@@ -284,11 +316,13 @@ func (m *MockISchemas) Find(arg0 SchemaID) ISchema {
 
 // Find indicates an expected call of Find
 func (mr *MockISchemasMockRecorder) Find(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Find", reflect.TypeOf((*MockISchemas)(nil).Find), arg0)
 }
 
 // List mocks base method
 func (m *MockISchemas) List() []ISchema {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List")
 	ret0, _ := ret[0].([]ISchema)
 	return ret0
@@ -296,11 +330,13 @@ func (m *MockISchemas) List() []ISchema {
 
 // List indicates an expected call of List
 func (mr *MockISchemasMockRecorder) List() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockISchemas)(nil).List))
 }
 
 // Relations mocks base method
 func (m *MockISchemas) Relations(arg0 SchemaID) []SchemaRelationInfo {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Relations", arg0)
 	ret0, _ := ret[0].([]SchemaRelationInfo)
 	return ret0
@@ -308,6 +344,7 @@ func (m *MockISchemas) Relations(arg0 SchemaID) []SchemaRelationInfo {
 
 // Relations indicates an expected call of Relations
 func (mr *MockISchemasMockRecorder) Relations(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Relations", reflect.TypeOf((*MockISchemas)(nil).Relations), arg0)
 }
 
@@ -336,6 +373,7 @@ func (m *MockISync) EXPECT() *MockISyncMockRecorder {
 
 // Delete mocks base method
 func (m *MockISync) Delete(arg0 context.Context, arg1 string, arg2 bool) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Delete", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -343,11 +381,13 @@ func (m *MockISync) Delete(arg0 context.Context, arg1 string, arg2 bool) error {
 
 // Delete indicates an expected call of Delete
 func (mr *MockISyncMockRecorder) Delete(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockISync)(nil).Delete), arg0, arg1, arg2)
 }
 
 // Fetch mocks base method
 func (m *MockISync) Fetch(arg0 context.Context, arg1 string) (*Node, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Fetch", arg0, arg1)
 	ret0, _ := ret[0].(*Node)
 	ret1, _ := ret[1].(error)
@@ -356,11 +396,13 @@ func (m *MockISync) Fetch(arg0 context.Context, arg1 string) (*Node, error) {
 
 // Fetch indicates an expected call of Fetch
 func (mr *MockISyncMockRecorder) Fetch(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Fetch", reflect.TypeOf((*MockISync)(nil).Fetch), arg0, arg1)
 }
 
 // Update mocks base method
 func (m *MockISync) Update(arg0 context.Context, arg1, arg2 string) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Update", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -368,11 +410,13 @@ func (m *MockISync) Update(arg0 context.Context, arg1, arg2 string) error {
 
 // Update indicates an expected call of Update
 func (mr *MockISyncMockRecorder) Update(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockISync)(nil).Update), arg0, arg1, arg2)
 }
 
 // Watch mocks base method
 func (m *MockISync) Watch(arg0 context.Context, arg1 string, arg2 time.Duration, arg3 int64) ([]*Event, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Watch", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].([]*Event)
 	ret1, _ := ret[1].(error)
@@ -381,6 +425,7 @@ func (m *MockISync) Watch(arg0 context.Context, arg1 string, arg2 time.Duration,
 
 // Watch indicates an expected call of Watch
 func (mr *MockISyncMockRecorder) Watch(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Watch", reflect.TypeOf((*MockISync)(nil).Watch), arg0, arg1, arg2, arg3)
 }
 
@@ -409,6 +454,7 @@ func (m *MockIDatabase) EXPECT() *MockIDatabaseMockRecorder {
 
 // Begin mocks base method
 func (m *MockIDatabase) Begin() (ITransaction, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Begin")
 	ret0, _ := ret[0].(ITransaction)
 	ret1, _ := ret[1].(error)
@@ -417,11 +463,13 @@ func (m *MockIDatabase) Begin() (ITransaction, error) {
 
 // Begin indicates an expected call of Begin
 func (mr *MockIDatabaseMockRecorder) Begin() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Begin", reflect.TypeOf((*MockIDatabase)(nil).Begin))
 }
 
 // BeginTx mocks base method
 func (m *MockIDatabase) BeginTx(arg0 Context, arg1 *TxOptions) (ITransaction, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "BeginTx", arg0, arg1)
 	ret0, _ := ret[0].(ITransaction)
 	ret1, _ := ret[1].(error)
@@ -430,11 +478,13 @@ func (m *MockIDatabase) BeginTx(arg0 Context, arg1 *TxOptions) (ITransaction, er
 
 // BeginTx indicates an expected call of BeginTx
 func (mr *MockIDatabaseMockRecorder) BeginTx(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BeginTx", reflect.TypeOf((*MockIDatabase)(nil).BeginTx), arg0, arg1)
 }
 
 // Options mocks base method
 func (m *MockIDatabase) Options() DbOptions {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Options")
 	ret0, _ := ret[0].(DbOptions)
 	return ret0
@@ -442,11 +492,13 @@ func (m *MockIDatabase) Options() DbOptions {
 
 // Options indicates an expected call of Options
 func (mr *MockIDatabaseMockRecorder) Options() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Options", reflect.TypeOf((*MockIDatabase)(nil).Options))
 }
 
 // Within mocks base method
 func (m *MockIDatabase) Within(arg0 Context, arg1 func(ITransaction) error) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Within", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -454,11 +506,13 @@ func (m *MockIDatabase) Within(arg0 Context, arg1 func(ITransaction) error) erro
 
 // Within indicates an expected call of Within
 func (mr *MockIDatabaseMockRecorder) Within(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Within", reflect.TypeOf((*MockIDatabase)(nil).Within), arg0, arg1)
 }
 
 // WithinTx mocks base method
 func (m *MockIDatabase) WithinTx(arg0 Context, arg1 *TxOptions, arg2 func(ITransaction) error) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "WithinTx", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -466,6 +520,7 @@ func (m *MockIDatabase) WithinTx(arg0 Context, arg1 *TxOptions, arg2 func(ITrans
 
 // WithinTx indicates an expected call of WithinTx
 func (mr *MockIDatabaseMockRecorder) WithinTx(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WithinTx", reflect.TypeOf((*MockIDatabase)(nil).WithinTx), arg0, arg1, arg2)
 }
 
@@ -494,6 +549,7 @@ func (m *MockITransaction) EXPECT() *MockITransactionMockRecorder {
 
 // Close mocks base method
 func (m *MockITransaction) Close() error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Close")
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -501,11 +557,13 @@ func (m *MockITransaction) Close() error {
 
 // Close indicates an expected call of Close
 func (mr *MockITransactionMockRecorder) Close() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockITransaction)(nil).Close))
 }
 
 // Closed mocks base method
 func (m *MockITransaction) Closed() bool {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Closed")
 	ret0, _ := ret[0].(bool)
 	return ret0
@@ -513,11 +571,13 @@ func (m *MockITransaction) Closed() bool {
 
 // Closed indicates an expected call of Closed
 func (mr *MockITransactionMockRecorder) Closed() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Closed", reflect.TypeOf((*MockITransaction)(nil).Closed))
 }
 
 // Commit mocks base method
 func (m *MockITransaction) Commit() error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Commit")
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -525,11 +585,13 @@ func (m *MockITransaction) Commit() error {
 
 // Commit indicates an expected call of Commit
 func (mr *MockITransactionMockRecorder) Commit() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Commit", reflect.TypeOf((*MockITransaction)(nil).Commit))
 }
 
 // Count mocks base method
 func (m *MockITransaction) Count(arg0 context.Context, arg1 ISchema, arg2 Filter) (uint64, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Count", arg0, arg1, arg2)
 	ret0, _ := ret[0].(uint64)
 	ret1, _ := ret[1].(error)
@@ -538,11 +600,13 @@ func (m *MockITransaction) Count(arg0 context.Context, arg1 ISchema, arg2 Filter
 
 // Count indicates an expected call of Count
 func (mr *MockITransactionMockRecorder) Count(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Count", reflect.TypeOf((*MockITransaction)(nil).Count), arg0, arg1, arg2)
 }
 
 // Create mocks base method
 func (m *MockITransaction) Create(arg0 context.Context, arg1 ISchema, arg2 map[string]interface{}) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Create", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -550,11 +614,13 @@ func (m *MockITransaction) Create(arg0 context.Context, arg1 ISchema, arg2 map[s
 
 // Create indicates an expected call of Create
 func (mr *MockITransactionMockRecorder) Create(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockITransaction)(nil).Create), arg0, arg1, arg2)
 }
 
 // Delete mocks base method
 func (m *MockITransaction) Delete(arg0 context.Context, arg1 ISchema, arg2 interface{}) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Delete", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -562,11 +628,13 @@ func (m *MockITransaction) Delete(arg0 context.Context, arg1 ISchema, arg2 inter
 
 // Delete indicates an expected call of Delete
 func (mr *MockITransactionMockRecorder) Delete(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockITransaction)(nil).Delete), arg0, arg1, arg2)
 }
 
 // Exec mocks base method
 func (m *MockITransaction) Exec(arg0 context.Context, arg1 string, arg2 ...interface{}) error {
+	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -578,12 +646,14 @@ func (m *MockITransaction) Exec(arg0 context.Context, arg1 string, arg2 ...inter
 
 // Exec indicates an expected call of Exec
 func (mr *MockITransactionMockRecorder) Exec(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exec", reflect.TypeOf((*MockITransaction)(nil).Exec), varargs...)
 }
 
 // Fetch mocks base method
 func (m *MockITransaction) Fetch(arg0 context.Context, arg1 ISchema, arg2 Filter) (map[string]interface{}, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Fetch", arg0, arg1, arg2)
 	ret0, _ := ret[0].(map[string]interface{})
 	ret1, _ := ret[1].(error)
@@ -592,11 +662,13 @@ func (m *MockITransaction) Fetch(arg0 context.Context, arg1 ISchema, arg2 Filter
 
 // Fetch indicates an expected call of Fetch
 func (mr *MockITransactionMockRecorder) Fetch(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Fetch", reflect.TypeOf((*MockITransaction)(nil).Fetch), arg0, arg1, arg2)
 }
 
 // GetIsolationLevel mocks base method
 func (m *MockITransaction) GetIsolationLevel() Type {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetIsolationLevel")
 	ret0, _ := ret[0].(Type)
 	return ret0
@@ -604,11 +676,13 @@ func (m *MockITransaction) GetIsolationLevel() Type {
 
 // GetIsolationLevel indicates an expected call of GetIsolationLevel
 func (mr *MockITransactionMockRecorder) GetIsolationLevel() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIsolationLevel", reflect.TypeOf((*MockITransaction)(nil).GetIsolationLevel))
 }
 
 // List mocks base method
 func (m *MockITransaction) List(arg0 context.Context, arg1 ISchema, arg2 Filter, arg3 *ListOptions, arg4 *Paginator) ([]map[string]interface{}, uint64, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].([]map[string]interface{})
 	ret1, _ := ret[1].(uint64)
@@ -618,11 +692,13 @@ func (m *MockITransaction) List(arg0 context.Context, arg1 ISchema, arg2 Filter,
 
 // List indicates an expected call of List
 func (mr *MockITransactionMockRecorder) List(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockITransaction)(nil).List), arg0, arg1, arg2, arg3, arg4)
 }
 
 // LockFetch mocks base method
 func (m *MockITransaction) LockFetch(arg0 context.Context, arg1 ISchema, arg2 Filter, arg3 LockPolicy) (map[string]interface{}, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "LockFetch", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(map[string]interface{})
 	ret1, _ := ret[1].(error)
@@ -631,11 +707,13 @@ func (m *MockITransaction) LockFetch(arg0 context.Context, arg1 ISchema, arg2 Fi
 
 // LockFetch indicates an expected call of LockFetch
 func (mr *MockITransactionMockRecorder) LockFetch(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockFetch", reflect.TypeOf((*MockITransaction)(nil).LockFetch), arg0, arg1, arg2, arg3)
 }
 
 // LockList mocks base method
 func (m *MockITransaction) LockList(arg0 context.Context, arg1 ISchema, arg2 Filter, arg3 *ListOptions, arg4 *Paginator, arg5 LockPolicy) ([]map[string]interface{}, uint64, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "LockList", arg0, arg1, arg2, arg3, arg4, arg5)
 	ret0, _ := ret[0].([]map[string]interface{})
 	ret1, _ := ret[1].(uint64)
@@ -645,11 +723,13 @@ func (m *MockITransaction) LockList(arg0 context.Context, arg1 ISchema, arg2 Fil
 
 // LockList indicates an expected call of LockList
 func (mr *MockITransactionMockRecorder) LockList(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockList", reflect.TypeOf((*MockITransaction)(nil).LockList), arg0, arg1, arg2, arg3, arg4, arg5)
 }
 
 // Query mocks base method
 func (m *MockITransaction) Query(arg0 context.Context, arg1 ISchema, arg2 string, arg3 []interface{}) ([]map[string]interface{}, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Query", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].([]map[string]interface{})
 	ret1, _ := ret[1].(error)
@@ -658,11 +738,13 @@ func (m *MockITransaction) Query(arg0 context.Context, arg1 ISchema, arg2 string
 
 // Query indicates an expected call of Query
 func (mr *MockITransactionMockRecorder) Query(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Query", reflect.TypeOf((*MockITransaction)(nil).Query), arg0, arg1, arg2, arg3)
 }
 
 // RawTransaction mocks base method
 func (m *MockITransaction) RawTransaction() interface{} {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RawTransaction")
 	ret0, _ := ret[0].(interface{})
 	return ret0
@@ -670,11 +752,13 @@ func (m *MockITransaction) RawTransaction() interface{} {
 
 // RawTransaction indicates an expected call of RawTransaction
 func (mr *MockITransactionMockRecorder) RawTransaction() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RawTransaction", reflect.TypeOf((*MockITransaction)(nil).RawTransaction))
 }
 
 // StateFetch mocks base method
 func (m *MockITransaction) StateFetch(arg0 context.Context, arg1 ISchema, arg2 Filter) (ResourceState, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StateFetch", arg0, arg1, arg2)
 	ret0, _ := ret[0].(ResourceState)
 	ret1, _ := ret[1].(error)
@@ -683,11 +767,13 @@ func (m *MockITransaction) StateFetch(arg0 context.Context, arg1 ISchema, arg2 F
 
 // StateFetch indicates an expected call of StateFetch
 func (mr *MockITransactionMockRecorder) StateFetch(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StateFetch", reflect.TypeOf((*MockITransaction)(nil).StateFetch), arg0, arg1, arg2)
 }
 
 // StateUpdate mocks base method
 func (m *MockITransaction) StateUpdate(arg0 context.Context, arg1 ISchema, arg2 map[string]interface{}, arg3 *ResourceState) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StateUpdate", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -695,11 +781,13 @@ func (m *MockITransaction) StateUpdate(arg0 context.Context, arg1 ISchema, arg2 
 
 // StateUpdate indicates an expected call of StateUpdate
 func (mr *MockITransactionMockRecorder) StateUpdate(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StateUpdate", reflect.TypeOf((*MockITransaction)(nil).StateUpdate), arg0, arg1, arg2, arg3)
 }
 
 // Update mocks base method
 func (m *MockITransaction) Update(arg0 context.Context, arg1 ISchema, arg2 map[string]interface{}) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Update", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -707,6 +795,7 @@ func (m *MockITransaction) Update(arg0 context.Context, arg1 ISchema, arg2 map[s
 
 // Update indicates an expected call of Update
 func (mr *MockITransactionMockRecorder) Update(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockITransaction)(nil).Update), arg0, arg1, arg2)
 }
 
@@ -735,6 +824,7 @@ func (m *MockIHTTP) EXPECT() *MockIHTTPMockRecorder {
 
 // Request mocks base method
 func (m *MockIHTTP) Request(arg0 context.Context, arg1, arg2 string, arg3 map[string]interface{}, arg4 interface{}, arg5 bool) (*Response, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Request", arg0, arg1, arg2, arg3, arg4, arg5)
 	ret0, _ := ret[0].(*Response)
 	ret1, _ := ret[1].(error)
@@ -743,11 +833,13 @@ func (m *MockIHTTP) Request(arg0 context.Context, arg1, arg2 string, arg3 map[st
 
 // Request indicates an expected call of Request
 func (mr *MockIHTTPMockRecorder) Request(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Request", reflect.TypeOf((*MockIHTTP)(nil).Request), arg0, arg1, arg2, arg3, arg4, arg5)
 }
 
 // RequestRaw mocks base method
 func (m *MockIHTTP) RequestRaw(arg0 context.Context, arg1, arg2 string, arg3 map[string]string, arg4 string) (*Response, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RequestRaw", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].(*Response)
 	ret1, _ := ret[1].(error)
@@ -756,6 +848,7 @@ func (m *MockIHTTP) RequestRaw(arg0 context.Context, arg1, arg2 string, arg3 map
 
 // RequestRaw indicates an expected call of RequestRaw
 func (mr *MockIHTTPMockRecorder) RequestRaw(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestRaw", reflect.TypeOf((*MockIHTTP)(nil).RequestRaw), arg0, arg1, arg2, arg3, arg4)
 }
 
@@ -784,6 +877,7 @@ func (m *MockIAuth) EXPECT() *MockIAuthMockRecorder {
 
 // GetTenantName mocks base method
 func (m *MockIAuth) GetTenantName(arg0 Context) string {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetTenantName", arg0)
 	ret0, _ := ret[0].(string)
 	return ret0
@@ -791,11 +885,13 @@ func (m *MockIAuth) GetTenantName(arg0 Context) string {
 
 // GetTenantName indicates an expected call of GetTenantName
 func (mr *MockIAuthMockRecorder) GetTenantName(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTenantName", reflect.TypeOf((*MockIAuth)(nil).GetTenantName), arg0)
 }
 
 // HasRole mocks base method
 func (m *MockIAuth) HasRole(arg0 Context, arg1 string) bool {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "HasRole", arg0, arg1)
 	ret0, _ := ret[0].(bool)
 	return ret0
@@ -803,11 +899,13 @@ func (m *MockIAuth) HasRole(arg0 Context, arg1 string) bool {
 
 // HasRole indicates an expected call of HasRole
 func (mr *MockIAuthMockRecorder) HasRole(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasRole", reflect.TypeOf((*MockIAuth)(nil).HasRole), arg0, arg1)
 }
 
 // IsAdmin mocks base method
 func (m *MockIAuth) IsAdmin(arg0 Context) bool {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IsAdmin", arg0)
 	ret0, _ := ret[0].(bool)
 	return ret0
@@ -815,7 +913,38 @@ func (m *MockIAuth) IsAdmin(arg0 Context) bool {
 
 // IsAdmin indicates an expected call of IsAdmin
 func (mr *MockIAuthMockRecorder) IsAdmin(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsAdmin", reflect.TypeOf((*MockIAuth)(nil).IsAdmin), arg0)
+}
+
+// ValidateDomainID mocks base method
+func (m *MockIAuth) ValidateDomainID(arg0 Context, arg1 string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateDomainID", arg0, arg1)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ValidateDomainID indicates an expected call of ValidateDomainID
+func (mr *MockIAuthMockRecorder) ValidateDomainID(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateDomainID", reflect.TypeOf((*MockIAuth)(nil).ValidateDomainID), arg0, arg1)
+}
+
+// ValidateTenantID mocks base method
+func (m *MockIAuth) ValidateTenantID(arg0 Context, arg1 string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateTenantID", arg0, arg1)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ValidateTenantID indicates an expected call of ValidateTenantID
+func (mr *MockIAuthMockRecorder) ValidateTenantID(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateTenantID", reflect.TypeOf((*MockIAuth)(nil).ValidateTenantID), arg0, arg1)
 }
 
 // MockIConfig is a mock of IConfig interface
@@ -843,6 +972,7 @@ func (m *MockIConfig) EXPECT() *MockIConfigMockRecorder {
 
 // Config mocks base method
 func (m *MockIConfig) Config(arg0 string, arg1 interface{}) interface{} {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Config", arg0, arg1)
 	ret0, _ := ret[0].(interface{})
 	return ret0
@@ -850,6 +980,7 @@ func (m *MockIConfig) Config(arg0 string, arg1 interface{}) interface{} {
 
 // Config indicates an expected call of Config
 func (mr *MockIConfigMockRecorder) Config(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Config", reflect.TypeOf((*MockIConfig)(nil).Config), arg0, arg1)
 }
 
@@ -878,6 +1009,7 @@ func (m *MockIUtil) EXPECT() *MockIUtilMockRecorder {
 
 // GetTransaction mocks base method
 func (m *MockIUtil) GetTransaction(arg0 Context) (ITransaction, bool) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetTransaction", arg0)
 	ret0, _ := ret[0].(ITransaction)
 	ret1, _ := ret[1].(bool)
@@ -886,11 +1018,13 @@ func (m *MockIUtil) GetTransaction(arg0 Context) (ITransaction, bool) {
 
 // GetTransaction indicates an expected call of GetTransaction
 func (mr *MockIUtilMockRecorder) GetTransaction(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTransaction", reflect.TypeOf((*MockIUtil)(nil).GetTransaction), arg0)
 }
 
 // NewUUID mocks base method
 func (m *MockIUtil) NewUUID() string {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "NewUUID")
 	ret0, _ := ret[0].(string)
 	return ret0
@@ -898,11 +1032,13 @@ func (m *MockIUtil) NewUUID() string {
 
 // NewUUID indicates an expected call of NewUUID
 func (mr *MockIUtilMockRecorder) NewUUID() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewUUID", reflect.TypeOf((*MockIUtil)(nil).NewUUID))
 }
 
 // ResourceFromMapForType mocks base method
 func (m *MockIUtil) ResourceFromMapForType(arg0 map[string]interface{}, arg1 interface{}) (Resource, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ResourceFromMapForType", arg0, arg1)
 	ret0, _ := ret[0].(Resource)
 	ret1, _ := ret[1].(error)
@@ -911,11 +1047,13 @@ func (m *MockIUtil) ResourceFromMapForType(arg0 map[string]interface{}, arg1 int
 
 // ResourceFromMapForType indicates an expected call of ResourceFromMapForType
 func (mr *MockIUtilMockRecorder) ResourceFromMapForType(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResourceFromMapForType", reflect.TypeOf((*MockIUtil)(nil).ResourceFromMapForType), arg0, arg1)
 }
 
 // ResourceToMap mocks base method
 func (m *MockIUtil) ResourceToMap(arg0 interface{}) map[string]interface{} {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ResourceToMap", arg0)
 	ret0, _ := ret[0].(map[string]interface{})
 	return ret0
@@ -923,6 +1061,7 @@ func (m *MockIUtil) ResourceToMap(arg0 interface{}) map[string]interface{} {
 
 // ResourceToMap indicates an expected call of ResourceToMap
 func (mr *MockIUtilMockRecorder) ResourceToMap(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResourceToMap", reflect.TypeOf((*MockIUtil)(nil).ResourceToMap), arg0)
 }
 
@@ -951,6 +1090,7 @@ func (m *MockISchema) EXPECT() *MockISchemaMockRecorder {
 
 // ColumnNames mocks base method
 func (m *MockISchema) ColumnNames() []string {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ColumnNames")
 	ret0, _ := ret[0].([]string)
 	return ret0
@@ -958,11 +1098,13 @@ func (m *MockISchema) ColumnNames() []string {
 
 // ColumnNames indicates an expected call of ColumnNames
 func (mr *MockISchemaMockRecorder) ColumnNames() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ColumnNames", reflect.TypeOf((*MockISchema)(nil).ColumnNames))
 }
 
 // Count mocks base method
 func (m *MockISchema) Count(arg0 Filter, arg1 Context) (uint64, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Count", arg0, arg1)
 	ret0, _ := ret[0].(uint64)
 	ret1, _ := ret[1].(error)
@@ -971,11 +1113,13 @@ func (m *MockISchema) Count(arg0 Filter, arg1 Context) (uint64, error) {
 
 // Count indicates an expected call of Count
 func (mr *MockISchemaMockRecorder) Count(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Count", reflect.TypeOf((*MockISchema)(nil).Count), arg0, arg1)
 }
 
 // CreateRaw mocks base method
 func (m *MockISchema) CreateRaw(arg0 interface{}, arg1 Context) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateRaw", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -983,11 +1127,13 @@ func (m *MockISchema) CreateRaw(arg0 interface{}, arg1 Context) error {
 
 // CreateRaw indicates an expected call of CreateRaw
 func (mr *MockISchemaMockRecorder) CreateRaw(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateRaw", reflect.TypeOf((*MockISchema)(nil).CreateRaw), arg0, arg1)
 }
 
 // DbCreateRaw mocks base method
 func (m *MockISchema) DbCreateRaw(arg0 interface{}, arg1 Context) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DbCreateRaw", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -995,11 +1141,13 @@ func (m *MockISchema) DbCreateRaw(arg0 interface{}, arg1 Context) error {
 
 // DbCreateRaw indicates an expected call of DbCreateRaw
 func (mr *MockISchemaMockRecorder) DbCreateRaw(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DbCreateRaw", reflect.TypeOf((*MockISchema)(nil).DbCreateRaw), arg0, arg1)
 }
 
 // DbDeleteFilterRaw mocks base method
 func (m *MockISchema) DbDeleteFilterRaw(arg0 Filter, arg1 Context) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DbDeleteFilterRaw", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -1007,11 +1155,13 @@ func (m *MockISchema) DbDeleteFilterRaw(arg0 Filter, arg1 Context) error {
 
 // DbDeleteFilterRaw indicates an expected call of DbDeleteFilterRaw
 func (mr *MockISchemaMockRecorder) DbDeleteFilterRaw(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DbDeleteFilterRaw", reflect.TypeOf((*MockISchema)(nil).DbDeleteFilterRaw), arg0, arg1)
 }
 
 // DbDeleteRaw mocks base method
 func (m *MockISchema) DbDeleteRaw(arg0 string, arg1 Context) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DbDeleteRaw", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -1019,11 +1169,13 @@ func (m *MockISchema) DbDeleteRaw(arg0 string, arg1 Context) error {
 
 // DbDeleteRaw indicates an expected call of DbDeleteRaw
 func (mr *MockISchemaMockRecorder) DbDeleteRaw(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DbDeleteRaw", reflect.TypeOf((*MockISchema)(nil).DbDeleteRaw), arg0, arg1)
 }
 
 // DbStateUpdateRaw mocks base method
 func (m *MockISchema) DbStateUpdateRaw(arg0 interface{}, arg1 Context, arg2 *ResourceState) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DbStateUpdateRaw", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -1031,11 +1183,13 @@ func (m *MockISchema) DbStateUpdateRaw(arg0 interface{}, arg1 Context, arg2 *Res
 
 // DbStateUpdateRaw indicates an expected call of DbStateUpdateRaw
 func (mr *MockISchemaMockRecorder) DbStateUpdateRaw(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DbStateUpdateRaw", reflect.TypeOf((*MockISchema)(nil).DbStateUpdateRaw), arg0, arg1, arg2)
 }
 
 // DbUpdateRaw mocks base method
 func (m *MockISchema) DbUpdateRaw(arg0 interface{}, arg1 Context) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DbUpdateRaw", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -1043,11 +1197,13 @@ func (m *MockISchema) DbUpdateRaw(arg0 interface{}, arg1 Context) error {
 
 // DbUpdateRaw indicates an expected call of DbUpdateRaw
 func (mr *MockISchemaMockRecorder) DbUpdateRaw(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DbUpdateRaw", reflect.TypeOf((*MockISchema)(nil).DbUpdateRaw), arg0, arg1)
 }
 
 // DeleteFilterRaw mocks base method
 func (m *MockISchema) DeleteFilterRaw(arg0 Filter, arg1 Context) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteFilterRaw", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -1055,11 +1211,13 @@ func (m *MockISchema) DeleteFilterRaw(arg0 Filter, arg1 Context) error {
 
 // DeleteFilterRaw indicates an expected call of DeleteFilterRaw
 func (mr *MockISchemaMockRecorder) DeleteFilterRaw(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteFilterRaw", reflect.TypeOf((*MockISchema)(nil).DeleteFilterRaw), arg0, arg1)
 }
 
 // DeleteRaw mocks base method
 func (m *MockISchema) DeleteRaw(arg0 string, arg1 Context) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteRaw", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -1067,11 +1225,13 @@ func (m *MockISchema) DeleteRaw(arg0 string, arg1 Context) error {
 
 // DeleteRaw indicates an expected call of DeleteRaw
 func (mr *MockISchemaMockRecorder) DeleteRaw(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteRaw", reflect.TypeOf((*MockISchema)(nil).DeleteRaw), arg0, arg1)
 }
 
 // DerivedSchemas mocks base method
 func (m *MockISchema) DerivedSchemas() []ISchema {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DerivedSchemas")
 	ret0, _ := ret[0].([]ISchema)
 	return ret0
@@ -1079,11 +1239,13 @@ func (m *MockISchema) DerivedSchemas() []ISchema {
 
 // DerivedSchemas indicates an expected call of DerivedSchemas
 func (mr *MockISchemaMockRecorder) DerivedSchemas() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DerivedSchemas", reflect.TypeOf((*MockISchema)(nil).DerivedSchemas))
 }
 
 // Extends mocks base method
 func (m *MockISchema) Extends() []SchemaID {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Extends")
 	ret0, _ := ret[0].([]SchemaID)
 	return ret0
@@ -1091,11 +1253,13 @@ func (m *MockISchema) Extends() []SchemaID {
 
 // Extends indicates an expected call of Extends
 func (mr *MockISchemaMockRecorder) Extends() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Extends", reflect.TypeOf((*MockISchema)(nil).Extends))
 }
 
 // Fetch mocks base method
 func (m *MockISchema) Fetch(arg0 string, arg1 Context) (interface{}, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Fetch", arg0, arg1)
 	ret0, _ := ret[0].(interface{})
 	ret1, _ := ret[1].(error)
@@ -1104,11 +1268,13 @@ func (m *MockISchema) Fetch(arg0 string, arg1 Context) (interface{}, error) {
 
 // Fetch indicates an expected call of Fetch
 func (mr *MockISchemaMockRecorder) Fetch(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Fetch", reflect.TypeOf((*MockISchema)(nil).Fetch), arg0, arg1)
 }
 
 // FetchFilter mocks base method
 func (m *MockISchema) FetchFilter(arg0 Filter, arg1 Context) (interface{}, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "FetchFilter", arg0, arg1)
 	ret0, _ := ret[0].(interface{})
 	ret1, _ := ret[1].(error)
@@ -1117,11 +1283,13 @@ func (m *MockISchema) FetchFilter(arg0 Filter, arg1 Context) (interface{}, error
 
 // FetchFilter indicates an expected call of FetchFilter
 func (mr *MockISchemaMockRecorder) FetchFilter(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FetchFilter", reflect.TypeOf((*MockISchema)(nil).FetchFilter), arg0, arg1)
 }
 
 // FetchFilterRaw mocks base method
 func (m *MockISchema) FetchFilterRaw(arg0 Filter, arg1 Context) (interface{}, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "FetchFilterRaw", arg0, arg1)
 	ret0, _ := ret[0].(interface{})
 	ret1, _ := ret[1].(error)
@@ -1130,11 +1298,13 @@ func (m *MockISchema) FetchFilterRaw(arg0 Filter, arg1 Context) (interface{}, er
 
 // FetchFilterRaw indicates an expected call of FetchFilterRaw
 func (mr *MockISchemaMockRecorder) FetchFilterRaw(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FetchFilterRaw", reflect.TypeOf((*MockISchema)(nil).FetchFilterRaw), arg0, arg1)
 }
 
 // FetchRaw mocks base method
 func (m *MockISchema) FetchRaw(arg0 string, arg1 Context) (interface{}, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "FetchRaw", arg0, arg1)
 	ret0, _ := ret[0].(interface{})
 	ret1, _ := ret[1].(error)
@@ -1143,11 +1313,13 @@ func (m *MockISchema) FetchRaw(arg0 string, arg1 Context) (interface{}, error) {
 
 // FetchRaw indicates an expected call of FetchRaw
 func (mr *MockISchemaMockRecorder) FetchRaw(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FetchRaw", reflect.TypeOf((*MockISchema)(nil).FetchRaw), arg0, arg1)
 }
 
 // ID mocks base method
 func (m *MockISchema) ID() SchemaID {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ID")
 	ret0, _ := ret[0].(SchemaID)
 	return ret0
@@ -1155,11 +1327,13 @@ func (m *MockISchema) ID() SchemaID {
 
 // ID indicates an expected call of ID
 func (mr *MockISchemaMockRecorder) ID() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ID", reflect.TypeOf((*MockISchema)(nil).ID))
 }
 
 // List mocks base method
 func (m *MockISchema) List(arg0 Filter, arg1 *Paginator, arg2 Context) ([]interface{}, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2)
 	ret0, _ := ret[0].([]interface{})
 	ret1, _ := ret[1].(error)
@@ -1168,11 +1342,13 @@ func (m *MockISchema) List(arg0 Filter, arg1 *Paginator, arg2 Context) ([]interf
 
 // List indicates an expected call of List
 func (mr *MockISchemaMockRecorder) List(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockISchema)(nil).List), arg0, arg1, arg2)
 }
 
 // ListRaw mocks base method
 func (m *MockISchema) ListRaw(arg0 Filter, arg1 *Paginator, arg2 Context) ([]interface{}, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListRaw", arg0, arg1, arg2)
 	ret0, _ := ret[0].([]interface{})
 	ret1, _ := ret[1].(error)
@@ -1181,11 +1357,13 @@ func (m *MockISchema) ListRaw(arg0 Filter, arg1 *Paginator, arg2 Context) ([]int
 
 // ListRaw indicates an expected call of ListRaw
 func (mr *MockISchemaMockRecorder) ListRaw(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRaw", reflect.TypeOf((*MockISchema)(nil).ListRaw), arg0, arg1, arg2)
 }
 
 // LockFetch mocks base method
 func (m *MockISchema) LockFetch(arg0 string, arg1 Context, arg2 LockPolicy) (interface{}, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "LockFetch", arg0, arg1, arg2)
 	ret0, _ := ret[0].(interface{})
 	ret1, _ := ret[1].(error)
@@ -1194,11 +1372,13 @@ func (m *MockISchema) LockFetch(arg0 string, arg1 Context, arg2 LockPolicy) (int
 
 // LockFetch indicates an expected call of LockFetch
 func (mr *MockISchemaMockRecorder) LockFetch(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockFetch", reflect.TypeOf((*MockISchema)(nil).LockFetch), arg0, arg1, arg2)
 }
 
 // LockFetchFilter mocks base method
 func (m *MockISchema) LockFetchFilter(arg0 Filter, arg1 Context, arg2 LockPolicy) (interface{}, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "LockFetchFilter", arg0, arg1, arg2)
 	ret0, _ := ret[0].(interface{})
 	ret1, _ := ret[1].(error)
@@ -1207,11 +1387,13 @@ func (m *MockISchema) LockFetchFilter(arg0 Filter, arg1 Context, arg2 LockPolicy
 
 // LockFetchFilter indicates an expected call of LockFetchFilter
 func (mr *MockISchemaMockRecorder) LockFetchFilter(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockFetchFilter", reflect.TypeOf((*MockISchema)(nil).LockFetchFilter), arg0, arg1, arg2)
 }
 
 // LockFetchFilterRaw mocks base method
 func (m *MockISchema) LockFetchFilterRaw(arg0 Filter, arg1 Context, arg2 LockPolicy) (interface{}, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "LockFetchFilterRaw", arg0, arg1, arg2)
 	ret0, _ := ret[0].(interface{})
 	ret1, _ := ret[1].(error)
@@ -1220,11 +1402,13 @@ func (m *MockISchema) LockFetchFilterRaw(arg0 Filter, arg1 Context, arg2 LockPol
 
 // LockFetchFilterRaw indicates an expected call of LockFetchFilterRaw
 func (mr *MockISchemaMockRecorder) LockFetchFilterRaw(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockFetchFilterRaw", reflect.TypeOf((*MockISchema)(nil).LockFetchFilterRaw), arg0, arg1, arg2)
 }
 
 // LockFetchRaw mocks base method
 func (m *MockISchema) LockFetchRaw(arg0 string, arg1 Context, arg2 LockPolicy) (interface{}, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "LockFetchRaw", arg0, arg1, arg2)
 	ret0, _ := ret[0].(interface{})
 	ret1, _ := ret[1].(error)
@@ -1233,11 +1417,13 @@ func (m *MockISchema) LockFetchRaw(arg0 string, arg1 Context, arg2 LockPolicy) (
 
 // LockFetchRaw indicates an expected call of LockFetchRaw
 func (mr *MockISchemaMockRecorder) LockFetchRaw(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockFetchRaw", reflect.TypeOf((*MockISchema)(nil).LockFetchRaw), arg0, arg1, arg2)
 }
 
 // LockList mocks base method
 func (m *MockISchema) LockList(arg0 Filter, arg1 *Paginator, arg2 Context, arg3 LockPolicy) ([]interface{}, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "LockList", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].([]interface{})
 	ret1, _ := ret[1].(error)
@@ -1246,11 +1432,13 @@ func (m *MockISchema) LockList(arg0 Filter, arg1 *Paginator, arg2 Context, arg3 
 
 // LockList indicates an expected call of LockList
 func (mr *MockISchemaMockRecorder) LockList(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockList", reflect.TypeOf((*MockISchema)(nil).LockList), arg0, arg1, arg2, arg3)
 }
 
 // LockListRaw mocks base method
 func (m *MockISchema) LockListRaw(arg0 Filter, arg1 *Paginator, arg2 Context, arg3 LockPolicy) ([]interface{}, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "LockListRaw", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].([]interface{})
 	ret1, _ := ret[1].(error)
@@ -1259,11 +1447,13 @@ func (m *MockISchema) LockListRaw(arg0 Filter, arg1 *Paginator, arg2 Context, ar
 
 // LockListRaw indicates an expected call of LockListRaw
 func (mr *MockISchemaMockRecorder) LockListRaw(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockListRaw", reflect.TypeOf((*MockISchema)(nil).LockListRaw), arg0, arg1, arg2, arg3)
 }
 
 // Properties mocks base method
 func (m *MockISchema) Properties() map[string]Property {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Properties")
 	ret0, _ := ret[0].(map[string]Property)
 	return ret0
@@ -1271,11 +1461,13 @@ func (m *MockISchema) Properties() map[string]Property {
 
 // Properties indicates an expected call of Properties
 func (mr *MockISchemaMockRecorder) Properties() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Properties", reflect.TypeOf((*MockISchema)(nil).Properties))
 }
 
 // RawSchema mocks base method
 func (m *MockISchema) RawSchema() interface{} {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RawSchema")
 	ret0, _ := ret[0].(interface{})
 	return ret0
@@ -1283,61 +1475,73 @@ func (m *MockISchema) RawSchema() interface{} {
 
 // RawSchema indicates an expected call of RawSchema
 func (mr *MockISchemaMockRecorder) RawSchema() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RawSchema", reflect.TypeOf((*MockISchema)(nil).RawSchema))
 }
 
 // RegisterCustomEventHandler mocks base method
 func (m *MockISchema) RegisterCustomEventHandler(arg0 CustomEvent, arg1 Handler, arg2 int) {
+	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "RegisterCustomEventHandler", arg0, arg1, arg2)
 }
 
 // RegisterCustomEventHandler indicates an expected call of RegisterCustomEventHandler
 func (mr *MockISchemaMockRecorder) RegisterCustomEventHandler(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterCustomEventHandler", reflect.TypeOf((*MockISchema)(nil).RegisterCustomEventHandler), arg0, arg1, arg2)
 }
 
 // RegisterRawType mocks base method
 func (m *MockISchema) RegisterRawType(arg0 interface{}) {
+	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "RegisterRawType", arg0)
 }
 
 // RegisterRawType indicates an expected call of RegisterRawType
 func (mr *MockISchemaMockRecorder) RegisterRawType(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterRawType", reflect.TypeOf((*MockISchema)(nil).RegisterRawType), arg0)
 }
 
 // RegisterResourceEventHandler mocks base method
 func (m *MockISchema) RegisterResourceEventHandler(arg0 ResourceEvent, arg1 SchemaHandler, arg2 int) {
+	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "RegisterResourceEventHandler", arg0, arg1, arg2)
 }
 
 // RegisterResourceEventHandler indicates an expected call of RegisterResourceEventHandler
 func (mr *MockISchemaMockRecorder) RegisterResourceEventHandler(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterResourceEventHandler", reflect.TypeOf((*MockISchema)(nil).RegisterResourceEventHandler), arg0, arg1, arg2)
 }
 
 // RegisterType mocks base method
 func (m *MockISchema) RegisterType(arg0 IResourceBase) {
+	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "RegisterType", arg0)
 }
 
 // RegisterType indicates an expected call of RegisterType
 func (mr *MockISchemaMockRecorder) RegisterType(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterType", reflect.TypeOf((*MockISchema)(nil).RegisterType), arg0)
 }
 
 // RegisterTypes mocks base method
 func (m *MockISchema) RegisterTypes(arg0 interface{}, arg1 IResourceBase) {
+	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "RegisterTypes", arg0, arg1)
 }
 
 // RegisterTypes indicates an expected call of RegisterTypes
 func (mr *MockISchemaMockRecorder) RegisterTypes(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterTypes", reflect.TypeOf((*MockISchema)(nil).RegisterTypes), arg0, arg1)
 }
 
 // ResourceFromMap mocks base method
 func (m *MockISchema) ResourceFromMap(arg0 map[string]interface{}) (Resource, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ResourceFromMap", arg0)
 	ret0, _ := ret[0].(Resource)
 	ret1, _ := ret[1].(error)
@@ -1346,11 +1550,13 @@ func (m *MockISchema) ResourceFromMap(arg0 map[string]interface{}) (Resource, er
 
 // ResourceFromMap indicates an expected call of ResourceFromMap
 func (mr *MockISchemaMockRecorder) ResourceFromMap(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResourceFromMap", reflect.TypeOf((*MockISchema)(nil).ResourceFromMap), arg0)
 }
 
 // StateFetchRaw mocks base method
 func (m *MockISchema) StateFetchRaw(arg0 string, arg1 Context) (ResourceState, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StateFetchRaw", arg0, arg1)
 	ret0, _ := ret[0].(ResourceState)
 	ret1, _ := ret[1].(error)
@@ -1359,11 +1565,13 @@ func (m *MockISchema) StateFetchRaw(arg0 string, arg1 Context) (ResourceState, e
 
 // StateFetchRaw indicates an expected call of StateFetchRaw
 func (mr *MockISchemaMockRecorder) StateFetchRaw(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StateFetchRaw", reflect.TypeOf((*MockISchema)(nil).StateFetchRaw), arg0, arg1)
 }
 
 // UpdateRaw mocks base method
 func (m *MockISchema) UpdateRaw(arg0 interface{}, arg1 Context) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateRaw", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -1371,5 +1579,6 @@ func (m *MockISchema) UpdateRaw(arg0 interface{}, arg1 Context) error {
 
 // UpdateRaw indicates an expected call of UpdateRaw
 func (mr *MockISchemaMockRecorder) UpdateRaw(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateRaw", reflect.TypeOf((*MockISchema)(nil).UpdateRaw), arg0, arg1)
 }

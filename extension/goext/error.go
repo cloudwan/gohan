@@ -76,6 +76,11 @@ func (e Error) Root() error {
 
 // Error returns formatted error message
 func (e Error) Error() string {
+	return e.String()
+}
+
+// String returns formatted error message
+func (e Error) String() string {
 	return fmt.Sprintf("HTTP %d (%s): %s", e.Status, http.StatusText(e.Status), e.Root())
 }
 

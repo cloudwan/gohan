@@ -9,12 +9,8 @@ import (
 )
 
 type CachedIdentityService struct {
-	inner IdentityService
+	IdentityService
 	cache *cache.Cache
-}
-
-func (c *CachedIdentityService) GetTenantID(tenantName string) (string, error) {
-	return c.inner.GetTenantID(tenantName)
 }
 
 func (c *CachedIdentityService) GetTenantName(tenantID string) (string, error) {
@@ -25,7 +21,7 @@ func (c *CachedIdentityService) GetTenantName(tenantID string) (string, error) {
 	}
 	c.updateCounter(1, "name.miss")
 
-	name, err := c.inner.GetTenantName(tenantID)
+	name, err := c.IdentityService.GetTenantName(tenantID)
 	if err != nil {
 		return "", err
 	}
@@ -41,7 +37,7 @@ func (c *CachedIdentityService) VerifyToken(token string) (schema.Authorization,
 	}
 	c.updateCounter(1, "token.miss")
 
-	a, err := c.inner.VerifyToken(token)
+	a, err := c.IdentityService.VerifyToken(token)
 	if err != nil {
 		return nil, err
 	}
@@ -52,10 +48,6 @@ func (c *CachedIdentityService) VerifyToken(token string) (schema.Authorization,
 func (c *CachedIdentityService) GetServiceAuthorization() (schema.Authorization, error) {
 	defer c.measureTime(time.Now(), "get_service_authorization")
 	return c.VerifyToken(c.GetServiceTokenID())
-}
-
-func (c *CachedIdentityService) GetServiceTokenID() string {
-	return c.inner.GetServiceTokenID()
 }
 
 func (c *CachedIdentityService) updateCounter(delta int64, action string) {
@@ -69,8 +61,7 @@ func (c *CachedIdentityService) measureTime(timeStarted time.Time, action string
 func NewCachedIdentityService(inner IdentityService, ttl time.Duration) IdentityService {
 	cleanupInterval := 4 * ttl
 	return &CachedIdentityService{
-		inner: inner,
-		cache: cache.New(ttl, cleanupInterval),
+		IdentityService: inner,
+		cache:           cache.New(ttl, cleanupInterval),
 	}
 }
-
