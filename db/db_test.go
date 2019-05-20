@@ -148,7 +148,7 @@ var _ = Describe("Database operation test", func() {
 		Describe("Using sql", func() {
 			BeforeEach(func() {
 				if os.Getenv("MYSQL_TEST") == "true" {
-					conn = "root@/gohan_test"
+					conn = "root@tcp(localhost:3306)/gohan_test"
 					dbType = "mysql"
 				} else {
 					conn = "./test.db"
@@ -201,13 +201,7 @@ var _ = Describe("Database operation test", func() {
 			})
 
 			Describe("When the database is not empty", func() {
-				JustBeforeEach(func() {
-					tx.Delete(ctx, subnetSchema, subnetResource.ID())
-					tx.Delete(ctx, serverSchema, serverResource.ID())
-
-					tx.Delete(ctx, networkSchema, networkResource1.ID())
-					tx.Delete(ctx, networkSchema, networkResource2.ID())
-					
+				JustBeforeEach(func() {	
 					create(networkResource1)
 					create(networkResource2)
 					create(serverResource)
@@ -215,6 +209,14 @@ var _ = Describe("Database operation test", func() {
 					tx.Close()
 					tx, err = dataStore.BeginTx()
 					Expect(err).ToNot(HaveOccurred())
+				})
+				
+				AfterEach(func() {
+					tx.Delete(ctx, subnetSchema, subnetResource.ID())
+					tx.Delete(ctx, serverSchema, serverResource.ID())
+
+					tx.Delete(ctx, networkSchema, networkResource1.ID())
+					tx.Delete(ctx, networkSchema, networkResource2.ID())
 				})
 
 				It("Returns the expected list", func() {
