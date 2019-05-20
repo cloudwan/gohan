@@ -202,6 +202,12 @@ var _ = Describe("Database operation test", func() {
 
 			Describe("When the database is not empty", func() {
 				JustBeforeEach(func() {	
+					tx.Delete(ctx, subnetSchema, subnetResource.ID())
+					tx.Delete(ctx, serverSchema, serverResource.ID())
+
+					tx.Delete(ctx, networkSchema, networkResource1.ID())
+					tx.Delete(ctx, networkSchema, networkResource2.ID())
+					
 					create(networkResource1)
 					create(networkResource2)
 					create(serverResource)
@@ -211,13 +217,6 @@ var _ = Describe("Database operation test", func() {
 					Expect(err).ToNot(HaveOccurred())
 				})
 				
-				AfterEach(func() {
-					tx.Delete(ctx, subnetSchema, subnetResource.ID())
-					tx.Delete(ctx, serverSchema, serverResource.ID())
-
-					tx.Delete(ctx, networkSchema, networkResource1.ID())
-					tx.Delete(ctx, networkSchema, networkResource2.ID())
-				})
 
 				It("Returns the expected list", func() {
 					list, num, err := tx.List(ctx, networkSchema, nil, nil, nil)
