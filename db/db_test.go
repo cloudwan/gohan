@@ -363,7 +363,7 @@ var _ = Describe("Database operation test", func() {
 
 				It("Updates the resource properly", func() {
 					By("Updating other fields")
-					updated := networkResource1.Update(map[string]interface{}{"name": "new_name"})
+					updated := networkResource1.CloneWithUpdate(map[string]interface{}{"name": "new_name"})
 					networkResource1, err = manager.LoadResource("network", updated)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(tx.Update(ctx, networkResource1)).To(Succeed())

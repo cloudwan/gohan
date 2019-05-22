@@ -894,7 +894,7 @@ func UpdateResourceInTransaction(
 		return ResourceError{err, "", Unauthorized}
 	}
 
-	data := resource.Update(dataMap)
+	data := resource.CloneWithUpdate(dataMap)
 	context["resource"] = data
 
 	if err := extension.HandleEvent(context, environment, "pre_update_in_transaction", resourceSchema.ID); err != nil {

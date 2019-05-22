@@ -117,7 +117,7 @@ func (resource *Resource) String() string {
 }
 
 //Update resource data
-func (resource *Resource) Update(updateData map[string]interface{}) map[string]interface{} {
+func (resource *Resource) CloneWithUpdate(updateData map[string]interface{}) map[string]interface{} {
 	data := make(map[string]interface{}, len(resource.properties))
 	for key, value := range resource.properties {
 		data[key] = value
