@@ -133,7 +133,7 @@ var _ = Describe("Database operation test", func() {
 			dataStore, err = dbutil.ConnectDB(dbType, conn, db.DefaultMaxOpenConn, options.Default())
 			Expect(err).ToNot(HaveOccurred())
 
-			for _, s := range manager.Schemas() {
+			for _, s := range manager.OrderedSchemas() {
 				Expect(dataStore.RegisterTable(s, false, true)).To(Succeed())
 			}
 
@@ -201,13 +201,13 @@ var _ = Describe("Database operation test", func() {
 			})
 
 			Describe("When the database is not empty", func() {
-				JustBeforeEach(func() {	
+				JustBeforeEach(func() {
 					tx.Delete(ctx, subnetSchema, subnetResource.ID())
 					tx.Delete(ctx, serverSchema, serverResource.ID())
 
 					tx.Delete(ctx, networkSchema, networkResource1.ID())
 					tx.Delete(ctx, networkSchema, networkResource2.ID())
-					
+
 					create(networkResource1)
 					create(networkResource2)
 					create(serverResource)
@@ -216,7 +216,6 @@ var _ = Describe("Database operation test", func() {
 					tx, err = dataStore.BeginTx()
 					Expect(err).ToNot(HaveOccurred())
 				})
-				
 
 				It("Returns the expected list", func() {
 					list, num, err := tx.List(ctx, networkSchema, nil, nil, nil)

@@ -741,7 +741,7 @@ schemas:
         type: string
         unique: false
         indexed: true
-        sql: varchar(255) not null
+        sql: varchar(255)
       domain_id:
         description: Domain ID
         permission:
@@ -750,7 +750,7 @@ schemas:
         type: string
         unique: false
         indexed: true
-        sql: varchar(255) not null
+        sql: varchar(255)
       test_string:
         default: ""
         description: Test string
@@ -798,6 +798,9 @@ schemas:
         unique: false
     propertiesOrder:
     - id
+    - tenant_id
+    - domain_id
+    required:
     - tenant_id
     - domain_id
     type: object
@@ -914,7 +917,7 @@ schemas:
         type: string
         unique: false
         indexed: true
-        sql: varchar(255) not null
+        sql: varchar(255)
       domain_id:
         description: Domain ID
         permission:
@@ -923,7 +926,7 @@ schemas:
         type: string
         unique: false
         indexed: true
-        sql: varchar(255) not null
+        sql: varchar(255)
       test_string:
         default: ""
         description: Test string
@@ -971,6 +974,9 @@ schemas:
         unique: false
     propertiesOrder:
     - id
+    - tenant_id
+    - domain_id
+    required:
     - tenant_id
     - domain_id
     type: object
@@ -1288,7 +1294,6 @@ schemas:
         - string
         - "null"
         unique: false
-        sql: varchar(255) null
         description: A property that can attach to 'attach_target' iff it is accessible
       attach_if_same_owner_id:
         permission:
@@ -1301,7 +1306,6 @@ schemas:
         - string
         - "null"
         unique: false
-        sql: varchar(255) null
         description: A property that can attach to 'attach_target' iff it has the same owner
       not_a_relation:
         permission:
@@ -1345,7 +1349,6 @@ schemas:
         - "null"
         unique: false
         description: Attach point
-        sql: varchar(255) null
       attach_b_id:
         permission:
         - create
@@ -1358,7 +1361,6 @@ schemas:
         - "null"
         unique: false
         description: Attach point
-        sql: varchar(255) null
       container_object:
         description: Container object for attacher
         permission:

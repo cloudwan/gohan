@@ -109,8 +109,8 @@ var _ = Describe("Sql", func() {
 		})
 
 		insertTwoRecords := func() {
-			Expect(tx.Exec(ctx, "INSERT INTO `tests` (`id`, `tenant_id`) values ('id1', 'tenant1')")).To(Succeed())
-			Expect(tx.Exec(ctx, "INSERT INTO `tests` (`id`, `tenant_id`) values ('id2', 'tenant2')")).To(Succeed())
+			Expect(tx.Exec(ctx, "INSERT INTO `tests` (`id`, `tenant_id`, `domain_id`) values ('id1', 'tenant1', 'domain')")).To(Succeed())
+			Expect(tx.Exec(ctx, "INSERT INTO `tests` (`id`, `tenant_id`, `domain_id`) values ('id2', 'tenant2', 'domain')")).To(Succeed())
 		}
 
 		listWithPaginator := func(pg *pagination.Paginator) ([]*schema.Resource, uint64) {

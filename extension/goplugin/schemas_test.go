@@ -18,6 +18,7 @@ package goplugin_test
 import (
 	"context"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -270,13 +271,13 @@ var _ = Describe("Schemas", func() {
 			c, err := testSchema.Count(goext.Filter{}, context)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(c).To(Equal(uint64(0)))
-			for i := 10; i < 12; i++ {
-				createdResource.ID = string(i)
+			for i := 0; i < 2; i++ {
+				createdResource.ID = strconv.Itoa(i)
 				createdResource.Name = goext.MakeString("test1")
 				Expect(testSchema.CreateRaw(&createdResource, context)).To(Succeed())
 			}
-			for i := 12; i < 15; i++ {
-				createdResource.ID = string(i)
+			for i := 2; i < 5; i++ {
+				createdResource.ID = strconv.Itoa(i)
 				createdResource.Name = goext.MakeString("test2")
 				Expect(testSchema.CreateRaw(&createdResource, context)).To(Succeed())
 			}
@@ -623,7 +624,7 @@ var _ = Describe("Schemas", func() {
 		)
 
 		BeforeEach(func() {
-			
+
 			//TODO: tests must be fixed for MYSQL DB as that is implemented by default in CircleCI
 			Skip("Locks are only valid in MySQL")
 
