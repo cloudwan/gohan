@@ -1001,12 +1001,12 @@ func addCustomFilters(schema *Schema, f filter.FilterElem, auth Authorization, c
 	if conditionFilters.isOwner {
 		tenantFilter := auth.getTenantCustomFilter(schema)
 		domainFilter := auth.getDomainCustomFilter(schema)
-		filtersToAdd := maybeEmptyAndFilter(append(tenantFilter, domainFilter...)...)
+		filtersToAdd := filter.MaybeEmptyAndFilter(append(tenantFilter, domainFilter...)...)
 		filters = append(filters, filtersToAdd)
 	}
 	if conditionFilters.isDomainOwner {
 		domainFilter := auth.getDomainCustomFilter(schema)
-		filters = append(filters, maybeEmptyAndFilter(domainFilter...))
+		filters = append(filters, filter.MaybeEmptyAndFilter(domainFilter...))
 	}
 	for _, match := range conditionFilters.matches {
 		filters = append(filters, match)
@@ -1058,14 +1058,4 @@ func getRegexp(input string) (*regexp.Regexp, error) {
 		input = globalRegexp
 	}
 	return regexp.Compile(input)
-}
-
-func maybeEmptyAndFilter(filters ...filter.FilterElem) filter.FilterElem {
-	if len(filters) == 0 {
-		return filter.True()
-	}
-	if len(filters) == 1 {
-		return filters[0]
-	}
-	return filter.And(filters...)
 }

@@ -1225,18 +1225,21 @@ func AddFilterToQuery(s *schema.Schema, q sq.SelectBuilder, filter map[string]in
 			continue
 		}
 
-		queryValues, ok := value.([]string)
-		if ok && property.Type == "boolean" {
-			v := make([]bool, len(queryValues))
-			for i, j := range queryValues {
-				v[i], _ = strconv.ParseBool(j)
-			}
-			q = q.Where(sq.Eq{column: v})
-		} else {
-			q = q.Where(sq.Eq{column: value})
-		}
+		q = q.Where(sq.Eq{column: parseBoolean(property.Type, value)})
 	}
 	return q, nil
+}
+
+func parseBoolean(typ string, value interface{}) interface{} {
+	queryValues, ok := value.([]string)
+	if ok && typ == "boolean" {
+		v := make([]bool, len(queryValues))
+		for i, j := range queryValues {
+			v[i], _ = strconv.ParseBool(j)
+		}
+		return v
+	}
+	return value
 }
 
 func addOrToQuery(s *schema.Schema, q sq.SelectBuilder, filter interface{}, join bool) (sq.Or, error) {
@@ -1290,6 +1293,7 @@ func addToFilter(s *schema.Schema, q sq.SelectBuilder, filter interface{}, join 
 				continue
 			}
 
+			value = parseBoolean(property.Type, value)
 			switch filter["type"] {
 			case "eq":
 				sqlizer = append(sqlizer, sq.Eq{column: value})

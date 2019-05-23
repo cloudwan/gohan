@@ -24,6 +24,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"regexp"
 	"strconv"
@@ -69,6 +70,7 @@ const (
 	citiesPluralURL                    = baseURL + "/v1.0/cities"
 	profilingURL                       = baseURL + "/debug/pprof/"
 	filterTestPluralURL                = baseURL + "/v2.0/filter_tests"
+	anyOfFilterPluralURL               = baseURL + "/v2.0/any_of_filters"
 	actionByDifferentUserTestPluralURL = baseURL + "/v2.0/actions_in_different_tenant_tests"
 	visibilityTestPluralURL            = baseURL + "/v2.0/visible_properties_tests"
 	attacherPluralURL                  = baseURL + "/v2.0/attachers"
@@ -458,7 +460,7 @@ var _ = Describe("Server package test", func() {
 			Expect(result).To(HaveKeyWithValue("network", networkExpected))
 
 			result = testURL("GET", baseURL+"/_all", memberTokenID, nil, http.StatusOK)
-			Expect(result).To(HaveLen(15))
+			Expect(result).To(HaveLen(16))
 			Expect(result).To(HaveKeyWithValue("networks", []interface{}{networkExpected}))
 			Expect(result).To(HaveKey("schemas"))
 			Expect(result).To(HaveKey("tests"))
@@ -628,6 +630,56 @@ var _ = Describe("Server package test", func() {
 				Entry("Should not update exposed with incorrect fields", "b", visibleTokenID, http.StatusUnauthorized),
 				Entry("Should update forbidden with correct fields", "b", hiddenTokenID, http.StatusOK),
 				Entry("Should not update forbidden with incorrect fields", "a", hiddenTokenID, http.StatusUnauthorized),
+			)
+		})
+
+		Context("Filter with any of condition", func() {
+			var resources []map[string]interface{}
+
+			createResource := func(isPublic bool, tenantID string, token string) {
+				resource := map[string]interface{}{
+					"id":        strconv.Itoa(len(resources)),
+					"is_public": isPublic,
+					"tenant_id": tenantID,
+				}
+				testURL(http.MethodPost, anyOfFilterPluralURL, token, resource, http.StatusCreated)
+				resources = append(resources, resource)
+			}
+
+			query := func(isPublic bool, tenantID string, token string) interface{} {
+				q := url.Values{}
+				q.Set("is_public", strconv.FormatBool(isPublic))
+				q.Set("tenant_id", tenantID)
+				q.Set("any_of", "true")
+				return testURL(http.MethodGet, anyOfFilterPluralURL+"/?"+q.Encode(), token, nil, http.StatusOK)
+			}
+
+			BeforeEach(func() {
+				resources = []map[string]interface{}{}
+				createResource(true, "admin", adminTokenID)
+				createResource(false, memberTenantID, memberTokenID)
+				createResource(false, powerUserTenantID, powerUserTokenID)
+			})
+
+			DescribeTable("filer with any of condition",
+				func(isPublic bool, tenantID string, token string, expectedResources ...int) {
+					result := query(isPublic, tenantID, token)
+					expected := make([]interface{}, len(expectedResources))
+					for i, id := range expectedResources {
+						expected[i] = util.MatchAsJSON(resources[id])
+					}
+					Expect(result).To(HaveKeyWithValue("any_of_filters", ConsistOf(expected...)))
+				},
+				Entry("tenant should see owned and public resources",
+					true, memberTenantID, memberTokenID, 0, 1),
+				Entry("other tenant should see owned and public resources",
+					true, powerUserTenantID, powerUserTokenID, 0, 2),
+				Entry("tenant should not see other tenant resources when searching by tenant id",
+					true, powerUserTenantID, memberTokenID, 0),
+				Entry("tenant should not see other tenant resources when searching by is_public",
+					false, memberTenantID, memberTokenID, 1),
+				Entry("tenant should not see other tenant resources when searching by both tenant_id and is_public",
+					false, powerUserTenantID, memberTokenID, 1),
 			)
 		})
 

@@ -41,3 +41,23 @@ func False() FilterElem {
 		"__bool__": false,
 	}
 }
+
+func MaybeEmptyAndFilter(filters ...FilterElem) FilterElem {
+	if len(filters) == 0 {
+		return True()
+	}
+	if len(filters) == 1 {
+		return filters[0]
+	}
+	return And(filters...)
+}
+
+func MaybeEmptyOrFilter(filters ...FilterElem) FilterElem {
+	if len(filters) == 0 {
+		return False()
+	}
+	if len(filters) == 1 {
+		return filters[0]
+	}
+	return Or(filters...)
+}
