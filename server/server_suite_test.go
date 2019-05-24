@@ -56,7 +56,7 @@ func TestServer(t *testing.T) {
 var _ = Describe("Suite set up and tear down", func() {
 	var conn, dbType string
 	if os.Getenv("MYSQL_TEST") == "true" {
-		conn = "root@/gohan_test"
+		conn = "root@tcp(localhost:3306)/gohan_test"
 		dbType = "mysql"
 	} else {
 		conn = "./server_test.db"

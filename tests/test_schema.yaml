@@ -741,6 +741,7 @@ schemas:
         type: string
         unique: false
         indexed: true
+        sql: varchar(255)
       domain_id:
         description: Domain ID
         permission:
@@ -749,6 +750,7 @@ schemas:
         type: string
         unique: false
         indexed: true
+        sql: varchar(255)
       test_string:
         default: ""
         description: Test string
@@ -796,6 +798,9 @@ schemas:
         unique: false
     propertiesOrder:
     - id
+    - tenant_id
+    - domain_id
+    required:
     - tenant_id
     - domain_id
     type: object
@@ -912,6 +917,7 @@ schemas:
         type: string
         unique: false
         indexed: true
+        sql: varchar(255)
       domain_id:
         description: Domain ID
         permission:
@@ -920,6 +926,7 @@ schemas:
         type: string
         unique: false
         indexed: true
+        sql: varchar(255)
       test_string:
         default: ""
         description: Test string
@@ -967,6 +974,9 @@ schemas:
         unique: false
     propertiesOrder:
     - id
+    - tenant_id
+    - domain_id
+    required:
     - tenant_id
     - domain_id
     type: object

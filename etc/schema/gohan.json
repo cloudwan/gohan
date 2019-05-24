@@ -854,8 +854,7 @@
                         "description": "Should never be used, just for framework compatibility",
                         "permission": [],
                         "title": "ID",
-                        "type": "string",
-                        "unique": true
+                        "type": "string"
                     }
                 },
                 "propertiesOrder": [
