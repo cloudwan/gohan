@@ -31,6 +31,7 @@ import (
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/extension"
 	"github.com/cloudwan/gohan/extension/goext"
+	"github.com/cloudwan/gohan/extension/goext/filter"
 	"github.com/cloudwan/gohan/metrics"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/cloudwan/gohan/server/middleware"
@@ -273,11 +274,10 @@ func GetResourcesInTransaction(context middleware.Context, resourceSchema *schem
 
 //modify search fields to build like queries
 func modifySearchFields(resourceSchema *schema.Schema, queryParameters map[string][]string, filter transaction.Filter) (transaction.Filter, error) {
-	if search_filter, ok := queryParameters["search_field"]; ok && resourceSchema.IsSubstringSearchEnabled() {
-		for _, column := range search_filter {
-			if search_value, ok := queryParameters[column]; ok {
-				delete(filter, column)
-				filter[column] = search.NewSearchField(search_value[0])
+	if searchFilters, ok := queryParameters["search_field"]; ok && resourceSchema.IsSubstringSearchEnabled() {
+		for _, column := range searchFilters {
+			if searchValues, ok := queryParameters[column]; ok {
+				filter[column] = search.NewSearchField(searchValues[0])
 			} else {
 				err := fmt.Errorf("search value for `%s` not available in URL ", column)
 				return nil, ResourceError{err, err.Error(), WrongQuery}
@@ -332,15 +332,23 @@ func GetMultipleResources(context middleware.Context, dataStore db.DB, resourceS
 
 	currCond := policy.GetCurrentResourceCondition()
 
-	filter := FilterFromQueryParameter(resourceSchema, queryParameters)
-	filter, err = modifySearchFields(resourceSchema, queryParameters, filter)
+	propertiesFilter := FilterFromQueryParameter(resourceSchema, queryParameters)
+	propertiesFilter, err = modifySearchFields(resourceSchema, queryParameters, propertiesFilter)
 	if err != nil {
 		return err
 	}
 
-	filter = policy.RemoveHiddenProperty(filter)
-	extendFilterByTenantAndDomain(resourceSchema, filter, schema.ActionRead, currCond, auth)
-	currCond.AddCustomFilters(resourceSchema, filter, auth)
+	propertiesFilter = policy.RemoveHiddenProperty(propertiesFilter)
+	propertiesFilter = applyAnyOfFilter(propertiesFilter, queryParameters)
+
+	customFilters := transaction.Filter{}
+	currCond.AddCustomFilters(resourceSchema, customFilters, auth)
+	if len(customFilters) == 0 {
+		customFilters = filter.True()
+	}
+
+	propertiesFilter = filter.And(propertiesFilter, customFilters)
+	extendFilterByTenantAndDomain(resourceSchema, propertiesFilter, schema.ActionRead, currCond, auth)
 
 	paginator, err := pagination.FromURLQuery(resourceSchema, queryParameters)
 	if err != nil {
@@ -367,7 +375,7 @@ func GetMultipleResources(context middleware.Context, dataStore db.DB, resourceS
 		return fmt.Errorf("extension returned invalid JSON: %v", rawResponse)
 	}
 
-	if err := GetResources(context, dataStore, resourceSchema, filter, paginator); err != nil {
+	if err := GetResources(context, dataStore, resourceSchema, propertiesFilter, paginator); err != nil {
 		return err
 	}
 
@@ -382,6 +390,20 @@ func GetMultipleResources(context middleware.Context, dataStore db.DB, resourceS
 	return nil
 }
 
+func applyAnyOfFilter(propertiesFilter map[string]interface{}, queryParameters map[string][]string) map[string]interface{} {
+	filterFunc := filter.MaybeEmptyAndFilter
+	if anyOf, ok := queryParameters["any_of"]; ok && len(anyOf) == 1 {
+		if parseBool(queryParameters["any_of"][0], false) {
+			filterFunc = filter.MaybeEmptyOrFilter
+		}
+	}
+	filters := make([]filter.FilterElem, 0, len(propertiesFilter))
+	for key, value := range propertiesFilter {
+		filters = append(filters, filter.Eq(key, value))
+	}
+	return filterFunc(filters...)
+}
+
 func verifyQueryParams(resourceSchema *schema.Schema, queryParameters map[string][]string) error {
 	for _, key := range resourceSchema.Properties {
 		delete(queryParameters, key.ID)
@@ -392,6 +414,7 @@ func verifyQueryParams(resourceSchema *schema.Schema, queryParameters map[string
 	delete(queryParameters, "offset")
 
 	delete(queryParameters, "search_field")
+	delete(queryParameters, "any_of")
 
 	delete(queryParameters, "_details")
 	delete(queryParameters, "_fields")

@@ -216,8 +216,6 @@ policies:
   resource:
     path: /v2.0/domain_owner_test.*
 - action: '*'
-  condition:
-  - is_owner
   effect: allow
   id: member_statement_test
   principal: Member
@@ -298,6 +296,31 @@ policies:
       - id
       - state
       - level
+- action: create
+  effect: allow
+  id: any_of_filter_create_member
+  principal: Member
+  resource:
+    path: /v2.0/any_of_filter.*
+- action: create
+  effect: allow
+  id: any_of_filter_create_admin
+  principal: admin
+  resource:
+    path: /v2.0/any_of_filter.*
+- action: read
+  effect: allow
+  id: any_of_filter_read_member
+  principal: Member
+  condition:
+    - or:
+        - is_owner
+        - match:
+            property: is_public
+            type: eq
+            value: true
+  resource:
+    path: /v2.0/any_of_filter.*
 - action: '*'
   effect: allow
   id: actions_in_different_tenant_complex_condition_test_all_admin
@@ -1116,11 +1139,6 @@ schemas:
       path: /:id/test_throw
       output:
         type: string
-    test_throw:
-      method: GET
-      path: /:id/test_throw
-      output:
-        type: string
     denied_action:
       method: GET
       path: /:id/denied_action
@@ -1184,6 +1202,38 @@ schemas:
     - level
     type: object
   title: Test Filter
+- description: Test Any Of Filter
+  id: any_of_filter
+  singular: any_of_filter
+  plural: any_of_filters
+  prefix: /v2.0
+  schema:
+    properties:
+      id:
+        description: ID
+        permission:
+          - create
+        title: ID
+        type: string
+        unique: true
+      tenant_id:
+        description: Tenant ID
+        permission:
+          - create
+        title: TenantID
+        type: string
+      is_public:
+        description: Is public
+        permission:
+          - create
+        title: Is public
+        type: boolean
+    propertiesOrder:
+      - id
+      - tenant_id
+      - is_public
+    type: object
+  title: Test Any Of Filter
 - description: Test Actions In Different Tenant
   id: actions_in_different_tenant_test
   singular: actions_in_different_tenant_test
