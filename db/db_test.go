@@ -24,7 +24,7 @@ import (
 	"github.com/cloudwan/gohan/db"
 	"github.com/cloudwan/gohan/db/dbutil"
 	"github.com/cloudwan/gohan/db/initializer"
-	"github.com/cloudwan/gohan/db/mocks"
+	mock_db "github.com/cloudwan/gohan/db/mocks"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/schema"
@@ -370,8 +370,13 @@ var _ = Describe("Database operation test", func() {
 
 				It("Updates the resource properly", func() {
 					By("Updating other fields")
-					Expect(networkResource1.Update(map[string]interface{}{"name": "new_name"})).To(Succeed())
+					updated := networkResource1.CloneWithUpdate(map[string]interface{}{"name": "new_name"})
+					networkResource1, err = manager.LoadResource("network", updated)
+					Expect(err).NotTo(HaveOccurred())
 					Expect(tx.Update(ctx, networkResource1)).To(Succeed())
+					res, err := tx.Fetch(ctx, networkSchema, transaction.Filter{"id": networkResource1.ID()}, nil)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(res.Get("name")).To(Equal("new_name"))
 					Expect(tx.Commit()).To(Succeed())
 				})
 

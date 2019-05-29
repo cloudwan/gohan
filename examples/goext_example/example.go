@@ -54,7 +54,9 @@ func Init(env goext.IEnvironment) error {
 	}, goext.PriorityDefault)
 
 	// Emit custom action event
-	env.Core().TriggerEvent(entryCustomAction, goext.MakeContext().WithISchema(schema).WithSchemaID("entry"))
+	if err := env.Core().TriggerEvent(entryCustomAction, goext.MakeContext().WithISchema(schema).WithSchemaID("entry")); err != nil {
+		return &goext.Error{Err:err}
+	}
 
 	return nil
 }

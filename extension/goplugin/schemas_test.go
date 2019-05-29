@@ -316,6 +316,7 @@ var _ = Describe("Schemas", func() {
 		It("UpdateRaw previously created resource", func() {
 			Expect(testSchema.CreateRaw(&createdResource, context)).To(Succeed())
 			createdResource.Description = "other-description"
+			context["skipCheckName"] = true
 			Expect(testSchema.UpdateRaw(&createdResource, context)).To(Succeed())
 			returnedResource, err := testSchema.FetchRaw(createdResource.ID, context)
 			Expect(err).ToNot(HaveOccurred())
@@ -941,6 +942,7 @@ var _ = Describe("Schemas", func() {
 		})
 
 		It("should copy context for update", func() {
+			context["skipCheckName"] = true
 			Expect(testSchema.CreateRaw(testResource, context)).To(Succeed())
 			Expect(testSchema.UpdateRaw(testResource, context)).To(Succeed())
 		})

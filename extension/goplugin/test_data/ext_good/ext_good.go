@@ -44,6 +44,7 @@ func Init(env goext.IEnvironment) error {
 	testSchema.RegisterCustomEventHandler("invoke_js", handleInvokeJs, goext.PriorityDefault)
 	testSchema.RegisterCustomEventHandler("sync_context_cancel", handleSyncContextCancel, goext.PriorityDefault)
 	testSchema.RegisterResourceEventHandler("pre_create", handlePreCreate, goext.PriorityDefault)
+	testSchema.RegisterResourceEventHandler("pre_update_in_transaction", handlePreUpdateTx, goext.PriorityDefault)
 
 	testSuiteSchema := env.Schemas().Find("test_suite")
 	if testSuiteSchema == nil {
@@ -106,7 +107,9 @@ func handleInvokeJs(requestContext goext.Context, env goext.IEnvironment) *goext
 
 	ctx := requestContext.Clone()
 	ctx["schema_id"] = "test"
-	env.Core().TriggerEvent("js_listener", ctx)
+	if err := env.Core().TriggerEvent("js_listener", ctx); err != nil {
+		return &goext.Error{Err: err}
+	}
 
 	requestContext["response"] = ctx["js_result"]
 	return nil
@@ -114,5 +117,20 @@ func handleInvokeJs(requestContext goext.Context, env goext.IEnvironment) *goext
 
 func handlePreCreate(requestContext goext.Context, _ goext.Resource, env goext.IEnvironment) *goext.Error {
 	env.Logger().Debug("Handling pre create")
+	return nil
+}
+
+func handlePreUpdateTx(requestContext goext.Context, res goext.Resource, env goext.IEnvironment) *goext.Error {
+	env.Logger().Debug("Handling pre update in transaction")
+	testRes := res.(*test.Test)
+	testSchema := env.Schemas().Find("test")
+	fetchRes, err := testSchema.FetchRaw(testRes.ID, requestContext)
+	if err != nil {
+		return &goext.Error{Err: err}
+	}
+	fetchedTest := fetchRes.(*test.Test)
+	if skip, ok := requestContext["skipCheckName"].(bool); (!ok || !skip) && fetchedTest.Name == testRes.Name {
+		return goext.NewErrorBadRequest(errors.New("Name should not be changed in fetched data"))
+	}
 	return nil
 }
