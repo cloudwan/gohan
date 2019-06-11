@@ -49,69 +49,136 @@ var _ = Describe("Keystone client", func() {
 		server.Close()
 	})
 
-	Describe("Tenant ID validation", func() {
+	Describe("Keystone validation", func() {
 
-		setupKeystone := func() {
-			server.AppendHandlers(
-				ghttp.RespondWithJSONEncoded(201, getV3TokensScopedToTenantResponse()),
-				ghttp.RespondWithJSONEncoded(200, getV3TenantsResponse()),
-			)
-			setupV3Client()
-		}
-
-		It("Returns false when tenant id is not known", func() {
-			setupKeystone()
-
-			valid, err := client.ValidateTenantID("some-random-id")
-			Expect(valid).To(BeFalse())
-			Expect(err).ToNot(HaveOccurred())
-		})
-
-		It("Returns true when tenant id is known", func() {
-			setupKeystone()
-
-			valid, err := client.ValidateTenantID("1234")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(valid).To(BeTrue())
-		})
-
-		It("Returns error when keystone is not operational", func() {
-			valid, err := client.ValidateTenantID("1234")
-			Expect(err).To(HaveOccurred())
-			Expect(valid).To(BeFalse())
-		})
-
-	})
-
-	Describe("Domain ID validation", func() {
-		setupKeystone := func() {
+		expectTokenAuthScopedToDomain := func() {
 			server.AppendHandlers(
 				ghttp.RespondWithJSONEncoded(201, getV3TokensScopedToDomainResponse()),
-				ghttp.RespondWithJSONEncoded(200, getV3DomainsResponse()),
 			)
-			setupV3Client()
 		}
 
-		It("Returns false when domain id is not known", func() {
-			setupKeystone()
+		expectTokenAuthScopedToTenant := func() {
+			server.AppendHandlers(
+				ghttp.RespondWithJSONEncoded(201, getV3TokensScopedToTenantResponse()),
+			)
+		}
 
-			valid, err := client.ValidateDomainID("some-random-id")
-			Expect(valid).To(BeFalse())
-			Expect(err).ToNot(HaveOccurred())
+		expectTenantList := func() {
+			server.AppendHandlers(
+				ghttp.RespondWithJSONEncoded(200, getV3TenantsResponse()),
+			)
+		}
+
+		expectDomainList := func() {
+			server.AppendHandlers(
+				ghttp.RespondWithJSONEncoded(200, getV3DomainsResponse()),
+			)
+		}
+
+		Context("TenantID and DomainID pair validation", func() {
+			It("Valid tenantID within different domain", func() {
+				expectTokenAuthScopedToDomain()
+				setupV3Client()
+
+				expectDomainList()
+				expectTenantList()
+
+				valid, err := client.ValidateTenantIDAndDomainIDPair("3456", "default")
+				Expect(valid).To(BeFalse())
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("Invalid tenantID and valid DomainID", func() {
+				expectTokenAuthScopedToDomain()
+				setupV3Client()
+
+				expectDomainList()
+				expectTenantList()
+
+				valid, err := client.ValidateTenantIDAndDomainIDPair("some-random-id", "default")
+				Expect(valid).To(BeFalse())
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("Valid tenantID within correct domain", func() {
+				expectTokenAuthScopedToDomain()
+				setupV3Client()
+
+				expectDomainList()
+				expectTenantList()
+
+				valid, err := client.ValidateTenantIDAndDomainIDPair("1234", "default")
+				Expect(valid).To(BeTrue())
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("Returns error when keystone is not operational", func() {
+				valid, err := client.ValidateTenantIDAndDomainIDPair("1234", "default")
+				Expect(err).To(HaveOccurred())
+				Expect(valid).To(BeFalse())
+			})
 		})
 
-		It("Returns true when domain id is known", func() {
-			setupKeystone()
+		Context("Tenant ID validation", func() {
+			It("Returns false when tenant id is not known", func() {
+				expectTokenAuthScopedToTenant()
+				setupV3Client()
 
-			valid, err := client.ValidateDomainID("default")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(valid).To(BeTrue())
+				expectTenantList()
+
+				valid, err := client.ValidateTenantID("some-random-id")
+				Expect(valid).To(BeFalse())
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("Returns true when tenant id is known", func() {
+				expectTokenAuthScopedToTenant()
+				setupV3Client()
+
+				expectTenantList()
+
+				valid, err := client.ValidateTenantID("1234")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(valid).To(BeTrue())
+			})
+
+			It("Returns error when keystone is not operational", func() {
+				valid, err := client.ValidateTenantID("1234")
+				Expect(err).To(HaveOccurred())
+				Expect(valid).To(BeFalse())
+			})
+
 		})
 
-		It("Returns error when keystone is not operational", func() {
-			valid, err := client.ValidateDomainID("default")
-			Expect(err).To(HaveOccurred())
-			Expect(valid).To(BeFalse())
+		Context("Domain ID validation", func() {
+
+			It("Returns false when domain id is not known", func() {
+				expectTokenAuthScopedToDomain()
+				setupV3Client()
+
+				expectDomainList()
+
+				valid, err := client.ValidateDomainID("some-random-id")
+				Expect(valid).To(BeFalse())
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("Returns true when domain id is known", func() {
+				expectTokenAuthScopedToDomain()
+				setupV3Client()
+
+				expectDomainList()
+
+				valid, err := client.ValidateDomainID("default")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(valid).To(BeTrue())
+			})
+
+			It("Returns error when keystone is not operational", func() {
+				valid, err := client.ValidateDomainID("default")
+				Expect(err).To(HaveOccurred())
+				Expect(valid).To(BeFalse())
+			})
 		})
 	})
 

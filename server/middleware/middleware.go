@@ -158,6 +158,7 @@ type IdentityService interface {
 	GetServiceTokenID() string
 	ValidateTenantID(string) (bool, error)
 	ValidateDomainID(string) (bool, error)
+	ValidateTenantIDAndDomainIDPair(string, string) (bool, error)
 }
 
 // CreateIdentityServiceFromConfig creates keystone identity from config
@@ -302,6 +303,10 @@ func (i *NobodyIdentityService) ValidateTenantID(id string) (bool, error) {
 }
 
 func (i *NobodyIdentityService) ValidateDomainID(id string) (bool, error) {
+	return false, fmt.Errorf("invalid operation")
+}
+
+func (i *NobodyIdentityService) ValidateTenantIDAndDomainIDPair(string, string) (bool, error) {
 	return false, fmt.Errorf("invalid operation")
 }
 

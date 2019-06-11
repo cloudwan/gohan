@@ -27,4 +27,6 @@ type IAuth interface {
 	ValidateTenantID(ctx Context, id string) (bool, error)
 	// ValidateDomainID checks whether given domain_id exists in backend.
 	ValidateDomainID(ctx Context, id string) (bool, error)
+	// ValidateTenantIDAndDomainIDPair checks whether given tenant_id is a child of domain with domain_id.
+	ValidateTenantIDAndDomainIDPair(ctx Context, tenantID, domainID string) (bool, error)
 }

@@ -947,6 +947,21 @@ func (mr *MockIAuthMockRecorder) ValidateTenantID(arg0, arg1 interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateTenantID", reflect.TypeOf((*MockIAuth)(nil).ValidateTenantID), arg0, arg1)
 }
 
+// ValidateTenantIDAndDomainIDPair mocks base method
+func (m *MockIAuth) ValidateTenantIDAndDomainIDPair(arg0 Context, arg1, arg2 string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateTenantIDAndDomainIDPair", arg0, arg1, arg2)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ValidateTenantIDAndDomainIDPair indicates an expected call of ValidateTenantIDAndDomainIDPair
+func (mr *MockIAuthMockRecorder) ValidateTenantIDAndDomainIDPair(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateTenantIDAndDomainIDPair", reflect.TypeOf((*MockIAuth)(nil).ValidateTenantIDAndDomainIDPair), arg0, arg1, arg2)
+}
+
 // MockIConfig is a mock of IConfig interface
 type MockIConfig struct {
 	ctrl     *gomock.Controller
