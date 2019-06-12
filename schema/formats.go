@@ -76,7 +76,10 @@ func (f cidrFormatChecker) IsFormat(input string) bool {
 		return false
 	}
 	if isV4(ip) {
-		inputIp := extractIpFromCidrFormattedString(input)
+		inputIp, mask := extractIpAndMaskFromCidrFormattedString(input)
+		if !maskIsValid(mask) {
+			return false
+		}
 		return matchYangIPv4AddressPattern(inputIp)
 	}
 	return true
@@ -95,11 +98,21 @@ func (f ipv4NetworkFormatChecker) IsFormat(input string) bool {
 		return false
 	}
 
-	inputIp := extractIpFromCidrFormattedString(input)
+	inputIp, mask := extractIpAndMaskFromCidrFormattedString(input)
 	if !matchYangIPv4AddressPattern(inputIp) {
 		return false
 	}
+	if !maskIsValid(mask) {
+		return false
+	}
 	return hostIP.Equal(netIP)
+}
+
+func maskIsValid(mask string) bool {
+	if len(mask) == 2 && mask[0] == '0' {
+		return false
+	}
+	return true
 }
 
 func (f ipv4AddressWithCidrFormatChecker) IsFormat(input string) bool {
@@ -120,7 +133,13 @@ func (f ipv4AddressWithCidrFormatChecker) IsFormat(input string) bool {
 }
 
 func extractIpFromCidrFormattedString(input string) string {
-	return strings.Split(input, "/")[0]
+	ip, _ := extractIpAndMaskFromCidrFormattedString(input)
+	return ip
+}
+
+func extractIpAndMaskFromCidrFormattedString(input string) (string, string) {
+	ipAndMask := strings.Split(input, "/")
+	return ipAndMask[0], ipAndMask[1]
 }
 
 func extractHostAndNet(input string) (hostIP net.IP, netIP net.IP, mask net.IPMask, err error) {

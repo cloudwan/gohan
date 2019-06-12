@@ -79,6 +79,7 @@ var _ = Describe("format checkers", func() {
 			Entry("IPv4 with three zeros in the first octet", "000.0.0.1/24"),
 			Entry("IPv4 with one redundant zero in the last octet ", "1.4.0.01/24"),
 			Entry("IPv4 with two redundant zeros in the last octet ", "1.4.0.001/24"),
+			Entry("IPv4 network with leading zero in mask ", "128.0.0.0/04"),
 		)
 	})
 
@@ -162,6 +163,7 @@ var _ = Describe("format checkers", func() {
 			Entry("IPv4 cidr and two redundant zeros in the last octet ", "1.4.0.001/24"),
 			Entry("IPv4 network with one redundant zero in the last octet ", "1.4.0.00/24"),
 			Entry("IPv4 network with two redundant zeros in the last octet ", "1.4.0.000/24"),
+			Entry("IPv4 network with leading zero in mask ", "128.0.0.0/04"),
 		)
 	})
 
@@ -192,6 +194,7 @@ var _ = Describe("format checkers", func() {
 			Entry("IPv4 network with three zeros in the first octet ", "000.168.0.0/24"),
 			Entry("IPv4 network with one redundant zero in the last octet ", "1.168.0.00/24"),
 			Entry("IPv4 network with two redundant zeros in the last octet ", "1.168.0.000/24"),
+			Entry("IPv4 network with leading zero in mask ", "128.0.0.0/04"),
 		)
 	})
 
@@ -224,6 +227,7 @@ var _ = Describe("format checkers", func() {
 			Entry("IPv4 with three zeros in the first octet ", "000.168.0.2/24"),
 			Entry("IPv4 with one redundant zero in the last octet", "00.168.0.02/24"),
 			Entry("IPv4 with two redundant zeros in the last octet ", "000.168.0.002/24"),
+			Entry("IPv4 network with leading zero in mask ", "128.0.0.0/04"),
 		)
 	})
 
