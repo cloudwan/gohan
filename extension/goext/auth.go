@@ -21,6 +21,10 @@ type IAuth interface {
 	HasRole(context Context, role string) bool
 	// GetTenantName return name from the given context
 	GetTenantName(context Context) string
+	// GetTenantID return id of the tenant from the given context
+	GetTenantID(context Context) string
+	// GetDomainID return id of the domain from the given context
+	GetDomainID(context Context) string
 	// IsAdmin reports whether context belongs to admin
 	IsAdmin(context Context) bool
 	// ValidateTenantID checks whether given tenant_id exists in backend.

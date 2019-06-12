@@ -875,6 +875,34 @@ func (m *MockIAuth) EXPECT() *MockIAuthMockRecorder {
 	return m.recorder
 }
 
+// GetDomainID mocks base method
+func (m *MockIAuth) GetDomainID(arg0 Context) string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDomainID", arg0)
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetDomainID indicates an expected call of GetDomainID
+func (mr *MockIAuthMockRecorder) GetDomainID(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDomainID", reflect.TypeOf((*MockIAuth)(nil).GetDomainID), arg0)
+}
+
+// GetTenantID mocks base method
+func (m *MockIAuth) GetTenantID(arg0 Context) string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTenantID", arg0)
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetTenantID indicates an expected call of GetTenantID
+func (mr *MockIAuthMockRecorder) GetTenantID(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTenantID", reflect.TypeOf((*MockIAuth)(nil).GetTenantID), arg0)
+}
+
 // GetTenantName mocks base method
 func (m *MockIAuth) GetTenantName(arg0 Context) string {
 	m.ctrl.T.Helper()

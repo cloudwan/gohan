@@ -46,6 +46,26 @@ func (a *Auth) GetTenantName(context goext.Context) string {
 	return auth.TenantName()
 }
 
+func (a *Auth) GetTenantID(context goext.Context) string {
+	auth, err := getAuthFromContext(context)
+	if err != nil {
+		log.Warning("GetTenantID: %s", err.Error())
+		return ""
+	}
+
+	return auth.TenantID()
+}
+
+func (a *Auth) GetDomainID(context goext.Context) string {
+	auth, err := getAuthFromContext(context)
+	if err != nil {
+		log.Warning("GetDomainID: %s", err.Error())
+		return ""
+	}
+
+	return auth.DomainID()
+}
+
 // IsAdmin returns true if user had admin role
 func (a *Auth) IsAdmin(context goext.Context) bool {
 	auth, err := getAuthFromContext(context)
