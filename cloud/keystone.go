@@ -40,6 +40,7 @@ type KeystoneIdentity interface {
 	GetServiceTokenID() string
 	ValidateTenantID(string) (bool, error)
 	ValidateDomainID(string) (bool, error)
+	ValidateTenantIDAndDomainIDPair(string, string) (bool, error)
 }
 
 type keystoneV3Client struct {
@@ -305,4 +306,28 @@ func (client *keystoneV3Client) ValidateDomainID(id string) (bool, error) {
 	}
 
 	return domain != nil, nil
+}
+
+func (client *keystoneV3Client) ValidateTenantIDAndDomainIDPair(tenantID, domainID string) (bool, error) {
+	defer client.measureTime(time.Now(), "validate_tenant_id_and_domain_id_pair")
+
+	domain, err := client.getDomain(func(domain *v3domains.Domain) bool {
+		return domain.ID == domainID
+	})
+	if err != nil {
+		return false, err
+	}
+
+	if domain == nil {
+		return false, nil
+	}
+
+	tenant, err := client.getTenant(func(project *v3tenants.Project) bool {
+		return project.ID == tenantID && project.DomainID == domain.ID
+	})
+	if err != nil {
+		return false, err
+	}
+
+	return tenant != nil, nil
 }

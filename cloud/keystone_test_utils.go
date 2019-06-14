@@ -175,11 +175,13 @@ func getV3TenantsResponse() interface{} {
 				"id":          "1234",
 				"name":        "admin",
 				"description": "admin description",
+				"domain_id":   "default",
 				"enabled":     true,
 			},
 			map[string]interface{}{
 				"id":          "3456",
 				"name":        "demo",
+				"domain_id":   "some-other-domain",
 				"description": "demo description",
 				"enabled":     true,
 			},

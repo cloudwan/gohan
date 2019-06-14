@@ -93,6 +93,14 @@ func (a *Auth) ValidateDomainID(ctx goext.Context, id string) (bool, error) {
 	return identityService.ValidateDomainID(id)
 }
 
+func (a *Auth) ValidateTenantIDAndDomainIDPair(ctx goext.Context, tenantID, domainID string) (bool, error) {
+	identityService, err := getIdentityServiceFromContext(ctx)
+	if err != nil {
+		return false, err
+	}
+	return identityService.ValidateTenantIDAndDomainIDPair(tenantID, domainID)
+}
+
 func getIdentityServiceFromContext(ctx goext.Context) (middleware.IdentityService, error) {
 	rawIdentityService, err := getFromContext(ctx, "identity_service")
 	if err != nil {
