@@ -395,21 +395,7 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 			}
 			fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, input)
 
-			// TODO use authorization middleware
-			manager := schema.GetManager()
-			path := r.URL.Path
-			policy, role := manager.PolicyValidate(action.ID, s.GetPluralURL(), auth)
-			if policy == nil {
-				middleware.HTTPJSONError(w, fmt.Sprintf("No matching policy: %s %s %v", action.ID, path, s.Actions), http.StatusUnauthorized)
-				return
-			}
-			context["policy"] = policy
-			context["role"] = role
-			context["tenant_id"] = auth.TenantID()
-			context["domain_id"] = auth.DomainID()
-			context["auth"] = auth
-
-			if err := resources.ActionResource(context, s, action, id, input); err != nil {
+			if err := resources.ActionResource(context, dataStore, s, action, id, input); err != nil {
 				handleError(w, err)
 				return
 			}
@@ -418,9 +404,9 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 				routes.ServeJson(w, response)
 			}
 		}
-		route.AddRoute(action.Method, s.GetActionURL(action.Path), ActionFunc)
+		route.AddRoute(action.Method, s.GetActionURL(action.Path), middleware.Authorization(action.ID), ActionFunc)
 		if s.ParentSchema != nil {
-			route.AddRoute(action.Method, s.GetActionURLWithParents(action.Path), ActionFunc)
+			route.AddRoute(action.Method, s.GetActionURLWithParents(action.Path), middleware.Authorization(action.ID), ActionFunc)
 		}
 	}
 }

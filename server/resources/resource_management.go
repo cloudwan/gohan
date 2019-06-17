@@ -586,7 +586,7 @@ func getFilterFromPolicy(
 	return filter
 }
 
-func checkIfResourceExistsForTenant(
+func checkIfResourceExistsForPolicy(
 	context context.Context,
 	auth schema.Authorization,
 	resourceID string,
@@ -864,7 +864,7 @@ func UpdateResource(
 		func() error {
 			currCond := policy.GetCurrentResourceCondition()
 			tenantIDs, domainIDs := currCond.GetTenantAndDomainFilters(schema.ActionRead, auth)
-			exists, err := checkIfResourceExistsForTenant(mustGetContext(context), auth, resourceID, resourceSchema, policy, mustGetTransaction(context))
+			exists, err := checkIfResourceExistsForPolicy(mustGetContext(context), auth, resourceID, resourceSchema, policy, mustGetTransaction(context))
 			if err != nil {
 				return err
 			}
@@ -1131,10 +1131,32 @@ func DeleteResourceInTransaction(context middleware.Context, resourceSchema *sch
 }
 
 // ActionResource runs custom action on resource
-func ActionResource(context middleware.Context, resourceSchema *schema.Schema,
+func ActionResource(context middleware.Context, dataStore db.DB, resourceSchema *schema.Schema,
 	action schema.Action, resourceID string, data interface{},
 ) error {
 	defer MeasureRequestTime(time.Now(), action.ID, resourceSchema.ID)
+
+	auth := context["auth"].(schema.Authorization)
+	policy, err := LoadPolicy(context, action.ID, strings.Replace(resourceSchema.GetSingleURL(), ":id", resourceID, 1), auth)
+	if err != nil {
+		return err
+	}
+
+	if err := resourceTransactionWithContext(context, dataStore, transaction.GetIsolationLevel(resourceSchema, action.ID),
+		func() error {
+			exists, err := checkIfResourceExistsForPolicy(mustGetContext(context), auth, resourceID, resourceSchema, policy, mustGetTransaction(context))
+			if err != nil {
+				return err
+			}
+			if !exists {
+				return ResourceError{transaction.ErrResourceNotFound, "", Unauthorized}
+			}
+			return nil
+		},
+	); err != nil {
+		return err
+	}
+
 	actionSchema := action.InputSchema
 	context["input"] = data
 	context["id"] = resourceID
@@ -1152,7 +1174,7 @@ func ActionResource(context middleware.Context, resourceSchema *schema.Schema,
 		}
 	}
 
-	err := extension.HandleEvent(context, environment, action.ID, resourceSchema.ID)
+	err = extension.HandleEvent(context, environment, action.ID, resourceSchema.ID)
 	if err != nil {
 		return err
 	}

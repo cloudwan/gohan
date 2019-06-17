@@ -2178,7 +2178,7 @@ var _ = Describe("Resource manager", func() {
 
 			It("Should run the extension", func() {
 				err := resources.ActionResource(
-					context, currentSchema, fakeAction, adminResourceID,
+					context, testDB, currentSchema, fakeAction, adminResourceID,
 					map[string]interface{}{"test_string": "Steloj ne estas en ordo."})
 				Expect(err).To(HaveOccurred())
 				extErr, ok := err.(extension.Error)
@@ -2191,7 +2191,7 @@ var _ = Describe("Resource manager", func() {
 			Context("Without input shcema", func() {
 				It("Should run the extension", func() {
 					err := resources.ActionResource(
-						context, currentSchema, fakeActionWithoutInput, adminResourceID,
+						context, testDB, currentSchema, fakeActionWithoutInput, adminResourceID,
 						map[string]interface{}{"test_string": "Steloj ne estas en ordo."})
 					Expect(err).To(HaveOccurred())
 					extErr, ok := err.(extension.Error)
