@@ -80,6 +80,10 @@ var _ = Describe("format checkers", func() {
 			Entry("IPv4 with one redundant zero in the last octet ", "1.4.0.01/24"),
 			Entry("IPv4 with two redundant zeros in the last octet ", "1.4.0.001/24"),
 			Entry("IPv4 network with leading zero in mask ", "128.0.0.0/04"),
+			Entry("IPv4 network with leading zeros in mask ", "128.0.0.0/004"),
+			Entry("IPv4 network with incorrect mask ", "128.0.0.0/4/6"),
+			Entry("IPv4 network with empty mask ", "128.0.0.0/"),
+			Entry("IPv4 network without mask ", "128.0.0.0"),
 		)
 	})
 
@@ -164,6 +168,9 @@ var _ = Describe("format checkers", func() {
 			Entry("IPv4 network with one redundant zero in the last octet ", "1.4.0.00/24"),
 			Entry("IPv4 network with two redundant zeros in the last octet ", "1.4.0.000/24"),
 			Entry("IPv4 network with leading zero in mask ", "128.0.0.0/04"),
+			Entry("IPv4 network with leading zeros in mask ", "128.0.0.0/004"),
+			Entry("IPv4 network with incorrect mask ", "128.0.0.0/4/6"),
+			Entry("IPv4 network with empty mask ", "128.0.0.0/"),
 		)
 	})
 
@@ -195,6 +202,10 @@ var _ = Describe("format checkers", func() {
 			Entry("IPv4 network with one redundant zero in the last octet ", "1.168.0.00/24"),
 			Entry("IPv4 network with two redundant zeros in the last octet ", "1.168.0.000/24"),
 			Entry("IPv4 network with leading zero in mask ", "128.0.0.0/04"),
+			Entry("IPv4 network with leading zeros in mask ", "128.0.0.0/004"),
+			Entry("IPv4 network with incorrect mask ", "128.0.0.0/4/6"),
+			Entry("IPv4 network with empty mask ", "128.0.0.0/"),
+			Entry("IPv4 network without mask ", "128.0.0.0"),
 		)
 	})
 
@@ -228,6 +239,10 @@ var _ = Describe("format checkers", func() {
 			Entry("IPv4 with one redundant zero in the last octet", "00.168.0.02/24"),
 			Entry("IPv4 with two redundant zeros in the last octet ", "000.168.0.002/24"),
 			Entry("IPv4 network with leading zero in mask ", "128.0.0.0/04"),
+			Entry("IPv4 network with leading zeros in mask ", "128.0.0.0/004"),
+			Entry("IPv4 network with incorrect mask ", "128.0.0.0/4/6"),
+			Entry("IPv4 network with empty mask ", "128.0.0.0/"),
+			Entry("IPv4 network without mask ", "128.0.0.0"),
 		)
 	})
 

@@ -109,6 +109,9 @@ func (f ipv4NetworkFormatChecker) IsFormat(input string) bool {
 }
 
 func maskIsValid(mask string) bool {
+	if len(mask) > 2 {
+		return false
+	}
 	if len(mask) == 2 && mask[0] == '0' {
 		return false
 	}
