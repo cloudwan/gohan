@@ -41,7 +41,7 @@ var _ = Describe("Resource manager", func() {
 	const (
 		adminResourceID       = "6660fbf8-ca60-4cb0-a42e-9a913beafbaf"
 		memberResourceID      = "6660fbf8-ca60-4cb0-a42e-9a913beafbae"
-		memberResourceID2     = "6660fbf8-ca60-4cb0-a42e-9a913beafba0"
+		otherTenantResourceID = "6660fbf8-ca60-4cb0-a42e-9a913beafba0"
 		otherDomainResourceID = "6660fbf8-ca60-4cb0-a42e-9a913beafbad"
 	)
 
@@ -69,28 +69,28 @@ var _ = Describe("Resource manager", func() {
 		fakeIdentity               middleware.IdentityService
 	)
 
+	domainA := schema.Domain{
+		ID:   domainAID,
+		Name: "domainA",
+	}
+
+	adminAuth = schema.NewAuthorizationBuilder().
+		WithTenant(schema.Tenant{ID: adminTenantID, Name: "admin"}).
+		WithRoleIDs("admin").
+		BuildAdmin()
+	memberAuth = schema.NewAuthorizationBuilder().
+		WithTenant(schema.Tenant{ID: memberTenantID, Name: "demo"}).
+		WithDomain(domainA).
+		WithRoleIDs("Member").
+		BuildScopedToTenant()
+	domainScopedAuth = schema.NewAuthorizationBuilder().
+		WithDomain(domainA).
+		WithRoleIDs("Member").
+		BuildScopedToDomain()
+
 	BeforeEach(func() {
 		manager = schema.GetManager()
 		ctx = context_pkg.Background()
-
-		domainA := schema.Domain{
-			ID:   domainAID,
-			Name: "domainA",
-		}
-
-		adminAuth = schema.NewAuthorizationBuilder().
-			WithTenant(schema.Tenant{ID: adminTenantID, Name: "admin"}).
-			WithRoleIDs("admin").
-			BuildAdmin()
-		memberAuth = schema.NewAuthorizationBuilder().
-			WithTenant(schema.Tenant{ID: memberTenantID, Name: "demo"}).
-			WithDomain(domainA).
-			WithRoleIDs("Member").
-			BuildScopedToTenant()
-		domainScopedAuth = schema.NewAuthorizationBuilder().
-			WithDomain(domainA).
-			WithRoleIDs("Member").
-			BuildScopedToDomain()
 
 		auth = adminAuth
 		context = middleware.Context{
@@ -555,7 +555,7 @@ var _ = Describe("Resource manager", func() {
 						schemaID = "blacklisted_property_resource"
 
 						memberResourceDataTrueBool = map[string]interface{}{
-							"id":           memberResourceID2,
+							"id":           otherTenantResourceID,
 							"tenant_id":    memberTenantID,
 							"domain_id":    domainAID,
 							"test_string":  "Mi estas la pordo, mi estas la sxlosilo.",
@@ -2149,12 +2149,14 @@ var _ = Describe("Resource manager", func() {
 		var (
 			fakeAction             schema.Action
 			fakeActionWithoutInput schema.Action
+			customAction           schema.Action
 		)
 
 		BeforeEach(func() {
+			var ok bool
 			schemaID = "test"
-			action = "create"
-			setupTestResources()
+			currentSchema, ok = manager.Schema(schemaID)
+			Expect(ok).To(BeTrue())
 			inputSchema := map[string]interface{}{
 				"type": "object",
 				"properties": map[string]interface{}{
@@ -2166,11 +2168,12 @@ var _ = Describe("Resource manager", func() {
 					},
 				},
 			}
+			setupAndCreateTestResources()
 			fakeAction = schema.NewAction("fake_action", "GET", "/:id/whatever", "", "", inputSchema, nil, nil, false)
 			fakeActionWithoutInput = schema.NewAction("fake_action", "GET", "/:id/whatever", "", "", nil, nil, nil, false)
+			customAction = schema.NewAction("custom_action", "POST", "/:id/custom_action", "", "", nil, nil, nil, false)
 		})
 
-		// Actions do not care resource existence or tenant ownership
 		Describe("With extension", func() {
 			BeforeEach(func() {
 				events["fake_action"] = `throw new CustomException("malbona", 390);`
@@ -2188,7 +2191,7 @@ var _ = Describe("Resource manager", func() {
 				Expect(extErr.ExceptionInfo).To(HaveKeyWithValue("code", int64(390)))
 			})
 
-			Context("Without input shcema", func() {
+			Context("Without input schema", func() {
 				It("Should run the extension", func() {
 					err := resources.ActionResource(
 						context, testDB, currentSchema, fakeActionWithoutInput, adminResourceID,
@@ -2202,6 +2205,39 @@ var _ = Describe("Resource manager", func() {
 				})
 			})
 		})
+
+		Context("Checking performing custom action on actions of single resources", func() {
+			addAuthAndEmptyResponseToContext := func(auth schema.Authorization) {
+				context["tenant_id"] = auth.TenantID()
+				context["domain_id"] = auth.DomainID()
+				context["auth"] = auth
+				context["response"] = ""
+			}
+
+			DescribeTable("Performing action", func(auth schema.Authorization, resourceID string, shouldFail bool) {
+				addAuthAndEmptyResponseToContext(auth)
+				err := resources.ActionResource(
+					context, testDB, currentSchema, customAction, resourceID,
+					map[string]interface{}{"test_string": "Steloj ne estas en ordo."})
+
+				if shouldFail {
+					Expect(err).To(HaveOccurred())
+					returnedErr, ok := err.(resources.ResourceError)
+					Expect(ok).To(BeTrue())
+					Expect(returnedErr.Problem).To(Equal(resources.Unauthorized))
+				} else {
+					Expect(err).NotTo(HaveOccurred())
+				}
+
+			},
+				Entry("Should not fail when performed action on own resource as member", memberAuth, memberResourceID, false),
+				Entry("Should not fail when performed action on domain domain as domain admin", domainScopedAuth, adminResourceID, false),
+				Entry("Should not fail when performed action on different domain resource as cloud admin", adminAuth, otherDomainResourceID, false),
+				Entry("Should fail when performed action on not own resource as member", memberAuth, adminResourceID, true),
+				Entry("Should fail when performed action on not own resource nor domain as domain admin", domainScopedAuth, otherDomainResourceID, true),
+			)
+		})
+
 	})
 
 	Describe("Executing a sequence of operations", func() {

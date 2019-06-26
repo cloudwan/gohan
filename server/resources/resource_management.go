@@ -576,11 +576,12 @@ func getFilterFromPolicy(
 	resourceID string,
 	resourceSchema *schema.Schema,
 	policy *schema.Policy,
+	action string,
 ) transaction.Filter {
 	filter := transaction.IDFilter(resourceID)
 
 	currCond := policy.GetCurrentResourceCondition()
-	extendFilterByTenantAndDomain(resourceSchema, filter, schema.ActionUpdate, currCond, auth)
+	extendFilterByTenantAndDomain(resourceSchema, filter, action, currCond, auth)
 	currCond.AddCustomFilters(resourceSchema, filter, auth)
 
 	return filter
@@ -592,9 +593,10 @@ func checkIfResourceExistsForPolicy(
 	resourceID string,
 	resourceSchema *schema.Schema,
 	policy *schema.Policy,
+	action string,
 	preTransaction transaction.Transaction,
 ) (bool, error) {
-	filter := getFilterFromPolicy(auth, resourceID, resourceSchema, policy)
+	filter := getFilterFromPolicy(auth, resourceID, resourceSchema, policy, action)
 
 	return checkIfResourceExists(context, filter, resourceSchema, preTransaction)
 }
@@ -692,7 +694,7 @@ func CreateResource(
 		return err
 	}
 
-	if !applyFilterToResource(resource.Data(), getFilterFromPolicy(auth, resource.ID(), resourceSchema, policy)) {
+	if !applyFilterToResource(resource.Data(), getFilterFromPolicy(auth, resource.ID(), resourceSchema, policy, schema.ActionUpdate)) {
 		return ResourceError{err, "", Unauthorized}
 	}
 
@@ -830,13 +832,7 @@ func UpdateResource(
 		return err
 	}
 
-	//fillup default values
-	if tenantID, ok := dataMap["tenant_id"]; ok && tenantID != nil {
-		dataMap["tenant_name"] = auth.TenantName()
-	}
-	if domainID, ok := dataMap["domain_id"]; ok && domainID != nil {
-		dataMap["domain_name"] = auth.DomainName()
-	}
+	fillDataMapWithTenantAndDomainNames(auth, dataMap)
 
 	//check policy
 	err = policy.Check(schema.ActionUpdate, auth, dataMap)
@@ -864,7 +860,7 @@ func UpdateResource(
 		func() error {
 			currCond := policy.GetCurrentResourceCondition()
 			tenantIDs, domainIDs := currCond.GetTenantAndDomainFilters(schema.ActionRead, auth)
-			exists, err := checkIfResourceExistsForPolicy(mustGetContext(context), auth, resourceID, resourceSchema, policy, mustGetTransaction(context))
+			exists, err := checkIfResourceExistsForPolicy(mustGetContext(context), auth, resourceID, resourceSchema, policy, schema.ActionUpdate, mustGetTransaction(context))
 			if err != nil {
 				return err
 			}
@@ -1132,28 +1128,11 @@ func DeleteResourceInTransaction(context middleware.Context, resourceSchema *sch
 
 // ActionResource runs custom action on resource
 func ActionResource(context middleware.Context, dataStore db.DB, resourceSchema *schema.Schema,
-	action schema.Action, resourceID string, data interface{},
+	action schema.Action, resourceID string, data map[string]interface{},
 ) error {
 	defer MeasureRequestTime(time.Now(), action.ID, resourceSchema.ID)
 
-	auth := context["auth"].(schema.Authorization)
-	policy, err := LoadPolicy(context, action.ID, strings.Replace(resourceSchema.GetSingleURL(), ":id", resourceID, 1), auth)
-	if err != nil {
-		return err
-	}
-
-	if err := resourceTransactionWithContext(context, dataStore, transaction.GetIsolationLevel(resourceSchema, action.ID),
-		func() error {
-			exists, err := checkIfResourceExistsForPolicy(mustGetContext(context), auth, resourceID, resourceSchema, policy, mustGetTransaction(context))
-			if err != nil {
-				return err
-			}
-			if !exists {
-				return ResourceError{transaction.ErrResourceNotFound, "", Unauthorized}
-			}
-			return nil
-		},
-	); err != nil {
+	if err := checkIfActionIsAllowedForUser(context, dataStore, data, resourceSchema, action, resourceID); err != nil {
 		return err
 	}
 
@@ -1174,7 +1153,7 @@ func ActionResource(context middleware.Context, dataStore db.DB, resourceSchema 
 		}
 	}
 
-	err = extension.HandleEvent(context, environment, action.ID, resourceSchema.ID)
+	err := extension.HandleEvent(context, environment, action.ID, resourceSchema.ID)
 	if err != nil {
 		return err
 	}
@@ -1186,6 +1165,66 @@ func ActionResource(context middleware.Context, dataStore db.DB, resourceSchema 
 	}
 
 	return fmt.Errorf("no response")
+}
+
+func checkIfActionIsAllowedForUser(context middleware.Context, dataStore db.DB, dataMap map[string]interface{},
+	resourceSchema *schema.Schema, action schema.Action, resourceID string) error {
+	auth := context["auth"].(schema.Authorization)
+	policyPath, isPlural := getResourcePathFromCustomAction(action, resourceSchema, resourceID)
+	policy, err := LoadPolicy(context, action.ID, policyPath, auth)
+
+	if err != nil {
+		return err
+	}
+
+	fillDataMapWithTenantAndDomainNames(auth, dataMap)
+
+	err = policy.Check(action.ID, auth, dataMap)
+	if err != nil {
+		return ResourceError{err, err.Error(), Unauthorized}
+	}
+
+	currCond := policy.GetCurrentResourceCondition()
+	err = currCond.ApplyPropertyConditionFilter(action.ID, dataMap, nil)
+	if err != nil {
+		return ResourceError{err, err.Error(), Unauthorized}
+	}
+
+	if isPlural {
+		return nil
+	}
+
+	if err := resourceTransactionWithContext(context, dataStore, transaction.GetIsolationLevel(resourceSchema, action.ID),
+		func() error {
+			exists, err := checkIfResourceExistsForPolicy(mustGetContext(context), auth, resourceID, resourceSchema, policy, action.ID, mustGetTransaction(context))
+			if err != nil {
+				return err
+			}
+			if !exists {
+				return ResourceError{transaction.ErrResourceNotFound, "", Unauthorized}
+			}
+			return nil
+		},
+	); err != nil {
+		return err
+	}
+	return nil
+}
+
+func fillDataMapWithTenantAndDomainNames(auth schema.Authorization, dataMap map[string]interface{}) {
+	if tenantID, ok := dataMap["tenant_id"]; ok && tenantID != nil {
+		dataMap["tenant_name"] = auth.TenantName()
+	}
+	if domainID, ok := dataMap["domain_id"]; ok && domainID != nil {
+		dataMap["domain_name"] = auth.DomainName()
+	}
+}
+
+func getResourcePathFromCustomAction(action schema.Action, resourceSchema *schema.Schema, resourceID string) (string, bool) {
+	if strings.Contains(action.Path, ":id") {
+		return strings.Replace(resourceSchema.GetSingleURL(), ":id", resourceID, 1), false
+	}
+	return resourceSchema.GetPluralURL(), true
 }
 
 func validateAttachment(
