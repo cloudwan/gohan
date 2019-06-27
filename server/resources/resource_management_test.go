@@ -50,6 +50,7 @@ var _ = Describe("Resource manager", func() {
 		adminAuth                  schema.Authorization
 		memberAuth                 schema.Authorization
 		domainScopedAuth           schema.Authorization
+		domainAdminAuth            schema.Authorization
 		auth                       schema.Authorization
 		context                    middleware.Context
 		schemaID                   string
@@ -86,6 +87,10 @@ var _ = Describe("Resource manager", func() {
 	domainScopedAuth = schema.NewAuthorizationBuilder().
 		WithDomain(domainA).
 		WithRoleIDs("Member").
+		BuildScopedToDomain()
+	domainAdminAuth = schema.NewAuthorizationBuilder().
+		WithDomain(domainA).
+		WithRoleIDs("admin").
 		BuildScopedToDomain()
 
 	BeforeEach(func() {
@@ -2146,10 +2151,25 @@ var _ = Describe("Resource manager", func() {
 	})
 
 	Describe("Running an action on a resource", func() {
+		inputSchema := map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"message": map[string]interface{}{
+					"type": "string",
+				},
+				"delay": map[string]interface{}{
+					"type": "string",
+				},
+			},
+		}
+
 		var (
-			fakeAction             schema.Action
-			fakeActionWithoutInput schema.Action
-			customAction           schema.Action
+			fakeAction               = schema.NewAction("fake_action", "GET", "/:id/whatever", "", "", inputSchema, nil, nil, false)
+			fakeActionWithoutInput   = schema.NewAction("fake_action", "GET", "/:id/whatever", "", "", nil, nil, nil, false)
+			singularIsOwnerAction    = schema.NewAction("singular_is_owner", "POST", "/:id/singular_is_owner", "", "", nil, nil, nil, false)
+			singularIsNotOwnerAction = schema.NewAction("singular_public", "POST", "/:id/singular_public", "", "", nil, nil, nil, false)
+			pluralPublicAction       = schema.NewAction("plural_member", "POST", "/plural_member", "", "", nil, nil, nil, false)
+			pluralAdminAction        = schema.NewAction("plural_admin", "POST", "/plural_admin", "", "", nil, nil, nil, false)
 		)
 
 		BeforeEach(func() {
@@ -2157,21 +2177,7 @@ var _ = Describe("Resource manager", func() {
 			schemaID = "test"
 			currentSchema, ok = manager.Schema(schemaID)
 			Expect(ok).To(BeTrue())
-			inputSchema := map[string]interface{}{
-				"type": "object",
-				"properties": map[string]interface{}{
-					"message": map[string]interface{}{
-						"type": "string",
-					},
-					"delay": map[string]interface{}{
-						"type": "string",
-					},
-				},
-			}
 			setupAndCreateTestResources()
-			fakeAction = schema.NewAction("fake_action", "GET", "/:id/whatever", "", "", inputSchema, nil, nil, false)
-			fakeActionWithoutInput = schema.NewAction("fake_action", "GET", "/:id/whatever", "", "", nil, nil, nil, false)
-			customAction = schema.NewAction("custom_action", "POST", "/:id/custom_action", "", "", nil, nil, nil, false)
 		})
 
 		Describe("With extension", func() {
@@ -2206,18 +2212,18 @@ var _ = Describe("Resource manager", func() {
 			})
 		})
 
-		Context("Checking performing custom action on actions of single resources", func() {
-			addAuthAndEmptyResponseToContext := func(auth schema.Authorization) {
-				context["tenant_id"] = auth.TenantID()
-				context["domain_id"] = auth.DomainID()
-				context["auth"] = auth
-				context["response"] = ""
-			}
+		addAuthAndEmptyResponseToContext := func(auth schema.Authorization) {
+			context["tenant_id"] = auth.TenantID()
+			context["domain_id"] = auth.DomainID()
+			context["auth"] = auth
+			context["response"] = ""
+		}
 
-			DescribeTable("Performing action", func(auth schema.Authorization, resourceID string, shouldFail bool) {
+		Context("Custom action isolation tests", func() {
+			DescribeTable("Performing action", func(auth schema.Authorization, resourceID string, action schema.Action, shouldFail bool) {
 				addAuthAndEmptyResponseToContext(auth)
 				err := resources.ActionResource(
-					context, testDB, currentSchema, customAction, resourceID,
+					context, testDB, currentSchema, action, resourceID,
 					map[string]interface{}{"test_string": "Steloj ne estas en ordo."})
 
 				if shouldFail {
@@ -2230,11 +2236,41 @@ var _ = Describe("Resource manager", func() {
 				}
 
 			},
-				Entry("Should not fail when performed action on own resource as member", memberAuth, memberResourceID, false),
-				Entry("Should not fail when performed action on domain domain as domain admin", domainScopedAuth, adminResourceID, false),
-				Entry("Should not fail when performed action on different domain resource as cloud admin", adminAuth, otherDomainResourceID, false),
-				Entry("Should fail when performed action on not own resource as member", memberAuth, adminResourceID, true),
-				Entry("Should fail when performed action on not own resource nor domain as domain admin", domainScopedAuth, otherDomainResourceID, true),
+				Entry("Should not fail when performed action matched to policy with is_owner on own resource as member",
+					memberAuth, memberResourceID, singularIsOwnerAction, false),
+				Entry("Should not fail when performed action matched to policy with is_owner_domain on domain domain as domain admin",
+					domainAdminAuth, adminResourceID, singularIsOwnerAction, false),
+				Entry("Should not fail when performed action on different domain resource as cloud admin",
+					adminAuth, otherDomainResourceID, singularIsOwnerAction, false),
+				Entry("Should fail when performed action matched to policy with is_owner on not own resource as member",
+					memberAuth, adminResourceID, singularIsOwnerAction, true),
+				Entry("Should fail when performed action matched to policy with is_owner_domain on not own resource nor domain as domain admin",
+					domainAdminAuth, otherDomainResourceID, singularIsOwnerAction, true),
+
+				Entry("Should not fail when performed action matched to policy without is_owner on own resource as member",
+					memberAuth, memberResourceID, singularIsNotOwnerAction, false),
+				Entry("Should not fail when performed action matched to policy without is_owner on domain domain as domain admin",
+					domainAdminAuth, adminResourceID, singularIsNotOwnerAction, false),
+				Entry("Should not fail when performed action on different domain resource as cloud admin",
+					adminAuth, otherDomainResourceID, singularIsNotOwnerAction, false),
+				Entry("Should not fail when performed action matched to policy without is_owner on not own resource as member",
+					memberAuth, adminResourceID, singularIsNotOwnerAction, false),
+				Entry("Should not fail when performed action matched to policy without is_owner_domain on not own resource nor domain as domain admin",
+					domainAdminAuth, otherDomainResourceID, singularIsNotOwnerAction, false),
+
+				Entry("Should not fail when performed public action as member (action on plural resource)",
+					memberAuth, "", pluralPublicAction, false),
+				Entry("Should not fail when performed public action as domain admin (action on plural resource)",
+					domainAdminAuth, "", pluralPublicAction, false),
+				Entry("Should not fail when performed public action as cloud admin (action on plural resource)",
+					adminAuth, "", pluralPublicAction, false),
+
+				Entry("Should fail when performed admin action as member (action on plural resource)",
+					memberAuth, "", pluralAdminAction, true),
+				Entry("Should not fail when performed admin action as domain admin (action on plural resource)",
+					domainAdminAuth, "", pluralAdminAction, false),
+				Entry("Should not fail when performed admin action as cloud admin (action on plural resource)",
+					adminAuth, "", pluralAdminAction, false),
 			)
 		})
 
