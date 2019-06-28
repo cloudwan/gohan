@@ -31,6 +31,7 @@ import (
 	"github.com/cloudwan/gohan/extension/goplugin/test_data/ext_good/test"
 	"github.com/cloudwan/gohan/schema"
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 )
 
@@ -150,6 +151,19 @@ var _ = Describe("Schemas", func() {
 				}).NotTo(Panic())
 			})
 		})
+	})
+
+	Context("Metadata", func() {
+		DescribeTable("Should get list of strings", func(key string, value interface{}) {
+			metadata := testSchema.Metadata()
+			Expect(metadata).To(HaveKeyWithValue(key, value))
+		},
+			Entry("list of strings", "metadata_string_list", []interface{}{"hello", "world"}),
+			Entry("bool", "metadata_bool", false),
+			Entry("string", "metadata_string", "hello"),
+			Entry("float", "metadata_float", float64(321.67)),
+			Entry("int", "metadata_int", 42),
+		)
 	})
 
 	Context("Properties", func() {

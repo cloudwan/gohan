@@ -651,6 +651,10 @@ func (schema *Schema) Count(filter goext.Filter, requestContext goext.Context) (
 	return tx.Count(goext.GetContext(requestContext), schema, filter)
 }
 
+func (schema *Schema) Metadata() map[string]interface{} {
+	return schema.raw.Metadata
+}
+
 // NewSchema allocates a new Schema
 func NewSchema(env IEnvironment, raw *gohan_schema.Schema) goext.ISchema {
 	return &Schema{env: env, raw: raw}

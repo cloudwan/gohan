@@ -271,6 +271,9 @@ type ISchema interface {
 
 	// Extends return list of schema_ids which given schema extends
 	Extends() []SchemaID
+
+	// Metadata returns metadata of schema
+	Metadata() map[string]interface{}
 }
 
 // Property represents schema property
