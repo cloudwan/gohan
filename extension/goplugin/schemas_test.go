@@ -154,7 +154,7 @@ var _ = Describe("Schemas", func() {
 	})
 
 	Context("Metadata", func() {
-		DescribeTable("Should get list of strings", func(key string, value interface{}) {
+		DescribeTable("Should get metadata entries", func(key string, value interface{}) {
 			metadata := testSchema.Metadata()
 			Expect(metadata).To(HaveKeyWithValue(key, value))
 		},
