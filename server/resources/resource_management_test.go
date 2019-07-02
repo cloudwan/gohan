@@ -2169,23 +2169,22 @@ var _ = Describe("Resource manager", func() {
 
 	Describe("Running an action on a resource", func() {
 		var (
-			inputSchema      map[string]interface{}
-			fake             schema.Action
-			fakeWithoutInput schema.Action
-			singular         schema.Action
-			singularPublic   schema.Action
-			pluralPublic     schema.Action
-			pluralAdmin      schema.Action
+			inputSchema            map[string]interface{}
+			fakeAction             schema.Action
+			fakeActionWithoutInput schema.Action
+			singularAction         schema.Action
+			singularPublicAction   schema.Action
+			pluralPublicAction     schema.Action
+			pluralAdminAction      schema.Action
 		)
 
 		setupCustomActions := func() {
-			fake = schema.NewAction("fake_action", "GET", "/:id/whatever", "", "", inputSchema, nil, nil, false)
-			fakeWithoutInput = schema.NewAction("fake_action", "GET", "/:id/whatever", "", "", nil, nil, nil, false)
-			singular = schema.NewAction("singular", "POST", "/:id/singular", "", "", nil, nil, nil, false)
-			singularPublic = schema.NewAction("singular_public", "POST", "/:id/singular_public", "", "", nil, nil, nil, false)
-			pluralPublic = schema.NewAction("plural_member", "POST", "/plural_member", "", "", nil, nil, nil, false)
-			pluralAdmin = schema.NewAction("plural_admin", "POST", "/plural_admin", "", "", nil, nil, nil, false)
-
+			fakeAction = schema.NewAction("fake_action", "GET", "/:id/whatever", "", "", inputSchema, nil, nil, false)
+			fakeActionWithoutInput = schema.NewAction("fake_action", "GET", "/:id/whatever", "", "", nil, nil, nil, false)
+			singularAction = schema.NewAction("singular", "POST", "/:id/singular", "", "", nil, nil, nil, false)
+			singularPublicAction = schema.NewAction("singular_public", "POST", "/:id/singular_public", "", "", nil, nil, nil, false)
+			pluralPublicAction = schema.NewAction("plural_member", "POST", "/plural_member", "", "", nil, nil, nil, false)
+			pluralAdminAction = schema.NewAction("plural_admin", "POST", "/plural_admin", "", "", nil, nil, nil, false)
 		}
 
 		BeforeEach(func() {
@@ -2215,7 +2214,7 @@ var _ = Describe("Resource manager", func() {
 
 			It("Should run the extension", func() {
 				err := resources.ActionResource(
-					context, testDB, currentSchema, fake, adminResourceID,
+					context, testDB, currentSchema, fakeAction, adminResourceID,
 					map[string]interface{}{"test_string": "Steloj ne estas en ordo."})
 				Expect(err).To(HaveOccurred())
 				extErr, ok := err.(extension.Error)
@@ -2228,7 +2227,7 @@ var _ = Describe("Resource manager", func() {
 			Context("Without input schema", func() {
 				It("Should run the extension", func() {
 					err := resources.ActionResource(
-						context, testDB, currentSchema, fakeWithoutInput, adminResourceID,
+						context, testDB, currentSchema, fakeActionWithoutInput, adminResourceID,
 						map[string]interface{}{"test_string": "Steloj ne estas en ordo."})
 					Expect(err).To(HaveOccurred())
 					extErr, ok := err.(extension.Error)
@@ -2268,40 +2267,40 @@ var _ = Describe("Resource manager", func() {
 
 			},
 				Entry("Should not fail when performed action matched to policy with is_owner on own resource as member",
-					createAuthToken(tenantMemberAuthScope), memberResourceID, &singular, NoProblem, false),
+					createAuthToken(tenantMemberAuthScope), memberResourceID, &singularAction, NoProblem, false),
 				Entry("Should not fail when performed action matched to policy with is_owner_domain on domain domain as domain admin",
-					createAuthToken(domainAdminAuthScope), adminResourceID, &singular, NoProblem, false),
+					createAuthToken(domainAdminAuthScope), adminResourceID, &singularAction, NoProblem, false),
 				Entry("Should not fail when performed action on different domain resource as cloud admin",
-					createAuthToken(superAdminAuthScope), otherDomainResourceID, &singular, NoProblem, false),
+					createAuthToken(superAdminAuthScope), otherDomainResourceID, &singularAction, NoProblem, false),
 				Entry("Should fail when performed action matched to policy with is_owner on not own resource as member",
-					createAuthToken(tenantMemberAuthScope), adminResourceID, &singular, resources.NotFound, true),
+					createAuthToken(tenantMemberAuthScope), adminResourceID, &singularAction, resources.NotFound, true),
 				Entry("Should fail when performed action matched to policy with is_owner_domain on not own resource nor domain as domain admin",
-					createAuthToken(domainAdminAuthScope), otherDomainResourceID, &singular, resources.NotFound, true),
+					createAuthToken(domainAdminAuthScope), otherDomainResourceID, &singularAction, resources.NotFound, true),
 
 				Entry("Should not fail when performed action matched to policy without is_owner on own resource as member",
-					createAuthToken(tenantMemberAuthScope), memberResourceID, &singularPublic, NoProblem, false),
+					createAuthToken(tenantMemberAuthScope), memberResourceID, &singularPublicAction, NoProblem, false),
 				Entry("Should not fail when performed action matched to policy without is_owner on domain domain as domain admin",
-					createAuthToken(domainAdminAuthScope), adminResourceID, &singularPublic, NoProblem, false),
+					createAuthToken(domainAdminAuthScope), adminResourceID, &singularPublicAction, NoProblem, false),
 				Entry("Should not fail when performed action on different domain resource as cloud admin",
-					createAuthToken(superAdminAuthScope), otherDomainResourceID, &singularPublic, NoProblem, false),
+					createAuthToken(superAdminAuthScope), otherDomainResourceID, &singularPublicAction, NoProblem, false),
 				Entry("Should not fail when performed action matched to policy without is_owner on not own resource as member",
-					createAuthToken(tenantMemberAuthScope), adminResourceID, &singularPublic, NoProblem, false),
+					createAuthToken(tenantMemberAuthScope), adminResourceID, &singularPublicAction, NoProblem, false),
 				Entry("Should not fail when performed action matched to policy without is_owner_domain on not own resource nor domain as domain admin",
-					createAuthToken(domainAdminAuthScope), otherDomainResourceID, &singularPublic, NoProblem, false),
+					createAuthToken(domainAdminAuthScope), otherDomainResourceID, &singularPublicAction, NoProblem, false),
 
 				Entry("Should not fail when performed public action as member (action on plural resource)",
-					createAuthToken(tenantMemberAuthScope), "", &pluralPublic, NoProblem, false),
+					createAuthToken(tenantMemberAuthScope), "", &pluralPublicAction, NoProblem, false),
 				Entry("Should not fail when performed public action as domain admin (action on plural resource)",
-					createAuthToken(domainAdminAuthScope), "", &pluralPublic, NoProblem, false),
+					createAuthToken(domainAdminAuthScope), "", &pluralPublicAction, NoProblem, false),
 				Entry("Should not fail when performed public action as cloud admin (action on plural resource)",
-					createAuthToken(superAdminAuthScope), "", &pluralPublic, NoProblem, false),
+					createAuthToken(superAdminAuthScope), "", &pluralPublicAction, NoProblem, false),
 
 				Entry("Should fail when performed admin action as member (action on plural resource)",
-					createAuthToken(tenantMemberAuthScope), "", &pluralAdmin, resources.Unauthorized, true),
+					createAuthToken(tenantMemberAuthScope), "", &pluralAdminAction, resources.Unauthorized, true),
 				Entry("Should not fail when performed admin action as domain admin (action on plural resource)",
-					createAuthToken(domainAdminAuthScope), "", &pluralAdmin, NoProblem, false),
+					createAuthToken(domainAdminAuthScope), "", &pluralAdminAction, NoProblem, false),
 				Entry("Should not fail when performed admin action as cloud admin (action on plural resource)",
-					createAuthToken(superAdminAuthScope), "", &pluralAdmin, NoProblem, false),
+					createAuthToken(superAdminAuthScope), "", &pluralAdminAction, NoProblem, false),
 			)
 		})
 
