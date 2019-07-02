@@ -38,11 +38,16 @@ import (
 )
 
 var _ = Describe("Resource manager", func() {
+	type AuthScope int
 	const (
-		adminResourceID       = "6660fbf8-ca60-4cb0-a42e-9a913beafbaf"
-		memberResourceID      = "6660fbf8-ca60-4cb0-a42e-9a913beafbae"
-		otherTenantResourceID = "6660fbf8-ca60-4cb0-a42e-9a913beafba0"
-		otherDomainResourceID = "6660fbf8-ca60-4cb0-a42e-9a913beafbad"
+		adminResourceID                 = "6660fbf8-ca60-4cb0-a42e-9a913beafbaf"
+		memberResourceID                = "6660fbf8-ca60-4cb0-a42e-9a913beafbae"
+		memberResourceID2               = "6660fbf8-ca60-4cb0-a42e-9a913beafba0"
+		otherDomainResourceID           = "6660fbf8-ca60-4cb0-a42e-9a913beafbad"
+		tenantMemberAuthScope AuthScope = iota
+		domainMemberAuthScope
+		domainAdminAuthScope
+		superAdminAuthScope
 	)
 
 	var (
@@ -50,7 +55,6 @@ var _ = Describe("Resource manager", func() {
 		adminAuth                  schema.Authorization
 		memberAuth                 schema.Authorization
 		domainScopedAuth           schema.Authorization
-		domainAdminAuth            schema.Authorization
 		auth                       schema.Authorization
 		context                    middleware.Context
 		schemaID                   string
@@ -70,32 +74,45 @@ var _ = Describe("Resource manager", func() {
 		fakeIdentity               middleware.IdentityService
 	)
 
-	domainA := schema.Domain{
-		ID:   domainAID,
-		Name: "domainA",
-	}
+	createAuthToken := func(scope AuthScope) schema.Authorization {
+		domainA := schema.Domain{
+			ID:   domainAID,
+			Name: "domainA",
+		}
 
-	adminAuth = schema.NewAuthorizationBuilder().
-		WithTenant(schema.Tenant{ID: adminTenantID, Name: "admin"}).
-		WithRoleIDs("admin").
-		BuildAdmin()
-	memberAuth = schema.NewAuthorizationBuilder().
-		WithTenant(schema.Tenant{ID: memberTenantID, Name: "demo"}).
-		WithDomain(domainA).
-		WithRoleIDs("Member").
-		BuildScopedToTenant()
-	domainScopedAuth = schema.NewAuthorizationBuilder().
-		WithDomain(domainA).
-		WithRoleIDs("Member").
-		BuildScopedToDomain()
-	domainAdminAuth = schema.NewAuthorizationBuilder().
-		WithDomain(domainA).
-		WithRoleIDs("admin").
-		BuildScopedToDomain()
+		switch scope {
+		case tenantMemberAuthScope:
+			return schema.NewAuthorizationBuilder().
+				WithTenant(schema.Tenant{ID: memberTenantID, Name: "demo"}).
+				WithDomain(domainA).
+				WithRoleIDs("Member").
+				BuildScopedToTenant()
+		case domainMemberAuthScope:
+			return schema.NewAuthorizationBuilder().
+				WithDomain(domainA).
+				WithRoleIDs("Member").
+				BuildScopedToDomain()
+		case domainAdminAuthScope:
+			return schema.NewAuthorizationBuilder().
+				WithDomain(domainA).
+				WithRoleIDs("admin").
+				BuildScopedToDomain()
+		case superAdminAuthScope:
+			return schema.NewAuthorizationBuilder().
+				WithTenant(schema.Tenant{ID: adminTenantID, Name: "admin"}).
+				WithRoleIDs("admin").
+				BuildAdmin()
+		}
+
+		return nil
+	}
 
 	BeforeEach(func() {
 		manager = schema.GetManager()
 		ctx = context_pkg.Background()
+		memberAuth = createAuthToken(tenantMemberAuthScope)
+		adminAuth = createAuthToken(superAdminAuthScope)
+		domainScopedAuth = createAuthToken(domainMemberAuthScope)
 
 		auth = adminAuth
 		context = middleware.Context{
@@ -560,7 +577,7 @@ var _ = Describe("Resource manager", func() {
 						schemaID = "blacklisted_property_resource"
 
 						memberResourceDataTrueBool = map[string]interface{}{
-							"id":           otherTenantResourceID,
+							"id":           memberResourceID2,
 							"tenant_id":    memberTenantID,
 							"domain_id":    domainAID,
 							"test_string":  "Mi estas la pordo, mi estas la sxlosilo.",
@@ -2151,29 +2168,40 @@ var _ = Describe("Resource manager", func() {
 	})
 
 	Describe("Running an action on a resource", func() {
-		inputSchema := map[string]interface{}{
-			"type": "object",
-			"properties": map[string]interface{}{
-				"message": map[string]interface{}{
-					"type": "string",
-				},
-				"delay": map[string]interface{}{
-					"type": "string",
-				},
-			},
-		}
-
 		var (
-			fakeAction               = schema.NewAction("fake_action", "GET", "/:id/whatever", "", "", inputSchema, nil, nil, false)
-			fakeActionWithoutInput   = schema.NewAction("fake_action", "GET", "/:id/whatever", "", "", nil, nil, nil, false)
-			singularIsOwnerAction    = schema.NewAction("singular_is_owner", "POST", "/:id/singular_is_owner", "", "", nil, nil, nil, false)
-			singularIsNotOwnerAction = schema.NewAction("singular_public", "POST", "/:id/singular_public", "", "", nil, nil, nil, false)
-			pluralPublicAction       = schema.NewAction("plural_member", "POST", "/plural_member", "", "", nil, nil, nil, false)
-			pluralAdminAction        = schema.NewAction("plural_admin", "POST", "/plural_admin", "", "", nil, nil, nil, false)
+			inputSchema      map[string]interface{}
+			fake             schema.Action
+			fakeWithoutInput schema.Action
+			singular         schema.Action
+			singularPublic   schema.Action
+			pluralPublic     schema.Action
+			pluralAdmin      schema.Action
 		)
+
+		setupCustomActions := func() {
+			fake = schema.NewAction("fake_action", "GET", "/:id/whatever", "", "", inputSchema, nil, nil, false)
+			fakeWithoutInput = schema.NewAction("fake_action", "GET", "/:id/whatever", "", "", nil, nil, nil, false)
+			singular = schema.NewAction("singular", "POST", "/:id/singular", "", "", nil, nil, nil, false)
+			singularPublic = schema.NewAction("singular_public", "POST", "/:id/singular_public", "", "", nil, nil, nil, false)
+			pluralPublic = schema.NewAction("plural_member", "POST", "/plural_member", "", "", nil, nil, nil, false)
+			pluralAdmin = schema.NewAction("plural_admin", "POST", "/plural_admin", "", "", nil, nil, nil, false)
+
+		}
 
 		BeforeEach(func() {
 			var ok bool
+			inputSchema = map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"message": map[string]interface{}{
+						"type": "string",
+					},
+					"delay": map[string]interface{}{
+						"type": "string",
+					},
+				},
+			}
+			setupCustomActions()
 			schemaID = "test"
 			currentSchema, ok = manager.Schema(schemaID)
 			Expect(ok).To(BeTrue())
@@ -2187,7 +2215,7 @@ var _ = Describe("Resource manager", func() {
 
 			It("Should run the extension", func() {
 				err := resources.ActionResource(
-					context, testDB, currentSchema, fakeAction, adminResourceID,
+					context, testDB, currentSchema, fake, adminResourceID,
 					map[string]interface{}{"test_string": "Steloj ne estas en ordo."})
 				Expect(err).To(HaveOccurred())
 				extErr, ok := err.(extension.Error)
@@ -2200,7 +2228,7 @@ var _ = Describe("Resource manager", func() {
 			Context("Without input schema", func() {
 				It("Should run the extension", func() {
 					err := resources.ActionResource(
-						context, testDB, currentSchema, fakeActionWithoutInput, adminResourceID,
+						context, testDB, currentSchema, fakeWithoutInput, adminResourceID,
 						map[string]interface{}{"test_string": "Steloj ne estas en ordo."})
 					Expect(err).To(HaveOccurred())
 					extErr, ok := err.(extension.Error)
@@ -2220,57 +2248,60 @@ var _ = Describe("Resource manager", func() {
 		}
 
 		Context("Custom action isolation tests", func() {
-			DescribeTable("Performing action", func(auth schema.Authorization, resourceID string, action schema.Action, shouldFail bool) {
+			var NoProblem resources.ResourceProblem = -1
+
+			DescribeTable("Performing action", func(auth schema.Authorization, resourceID string, action *schema.Action,
+				expectedResourceProblem resources.ResourceProblem, shouldFail bool) {
 				addAuthAndEmptyResponseToContext(auth)
 				err := resources.ActionResource(
-					context, testDB, currentSchema, action, resourceID,
-					map[string]interface{}{"test_string": "Steloj ne estas en ordo."})
+					context, testDB, currentSchema, *action, resourceID,
+					map[string]interface{}{"test_string": "test string"})
 
 				if shouldFail {
 					Expect(err).To(HaveOccurred())
 					returnedErr, ok := err.(resources.ResourceError)
 					Expect(ok).To(BeTrue())
-					Expect(returnedErr.Problem).To(Equal(resources.Unauthorized))
+					Expect(returnedErr.Problem).To(Equal(expectedResourceProblem))
 				} else {
 					Expect(err).NotTo(HaveOccurred())
 				}
 
 			},
 				Entry("Should not fail when performed action matched to policy with is_owner on own resource as member",
-					memberAuth, memberResourceID, singularIsOwnerAction, false),
+					createAuthToken(tenantMemberAuthScope), memberResourceID, &singular, NoProblem, false),
 				Entry("Should not fail when performed action matched to policy with is_owner_domain on domain domain as domain admin",
-					domainAdminAuth, adminResourceID, singularIsOwnerAction, false),
+					createAuthToken(domainAdminAuthScope), adminResourceID, &singular, NoProblem, false),
 				Entry("Should not fail when performed action on different domain resource as cloud admin",
-					adminAuth, otherDomainResourceID, singularIsOwnerAction, false),
+					createAuthToken(superAdminAuthScope), otherDomainResourceID, &singular, NoProblem, false),
 				Entry("Should fail when performed action matched to policy with is_owner on not own resource as member",
-					memberAuth, adminResourceID, singularIsOwnerAction, true),
+					createAuthToken(tenantMemberAuthScope), adminResourceID, &singular, resources.NotFound, true),
 				Entry("Should fail when performed action matched to policy with is_owner_domain on not own resource nor domain as domain admin",
-					domainAdminAuth, otherDomainResourceID, singularIsOwnerAction, true),
+					createAuthToken(domainAdminAuthScope), otherDomainResourceID, &singular, resources.NotFound, true),
 
 				Entry("Should not fail when performed action matched to policy without is_owner on own resource as member",
-					memberAuth, memberResourceID, singularIsNotOwnerAction, false),
+					createAuthToken(tenantMemberAuthScope), memberResourceID, &singularPublic, NoProblem, false),
 				Entry("Should not fail when performed action matched to policy without is_owner on domain domain as domain admin",
-					domainAdminAuth, adminResourceID, singularIsNotOwnerAction, false),
+					createAuthToken(domainAdminAuthScope), adminResourceID, &singularPublic, NoProblem, false),
 				Entry("Should not fail when performed action on different domain resource as cloud admin",
-					adminAuth, otherDomainResourceID, singularIsNotOwnerAction, false),
+					createAuthToken(superAdminAuthScope), otherDomainResourceID, &singularPublic, NoProblem, false),
 				Entry("Should not fail when performed action matched to policy without is_owner on not own resource as member",
-					memberAuth, adminResourceID, singularIsNotOwnerAction, false),
+					createAuthToken(tenantMemberAuthScope), adminResourceID, &singularPublic, NoProblem, false),
 				Entry("Should not fail when performed action matched to policy without is_owner_domain on not own resource nor domain as domain admin",
-					domainAdminAuth, otherDomainResourceID, singularIsNotOwnerAction, false),
+					createAuthToken(domainAdminAuthScope), otherDomainResourceID, &singularPublic, NoProblem, false),
 
 				Entry("Should not fail when performed public action as member (action on plural resource)",
-					memberAuth, "", pluralPublicAction, false),
+					createAuthToken(tenantMemberAuthScope), "", &pluralPublic, NoProblem, false),
 				Entry("Should not fail when performed public action as domain admin (action on plural resource)",
-					domainAdminAuth, "", pluralPublicAction, false),
+					createAuthToken(domainAdminAuthScope), "", &pluralPublic, NoProblem, false),
 				Entry("Should not fail when performed public action as cloud admin (action on plural resource)",
-					adminAuth, "", pluralPublicAction, false),
+					createAuthToken(superAdminAuthScope), "", &pluralPublic, NoProblem, false),
 
 				Entry("Should fail when performed admin action as member (action on plural resource)",
-					memberAuth, "", pluralAdminAction, true),
+					createAuthToken(tenantMemberAuthScope), "", &pluralAdmin, resources.Unauthorized, true),
 				Entry("Should not fail when performed admin action as domain admin (action on plural resource)",
-					domainAdminAuth, "", pluralAdminAction, false),
+					createAuthToken(domainAdminAuthScope), "", &pluralAdmin, NoProblem, false),
 				Entry("Should not fail when performed admin action as cloud admin (action on plural resource)",
-					adminAuth, "", pluralAdminAction, false),
+					createAuthToken(superAdminAuthScope), "", &pluralAdmin, NoProblem, false),
 			)
 		})
 

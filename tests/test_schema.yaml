@@ -99,17 +99,17 @@ extensions:
 networks: []
 
 policies:
-- action: singular_is_owner
+- action: singular
   effect: allow
-  id: singular_is_owner
+  id: singular_member
   resource:
     path: /v2.0/tests
   principal: Member
   condition:
     - is_owner
-- action: singular_is_owner
+- action: singular
   effect: allow
-  id: singular_is_owner
+  id: singular_domain_admin
   resource:
     path: /v2.0/tests
   scope:

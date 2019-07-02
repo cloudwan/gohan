@@ -694,7 +694,7 @@ func CreateResource(
 		return err
 	}
 
-	if !applyFilterToResource(resource.Data(), getFilterFromPolicy(auth, resource.ID(), resourceSchema, policy, schema.ActionUpdate)) {
+	if !applyFilterToResource(resource.Data(), getFilterFromPolicy(auth, resource.ID(), resourceSchema, policy, schema.ActionCreate)) {
 		return ResourceError{err, "", Unauthorized}
 	}
 
@@ -1201,7 +1201,7 @@ func checkIfActionIsAllowedForUser(context middleware.Context, dataStore db.DB, 
 				return err
 			}
 			if !exists {
-				return ResourceError{transaction.ErrResourceNotFound, "", Unauthorized}
+				return ResourceError{transaction.ErrResourceNotFound, "", NotFound}
 			}
 			return nil
 		},
