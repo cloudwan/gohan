@@ -1494,6 +1494,20 @@ func (mr *MockISchemaMockRecorder) LockListRaw(arg0, arg1, arg2, arg3 interface{
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockListRaw", reflect.TypeOf((*MockISchema)(nil).LockListRaw), arg0, arg1, arg2, arg3)
 }
 
+// Metadata mocks base method
+func (m *MockISchema) Metadata() map[string]interface{} {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Metadata")
+	ret0, _ := ret[0].(map[string]interface{})
+	return ret0
+}
+
+// Metadata indicates an expected call of Metadata
+func (mr *MockISchemaMockRecorder) Metadata() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Metadata", reflect.TypeOf((*MockISchema)(nil).Metadata))
+}
+
 // Properties mocks base method
 func (m *MockISchema) Properties() map[string]Property {
 	m.ctrl.T.Helper()
