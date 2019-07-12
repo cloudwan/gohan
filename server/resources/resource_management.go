@@ -239,7 +239,7 @@ func GetResourcesInTransaction(context middleware.Context, resourceSchema *schem
 		return err
 	}
 
-	var o *transaction.ViewOptions
+	o := &transaction.ViewOptions{Details: true}
 	r, ok := context["http_request"].(*http.Request)
 	if ok {
 		o = listOptionsFromQueryParameter(r.URL.Query())
@@ -480,7 +480,7 @@ func GetSingleResource(context middleware.Context, dataStore db.DB, resourceSche
 //GetSingleResourceInTransaction get resource in single transaction
 func GetSingleResourceInTransaction(context middleware.Context, resourceSchema *schema.Schema, resourceID string, tenantIDs []string, domainIDs []string) (err error) {
 	defer MeasureRequestTime(time.Now(), "get.single.in_tx", resourceSchema.ID)
-	var options *transaction.ViewOptions
+	options := &transaction.ViewOptions{Details: true}
 	r, ok := context["http_request"].(*http.Request)
 	if ok {
 		options = listOptionsFromQueryParameter(r.URL.Query())
@@ -1270,7 +1270,7 @@ func validateAttachmentRelation(
 	extendFilterByTenantAndDomain(relatedSchema, filter, schema.ActionRead, otherCond, auth)
 	otherCond.AddCustomFilters(relatedSchema, filter, auth)
 
-	options := &transaction.ViewOptions{}
+	options := &transaction.ViewOptions{Details: true}
 
 	mainTransaction := mustGetTransaction(context)
 	relatedRes, err := mainTransaction.Fetch(mustGetContext(context), relatedSchema, filter, options)

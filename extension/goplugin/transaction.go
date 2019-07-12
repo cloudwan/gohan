@@ -160,7 +160,14 @@ func (t *Transaction) List(ctx context.Context, schema goext.ISchema, filter goe
 	if err := ctx.Err(); err != nil {
 		return nil, 0, ctx.Err()
 	}
-	data, _, err := t.tx.List(context.Background(), t.findRawSchema(schemaID), transaction.Filter(filter), nil, (*pagination.Paginator)(paginator))
+	var o *transaction.ViewOptions
+	if listOptions != nil {
+		o = &transaction.ViewOptions{
+			Details: listOptions.Details,
+			Fields: listOptions.Fields,
+		}
+	}
+	data, _, err := t.tx.List(context.Background(), t.findRawSchema(schemaID), transaction.Filter(filter), o, (*pagination.Paginator)(paginator))
 	if err != nil {
 		return nil, 0, err
 	}

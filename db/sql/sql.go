@@ -904,7 +904,7 @@ func listContextHelper(s *schema.Schema, filter transaction.Filter, options *tra
 	sc := &selectContext{
 		schema:    s,
 		filter:    filter,
-		join:      true,
+		join:      false,
 		paginator: pg,
 	}
 	if options != nil {

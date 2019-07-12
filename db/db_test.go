@@ -278,7 +278,7 @@ var _ = Describe("Database operation test", func() {
 				})
 
 				It("Shows related resources", func() {
-					list, num, err := tx.List(ctx, serverSchema, nil, nil, nil)
+					list, num, err := tx.List(ctx, serverSchema, nil, &transaction.ViewOptions{Details: true}, nil)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(num).To(Equal(uint64(1)))
 					Expect(list).To(HaveLen(1))
