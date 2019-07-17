@@ -941,13 +941,6 @@ func (tx *Transaction) LockList(ctx context.Context, s *schema.Schema, filter tr
 		sql += " FOR UPDATE"
 	}
 
-	// update join for recursive
-	if options != nil {
-		sc.join = options.Details
-	} else {
-		sc.join = true
-	}
-
 	return tx.executeSelect(ctx, sc, sql, args)
 }
 
