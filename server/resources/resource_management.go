@@ -224,7 +224,8 @@ func GetResources(context middleware.Context, dataStore db.DB, resourceSchema *s
 }
 
 //GetResourcesInTransaction returns specified resources without calling non in_transaction events
-func GetResourcesInTransaction(context middleware.Context, resourceSchema *schema.Schema, filter map[string]interface{}, paginator *pagination.Paginator) error {
+func GetResourcesInTransaction(context middleware.Context, resourceSchema *schema.Schema,
+	filter map[string]interface{}, paginator *pagination.Paginator) error {
 	defer MeasureRequestTime(time.Now(), "get.resources.in_tx", resourceSchema.ID)
 	mainTransaction := mustGetTransaction(context)
 	response := map[string]interface{}{}
@@ -273,7 +274,8 @@ func GetResourcesInTransaction(context middleware.Context, resourceSchema *schem
 }
 
 //modify search fields to build like queries
-func modifySearchFields(resourceSchema *schema.Schema, queryParameters map[string][]string, filter transaction.Filter) (transaction.Filter, error) {
+func modifySearchFields(resourceSchema *schema.Schema,
+	queryParameters map[string][]string, filter transaction.Filter) (transaction.Filter, error) {
 	if searchFilters, ok := queryParameters["search_field"]; ok && resourceSchema.IsSubstringSearchEnabled() {
 		for _, column := range searchFilters {
 			if searchValues, ok := queryParameters[column]; ok {
@@ -321,7 +323,8 @@ func parseBool(s string, d bool) bool {
 }
 
 // GetMultipleResources returns all resources specified by the schema and query parameters
-func GetMultipleResources(context middleware.Context, dataStore db.DB, resourceSchema *schema.Schema, queryParameters map[string][]string) error {
+func GetMultipleResources(context middleware.Context, dataStore db.DB, resourceSchema *schema.Schema,
+	queryParameters map[string][]string) error {
 	defer MeasureRequestTime(time.Now(), "get.resources.multiple", resourceSchema.ID)
 	log.Debug("Start get multiple resources!!")
 	auth := context["auth"].(schema.Authorization)
@@ -478,7 +481,8 @@ func GetSingleResource(context middleware.Context, dataStore db.DB, resourceSche
 }
 
 //GetSingleResourceInTransaction get resource in single transaction
-func GetSingleResourceInTransaction(context middleware.Context, resourceSchema *schema.Schema, resourceID string, tenantIDs []string, domainIDs []string) (err error) {
+func GetSingleResourceInTransaction(context middleware.Context, resourceSchema *schema.Schema,
+	resourceID string, tenantIDs []string, domainIDs []string) (err error) {
 	defer MeasureRequestTime(time.Now(), "get.single.in_tx", resourceSchema.ID)
 	options := &transaction.ViewOptions{Details: true}
 	r, ok := context["http_request"].(*http.Request)
@@ -601,7 +605,8 @@ func checkIfResourceExistsForPolicy(
 	return checkIfResourceExists(context, filter, resourceSchema, preTransaction)
 }
 
-func checkIfResourceExists(context context.Context, filter transaction.Filter, resourceSchema *schema.Schema, preTransaction transaction.Transaction) (bool, error) {
+func checkIfResourceExists(context context.Context, filter transaction.Filter,
+	resourceSchema *schema.Schema, preTransaction transaction.Transaction) (bool, error) {
 	_, err := preTransaction.Fetch(context, resourceSchema, filter, nil)
 	if err != nil {
 		if err != transaction.ErrResourceNotFound {
@@ -860,7 +865,8 @@ func UpdateResource(
 		func() error {
 			currCond := policy.GetCurrentResourceCondition()
 			tenantIDs, domainIDs := currCond.GetTenantAndDomainFilters(schema.ActionRead, auth)
-			exists, err := checkIfResourceExistsForPolicy(mustGetContext(context), auth, resourceID, resourceSchema, policy, schema.ActionUpdate, mustGetTransaction(context))
+			exists, err := checkIfResourceExistsForPolicy(mustGetContext(context), auth, resourceID, resourceSchema,
+				policy, schema.ActionUpdate, mustGetTransaction(context))
 			if err != nil {
 				return err
 			}
@@ -912,9 +918,11 @@ func UpdateResourceInTransaction(
 	case schema.NoLocking:
 		resource, err = mainTransaction.Fetch(mustGetContext(context), resourceSchema, filter, nil)
 	case schema.LockRelatedResources:
-		resource, err = mainTransaction.LockFetch(mustGetContext(context), resourceSchema, filter, schema.LockRelatedResources, nil)
+		resource, err = mainTransaction.LockFetch(mustGetContext(context), resourceSchema,
+			filter, schema.LockRelatedResources, nil)
 	case schema.SkipRelatedResources:
-		resource, err = mainTransaction.LockFetch(mustGetContext(context), resourceSchema, filter, schema.SkipRelatedResources, nil)
+		resource, err = mainTransaction.LockFetch(mustGetContext(context), resourceSchema,
+			filter, schema.SkipRelatedResources, nil)
 	}
 
 	if err != nil {
@@ -1022,7 +1030,8 @@ func DeleteResource(ctx middleware.Context,
 	return nil
 }
 
-func fetchResource(resourceID string, resourceSchema *schema.Schema, tx transaction.Transaction, context middleware.Context) (*schema.Resource, error) {
+func fetchResource(resourceID string, resourceSchema *schema.Schema,
+	tx transaction.Transaction, context middleware.Context) (*schema.Resource, error) {
 	auth := context["auth"].(schema.Authorization)
 	resource, fetchErr := fetchResourceForAction(schema.ActionDelete, auth, resourceID, resourceSchema, tx, context)
 	if fetchErr != nil {
@@ -1196,7 +1205,8 @@ func checkIfActionIsAllowedForUser(context middleware.Context, dataStore db.DB, 
 
 	if err := resourceTransactionWithContext(context, dataStore, transaction.GetIsolationLevel(resourceSchema, action.ID),
 		func() error {
-			exists, err := checkIfResourceExistsForPolicy(mustGetContext(context), auth, resourceID, resourceSchema, policy, action.ID, mustGetTransaction(context))
+			exists, err := checkIfResourceExistsForPolicy(mustGetContext(context), auth, resourceID,
+				resourceSchema, policy, action.ID, mustGetTransaction(context))
 			if err != nil {
 				return err
 			}

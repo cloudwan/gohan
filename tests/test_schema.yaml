@@ -103,7 +103,7 @@ policies:
   effect: allow
   id: singular_member
   resource:
-    path: /v2.0/tests
+    path: /v2.0/custom_action_testers
   principal: Member
   condition:
     - is_owner
@@ -111,7 +111,7 @@ policies:
   effect: allow
   id: singular_domain_admin
   resource:
-    path: /v2.0/tests
+    path: /v2.0/custom_action_testers
   scope:
     - domain
   principal: admin
@@ -121,25 +121,25 @@ policies:
   effect: allow
   id: singular_public
   resource:
-    path: /v2.0/tests
+    path: /v2.0/custom_action_testers
   principal: Member
 - action: plural_admin
   effect: allow
   id: plural_admin
   resource:
-    path: /v2.0/tests
+    path: /v2.0/custom_action_testers
   principal: admin
 - action: plural_admin
   effect: deny
   id: plural_admin_deny
   resource:
-    path: /v2.0/tests
+    path: /v2.0/custom_action_testers
   principal: Member
 - action: plural_member
   effect: allow
   id: plural_member
   resource:
-    path: /v2.0/tests
+    path: /v2.0/custom_action_testers
   principal: Member
 - action: '*'
   effect: allow
@@ -1641,5 +1641,76 @@ schemas:
         unique: false
         description: A property is required to create a resource
   title: Schema with int primary key
+- description: Custom Action Test
+  id: custom_action_test
+  metadata:
+    state_versioning: true
+  plural: custom_action_testers
+  prefix: /v2.0
+  schema:
+    indexes:
+      test_unique_id_and_tenant_id_and_domain_id:
+        columns:
+          - id
+          - tenant_id
+          - domain_id
+        type: "unique"
+    properties:
+      id:
+        description: ID
+        permission:
+          - create
+        title: ID
+        type: string
+        unique: true
+      tenant_id:
+        description: Tenant ID
+        permission:
+          - create
+        title: TenantID
+        type: string
+        unique: false
+        indexed: true
+        sql: varchar(255)
+      domain_id:
+        description: Domain ID
+        permission:
+          - create
+        title: DomainID
+        type: string
+        unique: false
+        indexed: true
+        sql: varchar(255)
+    propertiesOrder:
+      - id
+      - tenant_id
+      - domain_id
+    required:
+      - tenant_id
+      - domain_id
+    type: object
+  singular: custom_action_tester
+  title: Custom Action Test
+  actions:
+    singular:
+      method: POST
+      path: /:id/singular
+      output:
+        type: string
+    singular_public:
+      method: POST
+      path: /:id/singular_public
+      output:
+        type: string
+    plural_admin:
+      method: POST
+      path: /:id/plural_admin
+      output:
+        type: string
+    plural_member:
+      method: POST
+      path: /:id/plural_member
+      output:
+        type: string
 
 subnets: []
