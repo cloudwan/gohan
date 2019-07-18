@@ -904,7 +904,7 @@ func listContextHelper(s *schema.Schema, filter transaction.Filter, options *tra
 	sc := &selectContext{
 		schema:    s,
 		filter:    filter,
-		join:      true,
+		join:      false,
 		paginator: pg,
 	}
 	if options != nil {
@@ -939,13 +939,6 @@ func (tx *Transaction) LockList(ctx context.Context, s *schema.Schema, filter tr
 
 	if tx.db.sqlType == "mysql" {
 		sql += " FOR UPDATE"
-	}
-
-	// update join for recursive
-	if options != nil {
-		sc.join = options.Details
-	} else {
-		sc.join = true
 	}
 
 	return tx.executeSelect(ctx, sc, sql, args)

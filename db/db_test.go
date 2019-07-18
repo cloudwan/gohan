@@ -278,7 +278,7 @@ var _ = Describe("Database operation test", func() {
 				})
 
 				It("Shows related resources", func() {
-					list, num, err := tx.List(ctx, serverSchema, nil, nil, nil)
+					list, num, err := tx.List(ctx, serverSchema, nil, &transaction.ViewOptions{Details: true}, nil)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(num).To(Equal(uint64(1)))
 					Expect(list).To(HaveLen(1))
@@ -300,7 +300,7 @@ var _ = Describe("Database operation test", func() {
 					Expect(err).ToNot(HaveOccurred())
 					Expect(num).To(Equal(uint64(1)))
 					Expect(list).To(HaveLen(1))
-					Expect(list[0].Data()).To(HaveKeyWithValue("network", HaveKeyWithValue("name", BeNil())))
+					Expect(list[0].Data()).ToNot(HaveKey("network"))
 					Expect(tx.Commit()).To(Succeed())
 				})
 
@@ -364,7 +364,7 @@ var _ = Describe("Database operation test", func() {
 				It("Fetches and doesn't lock related resources when requested", func() {
 					networkResourceFetched, err := tx.LockFetch(ctx, serverSchema, nil, schema.SkipRelatedResources, nil)
 					Expect(err).ToNot(HaveOccurred())
-					Expect(networkResourceFetched.Data()).To(HaveKeyWithValue("network", HaveKeyWithValue("name", BeNil())))
+					Expect(networkResourceFetched.Data()).ToNot(HaveKey("network"))
 					Expect(tx.Commit()).To(Succeed())
 				})
 
