@@ -2186,7 +2186,7 @@ var _ = Describe("Resource manager", func() {
 			fakeActionWithoutInput = schema.NewAction("fake_action", "GET", "/:id/whatever", "", "", nil, nil, nil, false)
 			singularAction = schema.NewAction("singular", "POST", "/:id/singular", "", "", nil, nil, nil, false)
 			singularPublicAction = schema.NewAction("singular_public", "POST", "/:id/singular_public", "", "", nil, nil, nil, false)
-			pluralPublicAction = schema.NewAction("plural_member", "POST", "/plural_member", "", "", nil, nil, nil, false)
+			pluralPublicAction = schema.NewAction("plural_public", "POST", "/plural_public", "", "", nil, nil, nil, false)
 			pluralAdminAction = schema.NewAction("plural_admin", "POST", "/plural_admin", "", "", nil, nil, nil, false)
 		}
 
