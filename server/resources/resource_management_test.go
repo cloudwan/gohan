@@ -38,11 +38,19 @@ import (
 )
 
 var _ = Describe("Resource manager", func() {
+	type AuthScope int
 	const (
-		adminResourceID       = "6660fbf8-ca60-4cb0-a42e-9a913beafbaf"
-		memberResourceID      = "6660fbf8-ca60-4cb0-a42e-9a913beafbae"
-		memberResourceID2     = "6660fbf8-ca60-4cb0-a42e-9a913beafba0"
-		otherDomainResourceID = "6660fbf8-ca60-4cb0-a42e-9a913beafbad"
+		adminResourceID                             = "6660fbf8-ca60-4cb0-a42e-9a913beafbaf"
+		memberResourceID                            = "6660fbf8-ca60-4cb0-a42e-9a913beafbae"
+		memberResourceID2                           = "6660fbf8-ca60-4cb0-a42e-9a913beafba0"
+		otherDomainResourceID                       = "6660fbf8-ca60-4cb0-a42e-9a913beafbad"
+		adminActionTesterResourceID                 = "6660fbf8-ca60-4cb0-a42e-9a913beafba1"
+		memberActionTesterResourceID                = "6660fbf8-ca60-4cb0-a42e-9a913beafba2"
+		otherDomainActionTesterResourceID           = "6660fbf8-ca60-4cb0-a42e-9a913beafba4"
+		tenantMemberAuthScope             AuthScope = iota
+		domainMemberAuthScope
+		domainAdminAuthScope
+		superAdminAuthScope
 	)
 
 	var (
@@ -69,28 +77,45 @@ var _ = Describe("Resource manager", func() {
 		fakeIdentity               middleware.IdentityService
 	)
 
-	BeforeEach(func() {
-		manager = schema.GetManager()
-		ctx = context_pkg.Background()
-
+	createAuthToken := func(scope AuthScope) schema.Authorization {
 		domainA := schema.Domain{
 			ID:   domainAID,
 			Name: "domainA",
 		}
 
-		adminAuth = schema.NewAuthorizationBuilder().
-			WithTenant(schema.Tenant{ID: adminTenantID, Name: "admin"}).
-			WithRoleIDs("admin").
-			BuildAdmin()
-		memberAuth = schema.NewAuthorizationBuilder().
-			WithTenant(schema.Tenant{ID: memberTenantID, Name: "demo"}).
-			WithDomain(domainA).
-			WithRoleIDs("Member").
-			BuildScopedToTenant()
-		domainScopedAuth = schema.NewAuthorizationBuilder().
-			WithDomain(domainA).
-			WithRoleIDs("Member").
-			BuildScopedToDomain()
+		switch scope {
+		case tenantMemberAuthScope:
+			return schema.NewAuthorizationBuilder().
+				WithTenant(schema.Tenant{ID: memberTenantID, Name: "demo"}).
+				WithDomain(domainA).
+				WithRoleIDs("Member").
+				BuildScopedToTenant()
+		case domainMemberAuthScope:
+			return schema.NewAuthorizationBuilder().
+				WithDomain(domainA).
+				WithRoleIDs("Member").
+				BuildScopedToDomain()
+		case domainAdminAuthScope:
+			return schema.NewAuthorizationBuilder().
+				WithDomain(domainA).
+				WithRoleIDs("admin").
+				BuildScopedToDomain()
+		case superAdminAuthScope:
+			return schema.NewAuthorizationBuilder().
+				WithTenant(schema.Tenant{ID: adminTenantID, Name: "admin"}).
+				WithRoleIDs("admin").
+				BuildAdmin()
+		}
+
+		return nil
+	}
+
+	BeforeEach(func() {
+		manager = schema.GetManager()
+		ctx = context_pkg.Background()
+		memberAuth = createAuthToken(tenantMemberAuthScope)
+		adminAuth = createAuthToken(superAdminAuthScope)
+		domainScopedAuth = createAuthToken(domainMemberAuthScope)
 
 		auth = adminAuth
 		context = middleware.Context{
@@ -2147,15 +2172,27 @@ var _ = Describe("Resource manager", func() {
 
 	Describe("Running an action on a resource", func() {
 		var (
+			inputSchema            map[string]interface{}
 			fakeAction             schema.Action
 			fakeActionWithoutInput schema.Action
+			singularAction         schema.Action
+			singularPublicAction   schema.Action
+			pluralPublicAction     schema.Action
+			pluralAdminAction      schema.Action
 		)
 
+		setupCustomActions := func() {
+			fakeAction = schema.NewAction("fake_action", "GET", "/:id/whatever", "", "", inputSchema, nil, nil, false)
+			fakeActionWithoutInput = schema.NewAction("fake_action", "GET", "/:id/whatever", "", "", nil, nil, nil, false)
+			singularAction = schema.NewAction("singular", "POST", "/:id/singular", "", "", nil, nil, nil, false)
+			singularPublicAction = schema.NewAction("singular_public", "POST", "/:id/singular_public", "", "", nil, nil, nil, false)
+			pluralPublicAction = schema.NewAction("plural_public", "POST", "/plural_public", "", "", nil, nil, nil, false)
+			pluralAdminAction = schema.NewAction("plural_admin", "POST", "/plural_admin", "", "", nil, nil, nil, false)
+		}
+
 		BeforeEach(func() {
-			schemaID = "test"
-			action = "create"
-			setupTestResources()
-			inputSchema := map[string]interface{}{
+			var ok bool
+			inputSchema = map[string]interface{}{
 				"type": "object",
 				"properties": map[string]interface{}{
 					"message": map[string]interface{}{
@@ -2166,11 +2203,13 @@ var _ = Describe("Resource manager", func() {
 					},
 				},
 			}
-			fakeAction = schema.NewAction("fake_action", "GET", "/:id/whatever", "", "", inputSchema, nil, nil, false)
-			fakeActionWithoutInput = schema.NewAction("fake_action", "GET", "/:id/whatever", "", "", nil, nil, nil, false)
+			setupCustomActions()
+			schemaID = "test"
+			currentSchema, ok = manager.Schema(schemaID)
+			Expect(ok).To(BeTrue())
+			setupAndCreateTestResources()
 		})
 
-		// Actions do not care resource existence or tenant ownership
 		Describe("With extension", func() {
 			BeforeEach(func() {
 				events["fake_action"] = `throw new CustomException("malbona", 390);`
@@ -2178,7 +2217,7 @@ var _ = Describe("Resource manager", func() {
 
 			It("Should run the extension", func() {
 				err := resources.ActionResource(
-					context, currentSchema, fakeAction, adminResourceID,
+					context, testDB, currentSchema, fakeAction, adminResourceID,
 					map[string]interface{}{"test_string": "Steloj ne estas en ordo."})
 				Expect(err).To(HaveOccurred())
 				extErr, ok := err.(extension.Error)
@@ -2188,10 +2227,10 @@ var _ = Describe("Resource manager", func() {
 				Expect(extErr.ExceptionInfo).To(HaveKeyWithValue("code", int64(390)))
 			})
 
-			Context("Without input shcema", func() {
+			Context("Without input schema", func() {
 				It("Should run the extension", func() {
 					err := resources.ActionResource(
-						context, currentSchema, fakeActionWithoutInput, adminResourceID,
+						context, testDB, currentSchema, fakeActionWithoutInput, adminResourceID,
 						map[string]interface{}{"test_string": "Steloj ne estas en ordo."})
 					Expect(err).To(HaveOccurred())
 					extErr, ok := err.(extension.Error)
@@ -2202,6 +2241,102 @@ var _ = Describe("Resource manager", func() {
 				})
 			})
 		})
+
+		addAuthAndEmptyResponseToContext := func(auth schema.Authorization) {
+			context["tenant_id"] = auth.TenantID()
+			context["domain_id"] = auth.DomainID()
+			context["auth"] = auth
+			context["response"] = ""
+		}
+
+		Context("Custom action isolation tests", func() {
+			var NoProblem resources.ResourceProblem = -1
+
+			setupCustomActionTestResources := func() {
+				var ok bool
+				schemaID = "custom_action_test"
+				currentSchema, ok = manager.Schema(schemaID)
+				Expect(ok).To(BeTrue())
+
+				adminResourceData = map[string]interface{}{
+					"id":        adminActionTesterResourceID,
+					"tenant_id": adminTenantID,
+					"domain_id": domainAID,
+				}
+
+				memberResourceData = map[string]interface{}{
+					"id":        memberActionTesterResourceID,
+					"tenant_id": memberTenantID,
+					"domain_id": domainAID,
+				}
+
+				otherDomainResourceData = map[string]interface{}{
+					"id":        otherDomainActionTesterResourceID,
+					"tenant_id": otherDomainTenantID,
+					"domain_id": domainBID,
+				}
+			}
+
+			BeforeEach(func() {
+				setupCustomActionTestResources()
+				createTestResources()
+			})
+
+			DescribeTable("Performing action", func(auth schema.Authorization, resourceID string, action *schema.Action,
+				expectedResourceProblem resources.ResourceProblem) {
+				addAuthAndEmptyResponseToContext(auth)
+				err := resources.ActionResource(
+					context, testDB, currentSchema, *action, resourceID,
+					map[string]interface{}{})
+
+				if expectedResourceProblem != NoProblem {
+					Expect(err).To(HaveOccurred())
+					returnedErr, ok := err.(resources.ResourceError)
+					Expect(ok).To(BeTrue())
+					Expect(returnedErr.Problem).To(Equal(expectedResourceProblem))
+				} else {
+					Expect(err).NotTo(HaveOccurred())
+				}
+
+			},
+				Entry("Should not fail when performed action matched to policy with is_owner on own resource as member",
+					createAuthToken(tenantMemberAuthScope), memberActionTesterResourceID, &singularAction, NoProblem),
+				Entry("Should not fail when performed action matched to policy with is_owner_domain on domain domain as domain admin",
+					createAuthToken(domainAdminAuthScope), adminActionTesterResourceID, &singularAction, NoProblem),
+				Entry("Should not fail when performed action on different domain resource as cloud admin",
+					createAuthToken(superAdminAuthScope), otherDomainActionTesterResourceID, &singularAction, NoProblem),
+				Entry("Should fail when performed action matched to policy with is_owner on not own resource as member",
+					createAuthToken(tenantMemberAuthScope), adminActionTesterResourceID, &singularAction, resources.NotFound),
+				Entry("Should fail when performed action matched to policy with is_owner_domain on not own resource nor domain as domain admin",
+					createAuthToken(domainAdminAuthScope), otherDomainActionTesterResourceID, &singularAction, resources.NotFound),
+
+				Entry("Should not fail when performed action matched to policy without is_owner on own resource as member",
+					createAuthToken(tenantMemberAuthScope), memberActionTesterResourceID, &singularPublicAction, NoProblem),
+				Entry("Should not fail when performed action matched to policy without is_owner on domain domain as domain admin",
+					createAuthToken(domainAdminAuthScope), adminActionTesterResourceID, &singularPublicAction, NoProblem),
+				Entry("Should not fail when performed action on different domain resource as cloud admin",
+					createAuthToken(superAdminAuthScope), otherDomainActionTesterResourceID, &singularPublicAction, NoProblem),
+				Entry("Should not fail when performed action matched to policy without is_owner on not own resource as member",
+					createAuthToken(tenantMemberAuthScope), adminActionTesterResourceID, &singularPublicAction, NoProblem),
+				Entry("Should not fail when performed action matched to policy without is_owner_domain on not own resource nor domain as domain admin",
+					createAuthToken(domainAdminAuthScope), otherDomainActionTesterResourceID, &singularPublicAction, NoProblem),
+
+				Entry("Should not fail when performed public action as member (action on plural resource)",
+					createAuthToken(tenantMemberAuthScope), "", &pluralPublicAction, NoProblem),
+				Entry("Should not fail when performed public action as domain admin (action on plural resource)",
+					createAuthToken(domainAdminAuthScope), "", &pluralPublicAction, NoProblem),
+				Entry("Should not fail when performed public action as cloud admin (action on plural resource)",
+					createAuthToken(superAdminAuthScope), "", &pluralPublicAction, NoProblem),
+
+				Entry("Should fail when performed admin action as member (action on plural resource)",
+					createAuthToken(tenantMemberAuthScope), "", &pluralAdminAction, resources.Unauthorized),
+				Entry("Should not fail when performed admin action as domain admin (action on plural resource)",
+					createAuthToken(domainAdminAuthScope), "", &pluralAdminAction, NoProblem),
+				Entry("Should not fail when performed admin action as cloud admin (action on plural resource)",
+					createAuthToken(superAdminAuthScope), "", &pluralAdminAction, NoProblem),
+			)
+		})
+
 	})
 
 	Describe("Executing a sequence of operations", func() {

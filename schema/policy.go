@@ -807,10 +807,10 @@ func (p *Policy) Check(action string, authorization Authorization, data map[stri
 
 // Checks if user is authorized to perform given action
 func (p *Policy) CheckAccess(action string, authorization Authorization,
-	data map[string]interface{}) error {
+	resourceData map[string]interface{}) error {
 
 	currCond := p.GetCurrentResourceCondition()
-	if err := authorization.checkAccessToResource(currCond, action, data); err != nil {
+	if err := authorization.checkAccessToResource(currCond, action, resourceData); err != nil {
 		return err
 	}
 
