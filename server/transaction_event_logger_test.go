@@ -35,6 +35,13 @@ var _ = Describe("Transaction Commit Logger", func() {
 		eventSchema *schema.Schema
 	)
 
+	getSchema := func(schemaID string) *schema.Schema {
+		manager := schema.GetManager()
+		s, ok := manager.Schema(schemaID)
+		Expect(ok).To(BeTrue())
+		return s
+	}
+
 	withinTx := func(fn func(transaction.Transaction)) {
 		Expect(db.WithinTx(syncedDb, func(tx transaction.Transaction) error {
 			fn(tx)
@@ -42,24 +49,21 @@ var _ = Describe("Transaction Commit Logger", func() {
 		})).To(Succeed())
 	}
 
-	deleteAllEvents := func() {
+	deleteAll := func(table string) {
 		withinTx(func(tx transaction.Transaction) {
-			Expect(tx.Exec(ctx, "DELETE FROM events")).To(Succeed())
+			Expect(tx.Exec(ctx, "DELETE FROM "+table)).To(Succeed())
 		})
 	}
 
-	deleteAllNetworks := func() {
-		withinTx(func(tx transaction.Transaction) {
-			Expect(tx.Exec(ctx, "DELETE FROM networks")).To(Succeed())
-		})
-	}
+	deleteAllNetworks := func() { deleteAll("networks") }
+	deleteAllEvents := func() { deleteAll("events") }
 
 	BeforeEach(func() {
 		// go vet complains about cancel(), but it's called in AfterEach
 		ctx, cancel = context.WithCancel(context.Background())
 
 		syncedDb = srv.NewDbSyncWrapper(testDB)
-		eventSchema, _ = schema.GetManager().Schema("event")
+		eventSchema = getSchema("event")
 
 		deleteAllEvents()
 		deleteAllNetworks()
@@ -76,6 +80,12 @@ var _ = Describe("Transaction Commit Logger", func() {
 		events, _, err := tx.List(ctx, eventSchema, transaction.Filter{}, nil, nil)
 		Expect(err).ToNot(HaveOccurred())
 		return events
+	}
+
+	expectEventTypes := func(events []*schema.Resource, eventTypes ...string) {
+		for i, event := range events {
+			Expect(event.Get("type")).To(Equal(eventTypes[i]))
+		}
 	}
 
 	It("CUD test", func() {
@@ -99,12 +109,16 @@ var _ = Describe("Transaction Commit Logger", func() {
 			createNetwork(ctx, tx, "green")
 			createNetwork(ctx, tx, "blue")
 
-			Expect(listEvents(tx)).To(HaveLen(3))
+			events := listEvents(tx)
+			Expect(events).To(HaveLen(3))
+			expectEventTypes(events, "create", "create", "create")
 
 			deleteAllFilter := filter.True()
 			Expect(tx.DeleteFilter(ctx, getSchema("network"), deleteAllFilter)).To(Succeed())
 
-			Expect(listEvents(tx)).To(HaveLen(6))
+			events = listEvents(tx)
+			Expect(events).To(HaveLen(6))
+			expectEventTypes(events, "create", "create", "create", "delete", "delete", "delete")
 		})
 	})
 
