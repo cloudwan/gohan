@@ -88,12 +88,12 @@ type Filter map[string]interface{}
 
 //ResourceState represents the state of a resource
 type ResourceState struct {
-	ID            string
-	ConfigVersion int64
-	StateVersion  int64
-	Error         string
-	State         string
-	Monitoring    string
+	ID            string `db:"id"`
+	ConfigVersion int64  `db:"config_version"`
+	StateVersion  int64  `db:"state_version"`
+	Error         string `db:"state_error"`
+	State         string `db:"state"`
+	Monitoring    string `db:"state_monitoring"`
 }
 
 //ViewOptions specifies additional options.

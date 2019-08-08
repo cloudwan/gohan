@@ -778,38 +778,6 @@ func makeJoin(s *schema.Schema, tableName string, q sq.SelectBuilder) sq.SelectB
 	return q
 }
 
-func decodeState(data map[string]interface{}, state *transaction.ResourceState) error {
-	resourceID, ok := data[idColumnName].([]byte)
-	if !ok {
-		return fmt.Errorf("Wrong state column %s returned from query", idColumnName)
-	}
-	state.ID = string(resourceID)
-	state.ConfigVersion, ok = data[configVersionColumnName].(int64)
-	if !ok {
-		return fmt.Errorf("Wrong state column %s returned from query", configVersionColumnName)
-	}
-	state.StateVersion, ok = data[stateVersionColumnName].(int64)
-	if !ok {
-		return fmt.Errorf("Wrong state column %s returned from query", stateVersionColumnName)
-	}
-	stateError, ok := data[stateErrorColumnName].([]byte)
-	if !ok {
-		return fmt.Errorf("Wrong state column %s returned from query", stateErrorColumnName)
-	}
-	state.Error = string(stateError)
-	stateState, ok := data[stateColumnName].([]byte)
-	if !ok {
-		return fmt.Errorf("Wrong state column %s returned from query", stateColumnName)
-	}
-	state.State = string(stateState)
-	stateMonitoring, ok := data[stateMonitoringColumnName].([]byte)
-	if !ok {
-		return fmt.Errorf("Wrong state column %s returned from query", stateMonitoringColumnName)
-	}
-	state.Monitoring = string(stateMonitoring)
-	return nil
-}
-
 //normFields runs normFields on all the fields.
 func normFields(fields []string, s *schema.Schema) []string {
 	if fields != nil {
@@ -1138,11 +1106,7 @@ func (tx *Transaction) stateList(ctx context.Context, s *schema.Schema, filter t
 	states := []transaction.ResourceState{}
 	for rows.Next() {
 		singleState := transaction.ResourceState{}
-		rowData := map[string]interface{}{}
-		if err := rows.MapScan(rowData); err != nil {
-			return nil, err
-		}
-		if err := decodeState(rowData, &singleState); err != nil {
+		if err := rows.StructScan(&singleState); err != nil {
 			return nil, err
 		}
 		states = append(states, singleState)
