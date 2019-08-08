@@ -327,6 +327,13 @@ var _ = Describe("Schemas", func() {
 			Expect(err).To(HaveOccurred())
 		})
 
+		It("DbDeleteFilterRaw deletes previously created resource", func() {
+			Expect(testSchema.CreateRaw(&createdResource, context)).To(Succeed())
+			Expect(testSchema.DbDeleteFilterRaw(goext.Filter{"id": createdResource.ID}, context)).To(Succeed())
+			_, err := testSchema.FetchRaw(createdResource.ID, context)
+			Expect(err).To(HaveOccurred())
+		})
+
 		It("UpdateRaw previously created resource", func() {
 			Expect(testSchema.CreateRaw(&createdResource, context)).To(Succeed())
 			createdResource.Description = "other-description"
@@ -344,8 +351,23 @@ var _ = Describe("Schemas", func() {
 			state, err := testSchema.StateFetchRaw(createdResource.ID, context)
 
 			Expect(err).ToNot(HaveOccurred())
-			expected := goext.ResourceState{Error: "", Monitoring: "", State: "", StateVersion: 0, ConfigVersion: 1}
+			expected := goext.ResourceState{ID: createdResource.ID, Error: "", Monitoring: "", State: "", StateVersion: 0, ConfigVersion: 1}
 			Expect(state).To(Equal(expected))
+		})
+
+		It("should list resources state", func() {
+			firstResource := &createdResource
+			secondResource := &test.Test{
+				ID:           "some-other-id",
+				Description:  firstResource.Description,
+				Enumerations: []test.EnumerationSubobject{},
+			}
+			Expect(testSchema.CreateRaw(firstResource, context)).To(Succeed())
+			Expect(testSchema.CreateRaw(secondResource, context)).To(Succeed())
+
+			states, err := testSchema.StateListRaw(goext.Filter{"description": firstResource.Description}, context)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(states).To(HaveLen(2))
 		})
 
 		It("should update resource state", func() {
@@ -354,7 +376,7 @@ var _ = Describe("Schemas", func() {
 
 			Expect(testSchema.DbStateUpdateRaw(&createdResource, context, &state)).To(Succeed())
 
-			expected := goext.ResourceState{Error: "1", Monitoring: "2", State: "3", StateVersion: 4, ConfigVersion: 1}
+			expected := goext.ResourceState{ID: createdResource.ID, Error: "1", Monitoring: "2", State: "3", StateVersion: 4, ConfigVersion: 1}
 			state, err := testSchema.StateFetchRaw(createdResource.ID, context)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(state).To(Equal(expected))
@@ -366,7 +388,7 @@ var _ = Describe("Schemas", func() {
 
 			Expect(testSchema.DbStateUpdateRaw(&createdResource, context, &state)).To(Succeed())
 
-			expected := goext.ResourceState{ConfigVersion: 1}
+			expected := goext.ResourceState{ID: createdResource.ID, ConfigVersion: 1}
 			state, err := testSchema.StateFetchRaw(createdResource.ID, context)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(state).To(Equal(expected))
@@ -382,7 +404,7 @@ var _ = Describe("Schemas", func() {
 				Expect(testSchema.CreateRaw(&createdResource, context)).To(Succeed())
 
 				f := filter.And(
-					filter.Eq("id", "some-id"),
+					filter.Eq("id", createdResource.ID),
 					filter.Eq("description", "description"),
 				)
 				returnedResources, err := testSchema.ListRaw(f, nil, context)
@@ -397,7 +419,7 @@ var _ = Describe("Schemas", func() {
 
 				f := filter.Or(
 					filter.Eq("id", "invalid-id"),
-					filter.Eq("id", "some-id"),
+					filter.Eq("id", createdResource.ID),
 				)
 				returnedResources, err := testSchema.ListRaw(f, nil, context)
 				Expect(err).ToNot(HaveOccurred())

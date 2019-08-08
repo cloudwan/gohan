@@ -343,6 +343,12 @@ func (schema *Schema) StateFetchRaw(id string, requestContext goext.Context) (go
 	return tx.StateFetch(goext.GetContext(requestContext), schema, goext.Filter{"id": id})
 }
 
+// StateListRaw returns a resources state
+func (schema *Schema) StateListRaw(filter goext.Filter, requestContext goext.Context) ([]goext.ResourceState, error) {
+	tx := mustGetOpenTransactionFromContext(requestContext)
+	return tx.StateList(goext.GetContext(requestContext), schema, filter)
+}
+
 func setValue(field, value reflect.Value) {
 	if value.IsValid() {
 		if value.Type() != field.Type() && field.Kind() == reflect.Slice { // empty slice has type []interface{}
@@ -458,25 +464,38 @@ func (schema *Schema) DbStateUpdateRaw(rawResource interface{}, requestContext g
 
 // DeleteRaw deletes resource by ID
 func (schema *Schema) DeleteRaw(id string, context goext.Context) error {
-	return schema.delete(goext.Filter{"id": id}, context, true)
+	return schema.delete(goext.Filter{"id": id}, context)
 }
 
 // DeleteFilterRaw deletes resource by filter
 func (schema *Schema) DeleteFilterRaw(filter goext.Filter, context goext.Context) error {
-	return schema.delete(filter, context, true)
+	return schema.delete(filter, context)
 }
 
 // DbDeleteRaw deletes resource by ID without triggering events
 func (schema *Schema) DbDeleteRaw(id string, context goext.Context) error {
-	return schema.delete(goext.Filter{"id": id}, context, false)
+	return schema.dbDeleteFilter(goext.Filter{"id": id}, context)
 }
 
 // DbDeleteFilterRaw deletes resource by filter without triggering events
 func (schema *Schema) DbDeleteFilterRaw(filter goext.Filter, context goext.Context) error {
-	return schema.delete(filter, context, false)
+	return schema.dbDeleteFilter(filter, context)
 }
 
-func (schema *Schema) delete(filter goext.Filter, requestContext goext.Context, triggerEvents bool) error {
+func (schema *Schema) dbDeleteFilter(filter goext.Filter, ctx goext.Context) error {
+	if len(filter) == 0 {
+		return errors.New("Cannot delete with empty filter")
+	}
+
+	tx := mustGetOpenTransactionFromContext(ctx)
+	if err := tx.DeleteFilter(goext.GetContext(ctx), schema, filter); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (schema *Schema) delete(filter goext.Filter, requestContext goext.Context) error {
 	if len(filter) == 0 {
 		return errors.New("Cannot delete with empty filter")
 	}
@@ -499,21 +518,18 @@ func (schema *Schema) delete(filter goext.Filter, requestContext goext.Context, 
 			WithSchemaID(schema.ID()).
 			WithResourceID(resourceID)
 
-		if triggerEvents {
-			if err = schema.env.HandleEvent(string(goext.PreDeleteTx), contextCopy); err != nil {
-				return err
-			}
+		if err = schema.env.HandleEvent(string(goext.PreDeleteTx), contextCopy); err != nil {
+			return err
 		}
 
 		if err = tx.Delete(goext.GetContext(requestContext), schema, resourceID); err != nil {
 			return err
 		}
 
-		if triggerEvents {
-			if err = schema.env.HandleEvent(string(goext.PostDeleteTx), contextCopy); err != nil {
-				return err
-			}
+		if err = schema.env.HandleEvent(string(goext.PostDeleteTx), contextCopy); err != nil {
+			return err
 		}
+
 	}
 
 	return nil

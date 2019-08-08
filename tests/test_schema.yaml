@@ -1655,7 +1655,7 @@ schemas:
   prefix: /v2.0
   schema:
     indexes:
-      test_unique_id_and_tenant_id_and_domain_id:
+      custom_action_test_unique_id_and_tenant_id_and_domain_id:
         columns:
           - id
           - tenant_id

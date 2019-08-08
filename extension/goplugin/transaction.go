@@ -79,6 +79,7 @@ func mapGoExtResourceState(resourceState *goext.ResourceState) *transaction.Reso
 
 func mapTransactionResourceState(resourceState transaction.ResourceState) goext.ResourceState {
 	return goext.ResourceState{
+		ID:            resourceState.ID,
 		ConfigVersion: resourceState.ConfigVersion,
 		StateVersion:  resourceState.StateVersion,
 		Error:         resourceState.Error,
@@ -102,6 +103,28 @@ func (t *Transaction) Delete(ctx context.Context, schema goext.ISchema, resource
 		return ctx.Err()
 	}
 	return t.tx.Delete(context.Background(), t.findRawSchema(schema.ID()), resourceID)
+}
+
+func (t *Transaction) DeleteFilter(ctx context.Context, schema goext.ISchema, filter goext.Filter) error {
+	if err := ctx.Err(); err != nil {
+		return ctx.Err()
+	}
+	return t.tx.DeleteFilter(context.Background(), t.findRawSchema(schema.ID()), transaction.Filter(filter))
+}
+
+func (t *Transaction) StateList(ctx context.Context, schema goext.ISchema, filter goext.Filter) ([]goext.ResourceState, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, ctx.Err()
+	}
+	rawResourceStates, err := t.tx.StateList(context.Background(), t.findRawSchema(schema.ID()), transaction.Filter(filter))
+	if err != nil {
+		return nil, err
+	}
+	resourceStates := make([]goext.ResourceState, 0, len(rawResourceStates))
+	for _, rawResourceState := range rawResourceStates {
+		resourceStates = append(resourceStates, mapTransactionResourceState(rawResourceState))
+	}
+	return resourceStates, nil
 }
 
 // Fetch fetches an existing resource

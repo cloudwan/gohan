@@ -197,6 +197,9 @@ type ISchema interface {
 	// StateFetchRaw returns a resource state
 	StateFetchRaw(id string, requestContext Context) (ResourceState, error)
 
+	// StateListRaw returns a resources state
+	StateListRaw(filter Filter, requestContext Context) ([]ResourceState, error)
+
 	// LockFetch returns a pointer to locked resource derived from BaseResource, containing db annotations
 	LockFetch(id string, context Context, lockPolicy LockPolicy) (interface{}, error)
 

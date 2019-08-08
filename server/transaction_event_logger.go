@@ -36,6 +36,10 @@ type transactionEventLogger struct {
 	lastEventId int64
 }
 
+func (tl *transactionEventLogger) syncEventNeeded(schema *schema.Schema) bool {
+	return schema.Metadata["nosync"] != true
+}
+
 func (tl *transactionEventLogger) logEvent(ctx context.Context, eventType string, resource *schema.Resource, version int64) error {
 	schemaManager := schema.GetManager()
 	eventSchema, ok := schemaManager.Schema("event")
@@ -43,7 +47,7 @@ func (tl *transactionEventLogger) logEvent(ctx context.Context, eventType string
 		panic("Schema 'event' not found. Check if gohan.json is loaded")
 	}
 
-	if resource.Schema().Metadata["nosync"] == true {
+	if !tl.syncEventNeeded(resource.Schema()) {
 		log.Debug("skipping event logging for schema: %s", resource.Schema().ID)
 		return nil
 	}
@@ -147,6 +151,50 @@ func (tl *transactionEventLogger) Delete(ctx context.Context, s *schema.Schema, 
 		return err
 	}
 	return tl.logEvent(ctx, "delete", resource, configVersion)
+}
+
+func (tl *transactionEventLogger) DeleteFilter(ctx context.Context, s *schema.Schema, filter transaction.Filter) error {
+	if !tl.syncEventNeeded(s) {
+		return tl.Transaction.DeleteFilter(ctx, s, filter)
+	}
+
+	stateVersioningEnabled := s.StateVersioning()
+
+	resources, _, err := tl.List(ctx, s, filter, nil, nil)
+	if err != nil {
+		return err
+	}
+
+	var resourceConfigVersionMap map[string]int64
+	if stateVersioningEnabled {
+		resourcesStates, err := tl.StateList(ctx, s, filter)
+		if err != nil {
+			return err
+		}
+		resourceConfigVersionMap = make(map[string]int64, len(resourcesStates))
+
+		for _, resourceState := range resourcesStates {
+			resourceConfigVersionMap[resourceState.ID] = resourceState.ConfigVersion
+		}
+	}
+
+	if err := tl.Transaction.DeleteFilter(ctx, s, filter); err != nil {
+		return err
+	}
+
+	for _, resource := range resources {
+		configVersion := int64(0)
+
+		if stateVersioningEnabled {
+			configVersion = resourceConfigVersionMap[resource.ID()] + 1
+		}
+
+		if err := tl.logEvent(ctx, "delete", resource, configVersion); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (tl *transactionEventLogger) Commit() error {

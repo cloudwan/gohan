@@ -1922,6 +1922,13 @@ func getNetwork(color string, tenant string) map[string]interface{} {
 	}
 }
 
+func getSchema(schemaID string) *schema.Schema {
+	manager := schema.GetManager()
+	s, ok := manager.Schema(schemaID)
+	Expect(ok).To(BeTrue())
+	return s
+}
+
 func createResource(ctx context.Context, tx transaction.Transaction, schemaId string, rawResource map[string]interface{}) *schema.Resource {
 	manager := schema.GetManager()
 	resource, err := manager.LoadResource(schemaId, rawResource)
