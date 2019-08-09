@@ -60,6 +60,11 @@ func (ft *FuzzyTransaction) Delete(ctx context.Context, s *schema.Schema, resour
 	return ft.fuzzIt(func() error { return ft.Tx.Delete(ctx, s, resourceID) })
 }
 
+// Delete deletes a resource
+func (ft *FuzzyTransaction) DeleteFilter(ctx context.Context, s *schema.Schema, filter Filter) error {
+	return ft.fuzzIt(func() error { return ft.Tx.DeleteFilter(ctx, s, filter) })
+}
+
 // Fetch fetches a resource
 func (ft *FuzzyTransaction) Fetch(ctx context.Context, s *schema.Schema, filter Filter, options *ViewOptions) (*schema.Resource, error) {
 	var outResource *schema.Resource
@@ -86,6 +91,16 @@ func (ft *FuzzyTransaction) StateFetch(ctx context.Context, s *schema.Schema, fi
 	return outResourceState, ft.fuzzIt(func() error {
 		var err error
 		outResourceState, err = ft.Tx.StateFetch(ctx, s, filter)
+		return err
+	})
+}
+
+// List lists resource states
+func (ft *FuzzyTransaction) StateList(ctx context.Context, s *schema.Schema, filter Filter) ([]ResourceState, error) {
+	var outStates []ResourceState
+	return outStates, ft.fuzzIt(func() error {
+		var err error
+		outStates, err = ft.Tx.StateList(ctx, s, filter)
 		return err
 	})
 }

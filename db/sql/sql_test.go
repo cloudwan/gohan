@@ -391,10 +391,10 @@ var _ = Describe("Sql", func() {
 			search_value := search.NewSearchField(searchString)
 			filter := map[string]interface{}{"test_string": search_value}
 
-			res, err := AddFilterToQuery(testSchema, query, filter, false)
+			query, err := AddFilterToSelectQuery(testSchema, query, filter, false)
 
 			Expect(err).ToNot(HaveOccurred())
-			resSql, param, err := res.ToSql()
+			resSql, param, err := query.ToSql()
 			Expect(err).ToNot(HaveOccurred())
 			expectedQuery = expectedQuery.Where(Like{"`test_string`": queryString})
 			expectedSql, expectedParam, _ := expectedQuery.ToSql()
@@ -406,7 +406,7 @@ var _ = Describe("Sql", func() {
 			It("should create empty select query", func() {
 				filter := map[string]interface{}{}
 
-				res, err := AddFilterToQuery(testSchema, query, filter, false)
+				res, err := AddFilterToSelectQuery(testSchema, query, filter, false)
 
 				Expect(err).ToNot(HaveOccurred())
 				resSql, param, err := res.ToSql()
@@ -418,7 +418,7 @@ var _ = Describe("Sql", func() {
 			It("should create select query with one parameter", func() {
 				filter := map[string]interface{}{"test_string": "123"}
 
-				res, err := AddFilterToQuery(testSchema, query, filter, false)
+				res, err := AddFilterToSelectQuery(testSchema, query, filter, false)
 
 				Expect(err).ToNot(HaveOccurred())
 				resSql, param, err := res.ToSql()
@@ -439,7 +439,7 @@ var _ = Describe("Sql", func() {
 				number_search := search.NewSearchField("42")
 				filter := map[string]interface{}{"test_string": string_search, "test_number": number_search}
 
-				res, err := AddFilterToQuery(testSchema, query, filter, false)
+				res, err := AddFilterToSelectQuery(testSchema, query, filter, false)
 
 				Expect(err).ToNot(HaveOccurred())
 				resSql, param, err := res.ToSql()
@@ -450,7 +450,7 @@ var _ = Describe("Sql", func() {
 				string_search := search.NewSearchField("one")
 				filter := map[string]interface{}{"test_string": string_search, "test_number": 54}
 
-				res, err := AddFilterToQuery(testSchema, query, filter, false)
+				res, err := AddFilterToSelectQuery(testSchema, query, filter, false)
 
 				Expect(err).ToNot(HaveOccurred())
 				resSql, param, err := res.ToSql()
@@ -460,7 +460,7 @@ var _ = Describe("Sql", func() {
 			It("should create conjunction for more than one parameter by default", func() {
 				filter := map[string]interface{}{"test_string": "123", "test_number": 42}
 
-				res, err := AddFilterToQuery(testSchema, query, filter, false)
+				res, err := AddFilterToSelectQuery(testSchema, query, filter, false)
 
 				Expect(err).ToNot(HaveOccurred())
 				resSql, param, err := res.ToSql()
@@ -482,7 +482,7 @@ var _ = Describe("Sql", func() {
 				},
 			}}
 
-			res, err := AddFilterToQuery(testSchema, query, filter, false)
+			res, err := AddFilterToSelectQuery(testSchema, query, filter, false)
 
 			Expect(err).ToNot(HaveOccurred())
 			resSql, param, err := res.ToSql()
@@ -512,7 +512,7 @@ var _ = Describe("Sql", func() {
 					},
 				}}
 
-				res, err := AddFilterToQuery(testSchema, query, filter, false)
+				res, err := AddFilterToSelectQuery(testSchema, query, filter, false)
 
 				Expect(err).ToNot(HaveOccurred())
 				resSql, param, err := res.ToSql()
@@ -540,7 +540,7 @@ var _ = Describe("Sql", func() {
 					},
 				}}
 
-				res, err := AddFilterToQuery(testSchema, query, filter, false)
+				res, err := AddFilterToSelectQuery(testSchema, query, filter, false)
 
 				Expect(err).ToNot(HaveOccurred())
 				resSql, param, err := res.ToSql()
@@ -607,7 +607,7 @@ var _ = Describe("Sql", func() {
 					},
 				}
 
-				res, err := AddFilterToQuery(testSchema, query, filter, false)
+				res, err := AddFilterToSelectQuery(testSchema, query, filter, false)
 
 				Expect(err).ToNot(HaveOccurred())
 				resSql, param, err := res.ToSql()
@@ -644,7 +644,7 @@ var _ = Describe("Sql", func() {
 					},
 				}
 
-				res, err := AddFilterToQuery(testSchema, query, filter, false)
+				res, err := AddFilterToSelectQuery(testSchema, query, filter, false)
 
 				Expect(err).ToNot(HaveOccurred())
 				resSql, param, err := res.ToSql()
@@ -682,7 +682,7 @@ var _ = Describe("Sql", func() {
 					},
 				}
 
-				res, err := AddFilterToQuery(testSchema, query, filter, false)
+				res, err := AddFilterToSelectQuery(testSchema, query, filter, false)
 
 				Expect(err).ToNot(HaveOccurred())
 				resSql, param, err := res.ToSql()
@@ -711,7 +711,7 @@ var _ = Describe("Sql", func() {
 					},
 				}
 
-				res, err := AddFilterToQuery(testSchema, query, filter, false)
+				res, err := AddFilterToSelectQuery(testSchema, query, filter, false)
 
 				Expect(err).ToNot(HaveOccurred())
 				resSql, param, err := res.ToSql()
@@ -725,7 +725,7 @@ var _ = Describe("Sql", func() {
 
 			DescribeTable("should handle empty list in WHERE ... IN ()",
 				func(filter map[string]interface{}, expected string) {
-					res, err := AddFilterToQuery(testSchema, query, filter, false)
+					res, err := AddFilterToSelectQuery(testSchema, query, filter, false)
 
 					Expect(err).ToNot(HaveOccurred())
 					resSql, param, err := res.ToSql()
@@ -766,7 +766,7 @@ var _ = Describe("Sql", func() {
 
 			DescribeTable("should handle constant bool conditions",
 				func(filter map[string]interface{}, expected interface{}) {
-					res, err := AddFilterToQuery(testSchema, query, filter, false)
+					res, err := AddFilterToSelectQuery(testSchema, query, filter, false)
 
 					Expect(err).ToNot(HaveOccurred())
 					resSql, param, err := res.ToSql()

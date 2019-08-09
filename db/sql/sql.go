@@ -30,7 +30,6 @@ import (
 	sq "github.com/Masterminds/squirrel"
 	"github.com/cloudwan/gohan/db/options"
 	"github.com/cloudwan/gohan/db/pagination"
-	"github.com/cloudwan/gohan/db/search"
 	"github.com/cloudwan/gohan/db/transaction"
 	"github.com/cloudwan/gohan/extension/goext"
 	l "github.com/cloudwan/gohan/log"
@@ -50,6 +49,7 @@ const retryDB = 50
 const retryDBWait = 10
 
 const (
+	idColumnName              = "id"
 	configVersionColumnName   = "config_version"
 	stateVersionColumnName    = "state_version"
 	stateErrorColumnName      = "state_error"
@@ -753,6 +753,7 @@ func MakeColumns(s *schema.Schema, tableName string, fields []string, join bool)
 
 func makeStateColumns(s *schema.Schema) (cols []string) {
 	dbTableName := s.GetDbTableName()
+	cols = append(cols, dbTableName+"."+idColumnName+" as "+quote(idColumnName))
 	cols = append(cols, dbTableName+"."+configVersionColumnName+" as "+quote(configVersionColumnName))
 	cols = append(cols, dbTableName+"."+stateVersionColumnName+" as "+quote(stateVersionColumnName))
 	cols = append(cols, dbTableName+"."+stateErrorColumnName+" as "+quote(stateErrorColumnName))
@@ -775,34 +776,6 @@ func makeJoin(s *schema.Schema, tableName string, q sq.SelectBuilder) sq.SelectB
 		q = makeJoin(relatedSchema, aliasTableName, q)
 	}
 	return q
-}
-
-func decodeState(data map[string]interface{}, state *transaction.ResourceState) error {
-	var ok bool
-	state.ConfigVersion, ok = data[configVersionColumnName].(int64)
-	if !ok {
-		return fmt.Errorf("Wrong state column %s returned from query", configVersionColumnName)
-	}
-	state.StateVersion, ok = data[stateVersionColumnName].(int64)
-	if !ok {
-		return fmt.Errorf("Wrong state column %s returned from query", stateVersionColumnName)
-	}
-	stateError, ok := data[stateErrorColumnName].([]byte)
-	if !ok {
-		return fmt.Errorf("Wrong state column %s returned from query", stateErrorColumnName)
-	}
-	state.Error = string(stateError)
-	stateState, ok := data[stateColumnName].([]byte)
-	if !ok {
-		return fmt.Errorf("Wrong state column %s returned from query", stateColumnName)
-	}
-	state.State = string(stateState)
-	stateMonitoring, ok := data[stateMonitoringColumnName].([]byte)
-	if !ok {
-		return fmt.Errorf("Wrong state column %s returned from query", stateMonitoringColumnName)
-	}
-	state.Monitoring = string(stateMonitoring)
-	return nil
 }
 
 //normFields runs normFields on all the fields.
@@ -836,10 +809,11 @@ func buildSelect(sc *selectContext) (string, []interface{}, error) {
 
 	cols := MakeColumns(sc.schema, t, sc.fields, sc.join)
 	q := sq.Select(cols...).From(quote(t))
-	q, err := AddFilterToQuery(sc.schema, q, sc.filter, sc.join)
+	q, err := AddFilterToSelectQuery(sc.schema, q, sc.filter, sc.join)
 	if err != nil {
 		return "", nil, err
 	}
+
 	if sc.paginator != nil {
 		if sc.paginator.Key != "" {
 			property, err := sc.schema.GetPropertyByID(sc.paginator.Key)
@@ -1025,7 +999,10 @@ func (tx *Transaction) Count(ctx context.Context, s *schema.Schema, filter trans
 
 	q := sq.Select("Count(id) as count").From(quote(s.GetDbTableName()))
 	//Filter get already tested
-	q, _ = AddFilterToQuery(s, q, filter, false)
+	q, err = AddFilterToSelectQuery(s, q, filter, false)
+	if err != nil {
+		return
+	}
 	sql, args, err := q.ToSql()
 	if err != nil {
 		return
@@ -1082,35 +1059,74 @@ func lockFetchContextHelper(err error, list []*schema.Resource, filter transacti
 	return list[0], nil
 }
 
-//StateFetch fetches the state of the specified resource
-func (tx *Transaction) StateFetch(ctx context.Context, s *schema.Schema, filter transaction.Filter) (state transaction.ResourceState, err error) {
-	defer tx.measureTime(time.Now(), s.ID, "state_fetch")
+func (tx *Transaction) DeleteFilter(ctx context.Context, s *schema.Schema, filter transaction.Filter) error {
+	defer tx.measureTime(time.Now(), s.ID, "delete_filter")
 
-	if !s.StateVersioning() {
-		err = fmt.Errorf("Schema %s does not support state versioning", s.ID)
-		return
+	q := sq.Delete(quote(s.GetDbTableName()))
+	q, err := AddFilterToDeleteQuery(s, q, filter, false)
+	if err != nil {
+		return err
 	}
-	cols := makeStateColumns(s)
-	q := sq.Select(cols...).From(quote(s.GetDbTableName()))
-	q, _ = AddFilterToQuery(s, q, filter, true)
+
 	sql, args, err := q.ToSql()
 	if err != nil {
-		return
+		return err
 	}
-	tx.logQuery(sql, args...)
-	rows, err := tx.transaction.QueryxContext(safeMysqlContext(ctx), sql, args...)
+	return tx.exec(ctx, sql, args...)
+
+}
+
+func (tx *Transaction) StateList(ctx context.Context, s *schema.Schema, filter transaction.Filter) ([]transaction.ResourceState, error) {
+	defer tx.measureTime(time.Now(), s.ID, "state_list")
+	return tx.stateList(ctx, s, filter)
+}
+
+func (tx *Transaction) stateList(ctx context.Context, s *schema.Schema, filter transaction.Filter) ([]transaction.ResourceState, error) {
+	if !s.StateVersioning() {
+		return nil, fmt.Errorf("schema %s does not support state versioning", s.ID)
+	}
+
+	cols := makeStateColumns(s)
+	q := sq.Select(cols...).From(quote(s.GetDbTableName()))
+	q, err := AddFilterToSelectQuery(s, q, filter, false)
 	if err != nil {
-		return
+		return nil, err
+	}
+	query, args, err := q.ToSql()
+	if err != nil {
+		return nil, err
+	}
+	tx.logQuery(query, args...)
+	rows, err := tx.transaction.QueryxContext(safeMysqlContext(ctx), query, args...)
+	if err != nil {
+		return nil, err
 	}
 	defer rows.Close()
-	if !rows.Next() {
-		err = transaction.ErrResourceNotFound
-		return
+
+	states := []transaction.ResourceState{}
+	for rows.Next() {
+		singleState := transaction.ResourceState{}
+		if err := rows.StructScan(&singleState); err != nil {
+			return nil, err
+		}
+		states = append(states, singleState)
 	}
-	data := map[string]interface{}{}
-	rows.MapScan(data)
-	err = decodeState(data, &state)
-	return
+
+	return states, nil
+}
+
+//StateFetch fetches the state of the specified resource
+func (tx *Transaction) StateFetch(ctx context.Context, s *schema.Schema, filter transaction.Filter) (transaction.ResourceState, error) {
+	defer tx.measureTime(time.Now(), s.ID, "state_fetch")
+	states, err := tx.stateList(ctx, s, filter)
+	if err != nil {
+		return transaction.ResourceState{}, err
+	}
+	if len(states) < 1 {
+		return transaction.ResourceState{}, transaction.ErrResourceNotFound
+	}
+
+	return states[0], nil
 }
 
 //RawTransaction returns raw transaction
@@ -1163,141 +1179,6 @@ func (tx *Transaction) Closed() bool {
 // GetIsolationLevel returns tx isolation level
 func (tx *Transaction) GetIsolationLevel() transaction.Type {
 	return tx.isolationLevel
-}
-
-const (
-	OrCondition   = "__or__"
-	AndCondition  = "__and__"
-	BoolCondition = "__bool__"
-)
-
-func AddFilterToQuery(s *schema.Schema, q sq.SelectBuilder, filter map[string]interface{}, join bool) (sq.SelectBuilder, error) {
-	if filter == nil {
-		return q, nil
-	}
-	for key, value := range filter {
-		if key == OrCondition {
-			orFilter, err := addOrToQuery(s, q, value, join)
-			if err != nil {
-				return q, err
-			}
-			q = q.Where(orFilter)
-			continue
-		} else if key == AndCondition {
-			andFilter, err := addAndToQuery(s, q, value, join)
-			if err != nil {
-				return q, err
-			}
-			q = q.Where(andFilter)
-			continue
-		} else if b, ok := filter[BoolCondition]; ok {
-			if b.(bool) {
-				q = q.Where("(1=1)")
-			} else {
-				q = q.Where("(1=0)")
-			}
-			continue
-		}
-
-		property, err := s.GetPropertyByID(key)
-
-		if err != nil {
-			return q, err
-		}
-
-		var column string
-		if join {
-			column = makeColumn(s.GetDbTableName(), *property)
-		} else {
-			column = quote(key)
-		}
-
-		substr, ok := value.(search.Search)
-		if ok {
-			q = q.Where(Like{column: substr.Value})
-			continue
-		}
-
-		q = q.Where(sq.Eq{column: parseBoolean(property.Type, value)})
-	}
-	return q, nil
-}
-
-func parseBoolean(typ string, value interface{}) interface{} {
-	queryValues, ok := value.([]string)
-	if ok && typ == "boolean" {
-		v := make([]bool, len(queryValues))
-		for i, j := range queryValues {
-			v[i], _ = strconv.ParseBool(j)
-		}
-		return v
-	}
-	return value
-}
-
-func addOrToQuery(s *schema.Schema, q sq.SelectBuilder, filter interface{}, join bool) (sq.Or, error) {
-	return addToFilter(s, q, filter, join, sq.Or{})
-}
-
-func addAndToQuery(s *schema.Schema, q sq.SelectBuilder, filter interface{}, join bool) (sq.And, error) {
-	return addToFilter(s, q, filter, join, sq.And{})
-}
-
-func addToFilter(s *schema.Schema, q sq.SelectBuilder, filter interface{}, join bool, sqlizer []sq.Sqlizer) ([]sq.Sqlizer, error) {
-	filters := filter.([]map[string]interface{})
-	for _, filter := range filters {
-		if match, ok := filter[OrCondition]; ok {
-			res, err := addOrToQuery(s, q, match, join)
-			if err != nil {
-				return nil, err
-			}
-			sqlizer = append(sqlizer, res)
-		} else if match, ok := filter[AndCondition]; ok {
-			res, err := addAndToQuery(s, q, match, join)
-			if err != nil {
-				return nil, err
-			}
-			sqlizer = append(sqlizer, res)
-		} else if b, ok := filter[BoolCondition]; ok {
-			if b.(bool) {
-				sqlizer = append(sqlizer, sq.Expr("(1=1)"))
-			} else {
-				sqlizer = append(sqlizer, sq.Expr("(1=0)"))
-			}
-		} else {
-			key := filter["property"].(string)
-			property, err := s.GetPropertyByID(key)
-			if err != nil {
-				return nil, err
-			}
-
-			var column string
-			if join {
-				column = makeColumn(s.GetDbTableName(), *property)
-			} else {
-				column = quote(key)
-			}
-
-			// TODO: add other operators
-			value := filter["value"]
-			substr, ok := value.(search.Search)
-			if ok {
-				sqlizer = append(sqlizer, Like{column: substr.Value})
-				continue
-			}
-
-			value = parseBoolean(property.Type, value)
-			switch filter["type"] {
-			case "eq":
-				sqlizer = append(sqlizer, sq.Eq{column: value})
-			case "neq":
-				sqlizer = append(sqlizer, sq.NotEq{column: value})
-			default:
-				panic("type has to be one of [eq, neq]")
-			}
-		}
-	}
-	return sqlizer, nil
 }
 
 //SetMaxOpenConns limit maximum connections

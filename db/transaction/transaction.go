@@ -88,11 +88,12 @@ type Filter map[string]interface{}
 
 //ResourceState represents the state of a resource
 type ResourceState struct {
-	ConfigVersion int64
-	StateVersion  int64
-	Error         string
-	State         string
-	Monitoring    string
+	ID            string `db:"id"`
+	ConfigVersion int64  `db:"config_version"`
+	StateVersion  int64  `db:"state_version"`
+	Error         string `db:"state_error"`
+	State         string `db:"state"`
+	Monitoring    string `db:"state_monitoring"`
 }
 
 //ViewOptions specifies additional options.
@@ -124,9 +125,11 @@ type Transaction interface {
 	Update(context.Context, *schema.Resource) error
 	StateUpdate(context.Context, *schema.Resource, *ResourceState) error
 	Delete(context.Context, *schema.Schema, interface{}) error
+	DeleteFilter(context.Context, *schema.Schema, Filter) error
 	Fetch(context.Context, *schema.Schema, Filter, *ViewOptions) (*schema.Resource, error)
 	LockFetch(context.Context, *schema.Schema, Filter, schema.LockPolicy, *ViewOptions) (*schema.Resource, error)
 	StateFetch(context.Context, *schema.Schema, Filter) (ResourceState, error)
+	StateList(ctx context.Context, s *schema.Schema, filter Filter) ([]ResourceState, error)
 	List(context.Context, *schema.Schema, Filter, *ViewOptions, *pagination.Paginator) ([]*schema.Resource, uint64, error)
 	LockList(context.Context, *schema.Schema, Filter, *ViewOptions, *pagination.Paginator, schema.LockPolicy) ([]*schema.Resource, uint64, error)
 	Count(context.Context, *schema.Schema, Filter) (uint64, error)

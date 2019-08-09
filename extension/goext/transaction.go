@@ -44,6 +44,7 @@ type TxOptions struct {
 
 // ResourceState represents the state of a resource
 type ResourceState struct {
+	ID            string
 	ConfigVersion int64
 	StateVersion  int64
 	Error         string
@@ -70,6 +71,8 @@ type ITransaction interface {
 	StateUpdate(ctx context.Context, schema ISchema, resource map[string]interface{}, state *ResourceState) error
 	// Delete deletes an existing resource
 	Delete(ctx context.Context, schema ISchema, resourceID interface{}) error
+	// DeleteFilter deletes and existing resources using filter
+	DeleteFilter(ctx context.Context, schema ISchema, filter Filter) error
 	// Fetch fetches an existing resource
 	Fetch(ctx context.Context, schema ISchema, filter Filter) (map[string]interface{}, error)
 	// LockFetch locks and fetches an existing resource
@@ -78,6 +81,8 @@ type ITransaction interface {
 	StateFetch(ctx context.Context, schema ISchema, filter Filter) (ResourceState, error)
 	// List lists existing resources
 	List(ctx context.Context, schema ISchema, filter Filter, listOptions *ListOptions, paginator *Paginator) ([]map[string]interface{}, uint64, error)
+	// StateList lists the state of existing resources
+	StateList(ctx context.Context, schema ISchema, filter Filter) ([]ResourceState, error)
 	// LockList locks and lists existing resources
 	LockList(ctx context.Context, schema ISchema, filter Filter, listOptions *ListOptions, paginator *Paginator, lockPolicy LockPolicy) ([]map[string]interface{}, uint64, error)
 	// Count returns number of resources matching the filter

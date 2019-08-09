@@ -632,6 +632,20 @@ func (mr *MockITransactionMockRecorder) Delete(arg0, arg1, arg2 interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockITransaction)(nil).Delete), arg0, arg1, arg2)
 }
 
+// DeleteFilter mocks base method
+func (m *MockITransaction) DeleteFilter(arg0 context.Context, arg1 ISchema, arg2 Filter) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteFilter", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteFilter indicates an expected call of DeleteFilter
+func (mr *MockITransactionMockRecorder) DeleteFilter(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteFilter", reflect.TypeOf((*MockITransaction)(nil).DeleteFilter), arg0, arg1, arg2)
+}
+
 // Exec mocks base method
 func (m *MockITransaction) Exec(arg0 context.Context, arg1 string, arg2 ...interface{}) error {
 	m.ctrl.T.Helper()
@@ -769,6 +783,21 @@ func (m *MockITransaction) StateFetch(arg0 context.Context, arg1 ISchema, arg2 F
 func (mr *MockITransactionMockRecorder) StateFetch(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StateFetch", reflect.TypeOf((*MockITransaction)(nil).StateFetch), arg0, arg1, arg2)
+}
+
+// StateList mocks base method
+func (m *MockITransaction) StateList(arg0 context.Context, arg1 ISchema, arg2 Filter) ([]ResourceState, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StateList", arg0, arg1, arg2)
+	ret0, _ := ret[0].([]ResourceState)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StateList indicates an expected call of StateList
+func (mr *MockITransactionMockRecorder) StateList(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StateList", reflect.TypeOf((*MockITransaction)(nil).StateList), arg0, arg1, arg2)
 }
 
 // StateUpdate mocks base method
@@ -1624,6 +1653,21 @@ func (m *MockISchema) StateFetchRaw(arg0 string, arg1 Context) (ResourceState, e
 func (mr *MockISchemaMockRecorder) StateFetchRaw(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StateFetchRaw", reflect.TypeOf((*MockISchema)(nil).StateFetchRaw), arg0, arg1)
+}
+
+// StateListRaw mocks base method
+func (m *MockISchema) StateListRaw(arg0 Filter, arg1 Context) ([]ResourceState, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StateListRaw", arg0, arg1)
+	ret0, _ := ret[0].([]ResourceState)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StateListRaw indicates an expected call of StateListRaw
+func (mr *MockISchemaMockRecorder) StateListRaw(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StateListRaw", reflect.TypeOf((*MockISchema)(nil).StateListRaw), arg0, arg1)
 }
 
 // UpdateRaw mocks base method

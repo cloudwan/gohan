@@ -42,6 +42,8 @@ type CachedTransaction struct {
 	QueryCache map[string]CachedState
 }
 
+var _ transaction.Transaction = &CachedTransaction{}
+
 func MakeCachedTransaction(transx TxInterface) TxInterface {
 	cachedTransaction := &CachedTransaction{transx, nil}
 	cachedTransaction.ClearCache()
@@ -66,6 +68,11 @@ func (tx *CachedTransaction) StateUpdate(ctx context.Context, resource *schema.R
 func (tx *CachedTransaction) Delete(ctx context.Context, s *schema.Schema, resourceID interface{}) error {
 	tx.ClearCache()
 	return tx.TxInterface.Delete(ctx, s, resourceID)
+}
+
+func (tx *CachedTransaction) DeleteFilter(ctx context.Context, s *schema.Schema, filter transaction.Filter) error {
+	tx.ClearCache()
+	return tx.TxInterface.DeleteFilter(ctx, s, filter)
 }
 
 func (tx *CachedTransaction) Exec(ctx context.Context, query string, args ...interface{}) error {

@@ -391,6 +391,17 @@ var _ = Describe("Database operation test", func() {
 					Expect(tx.Commit()).To(Succeed())
 				})
 
+				It("Deletes resources using filter", func() {
+					Expect(tx.DeleteFilter(ctx, serverSchema, transaction.IDFilter(serverResource.ID()))).To(Succeed())
+					Expect(tx.DeleteFilter(ctx, networkSchema, transaction.IDFilter(networkResource1.ID()))).To(Succeed())
+					_, err := tx.Fetch(ctx, networkSchema, transaction.Filter{"id": networkResource1.ID()}, nil)
+					Expect(err).To(HaveOccurred())
+					_, err = tx.Fetch(ctx, serverSchema, transaction.Filter{"id": serverResource.ID()}, nil)
+					Expect(err).To(HaveOccurred())
+
+					Expect(tx.Commit()).To(Succeed())
+				})
+
 				Context("Using StateFetch", func() {
 					It("Returns the defaults", func() {
 						beforeState, err := tx.StateFetch(ctx, networkSchema, transaction.IDFilter(networkResource1.ID()))
