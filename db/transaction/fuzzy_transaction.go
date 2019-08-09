@@ -95,7 +95,7 @@ func (ft *FuzzyTransaction) StateFetch(ctx context.Context, s *schema.Schema, fi
 	})
 }
 
-// List lists resources
+// List lists resource states
 func (ft *FuzzyTransaction) StateList(ctx context.Context, s *schema.Schema, filter Filter) ([]ResourceState, error) {
 	var outStates []ResourceState
 	return outStates, ft.fuzzIt(func() error {

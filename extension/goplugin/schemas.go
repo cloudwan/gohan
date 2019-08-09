@@ -464,12 +464,12 @@ func (schema *Schema) DbStateUpdateRaw(rawResource interface{}, requestContext g
 
 // DeleteRaw deletes resource by ID
 func (schema *Schema) DeleteRaw(id string, context goext.Context) error {
-	return schema.delete(goext.Filter{"id": id}, context)
+	return schema.deleteFilter(goext.Filter{"id": id}, context)
 }
 
 // DeleteFilterRaw deletes resource by filter
 func (schema *Schema) DeleteFilterRaw(filter goext.Filter, context goext.Context) error {
-	return schema.delete(filter, context)
+	return schema.deleteFilter(filter, context)
 }
 
 // DbDeleteRaw deletes resource by ID without triggering events
@@ -495,7 +495,7 @@ func (schema *Schema) dbDeleteFilter(filter goext.Filter, ctx goext.Context) err
 	return nil
 }
 
-func (schema *Schema) delete(filter goext.Filter, requestContext goext.Context) error {
+func (schema *Schema) deleteFilter(filter goext.Filter, requestContext goext.Context) error {
 	if len(filter) == 0 {
 		return errors.New("Cannot delete with empty filter")
 	}

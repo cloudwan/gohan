@@ -774,8 +774,6 @@ var _ = Describe("Sql", func() {
 
 					expectedQuery = expectedQuery.Where(expected)
 					expectedSql, expectedParam, _ := expectedQuery.ToSql()
-					fmt.Println("XD", resSql, expectedSql)
-					fmt.Println("XD", param, expectedParam)
 					Expect(resSql).To(Equal(expectedSql))
 					Expect(param).To(Equal(expectedParam))
 				},

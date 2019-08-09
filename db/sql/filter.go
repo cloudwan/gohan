@@ -153,7 +153,6 @@ func addToFilter(s *schema.Schema, q queryBuilder, filter interface{}, join bool
 				column = quote(key)
 			}
 
-			// TODO: add other operators
 			value := filter["value"]
 			substr, ok := value.(search.Search)
 			if ok {
