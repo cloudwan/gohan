@@ -559,6 +559,43 @@ var _ = Describe("Server package test", func() {
 					testURL("PUT", url, memberTokenID, testResource, http.StatusUnauthorized)
 				})
 			})
+
+			It("should not create resource in different tenant than relation", func() {
+				networkID := "networkred"
+				network := map[string]interface{}{
+					"id":        networkID,
+					"name":      "Networkred",
+					"tenant_id": memberTenantID,
+				}
+				testURL("POST", networkPluralURL, memberTokenID, network, http.StatusCreated)
+				server := map[string]interface{}{
+					"name":       "Server Red",
+					"network_id": networkID,
+					"status":     "ACTIVE",
+					"tenant_id":  powerUserTenantID,
+				}
+
+				testURL("POST", serverPluralURL, memberTokenID, server, http.StatusBadRequest)
+				testURL("POST", serverPluralURL, powerUserTokenID, server, http.StatusBadRequest)
+			})
+
+			It("should create resource in different tenant than relation when checking relation is skipped", func() {
+				networkID := "networkred"
+				network := map[string]interface{}{
+					"id":        networkID,
+					"name":      "Networkred",
+					"tenant_id": memberTenantID,
+				}
+				testURL("POST", networkPluralURL, adminTokenID, network, http.StatusCreated)
+				server := map[string]interface{}{
+					"name":       "Server Red",
+					"network_id": networkID,
+					"status":     "ACTIVE",
+					"tenant_id":  powerUserTenantID,
+				}
+
+				testURL("POST", serverPluralURL, adminTokenID, server, http.StatusCreated)
+			})
 		})
 
 		Context("Visibility of properties", func() {

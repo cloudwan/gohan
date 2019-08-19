@@ -57,6 +57,8 @@ const (
 	Forbidden
 	ForeignKeyFailed
 
+	tenantIDKey            = "tenant_id"
+	domainIDKey            = "domain_id"
 	goValidationContextKey = "go_validation"
 )
 
@@ -506,11 +508,11 @@ func GetSingleResourceInTransaction(context middleware.Context, resourceSchema *
 		return fmt.Errorf("extension returned invalid JSON: %v", rawResponse)
 	}
 	filter := transaction.IDFilter(resourceID)
-	if _, err := resourceSchema.GetPropertyByID("tenant_id"); err == nil && tenantIDs != nil {
-		filter["tenant_id"] = tenantIDs
+	if _, err := resourceSchema.GetPropertyByID(tenantIDKey); err == nil && tenantIDs != nil {
+		filter[tenantIDKey] = tenantIDs
 	}
-	if _, err := resourceSchema.GetPropertyByID("domain_id"); err == nil && domainIDs != nil {
-		filter["domain_id"] = domainIDs
+	if _, err := resourceSchema.GetPropertyByID(domainIDKey); err == nil && domainIDs != nil {
+		filter[domainIDKey] = domainIDs
 	}
 
 	auth := context["auth"].(schema.Authorization)
@@ -657,11 +659,11 @@ func CreateResource(
 		return ResourceError{err, err.Error(), Unauthorized}
 	}
 
-	if tenantID, ok := authDataMap["tenant_id"]; ok {
-		dataMap["tenant_id"] = tenantID
+	if tenantID, ok := authDataMap[tenantIDKey]; ok {
+		dataMap[tenantIDKey] = tenantID
 	}
-	if domainID, ok := authDataMap["domain_id"]; ok {
-		dataMap["domain_id"] = domainID
+	if domainID, ok := authDataMap[domainIDKey]; ok {
+		dataMap[domainIDKey] = domainID
 	}
 
 	delete(dataMap, "tenant_name")
@@ -730,8 +732,8 @@ func buildAuthDataMap(resourceSchema *schema.Schema, auth schema.Authorization,
 
 	authMap := map[string]interface{}{}
 
-	tenantID, provided := dataMap["tenant_id"]
-	expected := resourceSchema.HasPropertyID("tenant_id")
+	tenantID, provided := dataMap[tenantIDKey]
+	expected := resourceSchema.HasPropertyID(tenantIDKey)
 	if provided || expected {
 		if !provided {
 			tenantID = auth.TenantID()
@@ -741,18 +743,18 @@ func buildAuthDataMap(resourceSchema *schema.Schema, auth schema.Authorization,
 			}
 		}
 
-		authMap["tenant_id"] = tenantID
+		authMap[tenantIDKey] = tenantID
 		authMap["tenant_name"] = auth.TenantName()
 	}
 
-	domainID, provided := dataMap["domain_id"]
-	expected = resourceSchema.HasPropertyID("domain_id")
+	domainID, provided := dataMap[domainIDKey]
+	expected = resourceSchema.HasPropertyID(domainIDKey)
 	if provided || expected {
 		if !provided {
 			domainID = auth.DomainID()
 		}
 
-		authMap["domain_id"] = domainID
+		authMap[domainIDKey] = domainID
 		authMap["domain_name"] = auth.DomainName()
 	}
 
@@ -905,11 +907,11 @@ func UpdateResourceInTransaction(
 		return fmt.Errorf("No environment for schema")
 	}
 	filter := transaction.IDFilter(resourceID)
-	if _, err := resourceSchema.GetPropertyByID("tenant_id"); err == nil && tenantIDs != nil {
-		filter["tenant_id"] = tenantIDs
+	if _, err := resourceSchema.GetPropertyByID(tenantIDKey); err == nil && tenantIDs != nil {
+		filter[tenantIDKey] = tenantIDs
 	}
-	if _, err := resourceSchema.GetPropertyByID("domain_id"); err == nil && domainIDs != nil {
-		filter["domain_id"] = domainIDs
+	if _, err := resourceSchema.GetPropertyByID(domainIDKey); err == nil && domainIDs != nil {
+		filter[domainIDKey] = domainIDs
 	}
 
 	var resource *schema.Resource
@@ -1222,10 +1224,10 @@ func checkIfActionIsAllowedForUser(context middleware.Context, dataStore db.DB, 
 }
 
 func fillDataMapWithTenantAndDomainNames(auth schema.Authorization, dataMap map[string]interface{}) {
-	if tenantID, ok := dataMap["tenant_id"]; ok && tenantID != nil {
+	if tenantID, ok := dataMap[tenantIDKey]; ok && tenantID != nil {
 		dataMap["tenant_name"] = auth.TenantName()
 	}
-	if domainID, ok := dataMap["domain_id"]; ok && domainID != nil {
+	if domainID, ok := dataMap[domainIDKey]; ok && domainID != nil {
 		dataMap["domain_name"] = auth.DomainName()
 	}
 }
@@ -1275,7 +1277,7 @@ func validateAttachmentRelationUnderPath(
 	context middleware.Context,
 	policy *schema.Policy,
 	auth schema.Authorization,
-	data interface{},
+	data map[string]interface{},
 	resourceSchema *schema.Schema,
 	path string,
 ) error {
@@ -1312,7 +1314,7 @@ func validateAttachmentRelationUnderPath(
 	for _, dataPiece := range dataSet {
 		relatedResourceID, _ := dataPiece.(string)
 		log.Debug("Checking ID %s", relatedResourceID)
-		err := validateAttachmentRelation(context, policy, auth, currProp, relatedResourceID)
+		err := validateAttachmentRelation(context, policy, auth, currProp, relatedResourceID, data)
 		if err != nil {
 			return err
 		}
@@ -1327,6 +1329,7 @@ func validateAttachmentRelation(
 	auth schema.Authorization,
 	property *schema.Property,
 	relatedResourceID string,
+	data map[string]interface{},
 ) error {
 	if relatedResourceID == "" {
 		log.Debug("Skipping tenant isolation check because of empty ID")
@@ -1358,12 +1361,21 @@ func validateAttachmentRelation(
 		}
 	}
 
+	rc := policy.GetOtherResourceCondition()
+	if !rc.SkipTenantDomainCheck() && !checkRelatedResource(relatedRes, data) {
+		log.Debug(
+			"Tenant isolation failed: tenat or domain mismatch %s (tenant: %s, domain: %s)",
+			relatedResourceID, auth.TenantID(), auth.DomainID(),
+		)
+		return errorBadRequest(relatedSchema.ID, relatedResourceID)
+	}
+
 	err = otherCond.ApplyPropertyConditionFilter(schema.ActionAttach, relatedRes.Data(), nil)
 	if policy.IsDeny() {
 		if err == nil {
 			log.Debug(
-				"Tenant isolation failed: property condition filter rejected ID %s (tenant: %s, domain: %s)",
-				relatedResourceID, auth.TenantID(), auth.DomainID(),
+				"Tenant isolation failed: property condition filter rejected ID %s (tenant: %s, domain: %s) by policy %s",
+				relatedResourceID, auth.TenantID(), auth.DomainID(), policy.ID,
 			)
 			return errorBadRequest(relatedSchema.ID, relatedResourceID)
 		}
@@ -1377,17 +1389,31 @@ func validateAttachmentRelation(
 	return nil
 }
 
+func checkRelatedResource(relatedResource *schema.Resource, data map[string]interface{}) bool {
+	if expectedTenantID, ok := data[tenantIDKey].(string); ok {
+		if tenantID, ok := relatedResource.Data()[tenantIDKey].(string); ok && tenantID != expectedTenantID {
+			return false
+		}
+	}
+	if expectedDomainID, ok := data[domainIDKey].(string); ok {
+		if domainID, ok := relatedResource.Data()[domainIDKey].(string); ok && domainID != expectedDomainID {
+			return false
+		}
+	}
+	return true
+}
+
 func extendFilterByTenantAndDomain(
 	schema *schema.Schema,
 	filter transaction.Filter, action string,
 	rc *schema.ResourceCondition, auth schema.Authorization,
 ) {
 	tenantFilter, domainFilter := rc.GetTenantAndDomainFilters(action, auth)
-	if _, err := schema.GetPropertyByID("tenant_id"); err == nil && len(tenantFilter) > 0 {
-		filter["tenant_id"] = tenantFilter
+	if _, err := schema.GetPropertyByID(tenantIDKey); err == nil && len(tenantFilter) > 0 {
+		filter[tenantIDKey] = tenantFilter
 	}
-	if _, err := schema.GetPropertyByID("domain_id"); err == nil && len(domainFilter) > 0 {
-		filter["domain_id"] = domainFilter
+	if _, err := schema.GetPropertyByID(domainIDKey); err == nil && len(domainFilter) > 0 {
+		filter[domainIDKey] = domainFilter
 	}
 }
 
