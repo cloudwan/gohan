@@ -1,0 +1,168 @@
+schemas:
+  - id: shop
+    title: Shop resource title
+    description: Shop resource description
+    singular: shop
+    plural: shops
+    metadata:
+      resource_group: Resource Group
+    schema:
+      properties:
+        id:
+          title: Shop ID title
+          description: Shop ID description
+          type: string
+        banana_id:
+          relation: banana
+          relation_property: banana_object
+          title: Banana title
+          description: Banana description
+          type: string
+      type: object
+    actions:
+      action:
+        title: Standard action
+        path: /:id/action
+        method: GET
+        output:
+          type: object
+          properties:
+            foobar:
+              type: string
+              title: Normal action foobar title
+              description: Normal action foobar description
+      websocket:
+        title: Websocket action
+        protocol: websocket
+        path: /:id/websocket
+        method: GET
+        output:
+          type: object
+  - id: shop_array
+    title: Shop array resource title
+    description: Shop array resource description
+    singular: shop_array
+    plural: shop_arrays
+    metadata:
+      resource_group: Resource Group
+    schema:
+      properties:
+        id:
+          title: Shop array ID title
+          description: Shop array ID description
+          type: string
+        banana_ids:
+          type: array
+          title: Banana array title
+          description: Banana array description
+          items:
+            relation: banana
+            relation_property: banana_object
+            title: Banana item title
+            description: Banana item description
+            type: string
+      type: object
+  - id: banana
+    title: Banana resource title
+    description: Banana resource description
+    singular: banana
+    plural: bananas
+    schema:
+      properties:
+        id:
+          title: Banana ID title
+          description: Banana ID description
+          type: string
+      type: object
+  - id: apple
+    title: Apple resource title
+    description: Apple resource description
+    singular: apple
+    plural: apples
+    schema:
+      properties:
+        id:
+          title: Apple ID title
+          description: Apple ID description
+          type: string
+        color:
+          title: Apple color title
+          description: Apple color description
+          type:
+            - string
+            - "null"
+        taste:
+          title: Apple taste title
+          description: Apple taste description
+          deprecated: true
+          type: string
+      type: object
+  - id: orange
+    title: Orange resource title
+    description: Orange resource description
+    singular: orange
+    plural: oranges
+    schema:
+      properties:
+        id:
+          title: Orange ID title
+          description: Orange ID description
+          type: string
+        content:
+          title: Orange content title
+          description: Orange content description
+          type: object
+          additionalProperties:
+            title: Orange content additional properties title
+            description: Orange content additional properties description
+            type: object
+            properties:
+              foobar:
+                type: string
+                title: Orange content foobar title
+                description: Orange content foobar description
+      type: object
+  - id: lemon
+    title: Lemon resource title
+    description: Lemon resource description
+    singular: lemon
+    plural: lemons
+    schema:
+      properties:
+        sourness:
+          title: Lemon sourness title
+          description: Lemon sourness description
+          type: integer
+          minimum: 0
+          maximum: 100
+          default: 50
+          example: 42
+      type: object
+  - id: peach
+    title: Peach resource title
+    description: Peach resource description
+    singular: peach
+    plural: peaches
+    schema:
+      properties:
+        id:
+          title: Peach ID title
+          description: Peach ID description
+          type: string
+        color:
+          title: Peach color title
+          description: Peach color description
+          type: string
+          permission:
+            - create
+        sweetness:
+          title: Peach sweetness title
+          description: Peach sweetness description
+          type: string
+          permission:
+            - update
+        taste:
+          title: Peach taste title
+          description: Peach taste description
+          type: string
+      type: object

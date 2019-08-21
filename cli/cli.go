@@ -33,8 +33,8 @@ import (
 	"github.com/cloudwan/gohan/server"
 	sync_util "github.com/cloudwan/gohan/sync/util"
 	"github.com/cloudwan/gohan/util"
-	"github.com/urfave/cli"
 	"github.com/lestrrat/go-server-starter"
+	"github.com/urfave/cli"
 )
 
 var log = logger.NewLogger()
@@ -62,6 +62,7 @@ func Run(name, usage string) {
 		getResyncCommand(),
 		getTemplateCommand(),
 		getOpenAPICommand(),
+		getOpenAPI3Command(),
 		getMarkdownCommand(),
 		getDotCommand(),
 		getGraceServerCommand(),

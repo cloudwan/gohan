@@ -29,12 +29,16 @@ const (
 	versionFlagName              = "version"
 	titleFlagName                = "title"
 	descriptionFlagName          = "description"
+
+	schemasPathOpenAPIv3 = "#/components/schemas/"
+	schemasPathSwagger   = "#/definitions/"
 )
 
 func deleteGohanExtendedProperties(node map[string]interface{}) {
 	extendedProperties := [...]string{"unique", "permission", "relation",
 		"relation_property", "view", "detail_view", "propertiesOrder",
-		"on_delete_cascade", "indexed", "relationColumn", "sql", "indexes"}
+		"on_delete_cascade", "indexed", "relation_column", "sql", "indexes",
+		"patternProperties"}
 
 	for _, extendedProperty := range extendedProperties {
 		delete(node, extendedProperty)
@@ -51,6 +55,38 @@ func fixEnumDefaultValue(node map[string]interface{}) {
 				}
 			}
 		}
+	}
+}
+
+func getType(input interface{}) (valueType string, nullable bool, err error) {
+	valueType, _ = input.(string)
+	if valueType != "" {
+		return
+	}
+
+	types, _ := input.([]interface{})
+	for _, item := range types {
+		item := item.(string)
+		if item == "null" {
+			nullable = true
+		} else {
+			if valueType != "" {
+				return "", false, fmt.Errorf("more than one type in %+v", input)
+			}
+			valueType = item
+		}
+	}
+	return
+}
+
+func fixNullableTypes(node map[string]interface{}) {
+	valueType, nullable, err := getType(node["type"])
+	if err != nil || valueType == "" {
+		return
+	}
+	node["type"] = valueType
+	if nullable {
+		node["nullable"] = true
 	}
 }
 
@@ -85,8 +121,25 @@ func removeNotSupportedFormat(node map[string]interface{}) {
 	}
 }
 
-func fixPropertyTree(node map[string]interface{}) {
+func fixRelations(node map[string]interface{}) {
+	properties, _ := node["properties"].(map[string]interface{})
 
+	for _, property := range properties {
+		property, _ := property.(map[string]interface{})
+		relation, _ := property["relation"].(string)
+		relationProperty, _ := property["relation_property"].(string)
+
+		if relationProperty != "" && relation != "" {
+			properties[relationProperty] = map[string]interface{}{
+				"$ref": schemasPathOpenAPIv3 + relation,
+			}
+		}
+	}
+}
+
+func fixPropertyTree(node map[string]interface{}) {
+	fixNullableTypes(node)
+	fixRelations(node)
 	deleteGohanExtendedProperties(node)
 	fixEnumDefaultValue(node)
 	removeEmptyRequiredList(node)
@@ -102,11 +155,24 @@ func fixPropertyTree(node map[string]interface{}) {
 			}
 		}
 	}
-
 }
 
 func toSwagger(in *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
-	i := in.Interface()
+	value, err := toOpenAPIv3(in, param)
+	if err != nil {
+		return nil, err
+	}
+	data, ok := value.Interface().(string)
+	if !ok {
+		return nil, &pongo2.Error{OrigError: fmt.Errorf("toOpenAPIv3 didn't return string")}
+	}
+
+	data = strings.Replace(data, schemasPathOpenAPIv3, schemasPathSwagger, -1)
+	return pongo2.AsValue(data), nil
+}
+
+func toOpenAPIv3(in *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
+	i := deepcopy.Copy(in.Interface())
 	m := i.(map[string]interface{})
 
 	fixPropertyTree(m)
@@ -127,24 +193,14 @@ func hasIDParam(in *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.E
 }
 
 func toNonNullType(in *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
-	i := in.Interface()
-	s, ok := i.(string)
-	if ok {
-		return pongo2.AsValue(s), nil
+	valueType, _, err := getType(in.Interface())
+	if err != nil {
+		return nil, &pongo2.Error{OrigError: err}
 	}
-
-	iSlice, ok := i.([]interface{})
-	if !ok {
-		return nil, &pongo2.Error{OrigError: fmt.Errorf("Type is not string or array type")}
+	if valueType == "" {
+		return nil, &pongo2.Error{OrigError: fmt.Errorf("there is no not null type")}
 	}
-	for _, item := range iSlice {
-		t := item.(string)
-		if t != "null" {
-			return pongo2.AsValue(t), nil
-		}
-	}
-
-	return nil, &pongo2.Error{OrigError: fmt.Errorf("Type is only null")}
+	return pongo2.AsValue(valueType), nil
 }
 
 // SnakeToCamel  changes value from snake case to camel case
@@ -175,6 +231,7 @@ func toGoType(in *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Err
 }
 
 func init() {
+	pongo2.RegisterFilter("openapi3", toOpenAPIv3)
 	pongo2.RegisterFilter("swagger", toSwagger)
 	pongo2.RegisterFilter("swagger_path", toSwaggerPath)
 	pongo2.RegisterFilter("swagger_has_id_param", hasIDParam)
@@ -365,7 +422,7 @@ func convertCustomActionOutput(schemas []*SchemaWithPolicy) {
 			if val := action.OutputSchema["type"]; val != nil {
 				if stringVal, ok := val.(string); ok && stringVal != "object" {
 					delete(action.OutputSchema, "type")
-					action.OutputSchema["$ref"] = "#/definitions/" + stringVal
+					action.OutputSchema["$ref"] = schemasPathOpenAPIv3 + stringVal
 				}
 			}
 		}
@@ -608,6 +665,26 @@ func getOpenAPICommand() cli.Command {
 		Flags: []cli.Flag{
 			cli.StringFlag{Name: configFileFlagName, Value: "gohan.yaml", Usage: "Server config File"},
 			cli.StringFlag{Name: templateFlagWithShortName, Value: "embed://etc/templates/openapi.tmpl", Usage: "Template File"},
+			cli.StringFlag{Name: splitByResourceGroupFlagName, Value: "", Usage: "Group by resource"},
+			cli.StringFlag{Name: policyFlagName, Value: "admin", Usage: "Policy"},
+			cli.StringSliceFlag{Name: scopeFlagName, Usage: "Token Scope"},
+			cli.StringFlag{Name: versionFlagName, Value: "0.1", Usage: "API version"},
+			cli.StringFlag{Name: titleFlagName, Value: "gohan API", Usage: "API title"},
+			cli.StringFlag{Name: descriptionFlagName, Value: "", Usage: "API description"},
+		},
+		Action: doTemplate,
+	}
+}
+
+func getOpenAPI3Command() cli.Command {
+	return cli.Command{
+		Name:        "openapi3",
+		ShortName:   "openapi3",
+		Usage:       "Convert gohan schema to OpenAPI v3",
+		Description: "Convert gohan schema to OpenAPI v3",
+		Flags: []cli.Flag{
+			cli.StringFlag{Name: configFileFlagName, Value: "gohan.yaml", Usage: "Server config File"},
+			cli.StringFlag{Name: templateFlagWithShortName, Value: "embed://etc/templates/openapi3.tmpl", Usage: "Template File"},
 			cli.StringFlag{Name: splitByResourceGroupFlagName, Value: "", Usage: "Group by resource"},
 			cli.StringFlag{Name: policyFlagName, Value: "admin", Usage: "Policy"},
 			cli.StringSliceFlag{Name: scopeFlagName, Usage: "Token Scope"},

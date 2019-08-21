@@ -1,0 +1,3 @@
+schemas:
+  - "embed://etc/schema/gohan.json"
+  - "schemas.yaml"

@@ -1,0 +1,357 @@
+{% autoescape off %}{
+    "openapi": "3.0.0",
+    "info": {
+        "version": "{{ version }}",
+        {% if description | length != 0 %}"description": "{{ description }}",{% endif %}
+        "title": "{{ title }}"
+    },
+    "paths": { {% for schemaPolicy in schemas %}{% with schema=schemaPolicy.Schema policies=schemaPolicy.Policies jsonSchema=schemaPolicy.JSONSchema %}{% if schema.Metadata.type != "metaschema" && schema.Type != "abstract" %}
+        "{{ schema.GetPluralURL() }}": {
+            {% if "read" in policies %}"get": {
+                "description" : "Get list of {{ schema.ID}} resources",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/sortKeyParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/sortOrderParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/limitParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/offsetParam"
+                    }{% for key, prop in jsonSchema.properties %}{% with str_type=prop.type | to_non_null_type %}{% if str_type != "object" and str_type != "array" %},
+                    {
+                        "name": "{{ key }}",
+                        "in": "query",
+                        "description": "Filter results with {{ key }} value",
+                        "schema": {
+                            "type": "{{ str_type }}"
+                        }
+                    }{% endif %}{% endwith %}{% endfor %}
+                ],{% if schema.Metadata.resource_group | length != 0 %}
+                "tags": [
+                    "{{ schema.Metadata.resource_group }}"
+                ],{% endif %}
+                "responses": {
+                    "200": {
+                        "description": "{{ schema.Description }}",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/{{ schema.ID }}"
+                                    }
+                                }
+                            }
+                        },
+                        "headers": {
+                            "X-Total-Count": {
+                                "description": "The number of {{ schema.ID }} elements",
+                                "schema": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "$ref": "#/components/responses/UnexpectedError"
+                    }
+                }
+            }{% if "create" in policies %},{% endif %}{% endif %}{% if "create" in policies %}
+            "post": {
+                "description" : "Create new {{ schema.ID }} resource",
+                {% if schema.Metadata.resource_group | length != 0 %}
+                "tags": [
+                    "{{ schema.Metadata.resource_group }}"
+                ],{% endif %}
+                "requestBody": {
+                    "description": "{{ schema.ID }} resource input",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/{{ schema.ID }}Input"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "{{ schema.ID }} created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/{{ schema.ID }}"
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "$ref": "#/components/responses/UnexpectedError"
+                    }
+                }
+            }{% endif %}
+        },
+        "{{ schema.URL }}/{id}": {
+            {% if "read" in policies %}"get": {
+                "description" : "Show a {{ schema.ID}} resources",
+                {% if schema.Metadata.resource_group | length != 0 %}
+                "tags": [
+                    "{{ schema.Metadata.resource_group }}"
+                ],{% endif %}
+                "parameters": [
+                {
+                    "name": "id",
+                    "in": "path",
+                    "description": "ID of {{ schema.ID }} to fetch",
+                    "required": true,
+                    "schema": {
+                        "type": "string"
+                    }
+                }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{{ schema.Description }}",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/{{ schema.ID }}"
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "$ref": "#/components/responses/UnexpectedError"
+                    }
+                }
+            }{% if "update" in policies or "delete" in policies %},{% endif %}{% endif %}
+            {% if "update" in policies %}"put": {
+                "description" : "Update {{ schema.ID }} resource",
+                {% if schema.Metadata.resource_group | length != 0 %}
+                "tags": [
+                    "{{ schema.Metadata.resource_group }}"
+                ],{% endif %}
+                "parameters": [
+                {
+                    "name": "id",
+                    "in": "path",
+                    "description": "ID of {{ schema.ID }} to update",
+                    "required": true,
+                    "schema": {
+                        "type": "string"
+                    }
+                }],
+                "requestBody": {
+                    "description": "{{ schema.ID }} resource input",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/{{ schema.ID }}Update"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "{{ schema.ID }} updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/{{ schema.ID }}"
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "$ref": "#/components/responses/UnexpectedError"
+                    }
+                }
+            }{% if "delete" in policies %},{% endif %}{% endif %}
+            {% if "delete" in policies %}"delete": {
+                "description" : "Delete a {{ schema.ID }} resources",
+                {% if schema.Metadata.resource_group | length != 0 %}
+                "tags": [
+                    "{{ schema.Metadata.resource_group }}"
+                ],{% endif %}
+                "parameters": [
+                {
+                    "name": "id",
+                    "in": "path",
+                    "description": "ID of {{ schema.ID }} to fetch",
+                    "required": true,
+                    "schema": {
+                        "type": "string"
+                    }
+                }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "{{ schema.ID }} get deleted",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                   "$ref": "#/components/schemas/{{ schema.ID }}"
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "$ref": "#/components/responses/UnexpectedError"
+                    }
+                }
+            }{% endif %}
+        }{% for action in schema.Actions %},
+        "{{ schema.GetPluralURL() }}{{ action.Path | swagger_path }}": {
+            "{{ action.Method|lower }}" : {
+                "description": "{% if action.Description | length == 0 %}Action {{ action.ID}}{% else %}{{ action.Description }}{% endif %}",
+                {% if schema.Metadata.resource_group | length != 0 %}
+                "tags": [
+                    "{{ schema.Metadata.resource_group }}"
+                ],{% endif %}
+                {% with has_id=action.Path | swagger_has_id_param put_or_post=action.Method | lower == "post" or action.Method | lower == "put" %}
+                {% with has_params_in_get=action.Method | lower == "get" and action.Parameters | length != 0 %}
+                "parameters": [ {% if has_id %}
+                {
+                    "name": "id",
+                    "in": "path",
+                    "description": "ID of {{ schema.ID }} to fetch",
+                    "required": true,
+                    "schema": {
+                        "type": "string"
+                    }
+                }{% endif %} {% if has_params_in_get %},
+                {% for key, value in action.Parameters %}
+                {
+                    "name": "{{ key }}",
+                    "in": "query",
+                    "schema": {
+                        "type": "{{ value.type }}"
+                    },
+                    "required": {{ value.required | lower }},
+                    "description": "{{ value.description }}"
+                }{% if not forloop.Last %},{% endif %}{% endfor %}{% endif %}{% endwith %}
+                ],
+                {% if put_or_post %}
+                "requestBody": {
+                    "description": "{{ schema.ID }} resource input",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema":
+                                {% with schema=action.InputSchema | openapi3: "                    " %}
+                                {% if schema == "null" %} {}
+                                {% else %} {{schema}} {% endif %}{% endwith %}
+
+                        }
+                    }
+                },{% endif %} {% endwith %}
+                "responses": {
+                    {% if action.Protocol == "websocket" %}
+                    "default": {
+                        "description": "WebSocket protocol"
+                    }
+                    {% else %}
+                    "200": {
+                        "description": "action {{ schema.ID }} response",
+                        "content": {
+                            "application/json": {
+                            "schema":
+                                {{ action.OutputSchema | openapi3: "                        "}}
+                            }
+                        }
+                    },
+                    "default": {
+                        "$ref": "#/components/responses/UnexpectedError"
+                    }
+                    {% endif %}
+                }
+            }
+        }{% endfor %}{% if not forloop.Last %},{% endif %}
+{% endif %}{% endwith %}{% endfor %}
+    },
+    "components": {
+        "responses": {
+            "UnexpectedError": {
+                "description": "unexpected error",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/errorModel"
+                        }
+                    }
+                }
+            }
+        },
+        "schemas": { {% for schemaPolicy in schemas %}{% with schema=schemaPolicy.Schema %}{% if schema.Metadata.type != "metaschema" && schema.Type != "abstract" %}
+            {% with jsonSchema=schemaPolicy.JSONSchema | openapi3: "         " %}
+            {% if jsonSchema != "null"  %}
+            "{{ schema.ID }}" :
+            {{ jsonSchema }}, {% endif %} {% endwith %}
+            {% with jsonSchemaInput=schemaPolicy.JSONSchemaOnCreate | openapi3: "            " %}
+            {% if jsonSchemaInput != "null" %}
+            "{{ schema.ID }}Input" :
+            {{ jsonSchemaInput }}, {% endif %}{% endwith %}
+            {% with jsonSchemaUpdate=schemaPolicy.JSONSchemaOnUpdate | openapi3: "           " %}
+            {% if jsonSchemaUpdate != "null"  %}
+            "{{ schema.ID }}Update" :
+            {{ jsonSchemaUpdate }}, {% endif %}{% endwith %}
+            {% endif %}{% endwith %}{% endfor %}
+            "errorModel": {
+                "type": "object",
+                    "properties": {
+                    "error": {
+                        "description": "error message",
+                        "title": "error",
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "parameters": {
+            "sortKeyParam": {
+                "name": "sort_key",
+                "in": "query",
+                "description": "Property key name to sort results",
+                "schema": {
+                    "type": "string",
+                    "default": "id"
+                }
+            },
+            "sortOrderParam": {
+                "name": "sort_order",
+                "in": "query",
+                "description": "Sort order",
+                "schema": {
+                    "type": "string",
+                    "enum": [
+                        "asc",
+                        "desc"
+                    ],
+                    "default": "asc"
+                }
+            },
+            "limitParam": {
+                "name": "limit",
+                "in": "query",
+                "description": "Maximum number of results",
+                "schema": {
+                    "type": "integer"
+                }
+            },
+            "offsetParam": {
+                "name": "offset",
+                "in": "query",
+                "description": "Number of results to be skipped",
+                "schema": {
+                    "type": "integer"
+                }
+            }
+        }
+    }
+}
+{% endautoescape %}
