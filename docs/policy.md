@@ -24,7 +24,6 @@ Gohan supports several types of conditions
 
 - `is_owner` - Gohan will enforce access privileges for the resources specified in the policy. By default access to resources of all other tenants would be blocked.
 - `is_domain_owner` - Gohan will allow access only to resources from the same domain.
-- `skip_tenant_domain_check` - Gohan by default validates that related resource belongs to the same tenant and domain as created resource (if applicable). This flag allows to skip such validation for particular property.
 
 - belongs_to - Gohan will apply the policy if the user tries to access resources belonging to the tenant specified in condition (see the example below). The condition has no effect if the access privileges are not enforced by specifying the `is_owner` condition. The full condition looks like:
 
@@ -301,6 +300,9 @@ The syntax is slightly different than in the case of a standard policy:
   Can be `*`, then it applies to all properties of the source resource.
   Note that nested relations are also supported - for the syntax, see examples.
 - target_condition: Condition for the target resource (for syntax, see the 'Condition' section)
+
+Optional flags:
+- `skip_tenant_domain_check` - Gohan by default validates that related resource belongs to the same tenant and domain as created resource (if applicable).  This flag allows to skip such validation for particular property, which might be useful for i.e. public resources. This, however, does not turn off tenant isolation: one still would not be able to use resource for which he has no access.
 
 Attach policies are checked during creation/update of the _source_ resource.
 An attach policy is applied only if relation field is non-nil.
