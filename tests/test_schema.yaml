@@ -588,6 +588,9 @@ policies:
 - action: '__attach__'
   effect: allow
   id: tenant_isolation_domain_admin_server_to_network
+  scope:
+  - domain
+  - admin
   principal: admin
   relation_property: network_id
   target_condition:

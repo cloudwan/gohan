@@ -1361,8 +1361,7 @@ func validateAttachmentRelation(
 		}
 	}
 
-	rc := policy.GetOtherResourceCondition()
-	if !rc.SkipTenantDomainCheck() && !checkRelatedResource(relatedRes, data) {
+	if !checkRelatedResource(relatedRes, data, policy) {
 		log.Debug(
 			"Tenant isolation failed: tenat or domain mismatch %s (tenant: %s, domain: %s)",
 			relatedResourceID, auth.TenantID(), auth.DomainID(),
@@ -1389,15 +1388,19 @@ func validateAttachmentRelation(
 	return nil
 }
 
-func checkRelatedResource(relatedResource *schema.Resource, data map[string]interface{}) bool {
-	if expectedTenantID, ok := data[tenantIDKey].(string); ok {
-		if tenantID, ok := relatedResource.Data()[tenantIDKey].(string); ok && tenantID != expectedTenantID {
-			return false
-		}
+func checkRelatedResource(relatedResource *schema.Resource, data map[string]interface{}, policy *schema.Policy) bool {
+	rc := policy.GetOtherResourceCondition()
+	if rc.SkipTenantDomainCheck() {
+		return true
 	}
-	if expectedDomainID, ok := data[domainIDKey].(string); ok {
-		if domainID, ok := relatedResource.Data()[domainIDKey].(string); ok && domainID != expectedDomainID {
-			return false
+	return equalStringKeys(data, relatedResource.Data(), tenantIDKey) &&
+		equalStringKeys(data, relatedResource.Data(), domainIDKey)
+}
+
+func equalStringKeys(first, second map[string]interface{}, key string) bool {
+	if firstValue, ok := first[key].(string); ok {
+		if secondValue, ok := second[key].(string); ok {
+			return firstValue == secondValue
 		}
 	}
 	return true

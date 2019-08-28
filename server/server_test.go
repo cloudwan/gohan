@@ -560,41 +560,32 @@ var _ = Describe("Server package test", func() {
 				})
 			})
 
-			It("should not create resource in different tenant than relation", func() {
-				networkID := "networkred"
-				network := map[string]interface{}{
-					"id":        networkID,
-					"name":      "Networkred",
-					"tenant_id": memberTenantID,
-				}
-				testURL("POST", networkPluralURL, memberTokenID, network, http.StatusCreated)
-				server := map[string]interface{}{
-					"name":       "Server Red",
-					"network_id": networkID,
-					"status":     "ACTIVE",
-					"tenant_id":  powerUserTenantID,
-				}
+			Context("Creating resource in different tenant", func() {
+				var server map[string]interface{}
+				BeforeEach(func() {
+					networkID := "networkred"
+					network := map[string]interface{}{
+						"id":        networkID,
+						"name":      "Networkred",
+						"tenant_id": memberTenantID,
+					}
+					testURL("POST", networkPluralURL, memberTokenID, network, http.StatusCreated)
+					server = map[string]interface{}{
+						"name":       "Server Red",
+						"network_id": networkID,
+						"status":     "ACTIVE",
+						"tenant_id":  powerUserTenantID,
+					}
+				})
 
-				testURL("POST", serverPluralURL, memberTokenID, server, http.StatusBadRequest)
-				testURL("POST", serverPluralURL, powerUserTokenID, server, http.StatusBadRequest)
-			})
+				It("should not create resource in different tenant than relation", func() {
+					testURL("POST", serverPluralURL, memberTokenID, server, http.StatusBadRequest)
+					testURL("POST", serverPluralURL, powerUserTokenID, server, http.StatusBadRequest)
+				})
 
-			It("should create resource in different tenant than relation when checking relation is skipped", func() {
-				networkID := "networkred"
-				network := map[string]interface{}{
-					"id":        networkID,
-					"name":      "Networkred",
-					"tenant_id": memberTenantID,
-				}
-				testURL("POST", networkPluralURL, adminTokenID, network, http.StatusCreated)
-				server := map[string]interface{}{
-					"name":       "Server Red",
-					"network_id": networkID,
-					"status":     "ACTIVE",
-					"tenant_id":  powerUserTenantID,
-				}
-
-				testURL("POST", serverPluralURL, adminTokenID, server, http.StatusCreated)
+				It("should create resource in different tenant than relation when flag skip_tenant_domain_check is provided", func() {
+					testURL("POST", serverPluralURL, adminTokenID, server, http.StatusCreated)
+				})
 			})
 		})
 
