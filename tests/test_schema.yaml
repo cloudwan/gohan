@@ -606,7 +606,12 @@ policies:
   scope:
   - tenant
   target_condition:
-  - is_owner
+  - or:
+    - is_owner
+    - match:
+        property: shared
+        type: eq
+        value: true
   resource:
     path: /v2.0/servers
 
@@ -660,6 +665,14 @@ schemas:
         type: boolean
         unique: false
         default: false
+      tenant_id:
+        description: Tenant ID
+        permission:
+        - create
+        title: Tenant ID
+        type:
+        - string
+        - "null"
       config:
         permission:
           - create
@@ -730,6 +743,7 @@ schemas:
     - route_targets
     - shared
     - config
+    - tenant_id
     type: object
   singular: network
   title: Network

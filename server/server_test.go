@@ -587,6 +587,30 @@ var _ = Describe("Server package test", func() {
 					testURL("POST", serverPluralURL, adminTokenID, server, http.StatusCreated)
 				})
 			})
+
+			Context("Relation to resource with empty tenant", func() {
+				var server map[string]interface{}
+				BeforeEach(func() {
+					networkID := "networkred"
+					network := map[string]interface{}{
+						"id":        networkID,
+						"name":      "Networkred",
+						"tenant_id": nil,
+						"shared":    true,
+					}
+					testURL("POST", networkPluralURL, adminTokenID, network, http.StatusCreated)
+					server = map[string]interface{}{
+						"name":       "Server Red",
+						"network_id": networkID,
+						"status":     "ACTIVE",
+						"tenant_id":  powerUserTenantID,
+					}
+				})
+
+				It("should not create resource in different tenant than relation", func() {
+					testURL("POST", serverPluralURL, powerUserTokenID, server, http.StatusCreated)
+				})
+			})
 		})
 
 		Context("Visibility of properties", func() {
