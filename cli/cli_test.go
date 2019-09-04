@@ -20,17 +20,17 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path"
 	"sync"
 	"time"
 
-	"github.com/cloudwan/gohan/db/migration"
 	"github.com/cloudwan/gohan/extension/framework"
 	"github.com/cloudwan/gohan/sync/etcdv3"
 	sync_util "github.com/cloudwan/gohan/sync/util"
 	"github.com/cloudwan/gohan/util"
-	"github.com/urfave/cli"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/urfave/cli"
 )
 
 const useEtcdEnv = "USE_ETCD_DURING_MIGRATIONS"
@@ -57,10 +57,11 @@ var _ = Describe("CLI", func() {
 	)
 
 	var (
-		waitForThread sync.WaitGroup
-		waitForLocal  sync.WaitGroup
-		etcdSync      *etcdv3.Sync
-		ctx           context_pkg.Context
+		waitForThread      sync.WaitGroup
+		waitForLocal       sync.WaitGroup
+		etcdSync           *etcdv3.Sync
+		ctx                context_pkg.Context
+		originalWorkingDir string
 	)
 
 	BeforeEach(func() {
@@ -75,10 +76,13 @@ var _ = Describe("CLI", func() {
 		var err error
 		etcdSync, err = etcdv3.NewSync([]string{etcdServer}, time.Second)
 		Expect(err).ToNot(HaveOccurred())
+
+		originalWorkingDir = workingDir()
 	})
 
 	AfterEach(func() {
-		os.Unsetenv(useEtcdEnv)
+		Expect(os.Unsetenv(useEtcdEnv)).To(Succeed())
+		Expect(os.Chdir(originalWorkingDir)).To(Succeed())
 	})
 
 	Describe("Post migration subcommand wrapper tests", func() {
@@ -138,7 +142,6 @@ var _ = Describe("CLI", func() {
 
 			configFile := context.String(framework.FlagConfigFile)
 			loadConfig(configFile)
-			Expect(migration.LoadConfig(configFile)).To(Succeed())
 
 			actionMigrateWithPostMigrationEvent("up")(context)
 
@@ -149,5 +152,31 @@ var _ = Describe("CLI", func() {
 			Expect(err).To(Succeed())
 			Expect(node.Value).To(Equal("success"))
 		})
+
+		It("Should not change working directory", func() {
+			absoluteConfigPath := path.Join(workingDir(), configPath)
+			wrappedFuncCalled := false
+			expectedWorkingDir := "/"
+
+			// simply asserting that working dir is the same before and after, would not catch the bug when
+			// working dir is already the same as the one used by tested function
+			// (e.g. when tested function was executed in a previous test case)
+			Expect(workingDir()).NotTo(Equal(expectedWorkingDir))
+			Expect(os.Chdir(expectedWorkingDir)).To(Succeed())
+
+			context := getContextWithConfig(absoluteConfigPath, false)
+			withinLockedMigration(func(context_pkg.Context, *cli.Context) {
+				wrappedFuncCalled = true
+			})(context)
+			Expect(wrappedFuncCalled).To(BeTrue())
+
+			Expect(workingDir()).To(Equal(expectedWorkingDir))
+		})
 	})
 })
+
+func workingDir() string {
+	dir, err := os.Getwd()
+	Expect(err).NotTo(HaveOccurred())
+	return dir
+}

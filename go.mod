@@ -17,7 +17,7 @@ require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
 	github.com/drone/routes v0.0.0-20130816182705-853bef2b2311
 	github.com/flosch/pongo2 v0.0.0-20180611110828-67f4ff8560df
-	github.com/ghodss/yaml v1.0.0 // indirect
+	github.com/getkin/kin-openapi v0.2.0
 	github.com/go-martini/martini v0.0.0-20160404082044-b174c4f35f9f
 	github.com/go-sql-driver/mysql v1.4.0
 	github.com/gogo/protobuf v1.0.0 // indirect
@@ -58,7 +58,6 @@ require (
 	github.com/sirupsen/logrus v1.3.0 // indirect
 	github.com/soheilhy/cmux v0.1.4 // indirect
 	github.com/streamrail/concurrent-map v0.0.0-20160823150647-8bf1e9bacbf6
-	github.com/stretchr/testify v1.3.0 // indirect
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 // indirect
 	github.com/twinj/uuid v1.0.0
 	github.com/tylerb/gls v0.0.0-20150407001822-e606233f194d

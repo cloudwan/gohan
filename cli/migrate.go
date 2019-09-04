@@ -60,6 +60,11 @@ const (
 
 func withinLockedMigration(fn func(context_pkg.Context, *cli.Context)) func(*cli.Context) {
 	return func(context *cli.Context) {
+		workingDir, _ := os.Getwd()
+		defer func() {
+			_ = os.Chdir(workingDir)
+		}()
+
 		configFile := context.String("config-file")
 
 		if migration.LoadConfig(configFile) != nil {
