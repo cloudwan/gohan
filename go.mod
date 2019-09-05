@@ -2,7 +2,7 @@ module github.com/cloudwan/gohan
 
 require (
 	github.com/Juniper/go-netconf v0.1.1
-	github.com/Masterminds/semver v0.0.0-20180410205147-3c5608371304
+	github.com/Masterminds/semver v1.4.3-0.20180410205147-3c5608371304
 	github.com/Masterminds/squirrel v1.1.0
 	github.com/braintree/manners v0.0.0-20150503212558-0b5e6b2c2843
 	github.com/cloudwan/goose v0.0.0-20170411125245-c2d7eac2343d
@@ -24,7 +24,7 @@ require (
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
 	github.com/golang/groupcache v0.0.0-20190129154638-5b532d6fd5ef // indirect
 	github.com/golang/mock v1.3.0
-	github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c // indirect
+	github.com/google/btree v1.0.0 // indirect
 	github.com/gophercloud/gophercloud v0.0.0-20190126172459-c818fa66e4c8
 	github.com/gorilla/websocket v1.4.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
@@ -53,7 +53,7 @@ require (
 	github.com/prometheus/client_model v0.0.0-20190129233127-fd36f4220a90 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20180503174638-e2704e165165
 	github.com/robertkrimen/otto v0.0.0-20180617131154-15f95af6e78d
-	github.com/robfig/cron v0.0.0-20180505203441-b41be1df6967
+	github.com/robfig/cron v1.2.0
 	github.com/serenize/snaker v0.0.0-20171204205717-a683aaf2d516
 	github.com/sirupsen/logrus v1.3.0 // indirect
 	github.com/soheilhy/cmux v0.1.4 // indirect
@@ -71,16 +71,20 @@ require (
 	github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 // indirect
 	github.com/ziutek/telnet v0.0.0-20180329124119-c3b780dc415b // indirect
 	go.etcd.io/bbolt v1.3.2 // indirect
-	golang.org/x/crypto v0.0.0-20190426145343-a29dc8fdc734
-	golang.org/x/net v0.0.0-20190502183928-7f726cade0ab
-	golang.org/x/sys v0.0.0-20190502175342-a43fa875dd82 // indirect
-	golang.org/x/text v0.3.2 // indirect
+	golang.org/x/crypto v0.0.0-20190605123033-f99c8df09eb5
+	golang.org/x/net v0.0.0-20190603091049-60506f45cf65
 	golang.org/x/time v0.0.0-20181108054448-85acf8d2951c // indirect
+	google.golang.org/appengine v1.6.2 // indirect
 	google.golang.org/genproto v0.0.0-20180621235812-80063a038e33 // indirect
 	google.golang.org/grpc v1.13.0 // indirect
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce // indirect
 	gopkg.in/sourcemap.v1 v1.0.5 // indirect
+	gopkg.in/stretchr/testify.v1 v1.0.0-00010101000000-000000000000 // indirect
 	gopkg.in/yaml.v2 v2.2.2
 )
 
-replace github.com/onsi/ginkgo v1.6.0 => github.com/cloudwan/ginkgo v1.6.0-0.20190213151947-95174e8d10cd
+replace github.com/onsi/ginkgo => github.com/cloudwan/ginkgo v1.6.1-0.20190213151947-95174e8d10cd
+
+replace gopkg.in/stretchr/testify.v1 => github.com/stretchr/testify v1.4.0
+
+go 1.13
