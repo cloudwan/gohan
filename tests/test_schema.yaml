@@ -585,6 +585,35 @@ policies:
     - is_owner
   resource:
     path: /v2.0/owned_resource.*
+- action: '__attach__'
+  effect: allow
+  id: tenant_isolation_domain_admin_server_to_network
+  scope:
+  - domain
+  - admin
+  principal: admin
+  relation_property: network_id
+  target_condition:
+  - is_owner
+  - skip_tenant_domain_check
+  resource:
+    path: /v2.0/servers
+- action: '__attach__'
+  effect: allow
+  id: tenant_isolation_member_server_to_network
+  principal: Member
+  relation_property: network_id
+  scope:
+  - tenant
+  target_condition:
+  - or:
+    - is_owner
+    - match:
+        property: shared
+        type: eq
+        value: true
+  resource:
+    path: /v2.0/servers
 
 schemas:
 - description: Network
@@ -636,6 +665,14 @@ schemas:
         type: boolean
         unique: false
         default: false
+      tenant_id:
+        description: Tenant ID
+        permission:
+        - create
+        title: Tenant ID
+        type:
+        - string
+        - "null"
       config:
         permission:
           - create
@@ -706,6 +743,7 @@ schemas:
     - route_targets
     - shared
     - config
+    - tenant_id
     type: object
   singular: network
   title: Network

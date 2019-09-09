@@ -39,13 +39,14 @@ const (
 	// ActionAttach allows a resource to have a relation to another resource
 	ActionAttach = "__attach__"
 
-	conditionIsOwner       = "is_owner"
-	conditionIsDomainOwner = "is_domain_owner"
-	conditionTypeBelongsTo = "belongs_to"
-	conditionProperty      = "property"
-	conditionOr            = "or"
-	conditionAnd           = "and"
-	conditionMatch         = "match"
+	conditionIsOwner               = "is_owner"
+	conditionIsDomainOwner         = "is_domain_owner"
+	conditionSkipTenantDomainCheck = "skip_tenant_domain_check"
+	conditionTypeBelongsTo         = "belongs_to"
+	conditionProperty              = "property"
+	conditionOr                    = "or"
+	conditionAnd                   = "and"
+	conditionMatch                 = "match"
 
 	globalRegexp = ".*"
 
@@ -151,6 +152,7 @@ type ResourceCondition struct {
 	actionFilter                  *conditionFilter
 	requireOwner                  bool
 	requireDomainOwner            bool
+	skipTenantDomainCheck         bool
 }
 
 //resourceFilter describes which resources should be filtered, and what properties are allowed
@@ -624,6 +626,8 @@ func NewResourceCondition(rawCondition []interface{}, policyID string) (*Resourc
 				p.requireOwner = true
 			case conditionIsDomainOwner:
 				p.requireDomainOwner = true
+			case conditionSkipTenantDomainCheck:
+				p.skipTenantDomainCheck = true
 			default:
 				panic(fmt.Sprintf("Unknown condition '%s' for policy '%s'", condition, policyID))
 			}
@@ -758,6 +762,10 @@ func (p *Policy) IsDeny() bool {
 //RequireOwner ...
 func (p *ResourceCondition) RequireOwner() bool {
 	return p.requireOwner
+}
+
+func (p *ResourceCondition) SkipTenantDomainCheck() bool {
+	return p.skipTenantDomainCheck
 }
 
 func (p *ResourceCondition) requireTenantCheck() bool {

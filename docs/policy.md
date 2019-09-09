@@ -301,6 +301,9 @@ The syntax is slightly different than in the case of a standard policy:
   Note that nested relations are also supported - for the syntax, see examples.
 - target_condition: Condition for the target resource (for syntax, see the 'Condition' section)
 
+Optional flags:
+- `skip_tenant_domain_check` - Gohan by default validates that related resource belongs to the same tenant and domain as created resource (if applicable).  This flag allows to skip such validation for particular property, which might be useful for i.e. public resources. This, however, does not turn off tenant isolation: one still would not be able to use resource for which he has no access.
+
 Attach policies are checked during creation/update of the _source_ resource.
 An attach policy is applied only if relation field is non-nil.
 If any of the policies deny access, then modification is forbidden and a 404 response is returned.
