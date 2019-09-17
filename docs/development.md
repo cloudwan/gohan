@@ -1,6 +1,6 @@
 # Development Guide
 
-* Install Go >= 1.9 (preferred stable version)
+* Install Go >= 1.13 (preferred stable version)
 * Install development tools
 
 ```
