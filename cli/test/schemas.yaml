@@ -12,12 +12,18 @@ schemas:
           title: Shop ID title
           description: Shop ID description
           type: string
+          permission:
+            - create
+            - update
         banana_id:
           relation: banana
           relation_property: banana_object
           title: Banana title
           description: Banana description
           type: string
+          permission:
+            - create
+            - update
       type: object
     actions:
       action:
@@ -72,6 +78,31 @@ schemas:
         id:
           title: Banana ID title
           description: Banana ID description
+          type: string
+        color_id:
+          relation: color
+          relation_property: color_object
+          title: Banana color title
+          description: Banana color description
+          type: string
+          permission:
+            - create
+            - update
+      type: object
+  - id: color
+    title: Color resource title
+    description: Color resource description
+    singular: color
+    plural: colors
+    schema:
+      properties:
+        id:
+          title: Color ID title
+          description: Color ID description
+          type: string
+        name:
+          title: Color name title
+          description: Color name description
           type: string
       type: object
   - id: apple
