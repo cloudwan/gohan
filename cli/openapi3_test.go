@@ -25,7 +25,8 @@ var _ = Describe("OpenAPI v3", func() {
 	)
 
 	var (
-		root *openapi3.Swagger
+		output []byte
+		root   *openapi3.Swagger
 
 		expectedBananaSchema = &openapi3.SchemaRef{Value: &openapi3.Schema{
 			Type: "object",
@@ -42,7 +43,7 @@ var _ = Describe("OpenAPI v3", func() {
 	)
 
 	BeforeEach(func() {
-		output := command(
+		output = command(
 			getOpenAPI3Command(),
 			"--config-file", configFile,
 			"--title", apiTitle,
@@ -50,12 +51,17 @@ var _ = Describe("OpenAPI v3", func() {
 			"--description", apiDescription,
 			"--template", "../etc/templates/openapi3.tmpl",
 		)
-
 		var err error
 		root, err = openapi3.NewSwaggerLoader().LoadSwaggerFromData(output)
 		Expect(err).NotTo(HaveOccurred())
 		removeRef(root)
 		schema.ClearManager()
+	})
+
+	It("Should be valid JSON", func() {
+		// parser used by openapi3 package is too forgiving
+		var m map[string]interface{}
+		Expect(json.Unmarshal(output, &m)).To(Succeed())
 	})
 
 	It("Root should contain info section and OpenAPI version", func() {
@@ -307,6 +313,15 @@ var _ = Describe("OpenAPI v3", func() {
 			})
 
 			response := transformJSON(root.Paths["/bananas"].Get.Responses["200"])
+			Expect(response).To(Equal(expectedResponse))
+		})
+
+		It("DELETE should not contain schema in response", func() {
+			expectedResponse := transformJSON(openapi3.Response{
+				Description: "banana get deleted",
+			})
+
+			response := transformJSON(root.Paths["/bananas/{id}"].Delete.Responses["204"])
 			Expect(response).To(Equal(expectedResponse))
 		})
 

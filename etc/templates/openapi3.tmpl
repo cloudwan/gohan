@@ -191,14 +191,7 @@
                 ],
                 "responses": {
                     "204": {
-                        "description": "{{ schema.ID }} get deleted",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                   "$ref": "#/components/schemas/{{ schema.ID }}"
-                                }
-                            }
-                        }
+                        "description": "{{ schema.ID }} get deleted"
                     },
                     "default": {
                         "$ref": "#/components/responses/UnexpectedError"
