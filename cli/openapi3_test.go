@@ -8,7 +8,9 @@ import (
 
 	"github.com/cloudwan/gohan/schema"
 	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/mohae/deepcopy"
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/urfave/cli"
 )
@@ -25,24 +27,12 @@ var _ = Describe("OpenAPI v3", func() {
 	)
 
 	var (
-		root *openapi3.Swagger
-
-		expectedBananaSchema = &openapi3.SchemaRef{Value: &openapi3.Schema{
-			Type: "object",
-			Properties: map[string]*openapi3.SchemaRef{
-				"id": {Value: &openapi3.Schema{
-					Description: "Banana ID description",
-					Type:        "string",
-					ExtensionProps: openapi3.ExtensionProps{Extensions: map[string]interface{}{
-						"title": "Banana ID title",
-					}},
-				}},
-			},
-		}}
+		output []byte
+		root   *openapi3.Swagger
 	)
 
 	BeforeEach(func() {
-		output := command(
+		output = command(
 			getOpenAPI3Command(),
 			"--config-file", configFile,
 			"--title", apiTitle,
@@ -56,6 +46,12 @@ var _ = Describe("OpenAPI v3", func() {
 		Expect(err).NotTo(HaveOccurred())
 		removeRef(root)
 		schema.ClearManager()
+	})
+
+	It("Should be valid JSON", func() {
+		// parser used by openapi3 package is too forgiving
+		var m map[string]interface{}
+		Expect(json.Unmarshal(output, &m)).To(Succeed())
 	})
 
 	It("Root should contain info section and OpenAPI version", func() {
@@ -117,68 +113,8 @@ var _ = Describe("OpenAPI v3", func() {
 			properties := transformJSON(root.Components.Schemas["lemon"].Value.Properties)
 			Expect(properties).To(Equal(expectedProperties))
 		})
-	})
 
-	Describe("Schemas", func() {
-		It("should embed schemas from properties with relation", func() {
-			expectedSchema := transformJSON(&openapi3.SchemaRef{Value: &openapi3.Schema{
-				Type: "object",
-				Properties: map[string]*openapi3.SchemaRef{
-					"id": {Value: &openapi3.Schema{
-						Description: "Shop ID description",
-						Type:        "string",
-						ExtensionProps: openapi3.ExtensionProps{Extensions: map[string]interface{}{
-							"title": "Shop ID title",
-						}},
-					}},
-					"banana_id": {Value: &openapi3.Schema{
-						Description: "Banana description",
-						Type:        "string",
-						ExtensionProps: openapi3.ExtensionProps{Extensions: map[string]interface{}{
-							"title": "Banana title",
-						}},
-					}},
-					"banana_object": expectedBananaSchema,
-				},
-			}})
-
-			schema := transformJSON(root.Components.Schemas["shop"])
-			Expect(schema).To(Equal(expectedSchema))
-		})
-
-		It("should not embed schemas from array properties with relation", func() {
-			expectedSchema := transformJSON(&openapi3.SchemaRef{Value: &openapi3.Schema{
-				Type: "object",
-				Properties: map[string]*openapi3.SchemaRef{
-					"id": {Value: &openapi3.Schema{
-						Description: "Shop array ID description",
-						Type:        "string",
-						ExtensionProps: openapi3.ExtensionProps{Extensions: map[string]interface{}{
-							"title": "Shop array ID title",
-						}},
-					}},
-					"banana_ids": {Value: &openapi3.Schema{
-						Description: "Banana array description",
-						Type:        "array",
-						ExtensionProps: openapi3.ExtensionProps{Extensions: map[string]interface{}{
-							"title": "Banana array title",
-						}},
-						Items: &openapi3.SchemaRef{Value: &openapi3.Schema{
-							Description: "Banana item description",
-							Type:        "string",
-							ExtensionProps: openapi3.ExtensionProps{Extensions: map[string]interface{}{
-								"title": "Banana item title",
-							}},
-						}},
-					}},
-				},
-			}})
-
-			schema := transformJSON(root.Components.Schemas["shop_array"])
-			Expect(schema).To(Equal(expectedSchema))
-		})
-
-		It("should include additionalProperties", func() {
+		It("can have additionalProperties", func() {
 			expectedProperties := transformJSON(map[string]*openapi3.SchemaRef{
 				"id": {Value: &openapi3.Schema{
 					Description: "Orange ID description",
@@ -214,6 +150,155 @@ var _ = Describe("OpenAPI v3", func() {
 
 			properties := transformJSON(root.Components.Schemas["orange"].Value.Properties)
 			Expect(properties).To(Equal(expectedProperties))
+		})
+	})
+
+	Describe("Related schemas", func() {
+		responseContent := func(response *openapi3.ResponseRef) *openapi3.SchemaRef {
+			return response.Value.Content.Get("application/json").Schema
+		}
+		requestContent := func(request *openapi3.RequestBodyRef) *openapi3.SchemaRef {
+			return request.Value.Content.Get("application/json").Schema
+		}
+		withNoAdditionalPropertiesAllowed := func(schema *openapi3.SchemaRef) *openapi3.SchemaRef {
+			schema = deepcopy.Copy(schema).(*openapi3.SchemaRef)
+			schema.Value.AdditionalPropertiesAllowed = boolean(false)
+			return schema
+		}
+
+		expectedColorSchema := &openapi3.SchemaRef{Value: &openapi3.Schema{
+			Type: "object",
+			Properties: map[string]*openapi3.SchemaRef{
+				"id": {Value: &openapi3.Schema{
+					Description: "Color ID description",
+					Type:        "string",
+					ExtensionProps: openapi3.ExtensionProps{Extensions: map[string]interface{}{
+						"title": "Color ID title",
+					}},
+				}},
+				"name": {Value: &openapi3.Schema{
+					Description: "Color name description",
+					Type:        "string",
+					ExtensionProps: openapi3.ExtensionProps{Extensions: map[string]interface{}{
+						"title": "Color name title",
+					}},
+				}},
+			},
+		}}
+
+		expectedBananaSchemaWithRelation := &openapi3.SchemaRef{Value: &openapi3.Schema{
+			Type: "object",
+			Properties: map[string]*openapi3.SchemaRef{
+				"id": {Value: &openapi3.Schema{
+					Description: "Banana ID description",
+					Type:        "string",
+					ExtensionProps: openapi3.ExtensionProps{Extensions: map[string]interface{}{
+						"title": "Banana ID title",
+					}},
+				}},
+				"color_id": {Value: &openapi3.Schema{
+					Description: "Banana color description",
+					Type:        "string",
+					ExtensionProps: openapi3.ExtensionProps{Extensions: map[string]interface{}{
+						"title": "Banana color title",
+					}},
+				}},
+				"color_object": expectedColorSchema,
+			},
+		}}
+
+		expectedShopSchema := &openapi3.SchemaRef{Value: &openapi3.Schema{
+			Type: "object",
+			Properties: map[string]*openapi3.SchemaRef{
+				"id": {Value: &openapi3.Schema{
+					Description: "Shop ID description",
+					Type:        "string",
+					ExtensionProps: openapi3.ExtensionProps{Extensions: map[string]interface{}{
+						"title": "Shop ID title",
+					}},
+				}},
+				"banana_id": {Value: &openapi3.Schema{
+					Description: "Banana description",
+					Type:        "string",
+					ExtensionProps: openapi3.ExtensionProps{Extensions: map[string]interface{}{
+						"title": "Banana title",
+					}},
+				}},
+			},
+		}}
+
+		expectedShopSchemaWithRelation := deepcopy.Copy(expectedShopSchema).(*openapi3.SchemaRef)
+		expectedShopSchemaWithRelation.Value.Properties["banana_object"] = expectedBananaSchemaWithRelation
+
+		It("GET single response should contain object with related schemas", func() {
+			expectedSchema := transformJSON(expectedShopSchemaWithRelation)
+			schema := transformJSON(responseContent(root.Paths["/shops/{id}"].Get.Responses["200"]))
+			Expect(schema).To(Equal(expectedSchema))
+		})
+
+		It("GET multiple response should contain list of objects with related schemas", func() {
+			expectedSchema := transformJSON(&openapi3.SchemaRef{Value: &openapi3.Schema{
+				Type:  "array",
+				Items: expectedShopSchemaWithRelation,
+			}})
+			response := transformJSON(responseContent(root.Paths["/shops"].Get.Responses["200"]))
+			Expect(response).To(Equal(expectedSchema))
+		})
+
+		It("PUT request body should contain object without related schemas", func() {
+			expectedSchema := transformJSON(withNoAdditionalPropertiesAllowed(expectedShopSchema))
+			schema := transformJSON(requestContent(root.Paths["/shops/{id}"].Put.RequestBody))
+			Expect(schema).To(Equal(expectedSchema))
+		})
+
+		It("PUT response should contain object without related schemas", func() {
+			expectedSchema := transformJSON(expectedShopSchema)
+			schema := transformJSON(responseContent(root.Paths["/shops/{id}"].Put.Responses["200"]))
+			Expect(schema).To(Equal(expectedSchema))
+		})
+
+		It("POST request body should contain object without related schemas", func() {
+			expectedSchema := transformJSON(withNoAdditionalPropertiesAllowed(expectedShopSchema))
+			schema := transformJSON(requestContent(root.Paths["/shops"].Post.RequestBody))
+			Expect(schema).To(Equal(expectedSchema))
+		})
+
+		It("POST response should contain object without related schemas", func() {
+			expectedSchema := transformJSON(expectedShopSchema)
+			schema := transformJSON(responseContent(root.Paths["/shops"].Post.Responses["201"]))
+			Expect(schema).To(Equal(expectedSchema))
+		})
+
+		It("should not embed schemas from array properties with relation", func() {
+			expectedSchema := transformJSON(&openapi3.SchemaRef{Value: &openapi3.Schema{
+				Type: "object",
+				Properties: map[string]*openapi3.SchemaRef{
+					"id": {Value: &openapi3.Schema{
+						Description: "Shop array ID description",
+						Type:        "string",
+						ExtensionProps: openapi3.ExtensionProps{Extensions: map[string]interface{}{
+							"title": "Shop array ID title",
+						}},
+					}},
+					"banana_ids": {Value: &openapi3.Schema{
+						Description: "Banana array description",
+						Type:        "array",
+						ExtensionProps: openapi3.ExtensionProps{Extensions: map[string]interface{}{
+							"title": "Banana array title",
+						}},
+						Items: &openapi3.SchemaRef{Value: &openapi3.Schema{
+							Description: "Banana item description",
+							Type:        "string",
+							ExtensionProps: openapi3.ExtensionProps{Extensions: map[string]interface{}{
+								"title": "Banana item title",
+							}},
+						}},
+					}},
+				},
+			}})
+
+			schema := transformJSON(responseContent(root.Paths["/shop_arrays/{id}"].Get.Responses["200"]))
+			Expect(schema).To(Equal(expectedSchema))
 		})
 	})
 
@@ -285,8 +370,13 @@ var _ = Describe("OpenAPI v3", func() {
 	})
 
 	Describe("Responses", func() {
-		It("GET multiple should contain response with list of objects", func() {
-			expectedResponse := transformJSON(openapi3.Response{
+		withDummyContent := func(response *openapi3.ResponseRef) *openapi3.ResponseRef {
+			response.Value.Content = openapi3.NewContentWithJSONSchema(&openapi3.Schema{})
+			return response
+		}
+
+		It("GET multiple should contain response with custom header", func() {
+			expectedResponse := transformJSON(withDummyContent(&openapi3.ResponseRef{Value: &openapi3.Response{
 				Description: "Banana resource description",
 				Headers: map[string]*openapi3.HeaderRef{
 					"X-Total-Count": {Value: &openapi3.Header{
@@ -296,17 +386,18 @@ var _ = Describe("OpenAPI v3", func() {
 						}},
 					}},
 				},
-				Content: openapi3.Content{
-					"application/json": &openapi3.MediaType{
-						Schema: &openapi3.SchemaRef{Value: &openapi3.Schema{
-							Type:  "array",
-							Items: expectedBananaSchema,
-						}},
-					},
-				},
+			}}))
+
+			response := transformJSON(withDummyContent(root.Paths["/bananas"].Get.Responses["200"]))
+			Expect(response).To(Equal(expectedResponse))
+		})
+
+		It("DELETE should not contain schema in response", func() {
+			expectedResponse := transformJSON(openapi3.Response{
+				Description: "banana get deleted",
 			})
 
-			response := transformJSON(root.Paths["/bananas"].Get.Responses["200"])
+			response := transformJSON(root.Paths["/bananas/{id}"].Delete.Responses["204"])
 			Expect(response).To(Equal(expectedResponse))
 		})
 
@@ -417,6 +508,17 @@ var _ = Describe("OpenAPI v3", func() {
 			Expect(operation.Tags).To(Equal(expectedTags))
 		}
 	})
+
+	DescribeTable("openapi3 filter parameter parsing",
+		func(param string, expectedIndentPrefix string, expectedArgs map[string]bool) {
+			indentPrefix, args := toOpenAPIv3ParseParam(param)
+			Expect(indentPrefix).To(Equal(expectedIndentPrefix))
+			Expect(args).To(Equal(expectedArgs))
+		},
+		Entry("indent", "  ", "  ", map[string]bool{}),
+		Entry("parameter", "foo", "", map[string]bool{"foo": true}),
+		Entry("indent and parameters", " ,foo,bar", " ", map[string]bool{"foo": true, "bar": true}),
+	)
 })
 
 func removeRef(i interface{}) {
@@ -476,7 +578,6 @@ func captureStdout(f func()) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	Expect(err).NotTo(HaveOccurred())
 	os.Stdout = w
 	defer func() {
 		os.Stdout = stdout

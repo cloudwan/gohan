@@ -30,11 +30,16 @@ const (
 	titleFlagName                = "title"
 	descriptionFlagName          = "description"
 
-	schemasPathOpenAPIv3 = "#/components/schemas/"
-	schemasPathSwagger   = "#/definitions/"
+	schemasPathOpenAPIv3      = "#/components/schemas/"
+	schemasPathSwagger        = "#/definitions/"
+	schemaWithRelationsSuffix = "WithRelations"
 )
 
-func deleteGohanExtendedProperties(node map[string]interface{}) {
+type propertyTreeFixer struct {
+	addRelations bool
+}
+
+func (f *propertyTreeFixer) deleteGohanExtendedProperties(node map[string]interface{}) {
 	extendedProperties := [...]string{"unique", "permission", "relation",
 		"relation_property", "view", "detail_view", "propertiesOrder",
 		"on_delete_cascade", "indexed", "relation_column", "sql", "indexes",
@@ -45,7 +50,7 @@ func deleteGohanExtendedProperties(node map[string]interface{}) {
 	}
 }
 
-func fixEnumDefaultValue(node map[string]interface{}) {
+func (f *propertyTreeFixer) fixEnumDefaultValue(node map[string]interface{}) {
 	if defaultValue, ok := node["default"]; ok {
 		if enums, ok := node["enum"]; ok {
 			if defaultValueStr, ok := defaultValue.(string); ok {
@@ -79,7 +84,7 @@ func getType(input interface{}) (valueType string, nullable bool, err error) {
 	return
 }
 
-func fixNullableTypes(node map[string]interface{}) {
+func (f *propertyTreeFixer) fixNullableTypes(node map[string]interface{}) {
 	valueType, nullable, err := getType(node["type"])
 	if err != nil || valueType == "" {
 		return
@@ -90,7 +95,7 @@ func fixNullableTypes(node map[string]interface{}) {
 	}
 }
 
-func removeEmptyRequiredList(node map[string]interface{}) {
+func (f *propertyTreeFixer) removeEmptyRequiredList(node map[string]interface{}) {
 	const requiredProperty = "required"
 
 	if required, ok := node[requiredProperty]; ok {
@@ -107,7 +112,7 @@ func removeEmptyRequiredList(node map[string]interface{}) {
 	}
 }
 
-func removeNotSupportedFormat(node map[string]interface{}) {
+func (f *propertyTreeFixer) removeNotSupportedFormat(node map[string]interface{}) {
 	const formatProperty string = "format"
 	var allowedFormats = []string{"uri", "uuid", "email", "int32", "int64", "float", "double",
 		"byte", "binary", "date", "date-time", "password"}
@@ -121,7 +126,10 @@ func removeNotSupportedFormat(node map[string]interface{}) {
 	}
 }
 
-func fixRelations(node map[string]interface{}) {
+func (f *propertyTreeFixer) fixRelations(node map[string]interface{}) {
+	if !f.addRelations {
+		return
+	}
 	properties, _ := node["properties"].(map[string]interface{})
 
 	for _, property := range properties {
@@ -131,27 +139,27 @@ func fixRelations(node map[string]interface{}) {
 
 		if relationProperty != "" && relation != "" {
 			properties[relationProperty] = map[string]interface{}{
-				"$ref": schemasPathOpenAPIv3 + relation,
+				"$ref": schemasPathOpenAPIv3 + relation + schemaWithRelationsSuffix,
 			}
 		}
 	}
 }
 
-func fixPropertyTree(node map[string]interface{}) {
-	fixNullableTypes(node)
-	fixRelations(node)
-	deleteGohanExtendedProperties(node)
-	fixEnumDefaultValue(node)
-	removeEmptyRequiredList(node)
-	removeNotSupportedFormat(node)
+func (f *propertyTreeFixer) fixPropertyTree(node map[string]interface{}) {
+	f.fixNullableTypes(node)
+	f.fixRelations(node)
+	f.deleteGohanExtendedProperties(node)
+	f.fixEnumDefaultValue(node)
+	f.removeEmptyRequiredList(node)
+	f.removeNotSupportedFormat(node)
 
 	for _, value := range node {
 		switch childs := value.(type) {
 		case map[string]interface{}:
-			fixPropertyTree(childs)
+			f.fixPropertyTree(childs)
 		case map[string]map[string]interface{}:
 			for _, value := range childs {
-				fixPropertyTree(value)
+				f.fixPropertyTree(value)
 			}
 		}
 	}
@@ -162,22 +170,35 @@ func toSwagger(in *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Er
 	if err != nil {
 		return nil, err
 	}
-	data, ok := value.Interface().(string)
-	if !ok {
-		return nil, &pongo2.Error{OrigError: fmt.Errorf("toOpenAPIv3 didn't return string")}
-	}
-
+	data := value.String()
 	data = strings.Replace(data, schemasPathOpenAPIv3, schemasPathSwagger, -1)
 	return pongo2.AsValue(data), nil
+}
+
+func toOpenAPIv3ParseParam(param string) (string, map[string]bool) {
+	indentPrefix := ""
+	args := map[string]bool{}
+	for _, arg := range strings.Split(param, ",") {
+		if strings.TrimSpace(arg) == "" {
+			indentPrefix = arg
+		} else {
+			args[arg] = true
+		}
+	}
+	return indentPrefix, args
 }
 
 func toOpenAPIv3(in *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
 	i := deepcopy.Copy(in.Interface())
 	m := i.(map[string]interface{})
 
-	fixPropertyTree(m)
+	indentPrefix, args := toOpenAPIv3ParseParam(param.String())
+	f := propertyTreeFixer{
+		addRelations: args["addRelations"],
+	}
+	f.fixPropertyTree(m)
 
-	data, _ := json.MarshalIndent(i, param.String(), "    ")
+	data, _ := json.MarshalIndent(i, indentPrefix, "    ")
 	return pongo2.AsValue(string(data)), nil
 }
 

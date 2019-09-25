@@ -42,7 +42,7 @@
                                 "schema": {
                                     "type": "array",
                                     "items": {
-                                        "$ref": "#/components/schemas/{{ schema.ID }}"
+                                        "$ref": "#/components/schemas/{{ schema.ID }}WithRelations"
                                     }
                                 }
                             }
@@ -119,7 +119,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/{{ schema.ID }}"
+                                    "$ref": "#/components/schemas/{{ schema.ID }}WithRelations"
                                 }
                             }
                         }
@@ -191,14 +191,7 @@
                 ],
                 "responses": {
                     "204": {
-                        "description": "{{ schema.ID }} get deleted",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                   "$ref": "#/components/schemas/{{ schema.ID }}"
-                                }
-                            }
-                        }
+                        "description": "{{ schema.ID }} get deleted"
                     },
                     "default": {
                         "$ref": "#/components/responses/UnexpectedError"
@@ -292,6 +285,10 @@
             {% if jsonSchema != "null"  %}
             "{{ schema.ID }}" :
             {{ jsonSchema }}, {% endif %} {% endwith %}
+            {% with jsonSchemaWithRelations=schemaPolicy.JSONSchema | openapi3: "         ,addRelations" %}
+            {% if jsonSchemaWithRelations != "null"  %}
+            "{{ schema.ID }}WithRelations" :
+            {{ jsonSchemaWithRelations }}, {% endif %} {% endwith %}
             {% with jsonSchemaInput=schemaPolicy.JSONSchemaOnCreate | openapi3: "            " %}
             {% if jsonSchemaInput != "null" %}
             "{{ schema.ID }}Input" :
