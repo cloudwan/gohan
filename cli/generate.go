@@ -148,7 +148,7 @@ func gohanGenerate(c *cli.Context) {
 	})
 	execCommand(
 		fmt.Sprintf(
-			"go-bindata -pkg %s -o %s/go-bindata.go %s", packageName, codeDir, schemaPath))
+			"go-bindata -nometadata -pkg %s -o %s/go-bindata.go %s", packageName, codeDir, schemaPath))
 
 	//Generating application code
 	log.Info("Generating: application code")
