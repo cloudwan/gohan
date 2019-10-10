@@ -14,7 +14,7 @@ format:
 	govendor fmt +local
 gen:
 	@echo -e "$(OK_COLOR)==> Generating files$(NO_COLOR)"
-	go-bindata -pkg util -o util/bindata.go \
+	go-bindata -nometadata -pkg util -o util/bindata.go \
 	etc/schema/... \
 	etc/templates/... \
 	public/...
