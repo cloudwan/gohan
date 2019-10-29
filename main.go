@@ -32,6 +32,10 @@ func main() {
 	version.Build.Timestamp = buildTimestamp
 	version.Build.Host = buildHost
 
+	for i := 0; i < 10; i++ {
+		cli.Run("a", "b")
+	}
+
 	// run app
 	cli.Run("gohan", "Gohan")
 }
