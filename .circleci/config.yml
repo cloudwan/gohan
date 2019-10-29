@@ -38,6 +38,8 @@ jobs:
       - run: sudo install etcd-v3.1.7-linux-amd64/etcd /usr/bin
       - run: go get github.com/mattn/goveralls
       - run: make test
+      - store_artifacts:
+          path: profile.cov
 
 workflows:
   version: 2
