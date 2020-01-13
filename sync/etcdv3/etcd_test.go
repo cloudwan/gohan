@@ -1,6 +1,7 @@
 package etcdv3
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
@@ -8,7 +9,6 @@ import (
 	"github.com/cloudwan/gohan/extension/goext"
 	gohan_sync "github.com/cloudwan/gohan/sync"
 	etcd "github.com/coreos/etcd/clientv3"
-	"golang.org/x/net/context"
 )
 
 var (
