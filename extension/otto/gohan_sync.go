@@ -16,8 +16,9 @@
 package otto
 
 import (
+	"context"
+
 	"github.com/robertkrimen/otto"
-	"golang.org/x/net/context"
 
 	"github.com/cloudwan/gohan/sync"
 )
