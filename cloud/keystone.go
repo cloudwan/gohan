@@ -21,6 +21,7 @@ import (
 	"regexp"
 	"time"
 
+	l "github.com/cloudwan/gohan/log"
 	"github.com/cloudwan/gohan/metrics"
 	"github.com/cloudwan/gohan/schema"
 	"github.com/gophercloud/gophercloud"
@@ -29,6 +30,10 @@ import (
 	v3tenants "github.com/gophercloud/gophercloud/openstack/identity/v3/projects"
 	v3tokens "github.com/gophercloud/gophercloud/openstack/identity/v3/tokens"
 	"github.com/gophercloud/gophercloud/pagination"
+)
+
+var (
+	log = l.NewLogger()
 )
 
 //KeystoneIdentity middleware
@@ -91,6 +96,8 @@ func (client *keystoneV3Client) VerifyToken(token string) (schema.Authorization,
 
 	tokenResult := v3tokens.Get(client.client, token)
 	if tokenResult.Err != nil {
+		// tokenResult.Err.Error() is stripped out of useful info
+		log.Error("Error during verifying token: %#v", tokenResult.Err)
 		return nil, fmt.Errorf("Error during verifying token: %s", tokenResult.Err.Error())
 	}
 	_, err := tokenResult.ExtractToken()
@@ -100,6 +107,7 @@ func (client *keystoneV3Client) VerifyToken(token string) (schema.Authorization,
 	// If system token needed reauth and user token is invalid, err wont be propagated neither by return nor Err field,
 	// but response is nil
 	if err != nil || !ok {
+		log.Error("Invalid token, err: %s, result: %#v", err, tokenResult)
 		client.updateCounter(1, "error.token.invalid")
 		return nil, fmt.Errorf("Invalid token")
 	}
