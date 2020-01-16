@@ -35,7 +35,6 @@ import (
 	pb "github.com/coreos/etcd/mvcc/mvccpb"
 	cmap "github.com/streamrail/concurrent-map"
 	"github.com/twinj/uuid"
-	"google.golang.org/grpc"
 )
 
 const (
@@ -69,7 +68,6 @@ func NewSync(etcdServers []string, timeout time.Duration) (*Sync, error) {
 		etcd.Config{
 			Endpoints:   etcdServers,
 			DialTimeout: timeout,
-			DialOptions: []grpc.DialOption{grpc.WithBlock()},
 		},
 	)
 	if err != nil {
