@@ -47,11 +47,12 @@ type ITransaction interface {
 	Closed() bool
 }
 
-// IsDeadlock checks if error is deadlock
-func IsDeadlock(err error) bool {
+// IsKnownDatabaseError checks if error is know database error which should be retried
+func IsKnownDatabaseError(err error) bool {
 	knownDatabaseErrorMessages := []string{
 		"Deadlock found when trying to get lock; try restarting transaction", /* MySQL / MariaDB */
-		"database is locked",                                                 /* SQLite */
+		"Lock wait timeout exceeded; try restarting transaction",             /* MySQL / MariaDB */
+		"database is locked", /* SQLite */
 	}
 
 	for _, msg := range knownDatabaseErrorMessages {
@@ -107,13 +108,13 @@ func WithinTemplate(
 ) error {
 	var err error
 	for attempt := 0; attempt <= retries; attempt++ {
-		if err = tryWithinTx(beginStrategy, fn); err == nil || !IsDeadlock(err) {
+		if err = tryWithinTx(beginStrategy, fn); err == nil || !IsKnownDatabaseError(err) {
 			return err
 		}
 		retryInterval := GetRetryInterval(retryStrategy())
 		log.Warning(
 			"scoped transaction deadlocked, retrying %d / %d, after %dms",
-			attempt,
+			attempt+1,
 			retries,
 			retryInterval.Nanoseconds()/int64(time.Millisecond),
 		)

@@ -837,7 +837,8 @@ func buildSelect(sc *selectContext) (string, []interface{}, error) {
 
 func (tx *Transaction) executeSelect(ctx context.Context, sc *selectContext, sql string, args []interface{}) (list []*schema.Resource, total uint64, err error) {
 	tx.logQuery(sql, args...)
-	rows, err := tx.transaction.QueryxContext(safeMysqlContext(ctx), sql, args...)
+	var rows *sqlx.Rows
+	rows, err = tx.transaction.QueryxContext(safeMysqlContext(ctx), sql, args...)
 	if err != nil {
 		return
 	}
@@ -845,7 +846,7 @@ func (tx *Transaction) executeSelect(ctx context.Context, sc *selectContext, sql
 
 	list, err = tx.decodeRows(sc.schema, rows, list, sc.fields != nil, sc.join)
 	if err != nil {
-		return nil, 0, err
+		return
 	}
 
 	if tx.isSelectPaginated(sc) {
@@ -955,11 +956,17 @@ func (tx *Transaction) Query(ctx context.Context, s *schema.Schema, query string
 func (tx *Transaction) decodeRows(s *schema.Schema, rows *sqlx.Rows, list []*schema.Resource, skipNil, recursive bool) ([]*schema.Resource, error) {
 	for rows.Next() {
 		data := map[string]interface{}{}
-		rows.MapScan(data)
+		if err := rows.MapScan(data); err != nil {
+			return nil, err
+		}
 
 		resourceData := tx.decode(s, s.GetDbTableName(), skipNil, recursive, data)
 		resource := schema.NewResource(s, resourceData)
 		list = append(list, resource)
+	}
+
+	if e := rows.Err(); e != nil {
+		return nil, e
 	}
 
 	return list, nil
@@ -1110,6 +1117,10 @@ func (tx *Transaction) stateList(ctx context.Context, s *schema.Schema, filter t
 			return nil, err
 		}
 		states = append(states, singleState)
+	}
+
+	if e := rows.Err(); e != nil {
+		return nil, e
 	}
 
 	return states, nil
