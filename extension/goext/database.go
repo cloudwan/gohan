@@ -16,7 +16,6 @@
 package goext
 
 import (
-	"strings"
 	"time"
 )
 
@@ -48,20 +47,4 @@ func DefaultDbOptions() DbOptions {
 		RetryTxCount:    0,
 		RetryTxInterval: 0,
 	}
-}
-
-// IsDeadlock checks if error is deadlock
-func IsDeadlock(err error) bool {
-	knownDatabaseErrorMessages := []string{
-		"Deadlock found when trying to get lock; try restarting transaction", /* MySQL / MariaDB */
-		"database is locked",                                                 /* SQLite */
-	}
-
-	for _, msg := range knownDatabaseErrorMessages {
-		if strings.Contains(err.Error(), msg) {
-			return true
-		}
-	}
-
-	return false
 }

@@ -965,8 +965,8 @@ func (tx *Transaction) decodeRows(s *schema.Schema, rows *sqlx.Rows, list []*sch
 		list = append(list, resource)
 	}
 
-	if e := rows.Err(); e != nil {
-		return nil, e
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 
 	return list, nil
@@ -1119,8 +1119,8 @@ func (tx *Transaction) stateList(ctx context.Context, s *schema.Schema, filter t
 		states = append(states, singleState)
 	}
 
-	if e := rows.Err(); e != nil {
-		return nil, e
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 
 	return states, nil

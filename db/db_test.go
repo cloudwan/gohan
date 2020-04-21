@@ -129,6 +129,11 @@ var _ = Describe("Database operation test", func() {
 		Expect(err).ToNot(HaveOccurred())
 	}
 
+	create := func(tx transaction.Transaction, resource *schema.Resource) {
+		_, err := tx.Create(ctx, resource)
+		Expect(err).NotTo(HaveOccurred())
+	}
+
 	Describe("Base operations", func() {
 		var (
 			tx transaction.Transaction
@@ -166,11 +171,6 @@ var _ = Describe("Database operation test", func() {
 				}
 			})
 
-			create := func(resource *schema.Resource) {
-				_, err := tx.Create(ctx, resource)
-				Expect(err).NotTo(HaveOccurred())
-			}
-
 			Context("When the database is empty", func() {
 				It("Returns an empty list", func() {
 					list, num, err := tx.List(ctx, networkSchema, nil, nil, nil)
@@ -181,7 +181,7 @@ var _ = Describe("Database operation test", func() {
 				})
 
 				It("Creates a resource", func() {
-					create(networkResource1)
+					create(tx, networkResource1)
 
 					Expect(tx.Commit()).To(Succeed())
 				})
@@ -218,9 +218,9 @@ var _ = Describe("Database operation test", func() {
 					tx.Delete(ctx, networkSchema, networkResource1.ID())
 					tx.Delete(ctx, networkSchema, networkResource2.ID())
 
-					create(networkResource1)
-					create(networkResource2)
-					create(serverResource)
+					create(tx, networkResource1)
+					create(tx, networkResource2)
+					create(tx, serverResource)
 					Expect(tx.Commit()).To(Succeed())
 					tx.Close()
 					tx, err = dataStore.BeginTx()
@@ -391,7 +391,7 @@ var _ = Describe("Database operation test", func() {
 				})
 
 				It("Creates a dependent resource", func() {
-					create(subnetResource)
+					create(tx, subnetResource)
 					Expect(tx.Commit()).To(Succeed())
 				})
 
@@ -574,10 +574,10 @@ var _ = Describe("Database operation test", func() {
 						return nil
 					}
 					err := secondTx.Exec(ctx, "update todos set description = 'other_description' where id = 'second'")
-					Expect(db.IsKnownDatabaseError(err)).To(BeTrue())
+					Expect(db.IsTemporaryDatabaseError(err)).To(BeTrue())
 					return err
 				})
-				Expect(err).To(Succeed())
+			Expect(err).NotTo(HaveOccurred())
 				return nil
 			})).To(Succeed())
 		})
@@ -590,9 +590,10 @@ var _ = Describe("Database operation test", func() {
 
 			connOpts = options.Options{
 				RetryTxCount:    5,
-				RetryTxInterval: 100 * time.Millisecond,
+				RetryTxInterval: 0,
 			}
 		)
+
 		JustBeforeEach(func() {
 			firstConn, err = dbutil.ConnectDB(mysqlType, mysqlConn, db.DefaultMaxOpenConn, connOpts)
 			Expect(err).ToNot(HaveOccurred())
@@ -611,6 +612,9 @@ var _ = Describe("Database operation test", func() {
 		})
 
 		BeforeEach(func() {
+			if os.Getenv("MYSQL_TEST") != "true" {
+				Skip("Test possible only on MySQL DB")
+			}
 			initData()
 		})
 
@@ -632,10 +636,10 @@ var _ = Describe("Database operation test", func() {
 					if deadlockCount == 4 {
 						return nil
 					}
-					Expect(db.IsKnownDatabaseError(err)).To(BeTrue())
+					Expect(db.IsTemporaryDatabaseError(err)).To(BeTrue())
 					return err
 				})
-				Expect(err).To(Succeed())
+				Expect(err).NotTo(HaveOccurred())
 				return nil
 			})).To(Succeed())
 		})
