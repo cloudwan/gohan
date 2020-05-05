@@ -76,7 +76,7 @@ var _ = Describe("Database operation test", func() {
 		}
 	})
 
-	initData := func() {
+	initSchemas := func() {
 		Expect(manager.LoadSchemaFromFile("../tests/test_abstract_schema.yaml")).To(Succeed())
 		Expect(manager.LoadSchemaFromFile("../tests/test_schema.yaml")).To(Succeed())
 		networkSchema, ok = manager.Schema("network")
@@ -85,6 +85,10 @@ var _ = Describe("Database operation test", func() {
 		Expect(ok).To(BeTrue())
 		serverSchema, ok = manager.Schema("server")
 		Expect(ok).To(BeTrue())
+	}
+
+	initData := func() {
+		initSchemas()
 		network1 := map[string]interface{}{
 			"id":                "networkRed",
 			"name":              "NetworkRed",
@@ -593,6 +597,10 @@ var _ = Describe("Database operation test", func() {
 				RetryTxInterval: 0,
 			}
 		)
+		const (
+			networkTestID = "uniq-network-id"
+			serverTestID = "uniq-server-id"
+		)
 
 		JustBeforeEach(func() {
 			firstConn, err = dbutil.ConnectDB(mysqlType, mysqlConn, db.DefaultMaxOpenConn, connOpts)
@@ -603,9 +611,37 @@ var _ = Describe("Database operation test", func() {
 			for _, s := range manager.OrderedSchemas() {
 				Expect(firstConn.RegisterTable(s, false, true)).To(Succeed())
 			}
+			network1 := map[string]interface{}{
+				"id":                networkTestID,
+				"description":       "",
+				"shared":            false,
+				"route_targets":     []string{"1000:10000", "2000:20000"},
+				"providor_networks": map[string]interface{}{"segmentation_id": 10, "segmentation_type": "vlan"}}
+			nr, err := manager.LoadResource("network", network1)
+			Expect(err).ToNot(HaveOccurred())
+
+
+			server := map[string]interface{}{
+				"id":          serverTestID,
+				"network_id":  networkTestID,
+				"description": "",
+			}
+			sr, err := manager.LoadResource("server", server)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(db.WithinTx(firstConn, func(tx transaction.Transaction) error {
+				create(tx, nr)
+				create(tx, sr)
+				return nil
+			})).To(Succeed())
 		})
 
 		AfterEach(func() {
+			Expect(db.WithinTx(firstConn, func(tx transaction.Transaction) error {
+				Expect(tx.Delete(ctx, serverSchema, serverTestID)).To(Succeed())
+				Expect(tx.Delete(ctx, networkSchema, networkTestID)).To(Succeed())
+				return nil
+			})).To(Succeed())
 			firstConn.Close()
 			secondConn.Close()
 			schema.ClearManager()
@@ -615,7 +651,7 @@ var _ = Describe("Database operation test", func() {
 			if os.Getenv("MYSQL_TEST") != "true" {
 				Skip("Test possible only on MySQL DB")
 			}
-			initData()
+			initSchemas()
 		})
 
 		It("should retry a few times after a deadlock", func() {
@@ -624,11 +660,11 @@ var _ = Describe("Database operation test", func() {
 				err := db.WithinTx(secondConn, func(secondTx transaction.Transaction) error {
 					_, num, err := firstTx.LockList(ctx, networkSchema, nil, nil, nil, schema.SkipRelatedResources)
 					Expect(err).ToNot(HaveOccurred())
-					Expect(num).To(Equal(uint64(2)))
+					Expect(num).ToNot(BeZero())
 
 					_, num, err = secondTx.LockList(ctx, serverSchema, nil, nil, nil, schema.SkipRelatedResources)
 					Expect(err).ToNot(HaveOccurred())
-					Expect(num).To(Equal(uint64(1)))
+					Expect(num).ToNot(BeZero())
 
 					_, num, err = secondTx.LockList(ctx, networkSchema, nil, nil, nil, schema.SkipRelatedResources)
 					Expect(err).To(HaveOccurred())
