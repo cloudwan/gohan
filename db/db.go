@@ -47,10 +47,12 @@ type ITransaction interface {
 	Closed() bool
 }
 
-// IsDeadlock checks if error is deadlock
-func IsDeadlock(err error) bool {
+// IsTemporaryDatabaseError checks if error is temporary database error which should be retried
+func IsTemporaryDatabaseError(err error) bool {
 	knownDatabaseErrorMessages := []string{
 		"Deadlock found when trying to get lock; try restarting transaction", /* MySQL / MariaDB */
+		"Lock wait timeout exceeded; try restarting transaction",             /* MySQL / MariaDB */
+		"try restarting transaction",                                         /* MySQL / MariaDB */
 		"database is locked",                                                 /* SQLite */
 	}
 
@@ -106,9 +108,17 @@ func WithinTemplate(
 	fn func(ITransaction) error,
 ) error {
 	var err error
-	for attempt := 0; attempt <= retries; attempt++ {
-		if err = tryWithinTx(beginStrategy, fn); err == nil || !IsDeadlock(err) {
+	attempt := 0
+	for {
+		if err = tryWithinTx(beginStrategy, fn); err == nil {
+			return nil
+		}
+		if !IsTemporaryDatabaseError(err) {
 			return err
+		}
+		attempt++
+		if attempt > retries {
+			break
 		}
 		retryInterval := GetRetryInterval(retryStrategy())
 		log.Warning(

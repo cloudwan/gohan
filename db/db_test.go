@@ -56,6 +56,13 @@ var _ = Describe("Database operation test", func() {
 		ctx       context.Context
 	)
 
+	const (
+		mysqlConn = "root@tcp(localhost:3306)/gohan_test"
+		mysqlType = "mysql"
+		sqliteConn = "./test.db"
+		sqliteType = "sqlite3"
+	)
+
 	BeforeEach(func() {
 		manager = schema.GetManager()
 		Expect(manager.LoadSchemaFromFile("../etc/schema/gohan.json")).To(Succeed())
@@ -69,63 +76,75 @@ var _ = Describe("Database operation test", func() {
 		}
 	})
 
+	initSchemas := func() {
+		Expect(manager.LoadSchemaFromFile("../tests/test_abstract_schema.yaml")).To(Succeed())
+		Expect(manager.LoadSchemaFromFile("../tests/test_schema.yaml")).To(Succeed())
+		networkSchema, ok = manager.Schema("network")
+		Expect(ok).To(BeTrue())
+		subnetSchema, ok = manager.Schema("subnet")
+		Expect(ok).To(BeTrue())
+		serverSchema, ok = manager.Schema("server")
+		Expect(ok).To(BeTrue())
+	}
+
+	initData := func() {
+		initSchemas()
+		network1 := map[string]interface{}{
+			"id":                "networkRed",
+			"name":              "NetworkRed",
+			"description":       "A crimson network",
+			"tenant_id":         "red",
+			"shared":            false,
+			"route_targets":     []string{"1000:10000", "2000:20000"},
+			"providor_networks": map[string]interface{}{"segmentation_id": 10, "segmentation_type": "vlan"}}
+		networkResource1, err = manager.LoadResource("network", network1)
+		Expect(err).ToNot(HaveOccurred())
+
+		network2 := map[string]interface{}{
+			"id":                "networkBlue",
+			"name":              "NetworkBlue",
+			"description":       "A crimson network",
+			"tenant_id":         "blue",
+			"shared":            false,
+			"route_targets":     []string{"1000:10000", "2000:20000"},
+			"providor_networks": map[string]interface{}{"segmentation_id": 10, "segmentation_type": "vlan"}}
+		networkResource2, err = manager.LoadResource("network", network2)
+		Expect(err).ToNot(HaveOccurred())
+
+		subnet := map[string]interface{}{
+			"id":          "subnetRed",
+			"name":        "SubnetRed",
+			"description": "A crimson subnet",
+			"tenant_id":   "red",
+			"cidr":        "10.0.0.0/24"}
+		subnetResource, err = manager.LoadResource("subnet", subnet)
+		Expect(err).ToNot(HaveOccurred())
+		subnetResource.SetParentID("networkRed")
+		Expect(subnetResource.Path()).To(Equal("/v2.0/subnets/subnetRed"))
+
+		server := map[string]interface{}{
+			"id":          "serverRed",
+			"name":        "serverRed",
+			"tenant_id":   "red",
+			"network_id":  "networkRed",
+			"description": "red server",
+			"cidr":        "10.0.0.0/24"}
+		serverResource, err = manager.LoadResource("server", server)
+		Expect(err).ToNot(HaveOccurred())
+	}
+
+	create := func(tx transaction.Transaction, resource *schema.Resource) {
+		_, err := tx.Create(ctx, resource)
+		Expect(err).NotTo(HaveOccurred())
+	}
+
 	Describe("Base operations", func() {
 		var (
 			tx transaction.Transaction
 		)
 
 		BeforeEach(func() {
-			Expect(manager.LoadSchemaFromFile("../tests/test_abstract_schema.yaml")).To(Succeed())
-			Expect(manager.LoadSchemaFromFile("../tests/test_schema.yaml")).To(Succeed())
-			networkSchema, ok = manager.Schema("network")
-			Expect(ok).To(BeTrue())
-			subnetSchema, ok = manager.Schema("subnet")
-			Expect(ok).To(BeTrue())
-			serverSchema, ok = manager.Schema("server")
-			Expect(ok).To(BeTrue())
-
-			network1 := map[string]interface{}{
-				"id":                "networkRed",
-				"name":              "NetworkRed",
-				"description":       "A crimson network",
-				"tenant_id":         "red",
-				"shared":            false,
-				"route_targets":     []string{"1000:10000", "2000:20000"},
-				"providor_networks": map[string]interface{}{"segmentation_id": 10, "segmentation_type": "vlan"}}
-			networkResource1, err = manager.LoadResource("network", network1)
-			Expect(err).ToNot(HaveOccurred())
-
-			network2 := map[string]interface{}{
-				"id":                "networkBlue",
-				"name":              "NetworkBlue",
-				"description":       "A crimson network",
-				"tenant_id":         "blue",
-				"shared":            false,
-				"route_targets":     []string{"1000:10000", "2000:20000"},
-				"providor_networks": map[string]interface{}{"segmentation_id": 10, "segmentation_type": "vlan"}}
-			networkResource2, err = manager.LoadResource("network", network2)
-			Expect(err).ToNot(HaveOccurred())
-
-			subnet := map[string]interface{}{
-				"id":          "subnetRed",
-				"name":        "SubnetRed",
-				"description": "A crimson subnet",
-				"tenant_id":   "red",
-				"cidr":        "10.0.0.0/24"}
-			subnetResource, err = manager.LoadResource("subnet", subnet)
-			Expect(err).ToNot(HaveOccurred())
-			subnetResource.SetParentID("networkRed")
-			Expect(subnetResource.Path()).To(Equal("/v2.0/subnets/subnetRed"))
-
-			server := map[string]interface{}{
-				"id":          "serverRed",
-				"name":        "serverRed",
-				"tenant_id":   "red",
-				"network_id":  "networkRed",
-				"description": "red server",
-				"cidr":        "10.0.0.0/24"}
-			serverResource, err = manager.LoadResource("server", server)
-			Expect(err).ToNot(HaveOccurred())
+			initData()
 		})
 
 		JustBeforeEach(func() {
@@ -148,18 +167,13 @@ var _ = Describe("Database operation test", func() {
 		Describe("Using sql", func() {
 			BeforeEach(func() {
 				if os.Getenv("MYSQL_TEST") == "true" {
-					conn = "root@tcp(localhost:3306)/gohan_test"
-					dbType = "mysql"
+					conn = mysqlConn
+					dbType = mysqlType
 				} else {
-					conn = "./test.db"
-					dbType = "sqlite3"
+					conn = sqliteConn
+					dbType = sqliteType
 				}
 			})
-
-			create := func(resource *schema.Resource) {
-				_, err := tx.Create(ctx, resource)
-				Expect(err).NotTo(HaveOccurred())
-			}
 
 			Context("When the database is empty", func() {
 				It("Returns an empty list", func() {
@@ -171,7 +185,7 @@ var _ = Describe("Database operation test", func() {
 				})
 
 				It("Creates a resource", func() {
-					create(networkResource1)
+					create(tx, networkResource1)
 
 					Expect(tx.Commit()).To(Succeed())
 				})
@@ -208,9 +222,9 @@ var _ = Describe("Database operation test", func() {
 					tx.Delete(ctx, networkSchema, networkResource1.ID())
 					tx.Delete(ctx, networkSchema, networkResource2.ID())
 
-					create(networkResource1)
-					create(networkResource2)
-					create(serverResource)
+					create(tx, networkResource1)
+					create(tx, networkResource2)
+					create(tx, serverResource)
 					Expect(tx.Commit()).To(Succeed())
 					tx.Close()
 					tx, err = dataStore.BeginTx()
@@ -381,7 +395,7 @@ var _ = Describe("Database operation test", func() {
 				})
 
 				It("Creates a dependent resource", func() {
-					create(subnetResource)
+					create(tx, subnetResource)
 					Expect(tx.Commit()).To(Succeed())
 				})
 
@@ -564,10 +578,104 @@ var _ = Describe("Database operation test", func() {
 						return nil
 					}
 					err := secondTx.Exec(ctx, "update todos set description = 'other_description' where id = 'second'")
-					Expect(db.IsDeadlock(err)).To(BeTrue())
+					Expect(db.IsTemporaryDatabaseError(err)).To(BeTrue())
 					return err
 				})
-				Expect(err).To(Succeed())
+			Expect(err).NotTo(HaveOccurred())
+				return nil
+			})).To(Succeed())
+		})
+	})
+
+	Context("MySQL transaction retries", func() {
+		var (
+			firstConn  db.DB
+			secondConn db.DB
+
+			connOpts = options.Options{
+				RetryTxCount:    5,
+				RetryTxInterval: 0,
+			}
+		)
+		const (
+			networkTestID = "uniq-network-id"
+			serverTestID = "uniq-server-id"
+		)
+
+		JustBeforeEach(func() {
+			firstConn, err = dbutil.ConnectDB(mysqlType, mysqlConn, db.DefaultMaxOpenConn, connOpts)
+			Expect(err).ToNot(HaveOccurred())
+			secondConn, err = dbutil.ConnectDB(mysqlType, mysqlConn, db.DefaultMaxOpenConn, connOpts)
+			Expect(err).ToNot(HaveOccurred())
+
+			for _, s := range manager.OrderedSchemas() {
+				Expect(firstConn.RegisterTable(s, false, true)).To(Succeed())
+			}
+			network1 := map[string]interface{}{
+				"id":                networkTestID,
+				"description":       "",
+				"shared":            false,
+				"route_targets":     []string{"1000:10000", "2000:20000"},
+				"providor_networks": map[string]interface{}{"segmentation_id": 10, "segmentation_type": "vlan"}}
+			nr, err := manager.LoadResource("network", network1)
+			Expect(err).ToNot(HaveOccurred())
+
+
+			server := map[string]interface{}{
+				"id":          serverTestID,
+				"network_id":  networkTestID,
+				"description": "",
+			}
+			sr, err := manager.LoadResource("server", server)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(db.WithinTx(firstConn, func(tx transaction.Transaction) error {
+				create(tx, nr)
+				create(tx, sr)
+				return nil
+			})).To(Succeed())
+		})
+
+		AfterEach(func() {
+			Expect(db.WithinTx(firstConn, func(tx transaction.Transaction) error {
+				Expect(tx.Delete(ctx, serverSchema, serverTestID)).To(Succeed())
+				Expect(tx.Delete(ctx, networkSchema, networkTestID)).To(Succeed())
+				return nil
+			})).To(Succeed())
+			firstConn.Close()
+			secondConn.Close()
+			schema.ClearManager()
+		})
+
+		BeforeEach(func() {
+			if os.Getenv("MYSQL_TEST") != "true" {
+				Skip("Test possible only on MySQL DB")
+			}
+			initSchemas()
+		})
+
+		It("should retry a few times after a deadlock", func() {
+			deadlockCount := 0
+			Expect(db.WithinTx(firstConn, func(firstTx transaction.Transaction) error {
+				err := db.WithinTx(secondConn, func(secondTx transaction.Transaction) error {
+					_, num, err := firstTx.LockList(ctx, networkSchema, nil, nil, nil, schema.SkipRelatedResources)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(num).ToNot(BeZero())
+
+					_, num, err = secondTx.LockList(ctx, serverSchema, nil, nil, nil, schema.SkipRelatedResources)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(num).ToNot(BeZero())
+
+					_, num, err = secondTx.LockList(ctx, networkSchema, nil, nil, nil, schema.SkipRelatedResources)
+					Expect(err).To(HaveOccurred())
+					deadlockCount++
+					if deadlockCount == 4 {
+						return nil
+					}
+					Expect(db.IsTemporaryDatabaseError(err)).To(BeTrue())
+					return err
+				})
+				Expect(err).NotTo(HaveOccurred())
 				return nil
 			})).To(Succeed())
 		})
