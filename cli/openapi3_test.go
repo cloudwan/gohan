@@ -56,11 +56,11 @@ var _ = Describe("OpenAPI v3", func() {
 
 	It("Root should contain info section and OpenAPI version", func() {
 		Expect(root.OpenAPI).To(Equal(openApiVersion))
-		Expect(root.Info, WithTransform(transformJSON, Equal(transformJSON(openapi3.Info{
+		Expect(transformJSON(root.Info)).To(Equal(transformJSON(openapi3.Info{
 			Title:       apiTitle,
 			Version:     apiVersion,
 			Description: apiDescription,
-		}))))
+		})))
 	})
 
 	Describe("Properties", func() {
