@@ -133,7 +133,7 @@ func emitPostMigrateEvent(ctx context_pkg.Context, forcedSchemas string, syncETC
 		log.Fatal(err)
 	}
 
-	if err := publishEvent(ctx, postMigrationEnvName, modifiedSchemas, eventPostMigration, syncETCDEvent, postMigrationEventTimeout); err != nil {
+	if err := publishPostMigrateEvent(ctx, postMigrationEnvName, modifiedSchemas, syncETCDEvent, postMigrationEventTimeout); err != nil {
 		log.Fatal("Publish post-migrate event failed: %s", err)
 	}
 
@@ -234,8 +234,46 @@ func actionMigrateCreateInitialMigration() func(context *cli.Context) {
 	}
 }
 
-func publishEventWithOptions(ctx context_pkg.Context, envName string, modifiedSchemas []string, eventName string, syncETCDEvent bool, eventTimeout time.Duration, db db.DB, manager *schema.Manager, envManager *extension.Manager, sync sync.Sync, ident middleware.IdentityService) {
+func publishPostMigrateEvent(ctx context_pkg.Context, envName string, modifiedSchemas []string, syncETCDEvent bool,
+	eventTimeout time.Duration) error {
+
+	config := util.GetConfig()
+
+	rawDB, err := dbutil.CreateFromConfig(config)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	db := server.NewDbSyncWrapper(rawDB)
+
+	sync, err := sync_util.CreateFromConfig(config)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ident, err := middleware.CreateIdentityServiceFromConfig(config)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	envManager := extension.GetManager()
+	manager := schema.GetManager()
+
+	publishPostMigrateEventWithServices(ctx, envName, modifiedSchemas, syncETCDEvent, eventTimeout, db, manager, envManager,
+		sync, ident)
+
+	return nil
+}
+
+func publishPostMigrateEventWithServices(ctx context_pkg.Context, envName string, modifiedSchemas []string, syncETCDEvent bool,
+	eventTimeout time.Duration, db db.DB, manager *schema.Manager, envManager *extension.Manager, sync sync.Sync,
+	ident middleware.IdentityService) {
+
 	deadline := time.Now().Add(eventTimeout)
+	eventName := eventPostMigration
 
 	for _, s := range manager.Schemas() {
 		if !util.ContainsString(modifiedSchemas, s.ID) {
@@ -283,7 +321,13 @@ func publishEventWithOptions(ctx context_pkg.Context, envName string, modifiedSc
 		if err := env.HandleEvent(eventName, eventContext); err != nil {
 			log.Fatalf("Failed to handle event '%s': %s", eventName, err)
 		}
+
+		if err := migration.UnmarkSchema(s.ID); err != nil {
+			log.Fatalf("Failed to remove '%s' from pending post migration schemas: %s", s.ID, err)
+		}
 	}
+
+	clearDeadPendingSchemas(modifiedSchemas, manager)
 
 	if syncETCDEvent {
 		if _, err := server.NewSyncWriter(sync, db).Sync(ctx); err != nil {
@@ -292,33 +336,16 @@ func publishEventWithOptions(ctx context_pkg.Context, envName string, modifiedSc
 	}
 }
 
-func publishEvent(ctx context_pkg.Context, envName string, modifiedSchemas []string, eventName string, syncETCDEvent bool, eventTimeout time.Duration) error {
-	config := util.GetConfig()
+func clearDeadPendingSchemas(modifiedSchemas []string, manager *schema.Manager) {
+	for _, schemaID := range modifiedSchemas {
+		_, exists := manager.Schema(schemaID)
+		if exists {
+			continue
+		}
 
-	rawDB, err := dbutil.CreateFromConfig(config)
-
-	if err != nil {
-		log.Fatal(err)
+		log.Warning("Found no longer existing schema '%s' in pending post-migration events, removing", schemaID)
+		if err := migration.UnmarkSchema(schemaID); err != nil {
+			log.Fatalf("Failed to remove no longer existing '%s' from pending post migration schemas: %s", schemaID, err)
+		}
 	}
-
-	db := server.NewDbSyncWrapper(rawDB)
-
-	sync, err := sync_util.CreateFromConfig(config)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	ident, err := middleware.CreateIdentityServiceFromConfig(config)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	envManager := extension.GetManager()
-	manager := schema.GetManager()
-
-	publishEventWithOptions(ctx, envName, modifiedSchemas, eventName, syncETCDEvent, eventTimeout, db, manager, envManager, sync, ident)
-
-	return nil
 }
