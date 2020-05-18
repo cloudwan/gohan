@@ -1,7 +1,15 @@
-FROM golang:1.9
-MAINTAINER Leif Madsen <leif@leifmadsen.com>
+ARG GO_VERSION=1.13
 
-RUN go get github.com/cloudwan/gohan
+
+FROM golang:$GO_VERSION-alpine
+RUN apk add --no-cache gcc libc-dev
+
+WORKDIR $GOPATH/src/github.com/cloudwan/gohan
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+RUN go install -v
 
 ENTRYPOINT ["/go/bin/gohan"]
-CMD ["server", "--config-file", "/go/src/github.com/cloudwan/gohan/etc/gohan.yaml"]
