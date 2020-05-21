@@ -116,18 +116,16 @@ const schemaSetDbTable = "post_migration_events"
 func (b *postMigrationEventsBackend) loadSchemaIDs() (stringSet, error) {
 	log.Debug("post-migration: preloading pending schema IDs")
 
-	tx, err := b.db.Begin()
-	if err != nil {
-		return nil, err
-	}
+	var schemas stringSet
+	err := b.withinTx(func(tx *sql.Tx) error {
+		var innerErr error
+		if innerErr = b.ensureTableExists(tx); innerErr != nil {
+			return innerErr
+		}
+		schemas, innerErr = b.readSchemaIDsInTx(tx)
+		return innerErr
+	})
 
-	schemas, err := b.readSchemaIDsInTx(tx)
-	if err != nil {
-		tx.Rollback()
-		return nil, err
-	}
-
-	err = tx.Commit()
 	if err != nil {
 		return nil, err
 	}
@@ -135,11 +133,36 @@ func (b *postMigrationEventsBackend) loadSchemaIDs() (stringSet, error) {
 	return schemas, nil
 }
 
-func (b *postMigrationEventsBackend) readSchemaIDsInTx(tx *sql.Tx) (stringSet, error) {
-	if err := b.ensureTableExists(tx); err != nil {
-		return nil, err
+func (b *postMigrationEventsBackend) withinTx(f func(tx *sql.Tx) error) error {
+	tx, err := b.db.Begin()
+	if err != nil {
+		return err
 	}
 
+	err = f(tx)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (b *postMigrationEventsBackend) ensureTableExists(tx *sql.Tx) error {
+	log.Debug("post-migration: making sure table `%s` exists", schemaSetDbTable)
+
+	const stmt = "CREATE TABLE IF NOT EXISTS `" + schemaSetDbTable + "` (`schema_id` TEXT NOT NULL)"
+	_, err := tx.Exec(stmt)
+
+	return err
+}
+
+func (b *postMigrationEventsBackend) readSchemaIDsInTx(tx *sql.Tx) (stringSet, error) {
 	const query = "SELECT `schema_id` FROM `" + schemaSetDbTable + "`"
 	rows, err := tx.Query(query)
 	if err != nil {
@@ -166,15 +189,6 @@ func (b *postMigrationEventsBackend) readSchemaIDsInTx(tx *sql.Tx) (stringSet, e
 	return schemas, nil
 }
 
-func (b *postMigrationEventsBackend) ensureTableExists(tx *sql.Tx) error {
-	log.Debug("post-migration: making sure table `%s` exists", schemaSetDbTable)
-
-	const stmt = "CREATE TABLE IF NOT EXISTS `" + schemaSetDbTable + "` (`schema_id` TEXT NOT NULL)"
-	_, err := tx.Exec(stmt)
-
-	return err
-}
-
 func (b *postMigrationEventsBackend) persistSchemaID(schemaID string, tx *sql.Tx) error {
 	log.Debug("post-migration: persiting schemaID '%s' into `%s`", schemaID, schemaSetDbTable)
 	const stmtTemplate = "INSERT INTO `" + schemaSetDbTable + "` (`schema_id`) VALUES (?)"
@@ -184,25 +198,11 @@ func (b *postMigrationEventsBackend) persistSchemaID(schemaID string, tx *sql.Tx
 
 func (b *postMigrationEventsBackend) deleteSchemaID(schemaID string) error {
 	log.Debug("post-migration: deleting schemaID '%s' from schema set", schemaID)
-	tx, err := b.db.Begin()
 
-	if err != nil {
-		return err
-	}
-
-	const stmtTemplate = "DELETE FROM `" + schemaSetDbTable + "` WHERE `schema_id` = ?"
-	err = b.execStmt(tx, stmtTemplate, schemaID)
-	if err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return b.withinTx(func(tx *sql.Tx) error {
+		const stmtTemplate = "DELETE FROM `" + schemaSetDbTable + "` WHERE `schema_id` = ?"
+		return b.execStmt(tx, stmtTemplate, schemaID)
+	})
 }
 
 func (b *postMigrationEventsBackend) execStmt(tx *sql.Tx, stmtTemplate, value string) error {

@@ -134,70 +134,86 @@ var _ = Describe("CLI", func() {
 			waitForThread.Wait()
 		})
 
-		setPostMigrationFlags := func(set *flag.FlagSet) {
-			cli.BoolTFlag{Name: FlagEmitPostMigrationEvent}.Apply(set)
-			cli.StringFlag{Name: framework.FlagConfigFile, Value: "../tests/test_forced_post_migrate_config.yaml"}.Apply(set)
-			cli.DurationFlag{Name: FlagPostMigrationEventTimeout, Value: time.Duration(60) * time.Second}.Apply(set)
-		}
+		Context("post-migration event handling", func() {
+			var (
+				flagSet *flag.FlagSet
+			)
 
-		expectPostMigrationSucceded := func() {
-			sync, err := sync_util.CreateFromConfig(util.GetConfig())
-			Expect(err).To(Succeed())
+			BeforeEach(func() {
+				const configFile = "../tests/test_forced_post_migrate_config.yaml"
 
-			node, err := sync.Fetch(ctx, "post-migration")
-			Expect(err).To(Succeed())
-			Expect(node.Value).To(Equal("success"))
-			Expect(sync.Delete(ctx, "post-migration", true)).To(Succeed())
-		}
+				flagSet = flag.NewFlagSet("", flag.PanicOnError)
+				cli.BoolTFlag{Name: FlagEmitPostMigrationEvent}.Apply(flagSet)
+				cli.StringFlag{Name: framework.FlagConfigFile, Value: configFile}.Apply(flagSet)
+				cli.DurationFlag{Name: FlagPostMigrationEventTimeout, Value: time.Duration(60) * time.Second}.Apply(flagSet)
+			})
 
-		It("Should handle sending post-migration event to forced schemas", func() {
-			set := flag.NewFlagSet("", flag.PanicOnError)
-			cli.StringFlag{Name: FlagForcedSchemas, Value: "force_schema"}.Apply(set)
-			setPostMigrationFlags(set)
-			context := cli.NewContext(nil, set, &cli.Context{})
+			prepareContext := func() *cli.Context {
+				context := cli.NewContext(nil, flagSet, &cli.Context{})
 
-			configFile := context.String(framework.FlagConfigFile)
-			loadConfig(configFile)
+				configFile := context.String(framework.FlagConfigFile)
+				loadConfig(configFile)
+				return context
+			}
 
-			actionMigrateWithPostMigrationEvent("up")(context)
+			expectPostMigrationSucceded := func() {
+				sync, err := sync_util.CreateFromConfig(util.GetConfig())
+				Expect(err).To(Succeed())
 
-			expectPostMigrationSucceded()
-		})
+				node, err := sync.Fetch(ctx, "post-migration")
+				Expect(err).To(Succeed())
+				Expect(node.Value).To(Equal("success"))
+				Expect(sync.Delete(ctx, "post-migration", true)).To(Succeed())
+			}
 
-		runSchemaMarkingMigration := func(schemaID string) {
-			config := util.GetConfig()
-			dbType := config.GetString("database/type", "sqlite3")
-			dbConnection := config.GetString("database/connection", "")
+			It("Should handle sending post-migration event to forced schemas", func() {
+				cli.StringFlag{Name: FlagForcedSchemas, Value: "force_schema"}.Apply(flagSet)
+				context := prepareContext()
 
-			db, err := sql.Open(dbType, dbConnection)
-			Expect(err).NotTo(HaveOccurred())
+				actionMigrateWithPostMigrationEvent("up")(context)
 
-			tx, err := db.Begin()
-			Expect(err).NotTo(HaveOccurred())
+				expectPostMigrationSucceded()
+			})
 
-			Expect(migration.MarkSchemaAsModified(schemaID, tx)).To(Succeed())
+			runSchemaMarkingMigration := func(schemaID string) {
+				config := util.GetConfig()
+				dbType := config.GetString("database/type", "sqlite3")
+				dbConnection := config.GetString("database/connection", "")
 
-			Expect(tx.Commit()).To(Succeed())
-		}
+				db, err := sql.Open(dbType, dbConnection)
+				Expect(err).NotTo(HaveOccurred())
 
-		It("Should handle sending post-migration event to marked schemas", func() {
-			set := flag.NewFlagSet("", flag.PanicOnError)
-			setPostMigrationFlags(set)
-			context := cli.NewContext(nil, set, &cli.Context{})
+				tx, err := db.Begin()
+				Expect(err).NotTo(HaveOccurred())
 
-			configFile := context.String(framework.FlagConfigFile)
-			loadConfig(configFile)
+				Expect(migration.MarkSchemaAsModified(schemaID, tx)).To(Succeed())
 
-			withinLockedMigration(func(context_pkg.Context, *cli.Context) {
-				Expect(migration.Run("up", context.Args())).To(Succeed())
-				runSchemaMarkingMigration("force_schema")
-				emitPostMigrateEvent(ctx, context.String(FlagForcedSchemas), context.Bool(FlagSyncETCDEvent),
-					context.Duration(FlagPostMigrationEventTimeout))
-			})(context)
+				Expect(tx.Commit()).To(Succeed())
+			}
 
-			Expect(migration.GetModifiedSchemas()).To(BeEmpty())
+			runPostMigrationForSchemaID := func(schemaID string) {
+				context := prepareContext()
 
-			expectPostMigrationSucceded()
+				withinLockedMigration(func(context_pkg.Context, *cli.Context) {
+					Expect(migration.Run("up", context.Args())).To(Succeed())
+					runSchemaMarkingMigration(schemaID)
+					emitPostMigrateEvent(ctx, context.String(FlagForcedSchemas), context.Bool(FlagSyncETCDEvent),
+						context.Duration(FlagPostMigrationEventTimeout))
+				})(context)
+			}
+
+			It("Should handle sending post-migration event to marked schemas", func() {
+				runPostMigrationForSchemaID("force_schema")
+
+				Expect(migration.GetModifiedSchemas()).To(BeEmpty())
+				expectPostMigrationSucceded()
+			})
+
+			It("Should ignore post-migration event for no longer existing schemas", func() {
+				runPostMigrationForSchemaID("no_such_schema")
+
+				Expect(migration.GetModifiedSchemas()).To(BeEmpty())
+			})
 		})
 
 		It("Should not change working directory", func() {
