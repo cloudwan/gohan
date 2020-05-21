@@ -273,7 +273,6 @@ func publishPostMigrateEventWithServices(ctx context_pkg.Context, envName string
 	ident middleware.IdentityService) {
 
 	deadline := time.Now().Add(eventTimeout)
-	eventName := eventPostMigration
 
 	for _, s := range manager.Schemas() {
 		if !util.ContainsString(modifiedSchemas, s.ID) {
@@ -290,7 +289,7 @@ func publishPostMigrateEventWithServices(ctx context_pkg.Context, envName string
 			}
 
 			envOtto := otto.NewEnvironment(envName, db, ident, sync)
-			envOtto.SetEventTimeLimit(eventName, left)
+			envOtto.SetEventTimeLimit(eventPostMigration, left)
 
 			envGoplugin := goplugin.NewEnvironment(envName, nil, nil)
 			envGoplugin.SetDatabase(db)
@@ -318,8 +317,8 @@ func publishPostMigrateEventWithServices(ctx context_pkg.Context, envName string
 		eventContext["context"] = ctx
 		eventContext["trace_id"] = util.NewTraceID()
 
-		if err := env.HandleEvent(eventName, eventContext); err != nil {
-			log.Fatalf("Failed to handle event '%s': %s", eventName, err)
+		if err := env.HandleEvent(eventPostMigration, eventContext); err != nil {
+			log.Fatalf("Failed to handle event '%s': %s", eventPostMigration, err)
 		}
 
 		if err := migration.UnmarkSchema(s.ID); err != nil {

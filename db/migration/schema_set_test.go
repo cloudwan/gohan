@@ -18,52 +18,10 @@ package migration
 import (
 	"database/sql"
 	"errors"
-	"sort"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
-
-type fakeSchemaSetBackend struct {
-	initialIDs    []string
-	persistedIDs  []string
-	deletedIDs    []string
-	failLoad      bool
-	failOperation bool
-}
-
-func (b *fakeSchemaSetBackend) loadSchemaIDs() (stringSet, error) {
-	if b.failLoad {
-		return nil, errors.New("failure test")
-	}
-
-	result := make(stringSet, len(b.initialIDs))
-	for _, id := range b.initialIDs {
-		result[id] = true
-	}
-
-	return result, nil
-}
-
-func (b *fakeSchemaSetBackend) persistSchemaID(schemaID string, tx *sql.Tx) error {
-	if b.failOperation {
-		return errors.New("failure test")
-	}
-
-	b.persistedIDs = append(b.persistedIDs, schemaID)
-	return nil
-}
-
-func (b *fakeSchemaSetBackend) deleteSchemaID(schemaID string) error {
-	if b.failOperation {
-		return errors.New("failure test")
-	}
-
-	b.deletedIDs = append(b.deletedIDs, schemaID)
-	return nil
-}
-
-var _ schemaSetBackend = &fakeSchemaSetBackend{}
 
 var _ = Describe("Schema Set", func() {
 	var (
@@ -94,11 +52,7 @@ var _ = Describe("Schema Set", func() {
 
 	expectSchemaIDs := func(expectedIDs []string) {
 		actualIDs := set.getSchemaIDs()
-
-		sort.Strings(actualIDs)
-		sort.Strings(expectedIDs)
-
-		Expect(actualIDs).To(Equal(expectedIDs))
+		Expect(actualIDs).To(ConsistOf(expectedIDs))
 	}
 
 	It("Should load schemaIDs from backend", func() {
@@ -177,3 +131,44 @@ var _ = Describe("Schema Set", func() {
 		Expect(set.removeSchemaID("id")).NotTo(Succeed())
 	})
 })
+
+type fakeSchemaSetBackend struct {
+	initialIDs    []string
+	persistedIDs  []string
+	deletedIDs    []string
+	failLoad      bool
+	failOperation bool
+}
+
+func (b *fakeSchemaSetBackend) loadSchemaIDs() (stringSet, error) {
+	if b.failLoad {
+		return nil, errors.New("failure test")
+	}
+
+	result := make(stringSet, len(b.initialIDs))
+	for _, id := range b.initialIDs {
+		result[id] = true
+	}
+
+	return result, nil
+}
+
+func (b *fakeSchemaSetBackend) persistSchemaID(schemaID string, tx *sql.Tx) error {
+	if b.failOperation {
+		return errors.New("failure test")
+	}
+
+	b.persistedIDs = append(b.persistedIDs, schemaID)
+	return nil
+}
+
+func (b *fakeSchemaSetBackend) deleteSchemaID(schemaID string) error {
+	if b.failOperation {
+		return errors.New("failure test")
+	}
+
+	b.deletedIDs = append(b.deletedIDs, schemaID)
+	return nil
+}
+
+var _ schemaSetBackend = &fakeSchemaSetBackend{}
