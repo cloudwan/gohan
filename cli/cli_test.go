@@ -17,6 +17,7 @@ package cli
 
 import (
 	context_pkg "context"
+	"database/sql"
 	"flag"
 	"fmt"
 	"os"
@@ -24,6 +25,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cloudwan/gohan/db/migration"
 	"github.com/cloudwan/gohan/extension/framework"
 	"github.com/cloudwan/gohan/sync/etcdv3"
 	sync_util "github.com/cloudwan/gohan/sync/util"
@@ -132,25 +134,86 @@ var _ = Describe("CLI", func() {
 			waitForThread.Wait()
 		})
 
-		It("Should handle sending post-migration event to forced schemas", func() {
-			set := flag.NewFlagSet("", flag.PanicOnError)
-			cli.StringFlag{Name: FlagForcedSchemas, Value: "force_schema"}.Apply(set)
-			cli.BoolTFlag{Name: FlagEmitPostMigrationEvent}.Apply(set)
-			cli.StringFlag{Name: framework.FlagConfigFile, Value: "../tests/test_forced_post_migrate_config.yaml"}.Apply(set)
-			cli.DurationFlag{Name: FlagPostMigrationEventTimeout, Value: time.Duration(60) * time.Second}.Apply(set)
-			context := cli.NewContext(nil, set, &cli.Context{})
+		Context("post-migration event handling", func() {
+			var (
+				flagSet *flag.FlagSet
+			)
 
-			configFile := context.String(framework.FlagConfigFile)
-			loadConfig(configFile)
+			BeforeEach(func() {
+				const configFile = "../tests/test_forced_post_migrate_config.yaml"
 
-			actionMigrateWithPostMigrationEvent("up")(context)
+				flagSet = flag.NewFlagSet("", flag.PanicOnError)
+				cli.BoolTFlag{Name: FlagEmitPostMigrationEvent}.Apply(flagSet)
+				cli.StringFlag{Name: framework.FlagConfigFile, Value: configFile}.Apply(flagSet)
+				cli.DurationFlag{Name: FlagPostMigrationEventTimeout, Value: time.Duration(60) * time.Second}.Apply(flagSet)
+			})
 
-			sync, err := sync_util.CreateFromConfig(util.GetConfig())
-			Expect(err).To(Succeed())
+			prepareContext := func() *cli.Context {
+				context := cli.NewContext(nil, flagSet, &cli.Context{})
 
-			node, err := sync.Fetch(ctx, "post-migration")
-			Expect(err).To(Succeed())
-			Expect(node.Value).To(Equal("success"))
+				configFile := context.String(framework.FlagConfigFile)
+				loadConfig(configFile)
+				return context
+			}
+
+			expectPostMigrationSucceded := func() {
+				sync, err := sync_util.CreateFromConfig(util.GetConfig())
+				Expect(err).To(Succeed())
+
+				node, err := sync.Fetch(ctx, "post-migration")
+				Expect(err).To(Succeed())
+				Expect(node.Value).To(Equal("success"))
+				Expect(sync.Delete(ctx, "post-migration", true)).To(Succeed())
+			}
+
+			It("Should handle sending post-migration event to forced schemas", func() {
+				cli.StringFlag{Name: FlagForcedSchemas, Value: "force_schema"}.Apply(flagSet)
+				context := prepareContext()
+
+				actionMigrateWithPostMigrationEvent("up")(context)
+
+				expectPostMigrationSucceded()
+			})
+
+			runSchemaMarkingMigration := func(schemaID string) {
+				config := util.GetConfig()
+				dbType := config.GetString("database/type", "sqlite3")
+				dbConnection := config.GetString("database/connection", "")
+
+				db, err := sql.Open(dbType, dbConnection)
+				Expect(err).NotTo(HaveOccurred())
+
+				tx, err := db.Begin()
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(migration.MarkSchemaAsModified(schemaID, tx)).To(Succeed())
+
+				Expect(tx.Commit()).To(Succeed())
+			}
+
+			runPostMigrationForSchemaID := func(schemaID string) {
+				context := prepareContext()
+
+				withinLockedMigration(func(context_pkg.Context, *cli.Context) {
+					Expect(migration.Run("up", context.Args())).To(Succeed())
+					runSchemaMarkingMigration(schemaID)
+					emitPostMigrateEvent(ctx, context.String(FlagForcedSchemas), context.Bool(FlagSyncETCDEvent),
+						context.Duration(FlagPostMigrationEventTimeout))
+				})(context)
+			}
+
+			It("Should handle sending post-migration event to marked schemas", func() {
+				runPostMigrationForSchemaID("force_schema")
+
+				Expect(migration.GetModifiedSchemas()).To(BeEmpty())
+				expectPostMigrationSucceded()
+			})
+
+			It("Should ignore post-migration event for no longer existing schemas", func() {
+				runPostMigrationForSchemaID("no_such_schema")
+
+				Expect(migration.GetModifiedSchemas()).To(BeEmpty())
+			})
 		})
 
 		It("Should not change working directory", func() {

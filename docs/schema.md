@@ -21,7 +21,11 @@ Schemas might also have any of the following optional properties.
 - metadata  -- application specific schema metadata (object)
 - type      -- can be an abstract or empty string (see more in schema inheritance)
 - extends   -- list of base schemas
-- order_properties_before -- to order properties before properties of extended schemas. 
+- order_properties_before -- to order properties before properties of extended schemas.
+
+## Schema ID
+
+Schema ID (`id:`) must be unique and cannot be equal to a reserved gohan identifier including but not limited to "goose_db_version" and "post_migration_event(s)".
 
 ## Schema Inheritance
 

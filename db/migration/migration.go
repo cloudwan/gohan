@@ -27,22 +27,35 @@ import (
 )
 
 var (
-	log                             = logger.NewLogger()
-	modifiedSchemas map[string]bool = map[string]bool{}
+	log                        = logger.NewLogger()
+	modifiedSchemas *schemaSet = newSchemaSet()
 )
 
-// MarkSchemaAsModified marks schema as modified
-func MarkSchemaAsModified(schemaID string) {
-	modifiedSchemas[schemaID] = true
+// MarkSchemaAsModified marks schema as modified. This should be called from
+// goose migration plugins, which are provided with a transaction, one should
+// pass it so we can reuse it, instead of creating a new one. Any error returned
+// from this function should result in a rollback of that transaction.
+func MarkSchemaAsModified(schemaID string, tx *sql.Tx) error {
+	err := modifiedSchemas.markSchemaID(schemaID, tx)
+	if err != nil {
+		log.Error("post-migration: failed to mark schema '%s': %v", schemaID, err)
+	}
+
+	return err
 }
 
 // GetModifiedSchemas returns a list of schemas modified during migrations
 func GetModifiedSchemas() []string {
-	schemas := make([]string, len(modifiedSchemas))
-	for schema := range modifiedSchemas {
-		schemas = append(schemas, schema)
+	return modifiedSchemas.getSchemaIDs()
+}
+
+// UnmarkSchema removes schema from set of modified schemas.
+func UnmarkSchema(schemaID string) error {
+	err := modifiedSchemas.removeSchemaID(schemaID)
+	if err != nil {
+		log.Error("post-migration: failed to remove schema '%s': %v", schemaID, err)
 	}
-	return schemas
+	return err
 }
 
 // Init initialises migration
@@ -102,6 +115,15 @@ func Init() error {
 		if last != dbVersion {
 			return fmt.Errorf("migration: there are pending migrations - reject to run gohan (no_init=true); db version=%d; last migration=%d", dbVersion, last)
 		}
+
+		if err = modifiedSchemas.init(newSchemaSetDbBackend(db)); err != nil {
+			return fmt.Errorf("migration: failed to check pending migration events: %s", err)
+		}
+
+		if len(modifiedSchemas.getSchemaIDs()) != 0 {
+			return fmt.Errorf("migration: there are pending migration events - reject to run gohan (no_init=true);"+
+				" db version=%d, pending schemas: %+v", dbVersion, modifiedSchemas.getSchemaIDs())
+		}
 	}
 
 	return goose.Status(db, migrationsPath)
@@ -153,6 +175,11 @@ func Run(subCmd string, args []string) error {
 
 	if err != nil {
 		fmt.Printf("error: failed to open db: %s\n", err)
+		return err
+	}
+
+	if err = modifiedSchemas.init(newSchemaSetDbBackend(db)); err != nil {
+		log.Error("migration: failed to init pending migration events: %s", err)
 		return err
 	}
 
