@@ -14,6 +14,7 @@ require (
 	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f // indirect
 	github.com/cyberdelia/go-metrics-graphite v0.0.0-20161219230853-39f87cc3b432
 	github.com/ddliu/motto v0.3.0
+	github.com/deathowl/go-metrics-prometheus v0.0.0-20200518174047-74482eab5bfb
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
 	github.com/drone/routes v0.0.0-20130816182705-853bef2b2311
 	github.com/flosch/pongo2 v0.0.0-20180611110828-67f4ff8560df
@@ -41,7 +42,6 @@ require (
 	github.com/mattn/go-runewidth v0.0.2 // indirect
 	github.com/mattn/go-sqlite3 v1.9.0
 	github.com/mitchellh/hashstructure v0.0.0-20170609045927-2bca23e0e452
-	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/myesui/uuid v1.0.0 // indirect
 	github.com/nullbio/inflect v0.0.0-20170731032957-3edb4592a77b // indirect
@@ -51,8 +51,8 @@ require (
 	github.com/op/go-logging v0.0.0-20160211212156-b2cb9fa56473
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/errors v0.8.1
-	github.com/prometheus/client_golang v0.9.2 // indirect
-	github.com/rcrowley/go-metrics v0.0.0-20180503174638-e2704e165165
+	github.com/prometheus/client_golang v1.1.0
+	github.com/rcrowley/go-metrics v0.0.0-20200313005456-10cdbea86bc0
 	github.com/robertkrimen/otto v0.0.0-20180617131154-15f95af6e78d
 	github.com/robfig/cron v1.2.0
 	github.com/serenize/snaker v0.0.0-20171204205717-a683aaf2d516

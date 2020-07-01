@@ -289,7 +289,7 @@ func NewServer(configFile string) (*Server, error) {
 		server.initDB()
 	}
 
-	if err = metrics.SetupMetrics(config); err != nil {
+	if err = metrics.SetupMetrics(config, server.address); err != nil {
 		return nil, err
 	}
 
