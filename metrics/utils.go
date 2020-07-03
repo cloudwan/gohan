@@ -20,7 +20,6 @@ import (
 	"strconv"
 
 	"github.com/cloudwan/gohan/util"
-	"github.com/pkg/errors"
 )
 
 func getPercentilesFrom(config *util.Config, path string) (percentiles []float64, err error) {
@@ -29,7 +28,7 @@ func getPercentilesFrom(config *util.Config, path string) (percentiles []float64
 	percentiles = make([]float64, len(percentilesStr))
 	for i, v := range percentilesStr {
 		if percentiles[i], err = strconv.ParseFloat(v, 64); err != nil {
-			return nil, fmt.Errorf("Error '%s' when parsing %s, expecting a float, '%s' given", err, path, v)
+			return nil, fmt.Errorf("error '%s' when parsing %s, expecting a float, '%s' given", err, path, v)
 		}
 	}
 
@@ -44,19 +43,13 @@ const (
 func createMetricsExporter(config *util.Config) (metricsExporter, error) {
 	exporterTag := config.GetString("metrics/exporter", graphiteTag)
 
-	var exporter metricsExporter
-
 	switch exporterTag {
 	case graphiteTag:
-		exporter = &graphiteExporter{}
+		return &graphiteExporter{}, nil
 	case prometheusTag:
-		exporter = &prometheusExporter{}
-	}
-
-	if exporter == nil {
-		return nil, errors.Errorf("Unsupported metrics exporter under metrics/exporter: %s, must be 'graphite' or 'prometheus'",
+		return &prometheusExporter{}, nil
+	default:
+		return nil, fmt.Errorf("unsupported metrics exporter under metrics/exporter: %s, must be 'graphite' or 'prometheus'",
 			exporterTag)
 	}
-
-	return exporter, nil
 }

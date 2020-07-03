@@ -17,27 +17,26 @@ package metrics
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/cloudwan/gohan/util"
 	prometheusmetrics "github.com/deathowl/go-metrics-prometheus"
-	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	metrics "github.com/rcrowley/go-metrics"
 )
 
-const configPrefix = "metrics/prometheus/"
+const prometheusPath = "metrics/prometheus/"
 
 func getString(config *util.Config, key, defaultValue string) string {
-	return config.GetString(configPrefix+key, defaultValue)
+	return config.GetString(prometheusPath+key, defaultValue)
 }
 
 func getDuration(config *util.Config, key string, defaultValue time.Duration) time.Duration {
-	return config.GetDuration(configPrefix+key, defaultValue)
+	return config.GetDuration(prometheusPath+key, defaultValue)
 }
 
 type prometheusConfig struct {
@@ -65,7 +64,7 @@ func (pe *prometheusExporter) Setup(config *util.Config, mainAddress string) err
 	pe.config.subsystem = getString(config, "subsystem", "")
 
 	var err error
-	pe.config.timerBuckets, err = getPercentilesFrom(config, configPrefix+"timer_buckets")
+	pe.config.timerBuckets, err = getPercentilesFrom(config, prometheusPath+"timer_buckets")
 	if err != nil {
 		return err
 	}
@@ -81,20 +80,21 @@ func (pe *prometheusExporter) Setup(config *util.Config, mainAddress string) err
 }
 
 func (pe *prometheusExporter) setServerAddress(config *util.Config, mainAddress string) error {
-	mainSplit := strings.Split(mainAddress, ":")
-	if len(mainSplit) != 2 {
-		return errors.Errorf("Incorrect main gohan address '%s', cannot deduct prometheus metrics address", mainAddress)
-	}
-	mainPort, err := strconv.Atoi(mainSplit[1])
+	mainHost, mainPortStr, err := net.SplitHostPort(mainAddress)
 	if err != nil {
-		return errors.Errorf("Incorrect main gohan address '%s', port is not a number", mainAddress)
+		return fmt.Errorf("incorrect main gohan address '%s': %s", mainAddress, err)
 	}
 
-	defaultAddress := fmt.Sprintf("%s:%d", mainSplit[0], mainPort+2) // healthcheck uses +1
+	mainPort, err := strconv.Atoi(mainPortStr)
+	if err != nil {
+		return fmt.Errorf("incorrect main gohan address '%s', port is not a number", mainAddress)
+	}
+
+	defaultAddress := fmt.Sprintf("%s:%d", mainHost, mainPort+util.DefaultMetricsPortOffset)
 	pe.config.serverAddress = getString(config, "address", defaultAddress)
 
 	if pe.config.serverAddress == mainAddress {
-		return errors.Errorf("%s%s cannot be set to the same value main gohan address is: '%s'", configPrefix, "address",
+		return fmt.Errorf("%s%s cannot be set to the same value main gohan address is: '%s'", prometheusPath, "address",
 			mainAddress)
 	}
 

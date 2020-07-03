@@ -25,6 +25,8 @@ import (
 	metrics "github.com/rcrowley/go-metrics"
 )
 
+const graphitePath = "metrics/graphite/"
+
 type graphiteExporter struct {
 	configs []graphite.Config
 }
@@ -52,7 +54,7 @@ func (ge *graphiteExporter) Start() {
 }
 
 func (ge *graphiteExporter) getGraphiteConfig(config *util.Config) (graphiteConfigs []graphite.Config, err error) {
-	graphiteEndpoints := config.GetStringList("metrics/graphite/endpoints", []string{})
+	graphiteEndpoints := config.GetStringList(graphitePath+"endpoints", []string{})
 	if len(graphiteEndpoints) == 0 {
 		log.Debug("No graphite endpoints set in config file")
 		return graphiteConfigs, nil
@@ -60,18 +62,18 @@ func (ge *graphiteExporter) getGraphiteConfig(config *util.Config) (graphiteConf
 
 	var baseconfig graphite.Config
 
-	if baseconfig.Percentiles, err = getPercentilesFrom(config, "metrics/graphite/percentiles"); err != nil {
+	if baseconfig.Percentiles, err = getPercentilesFrom(config, graphitePath+"percentiles"); err != nil {
 		return nil, err
 	}
-	baseconfig.FlushInterval = time.Duration(config.GetInt("metrics/graphite/flush_interval_sec", 60)) * time.Second
-	baseconfig.Prefix = config.GetString("metrics/graphite/prefix", "gohan")
+	baseconfig.FlushInterval = time.Duration(config.GetInt(graphitePath+"flush_interval_sec", 60)) * time.Second
+	baseconfig.Prefix = config.GetString(graphitePath+"prefix", "gohan")
 	baseconfig.DurationUnit = time.Nanosecond
 	baseconfig.Registry = metrics.DefaultRegistry
 
 	for _, endpoint := range graphiteEndpoints {
 		addr, err := net.ResolveTCPAddr("tcp", endpoint)
 		if err != nil {
-			return nil, fmt.Errorf("Can't resolve graphite endpoint %s: %s", endpoint, err)
+			return nil, fmt.Errorf("can't resolve graphite endpoint %s: %s", endpoint, err)
 		}
 		config := baseconfig
 		config.Addr = addr

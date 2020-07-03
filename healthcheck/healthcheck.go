@@ -76,10 +76,8 @@ func (healthCheck *HealthCheck) Run() {
 		}
 	}
 
-
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthcheck", healthCheckHandler)
-
 
 	go func() {
 		for {
@@ -101,7 +99,8 @@ func getHealthCheckAddress(serverAddress string, config *util.Config) (string, e
 	if err != nil {
 		return "", errors.New("Incorrect gohan server address: expected port number got " + addressAndPort[1])
 	}
-	healthCheckAddress := config.GetString(healthCheckAddressKey, fmt.Sprintf("%s:%d", addressAndPort[0], gohanPort+1))
+	healthCheckAddress := config.GetString(healthCheckAddressKey, fmt.Sprintf("%s:%d", addressAndPort[0],
+		gohanPort+util.DefaultHealthCheckPortOffset))
 	if healthCheckAddress == serverAddress {
 		return "", errors.New("HealthCheck address must be different than server address " + serverAddress)
 	}

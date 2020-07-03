@@ -35,10 +35,7 @@ var _ = Describe("Metrics utils", func() {
 		const key = "some_key"
 
 		thenPercentilesAre := func(config *util.Config, expectedPercentiles []float64) {
-			percentiles, err := getPercentilesFrom(config, key)
-
-			Expect(err).NotTo(HaveOccurred())
-			Expect(percentiles).To(Equal(expectedPercentiles))
+			Expect(getPercentilesFrom(config, key)).To(Equal(expectedPercentiles))
 		}
 
 		It("Returns default percentile value by default", func() {
