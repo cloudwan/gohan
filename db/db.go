@@ -96,7 +96,7 @@ func tryWithinTx(
 	}()
 
 	if err = tryToCommit(fn)(tx); err != nil {
-		log.Debug("scoped database transaction failed with error: %s", err)
+		log.Warning("scoped database transaction failed with error: %s", err)
 	}
 	return err
 }

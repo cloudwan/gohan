@@ -568,10 +568,19 @@ func (db *DB) DropTable(s *schema.Schema) error {
 }
 
 func (tx *Transaction) logQuery(sql string, args ...interface{}) {
+	tx.log.Debug("[%p] Executing SQL query '%s'", tx.transaction, formatQuery(sql, args...))
+}
+
+func (tx *Transaction) logIfFailedQuery(err *error, sql string, args ...interface{}) {
+	if *err != nil {
+		tx.log.Warning("[%p] Failed to execute SQL query '%s': %s", tx.transaction, formatQuery(sql, args...), *err)
+	}
+}
+
+func formatQuery(sql string, args ...interface{}) string {
 	sqlFormat := strings.Replace(sql, "%", "%%", -1)
 	sqlFormat = strings.Replace(sqlFormat, "?", "%s", -1)
-	query := fmt.Sprintf(sqlFormat, args...)
-	tx.log.Debug("[%p] Executing SQL query '%s'", tx.transaction, query)
+	return fmt.Sprintf(sqlFormat, args...)
 }
 
 func (tx *Transaction) measureTime(timeStarted time.Time, schemaId, action string) {
@@ -589,9 +598,13 @@ func (tx *Transaction) exec(ctx context.Context, sql string, args ...interface{}
 	return err
 }
 
-func (tx *Transaction) execWithResult(ctx context.Context, sql string, args ...interface{}) (transaction.Result, error) {
+func (tx *Transaction) execWithResult(ctx context.Context, sql string, args ...interface{}) (res transaction.Result, err error) {
 	tx.logQuery(sql, args...)
-	return tx.transaction.ExecContext(safeMysqlContext(ctx), sql, args...)
+	defer tx.logIfFailedQuery(&err, sql, args...)
+
+	res, err = tx.transaction.ExecContext(safeMysqlContext(ctx), sql, args...)
+
+	return
 }
 
 //Create create resource in the db
@@ -835,8 +848,26 @@ func buildSelect(sc *selectContext) (string, []interface{}, error) {
 	return q.ToSql()
 }
 
-func (tx *Transaction) executeSelect(ctx context.Context, sc *selectContext, sql string, args []interface{}) (list []*schema.Resource, total uint64, err error) {
+func (tx *Transaction) executeCountingSelect(ctx context.Context, sc *selectContext, sql string, args []interface{}) ([]*schema.Resource, uint64, error) {
+	list, err := tx.executeSelect(ctx, sc, sql, args)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	var total uint64
+	if tx.isSelectPaginated(sc) {
+		total, err = tx.Count(ctx, sc.schema, sc.filter)
+	} else {
+		total = uint64(len(list))
+	}
+
+	return list, total, err
+}
+
+func (tx *Transaction) executeSelect(ctx context.Context, sc *selectContext, sql string, args []interface{}) (list []*schema.Resource, err error) {
 	tx.logQuery(sql, args...)
+	defer tx.logIfFailedQuery(&err, sql, args...)
+
 	var rows *sqlx.Rows
 	rows, err = tx.transaction.QueryxContext(safeMysqlContext(ctx), sql, args...)
 	if err != nil {
@@ -845,15 +876,7 @@ func (tx *Transaction) executeSelect(ctx context.Context, sc *selectContext, sql
 	defer rows.Close()
 
 	list, err = tx.decodeRows(sc.schema, rows, list, sc.fields != nil, sc.join)
-	if err != nil {
-		return
-	}
 
-	if tx.isSelectPaginated(sc) {
-		total, err = tx.Count(ctx, sc.schema, sc.filter)
-	} else {
-		total = uint64(len(list))
-	}
 	return
 }
 
@@ -872,7 +895,7 @@ func (tx *Transaction) List(ctx context.Context, s *schema.Schema, filter transa
 		return nil, 0, err
 	}
 
-	return tx.executeSelect(ctx, sc, sql, args)
+	return tx.executeCountingSelect(ctx, sc, sql, args)
 }
 
 func listContextHelper(s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions, pg *pagination.Paginator) *selectContext {
@@ -916,7 +939,7 @@ func (tx *Transaction) LockList(ctx context.Context, s *schema.Schema, filter tr
 		sql += " FOR UPDATE"
 	}
 
-	return tx.executeSelect(ctx, sc, sql, args)
+	return tx.executeCountingSelect(ctx, sc, sql, args)
 }
 
 func lockListContextHelper(s *schema.Schema, filter transaction.Filter, options *transaction.ViewOptions, pg *pagination.Paginator, lockPolicy schema.LockPolicy) *selectContext {
@@ -935,22 +958,11 @@ func lockListContextHelper(s *schema.Schema, filter transaction.Filter, options 
 }
 
 // Query with raw sql string
-func (tx *Transaction) Query(ctx context.Context, s *schema.Schema, query string, arguments []interface{}) (list []*schema.Resource, err error) {
+func (tx *Transaction) Query(ctx context.Context, s *schema.Schema, query string, arguments []interface{}) ([]*schema.Resource, error) {
 	defer tx.measureTime(time.Now(), s.ID, "query")
 
-	tx.logQuery(query, arguments...)
-	rows, err := tx.transaction.QueryxContext(safeMysqlContext(ctx), query, arguments...)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to run query: %s, %s", query, err)
-	}
-
-	defer rows.Close()
-	list, err = tx.decodeRows(s, rows, list, false, false)
-	if err != nil {
-		return nil, err
-	}
-
-	return
+	sc := listContextHelper(s, nil, nil, nil)
+	return tx.executeSelect(ctx, sc, query, arguments)
 }
 
 func (tx *Transaction) decodeRows(s *schema.Schema, rows *sqlx.Rows, list []*schema.Resource, skipNil, recursive bool) ([]*schema.Resource, error) {
@@ -1015,6 +1027,10 @@ func (tx *Transaction) Count(ctx context.Context, s *schema.Schema, filter trans
 		return
 	}
 	result := map[string]interface{}{}
+
+	tx.logQuery(sql, args...)
+	defer tx.logIfFailedQuery(&err, sql, args...)
+
 	err = tx.transaction.QueryRowxContext(safeMysqlContext(ctx), sql, args...).MapScan(result)
 	if err != nil {
 		return
@@ -1093,9 +1109,10 @@ func (tx *Transaction) stateList(ctx context.Context, s *schema.Schema, filter t
 		return nil, fmt.Errorf("schema %s does not support state versioning", s.ID)
 	}
 
+	var err error
 	cols := makeStateColumns(s)
 	q := sq.Select(cols...).From(quote(s.GetDbTableName()))
-	q, err := AddFilterToSelectQuery(s, q, filter, false)
+	q, err = AddFilterToSelectQuery(s, q, filter, false)
 	if err != nil {
 		return nil, err
 	}
@@ -1103,7 +1120,10 @@ func (tx *Transaction) stateList(ctx context.Context, s *schema.Schema, filter t
 	if err != nil {
 		return nil, err
 	}
+
 	tx.logQuery(query, args...)
+	defer tx.logIfFailedQuery(&err, query, args...)
+
 	rows, err := tx.transaction.QueryxContext(safeMysqlContext(ctx), query, args...)
 	if err != nil {
 		return nil, err
