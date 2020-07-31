@@ -336,14 +336,20 @@ var _ = Describe("Keystone client", func() {
 	Context("Token scope", func() {
 		var token = "token"
 
+		setResponses := func(response interface{}) {
+			server.AppendHandlers(
+				ghttp.RespondWithJSONEncoded(201, response),
+				ghttp.RespondWithJSONEncoded(200, response),
+			)
+		}
+
 		Describe("Keystone v3", func() {
 			It("Should read tokens with tenant scope", func() {
-				server.AppendHandlers(
-					ghttp.RespondWithJSONEncoded(201, getV3TokensScopedToTenantResponse()),
-					ghttp.RespondWithJSONEncoded(200, getV3TokensScopedToTenantResponse()),
-				)
+				setResponses(getV3TokensScopedToTenantResponse())
 				setupV3Client()
+
 				auth, err := client.VerifyToken(token)
+
 				Expect(err).To(BeNil())
 				Expect(auth.TenantID()).To(Equal("acme-id"))
 				Expect(auth.TenantName()).To(Equal("acme"))
@@ -353,12 +359,11 @@ var _ = Describe("Keystone client", func() {
 			})
 
 			It("Should read tokens with domain scope", func() {
-				server.AppendHandlers(
-					ghttp.RespondWithJSONEncoded(201, getV3TokensScopedToDomainResponse()),
-					ghttp.RespondWithJSONEncoded(200, getV3TokensScopedToDomainResponse()),
-				)
+				setResponses(getV3TokensScopedToDomainResponse())
 				setupV3Client()
+
 				auth, err := client.VerifyToken(token)
+
 				Expect(err).To(BeNil())
 				Expect(auth.TenantID()).To(Equal(""))
 				Expect(auth.TenantName()).To(Equal(""))
@@ -368,18 +373,51 @@ var _ = Describe("Keystone client", func() {
 			})
 
 			It("Should read tokens scoped to admin project", func() {
-				server.AppendHandlers(
-					ghttp.RespondWithJSONEncoded(201, getV3TokensAdminResponse()),
-					ghttp.RespondWithJSONEncoded(200, getV3TokensAdminResponse()),
-				)
+				setResponses(getV3TokensAdminResponse())
 				setupV3Client()
+
 				auth, err := client.VerifyToken(token)
+
 				Expect(err).To(BeNil())
 				Expect(auth.TenantID()).To(Equal("admin-project-id"))
 				Expect(auth.TenantName()).To(Equal("admin-project"))
 				Expect(auth.DomainID()).To(Equal("default"))
 				Expect(auth.DomainName()).To(Equal("default"))
 				Expect(auth.IsAdmin()).To(BeTrue())
+			})
+
+			It("Should reject admin token with multiple roles", func() {
+				multipleRoles := []interface{}{
+					map[string]interface{}{
+						"id":   "51cc68287d524c759f47c811e6463340",
+						"name": "Member",
+					},
+					map[string]interface{}{
+						"id":   "7f0ea059b6d84029b60c18169d3c1d9a",
+						"name": "admin",
+					},
+				}
+				setResponses(getV3TokensAdminResponseWithRoles(multipleRoles))
+				setupV3Client()
+
+				_, err := client.VerifyToken(token)
+
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("Should reject admin token with non-admin role", func() {
+				memberRole := []interface{}{
+					map[string]interface{}{
+						"id":   "51cc68287d524c759f47c811e6463340",
+						"name": "Member",
+					},
+				}
+				setResponses(getV3TokensAdminResponseWithRoles(memberRole))
+				setupV3Client()
+
+				_, err := client.VerifyToken(token)
+
+				Expect(err).To(HaveOccurred())
 			})
 		})
 	})

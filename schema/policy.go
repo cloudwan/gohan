@@ -52,7 +52,7 @@ const (
 
 	onlyOneOfTenantIDTenantNameError = "Only one of [tenant_id, tenant_name] should be specified"
 
-	adminRole = "admin"
+	AdminRole = "admin"
 )
 
 // AllActions are all possible actions
@@ -234,7 +234,7 @@ func (ab *AuthorizationBuilder) BuildScopedToTenant() Authorization {
 	if ab.authViaKeystoneV2 {
 		// When using Keystone V2, user is an admin if they have an admin role in the current project
 		for _, role := range ab.roles {
-			if role.Name == adminRole {
+			if role.Name == AdminRole {
 				return ab.BuildAdmin()
 			}
 		}
