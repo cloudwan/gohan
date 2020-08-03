@@ -50,10 +50,7 @@ func getV3TokensScopedToTenantResponse() interface{} {
 				"name": "admin",
 			},
 			"roles": []interface{}{
-				map[string]interface{}{
-					"id":   "51cc68287d524c759f47c811e6463340",
-					"name": "member",
-				},
+				getMemberRole(),
 			},
 			"catalog": []interface{}{},
 			"project": map[string]interface{}{
@@ -85,10 +82,7 @@ func getV3TokensScopedToDomainResponse() interface{} {
 				"name": "admin",
 			},
 			"roles": []interface{}{
-				map[string]interface{}{
-					"id":   "51cc68287d524c759f47c811e6463340",
-					"name": "member",
-				},
+				getMemberRole(),
 			},
 			"catalog": []interface{}{},
 			"domain": map[string]interface{}{
@@ -100,12 +94,7 @@ func getV3TokensScopedToDomainResponse() interface{} {
 }
 
 func getV3TokensAdminResponse() interface{} {
-	return getV3TokensAdminResponseWithRoles([]interface{}{
-		map[string]interface{}{
-			"id":   "7f0ea059b6d84029b60c18169d3c1d9a",
-			"name": "admin",
-		},
-	})
+	return getV3TokensAdminResponseWithRoles([]interface{}{getAdminRole()})
 }
 
 func getV3TokensAdminResponseWithRoles(roles []interface{}) interface{} {
@@ -136,6 +125,20 @@ func getV3TokensAdminResponseWithRoles(roles []interface{}) interface{} {
 			},
 			"is_admin_project": true,
 		},
+	}
+}
+
+func getMemberRole() map[string]interface{} {
+	return map[string]interface{}{
+		"id":   "51cc68287d524c759f47c811e6463340",
+		"name": "Member",
+	}
+}
+
+func getAdminRole() map[string]interface{} {
+	return map[string]interface{}{
+		"id":   "7f0ea059b6d84029b60c18169d3c1d9a",
+		"name": "admin",
 	}
 }
 

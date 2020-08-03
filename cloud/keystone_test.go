@@ -21,6 +21,7 @@ import (
 	"github.com/cloudwan/gohan/schema"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/ghttp"
 )
@@ -327,7 +328,7 @@ var _ = Describe("Keystone client", func() {
 					Expect(auth.TenantName()).To(Equal("acme"))
 					Expect(auth.DomainID()).To(Equal("domain-id"))
 					Expect(auth.DomainName()).To(Equal("domain"))
-					Expect(auth.Roles()).To(Equal([]*schema.Role{{Name: "member"}}))
+					Expect(auth.Roles()).To(Equal([]*schema.Role{{Name: "Member"}}))
 				})
 			})
 		})
@@ -386,39 +387,19 @@ var _ = Describe("Keystone client", func() {
 				Expect(auth.IsAdmin()).To(BeTrue())
 			})
 
-			It("Should reject admin token with multiple roles", func() {
-				multipleRoles := []interface{}{
-					map[string]interface{}{
-						"id":   "51cc68287d524c759f47c811e6463340",
-						"name": "Member",
-					},
-					map[string]interface{}{
-						"id":   "7f0ea059b6d84029b60c18169d3c1d9a",
-						"name": "admin",
-					},
-				}
-				setResponses(getV3TokensAdminResponseWithRoles(multipleRoles))
-				setupV3Client()
+			DescribeTable("Admin token rejection cases",
+				func(roles ...interface{}) {
+					setResponses(getV3TokensAdminResponseWithRoles(roles))
+					setupV3Client()
 
-				_, err := client.VerifyToken(token)
+					_, err := client.VerifyToken(token)
 
-				Expect(err).To(HaveOccurred())
-			})
-
-			It("Should reject admin token with non-admin role", func() {
-				memberRole := []interface{}{
-					map[string]interface{}{
-						"id":   "51cc68287d524c759f47c811e6463340",
-						"name": "Member",
-					},
-				}
-				setResponses(getV3TokensAdminResponseWithRoles(memberRole))
-				setupV3Client()
-
-				_, err := client.VerifyToken(token)
-
-				Expect(err).To(HaveOccurred())
-			})
+					Expect(err).To(HaveOccurred())
+				},
+				Entry("Reject multiple roles", getMemberRole(), getAdminRole()),
+				Entry("Reject non-admin role", getMemberRole()),
+				Entry("Reject no roles"),
+			)
 		})
 	})
 })
