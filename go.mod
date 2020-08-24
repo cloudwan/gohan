@@ -84,4 +84,6 @@ require (
 
 replace github.com/onsi/ginkgo => github.com/cloudwan/ginkgo v1.6.1-0.20190213151947-95174e8d10cd
 
+replace github.com/coreos/etcd => github.com/cloudwan/etcd_for_gohan v3.3.19-0.20200824122433-788f26348f7b+incompatible
+
 go 1.13
