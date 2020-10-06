@@ -154,7 +154,7 @@ func fillObjectDefaults(objectProperty Property, resourceMap, defaultValueMaskMa
 				if resourceFilled {
 					fillObjectDefaults(innerProperty, resourceFilledProperty.(map[string]interface{}), innerPropertyMaskMap)
 				} else {
-					if innerPropertyMaskMap != nil && innerProperty.Default != nil {
+					if innerPropertyMaskMap != nil && innerProperty.DefaultMask != nil {
 						resourceMap[innerProperty.ID] = innerPropertyMaskMap
 					}
 				}

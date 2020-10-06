@@ -133,6 +133,10 @@ var _ = Describe("Resources", func() {
 		networkRed := NewResource(networkSchema, networkRedObj)
 		Expect(networkRed.PopulateDefaults()).To(Succeed())
 		expectedConfig := map[string]interface{}{
+			"default_vlan": map[string]interface{}{
+				"name":    "default_vlan",
+				"vlan_id": float64(1),
+			},
 			"empty_vlan": map[string]interface{}{},
 			"vpn_vlan": map[string]interface{}{
 				"name": "vpn_vlan",
@@ -162,7 +166,7 @@ var _ = Describe("Resources", func() {
 		Expect(actualProvidorNetworks).To(Equal(expectedProvidorNetworks))
 	})
 
-	It("override property which has default object", func() {
+	It("override property which has default subproperties", func() {
 		networkSchema, exists := manager.Schema("network")
 		Expect(exists).To(BeTrue())
 		networkRedObj := map[string]interface{}{
@@ -180,6 +184,10 @@ var _ = Describe("Resources", func() {
 		networkRed := NewResource(networkSchema, networkRedObj)
 		Expect(networkRed.PopulateDefaults()).To(Succeed())
 		expectedConfig := map[string]interface{}{
+			"default_vlan": map[string]interface{}{
+				"name":    "default_vlan",
+				"vlan_id": float64(1),
+			},
 			"empty_vlan": map[string]interface{}{},
 			"vpn_vlan": map[string]interface{}{
 				"name": "my_vpn_vlan",
