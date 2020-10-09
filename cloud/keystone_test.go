@@ -21,6 +21,7 @@ import (
 	"github.com/cloudwan/gohan/schema"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/ghttp"
 )
@@ -327,7 +328,7 @@ var _ = Describe("Keystone client", func() {
 					Expect(auth.TenantName()).To(Equal("acme"))
 					Expect(auth.DomainID()).To(Equal("domain-id"))
 					Expect(auth.DomainName()).To(Equal("domain"))
-					Expect(auth.Roles()).To(Equal([]*schema.Role{{Name: "member"}}))
+					Expect(auth.Roles()).To(Equal([]*schema.Role{{Name: "Member"}}))
 				})
 			})
 		})
@@ -336,14 +337,20 @@ var _ = Describe("Keystone client", func() {
 	Context("Token scope", func() {
 		var token = "token"
 
+		setResponses := func(response interface{}) {
+			server.AppendHandlers(
+				ghttp.RespondWithJSONEncoded(201, response),
+				ghttp.RespondWithJSONEncoded(200, response),
+			)
+		}
+
 		Describe("Keystone v3", func() {
 			It("Should read tokens with tenant scope", func() {
-				server.AppendHandlers(
-					ghttp.RespondWithJSONEncoded(201, getV3TokensScopedToTenantResponse()),
-					ghttp.RespondWithJSONEncoded(200, getV3TokensScopedToTenantResponse()),
-				)
+				setResponses(getV3TokensScopedToTenantResponse())
 				setupV3Client()
+
 				auth, err := client.VerifyToken(token)
+
 				Expect(err).To(BeNil())
 				Expect(auth.TenantID()).To(Equal("acme-id"))
 				Expect(auth.TenantName()).To(Equal("acme"))
@@ -353,12 +360,11 @@ var _ = Describe("Keystone client", func() {
 			})
 
 			It("Should read tokens with domain scope", func() {
-				server.AppendHandlers(
-					ghttp.RespondWithJSONEncoded(201, getV3TokensScopedToDomainResponse()),
-					ghttp.RespondWithJSONEncoded(200, getV3TokensScopedToDomainResponse()),
-				)
+				setResponses(getV3TokensScopedToDomainResponse())
 				setupV3Client()
+
 				auth, err := client.VerifyToken(token)
+
 				Expect(err).To(BeNil())
 				Expect(auth.TenantID()).To(Equal(""))
 				Expect(auth.TenantName()).To(Equal(""))
@@ -368,12 +374,11 @@ var _ = Describe("Keystone client", func() {
 			})
 
 			It("Should read tokens scoped to admin project", func() {
-				server.AppendHandlers(
-					ghttp.RespondWithJSONEncoded(201, getV3TokensAdminResponse()),
-					ghttp.RespondWithJSONEncoded(200, getV3TokensAdminResponse()),
-				)
+				setResponses(getV3TokensAdminResponse())
 				setupV3Client()
+
 				auth, err := client.VerifyToken(token)
+
 				Expect(err).To(BeNil())
 				Expect(auth.TenantID()).To(Equal("admin-project-id"))
 				Expect(auth.TenantName()).To(Equal("admin-project"))
@@ -381,6 +386,20 @@ var _ = Describe("Keystone client", func() {
 				Expect(auth.DomainName()).To(Equal("default"))
 				Expect(auth.IsAdmin()).To(BeTrue())
 			})
+
+			DescribeTable("Admin token rejection cases",
+				func(roles ...interface{}) {
+					setResponses(getV3TokensAdminResponseWithRoles(roles))
+					setupV3Client()
+
+					_, err := client.VerifyToken(token)
+
+					Expect(err).To(HaveOccurred())
+				},
+				Entry("Reject multiple roles", getMemberRole(), getAdminRole()),
+				Entry("Reject non-admin role", getMemberRole()),
+				Entry("Reject no roles"),
+			)
 		})
 	})
 })

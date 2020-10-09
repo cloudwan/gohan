@@ -144,6 +144,10 @@ func (client *keystoneV3Client) VerifyToken(token string) (schema.Authorization,
 			WithRoleIDs(roleIDs...)
 
 		if isTokenScopedToAdminProject(&tokenResult) {
+			if err := client.validateRolesForAdmin(roleIDs); err != nil {
+				return nil, err
+			}
+
 			return builder.BuildAdmin(), nil
 		}
 		return builder.BuildScopedToTenant(), nil
@@ -226,6 +230,15 @@ func isTokenScopedToAdminProject(result *v3tokens.GetResult) bool {
 	}
 	err := result.ExtractInto(&s)
 	return (err == nil) && s.IsAdminProject
+}
+
+func (client *keystoneV3Client) validateRolesForAdmin(roleIDs []string) error {
+	if len(roleIDs) != 1 || roleIDs[0] != schema.AdminRole {
+		client.updateCounter(1, "error.token.mismatched_role_admin")
+		return fmt.Errorf("Admin token should have only a single admin role instead of '%v'", roleIDs)
+	}
+
+	return nil
 }
 
 func (client *keystoneV3Client) getTenant(filter func(*v3tenants.Project) bool) (*v3tenants.Project, error) {
