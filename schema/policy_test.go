@@ -16,6 +16,8 @@
 package schema
 
 import (
+	"fmt"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -1116,6 +1118,61 @@ var _ = Describe("Policies", func() {
 					}
 					Expect(filter).To(Equal(expected))
 				})
+
+				DescribeTable("Same tenancy condition",
+					func(conjunction string) {
+						schema := getSchema("test")
+						testPolicy["action"] = ActionAttach
+						testPolicy["relation_property"] = "some property"
+						testPolicy["target_condition"] = []interface{}{
+							map[string]interface{}{
+								"or": []interface{}{
+									map[string]interface{}{
+										conjunction: []interface{}{
+											"same_tenancy",
+										},
+									},
+								},
+							},
+						}
+						var err error
+						policy, err = NewPolicy(testPolicy)
+						Expect(err).ToNot(HaveOccurred())
+
+						tenantID := "some tenant id"
+						domainID := "some domain id"
+						tenancy := &Tenancy{
+							TenantID: &tenantID,
+							DomainID: &domainID,
+						}
+						filter := map[string]interface{}{}
+
+						otherCond := policy.GetOtherResourceCondition()
+						otherCond.AddCustomFiltersWithTenancy(schema, filter, nil, tenancy)
+
+						expected := map[string]interface{}{
+							"__or__": []map[string]interface{}{{
+								fmt.Sprintf("__%s__", conjunction): []map[string]interface{}{{
+									"__and__": []map[string]interface{}{
+										{
+											"property": tenantIDKey,
+											"type":     "eq",
+											"value":    &tenantID,
+										},
+										{
+											"property": domainIDKey,
+											"type":     "eq",
+											"value":    &domainID,
+										},
+									},
+								}},
+							}},
+						}
+						Expect(filter).To(Equal(expected))
+					},
+					Entry("Should create or filter with same tenancy condition", "or"),
+					Entry("Should create and filter with same tenancy condition", "and"),
+				)
 			})
 		})
 	})

@@ -30,7 +30,7 @@ test: build
 
 lint:
 	@echo -e "$(OK_COLOR)==> Linting$(NO_COLOR)"
-	./tools/lint.sh
+	./tools/lint.sh || true
 
 build: deps
 	@echo -e "$(OK_COLOR)==> Building$(NO_COLOR)"

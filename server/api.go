@@ -311,7 +311,7 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 				}
 			}
 		}
-		if err := resources.CreateResource(context, dataStore, identityService, s, dataMap); err != nil {
+		if err := resources.CreateResource(context, dataStore, s, dataMap); err != nil {
 			handleError(w, err)
 			return
 		}
@@ -337,7 +337,7 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 		dataMap = removeResourceWrapper(s, dataMap)
 		fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, dataMap)
 		if isCreated, err := resources.CreateOrUpdateResource(
-			context, dataStore, identityService, s, id, dataMap); err != nil {
+			context, dataStore, s, id, dataMap); err != nil {
 			handleError(w, err)
 			return
 		} else if isCreated {
@@ -364,7 +364,7 @@ func MapRouteBySchema(server *Server, dataStore db.DB, s *schema.Schema) {
 		dataMap = removeResourceWrapper(s, dataMap)
 		fillInContext(context, dataStore, r, w, s, p, server.sync, identityService, dataMap)
 		if err := resources.UpdateResource(
-			context, dataStore, identityService, s, id, dataMap); err != nil {
+			context, dataStore, s, id, dataMap); err != nil {
 			handleError(w, err)
 			return
 		}

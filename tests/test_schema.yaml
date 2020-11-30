@@ -614,6 +614,16 @@ policies:
         value: true
   resource:
     path: /v2.0/servers
+- action: '__attach__'
+  effect: allow
+  id: same_tenancy_check
+  principal: admin
+  relation_property: same_tenancy_related_resource_id
+  target_condition:
+    - and:
+      - same_tenancy
+  resource:
+    path: /v2.0/same_tenancy_main_resources
 
 schemas:
 - description: Network
@@ -1641,6 +1651,59 @@ schemas:
         type: string
         unique: false
   title: Owned resource
+
+- description: Same tenancy related resource
+  id: same_tenancy_related_resource
+  singular: same_tenancy_related_resource
+  plural: same_tenancy_related_resources
+  prefix: /v2.0
+  schema:
+    properties:
+      id:
+        description: ID
+        permission:
+          - create
+        title: ID
+        type: string
+        unique: true
+      tenant_id:
+        description: Tenant ID
+        permission:
+          - create
+        title: TenantID
+        type: string
+  title: Same tenancy related resource
+
+- description: Same tenancy main resource
+  id: same_tenancy_main_resource
+  singular: same_tenancy_main_resource
+  plural: same_tenancy_main_resources
+  prefix: /v2.0
+  schema:
+    properties:
+      id:
+        description: ID
+        permission:
+          - create
+        title: ID
+        type: string
+        unique: true
+      same_tenancy_related_resource_id:
+        description: Same tenancy related resource
+        permission:
+          - create
+          - update
+        relation: same_tenancy_related_resource
+        relation_property: same_tenancy_related_resource
+        title: Same tenancy related resource
+        type: string
+      tenant_id:
+        description: Tenant ID
+        permission:
+          - create
+        title: TenantID
+        type: string
+  title: Same tenancy main resource
 
 - description: Schema that is not synced
   id: not_synced

@@ -198,7 +198,7 @@ func ApplyPolicyForResource(context middleware.Context, resourceSchema *schema.S
 	return nil
 }
 
-func ValidateAttachmentsForResource(context middleware.Context, resourceSchema *schema.Schema, resourceMap map[string]interface{}) error {
+func ValidateAttachmentsForResource(context middleware.Context, resourceSchema *schema.Schema, tenancy *schema.Tenancy, resourceMap map[string]interface{}) error {
 	attachPolicies, hasAttachPolicies := context["attach_policies"].([]*schema.Policy)
 	auth, hasAuth := context["auth"].(schema.Authorization)
 	if !hasAttachPolicies || !hasAuth {
@@ -206,7 +206,7 @@ func ValidateAttachmentsForResource(context middleware.Context, resourceSchema *
 	}
 
 	for _, attachPolicy := range attachPolicies {
-		if err := validateAttachment(context, attachPolicy, auth, resourceSchema, resourceMap); err != nil {
+		if err := validateAttachment(context, attachPolicy, auth, resourceSchema, tenancy, resourceMap); err != nil {
 			return err
 		}
 	}
@@ -545,7 +545,7 @@ func GetSingleResourceInTransaction(context middleware.Context, resourceSchema *
 // CreateOrUpdateResource updates resource if it existed and otherwise creates it and returns true.
 func CreateOrUpdateResource(
 	ctx middleware.Context,
-	dataStore db.DB, identityService middleware.IdentityService,
+	dataStore db.DB,
 	resourceSchema *schema.Schema,
 	resourceID string, dataMap map[string]interface{},
 ) (bool, error) {
@@ -568,13 +568,13 @@ func CreateOrUpdateResource(
 
 	if !exists {
 		dataMap["id"] = resourceID
-		if err := CreateResource(ctx, dataStore, identityService, resourceSchema, dataMap); err != nil {
+		if err := CreateResource(ctx, dataStore, resourceSchema, dataMap); err != nil {
 			return false, err
 		}
 		return true, nil
 	}
 
-	return false, UpdateResource(ctx, dataStore, identityService, resourceSchema, resourceID, dataMap)
+	return false, UpdateResource(ctx, dataStore, resourceSchema, resourceID, dataMap)
 }
 
 func getFilterFromPolicy(
@@ -623,7 +623,6 @@ func checkIfResourceExists(context context.Context, filter transaction.Filter,
 func CreateResource(
 	context middleware.Context,
 	dataStore db.DB,
-	identityService middleware.IdentityService,
 	resourceSchema *schema.Schema,
 	dataMap map[string]interface{},
 ) error {
@@ -772,7 +771,9 @@ func CreateResourceInTransaction(context middleware.Context, resourceSchema *sch
 		return fmt.Errorf("No environment for schema")
 	}
 
-	if err := ValidateAttachmentsForResource(context, resourceSchema, resource.Data()); err != nil {
+	data := resource.Data()
+	tenancy := schema.NewTenancy(data)
+	if err := ValidateAttachmentsForResource(context, resourceSchema, tenancy, data); err != nil {
 		return err
 	}
 
@@ -812,7 +813,7 @@ func CreateResourceInTransaction(context middleware.Context, resourceSchema *sch
 // UpdateResource updates the resource specified by the schema and ID using the dataMap
 func UpdateResource(
 	context middleware.Context,
-	dataStore db.DB, identityService middleware.IdentityService,
+	dataStore db.DB,
 	resourceSchema *schema.Schema,
 	resourceID string, dataMap map[string]interface{},
 ) error {
@@ -935,7 +936,8 @@ func UpdateResourceInTransaction(
 		return err
 	}
 
-	if err := ValidateAttachmentsForResource(context, resourceSchema, dataMap); err != nil {
+	tenancy := schema.NewTenancy(resource.Data())
+	if err := ValidateAttachmentsForResource(context, resourceSchema, tenancy, dataMap); err != nil {
 		return err
 	}
 
@@ -1244,20 +1246,21 @@ func validateAttachment(
 	policy *schema.Policy,
 	auth schema.Authorization,
 	resourceSchema *schema.Schema,
+	tenancy *schema.Tenancy,
 	dataMap map[string]interface{},
 ) error {
 	log.Debug("Checking tenant isolation policy: %s", policy.ID)
 	relationPropertyName := policy.GetRelationPropertyName()
 	if relationPropertyName == "*" {
 		for path := range resourceSchema.GetAllPropertiesFullyQualifiedMap() {
-			err := validateAttachmentRelationUnderPath(context, policy, auth, dataMap, resourceSchema, path)
+			err := validateAttachmentRelationUnderPath(context, policy, auth, tenancy, dataMap, resourceSchema, path)
 			if err != nil {
 				return err
 			}
 		}
 		return nil
 	} else {
-		return validateAttachmentRelationUnderPath(context, policy, auth, dataMap, resourceSchema, relationPropertyName)
+		return validateAttachmentRelationUnderPath(context, policy, auth, tenancy, dataMap, resourceSchema, relationPropertyName)
 	}
 }
 
@@ -1277,6 +1280,7 @@ func validateAttachmentRelationUnderPath(
 	context middleware.Context,
 	policy *schema.Policy,
 	auth schema.Authorization,
+	tenancy *schema.Tenancy,
 	data map[string]interface{},
 	resourceSchema *schema.Schema,
 	path string,
@@ -1314,7 +1318,7 @@ func validateAttachmentRelationUnderPath(
 	for _, dataPiece := range dataSet {
 		relatedResourceID, _ := dataPiece.(string)
 		log.Debug("Checking ID %s", relatedResourceID)
-		err := validateAttachmentRelation(context, policy, auth, currProp, relatedResourceID, data)
+		err := validateAttachmentRelation(context, policy, auth, currProp, relatedResourceID, tenancy, data)
 		if err != nil {
 			return err
 		}
@@ -1329,6 +1333,7 @@ func validateAttachmentRelation(
 	auth schema.Authorization,
 	property *schema.Property,
 	relatedResourceID string,
+	tenancy *schema.Tenancy,
 	data map[string]interface{},
 ) error {
 	if relatedResourceID == "" {
@@ -1342,7 +1347,7 @@ func validateAttachmentRelation(
 	otherCond := policy.GetOtherResourceCondition()
 	filter := transaction.IDFilter(relatedResourceID)
 	extendFilterByTenantAndDomain(relatedSchema, filter, schema.ActionRead, otherCond, auth)
-	otherCond.AddCustomFilters(relatedSchema, filter, auth)
+	otherCond.AddCustomFiltersWithTenancy(relatedSchema, filter, auth, tenancy)
 
 	options := &transaction.ViewOptions{Details: true}
 
