@@ -78,6 +78,8 @@ const (
 	attacherNestedPluralURL            = baseURL + "/v2.0/nested_attachers"
 	attachTargetPluralURL              = baseURL + "/v2.0/attach_targets"
 	ownedResourcePluralURL             = baseURL + "/v2.0/owned_resources"
+	sameTenancyRelatedPluralURL        = baseURL + "/v2.0/same_tenancy_related_resources"
+	sameTenancyMainPluralURL           = baseURL + "/v2.0/same_tenancy_main_resources"
 )
 
 var _ = Describe("Server package test", func() {
@@ -558,6 +560,51 @@ var _ = Describe("Server package test", func() {
 					}
 					testURL("PUT", url, memberTokenID, testResource, http.StatusUnauthorized)
 				})
+			})
+
+			Context("Same tenancy condition", func() {
+				const (
+					relatedResourceID = "some_id1"
+					mainResourceID    = "some_id2"
+				)
+
+				BeforeEach(func() {
+					relatedResource := map[string]interface{}{
+						"id":        relatedResourceID,
+						"tenant_id": powerUserTenantID,
+					}
+					testURL(http.MethodPost, sameTenancyRelatedPluralURL, adminTokenID, relatedResource, http.StatusCreated)
+				})
+
+				DescribeTable("Create with same tenancy condition",
+					func(mainResourceTenantID string, expectedStatusCode int) {
+						mainResource := map[string]interface{}{
+							"id":                               mainResourceID,
+							"same_tenancy_related_resource_id": relatedResourceID,
+							"tenant_id":                        mainResourceTenantID,
+						}
+						testURL(http.MethodPost, sameTenancyMainPluralURL, adminTokenID, mainResource, expectedStatusCode)
+					},
+					Entry("Should not create resource with different tenancy", memberTenantID, http.StatusBadRequest),
+					Entry("Should create resource with same tenancy", powerUserTenantID, http.StatusCreated),
+				)
+
+				DescribeTable("Update with same tenancy condition",
+					func(mainResourceTenantID string, expectedStatusCode int) {
+						mainResource := map[string]interface{}{
+							"id":        mainResourceID,
+							"tenant_id": mainResourceTenantID,
+						}
+						testURL(http.MethodPost, sameTenancyMainPluralURL, adminTokenID, mainResource, http.StatusCreated)
+
+						mainResource = map[string]interface{}{
+							"same_tenancy_related_resource_id": relatedResourceID,
+						}
+						testURL(http.MethodPut, sameTenancyMainPluralURL+"/"+mainResourceID, adminTokenID, mainResource, expectedStatusCode)
+					},
+					Entry("Should not update resource with different tenancy", memberTenantID, http.StatusBadRequest),
+					Entry("Should update resource with same tenancy", powerUserTenantID, http.StatusOK),
+				)
 			})
 
 			Context("Creating resource in different tenant", func() {

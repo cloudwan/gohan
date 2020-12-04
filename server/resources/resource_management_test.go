@@ -197,7 +197,7 @@ var _ = Describe("Resource manager", func() {
 
 	createAndExpectSuccess := func(resourceData map[string]interface{}) interface{} {
 		err := resources.CreateResource(
-			context, testDB, fakeIdentity, currentSchema, resourceData)
+			context, testDB, currentSchema, resourceData)
 
 		result := context["response"].(map[string]interface{})
 		Expect(err).NotTo(HaveOccurred())
@@ -207,7 +207,7 @@ var _ = Describe("Resource manager", func() {
 
 	createAndExpectResourceError := func(resourceData map[string]interface{}) {
 		err := resources.CreateResource(
-			context, testDB, fakeIdentity, currentSchema, resourceData)
+			context, testDB, currentSchema, resourceData)
 		Expect(err).To(HaveOccurred())
 		_, ok := err.(resources.ResourceError)
 		Expect(ok).To(BeTrue())
@@ -215,7 +215,7 @@ var _ = Describe("Resource manager", func() {
 
 	updateAndExpectSuccess := func(resourceID string, resourceData map[string]interface{}) interface{} {
 		err := resources.UpdateResource(
-			context, testDB, fakeIdentity, currentSchema, resourceID,
+			context, testDB, currentSchema, resourceID,
 			resourceData)
 		Expect(err).NotTo(HaveOccurred())
 		result := context["response"].(map[string]interface{})
@@ -226,7 +226,7 @@ var _ = Describe("Resource manager", func() {
 
 	updateAndExpectError := func(resourceID string, resourceData map[string]interface{}) {
 		err := resources.UpdateResource(
-			context, testDB, fakeIdentity, currentSchema, resourceID, resourceData)
+			context, testDB, currentSchema, resourceID, resourceData)
 		Expect(err).To(HaveOccurred())
 		_, ok := err.(resources.ResourceError)
 		Expect(ok).To(BeTrue())
@@ -1452,7 +1452,7 @@ var _ = Describe("Resource manager", func() {
 
 					It("Should run the extension", func() {
 						err := resources.CreateResource(
-							context, testDB, fakeIdentity, currentSchema, adminResourceData)
+							context, testDB, currentSchema, adminResourceData)
 						Expect(err).To(HaveOccurred())
 						extErr, ok := err.(extension.Error)
 						Expect(ok).To(BeTrue())
@@ -1469,7 +1469,7 @@ var _ = Describe("Resource manager", func() {
 
 					It("Should run the extension", func() {
 						err := resources.CreateResource(
-							context, testDB, fakeIdentity, currentSchema, adminResourceData)
+							context, testDB, currentSchema, adminResourceData)
 						Expect(err).To(HaveOccurred())
 						extErr, ok := err.(extension.Error)
 						Expect(ok).To(BeTrue())
@@ -1486,7 +1486,7 @@ var _ = Describe("Resource manager", func() {
 
 					It("Should run the extension", func() {
 						err := resources.CreateResource(
-							context, testDB, fakeIdentity, currentSchema, adminResourceData)
+							context, testDB, currentSchema, adminResourceData)
 						Expect(err).To(HaveOccurred())
 						extErr, ok := err.(extension.Error)
 						Expect(ok).To(BeTrue())
@@ -1503,7 +1503,7 @@ var _ = Describe("Resource manager", func() {
 
 					It("Should run the extension", func() {
 						err := resources.CreateResource(
-							context, testDB, fakeIdentity, currentSchema, adminResourceData)
+							context, testDB, currentSchema, adminResourceData)
 						Expect(err).To(HaveOccurred())
 						extErr, ok := err.(extension.Error)
 						Expect(ok).To(BeTrue())
@@ -1544,7 +1544,7 @@ var _ = Describe("Resource manager", func() {
 				It("Should create own resource when tenant_id isn't provided and fill it in DB",
 					func() {
 						err := resources.CreateResource(
-							context, testDB, fakeIdentity, currentSchema, map[string]interface{}{
+							context, testDB, currentSchema, map[string]interface{}{
 								"id":        memberResourceID,
 								"domain_id": domainAID,
 							})
@@ -1565,7 +1565,7 @@ var _ = Describe("Resource manager", func() {
 					"and response should not contain it",
 					func() {
 						err := resources.CreateResource(
-							context, testDB, fakeIdentity, currentSchema, map[string]interface{}{
+							context, testDB, currentSchema, map[string]interface{}{
 								"id":        memberResourceID,
 								"domain_id": domainAID,
 							})
@@ -1579,7 +1579,7 @@ var _ = Describe("Resource manager", func() {
 
 				It("Should not create resource when blacklisted tenant_id is provided", func() {
 					err := resources.CreateResource(
-						context, testDB, fakeIdentity, currentSchema, map[string]interface{}{
+						context, testDB, currentSchema, map[string]interface{}{
 							"id":        memberResourceID,
 							"tenant_id": memberTenantID,
 							"domain_id": domainAID,
@@ -1594,14 +1594,14 @@ var _ = Describe("Resource manager", func() {
 
 				It("Should create and update same resource when tenant_id is not provided", func() {
 					err := resources.CreateResource(
-						context, testDB, fakeIdentity, currentSchema, map[string]interface{}{
+						context, testDB, currentSchema, map[string]interface{}{
 							"id":        memberResourceID,
 							"domain_id": domainAID,
 						})
 
 					Expect(err).NotTo(HaveOccurred())
 
-					err = resources.UpdateResource(context, testDB, fakeIdentity, currentSchema,
+					err = resources.UpdateResource(context, testDB, currentSchema,
 						memberResourceID, map[string]interface{}{})
 
 					Expect(err).NotTo(HaveOccurred())
@@ -1631,7 +1631,7 @@ var _ = Describe("Resource manager", func() {
 
 					It("Should run the extension", func() {
 						err := resources.UpdateResource(
-							context, testDB, fakeIdentity, currentSchema, adminResourceID, adminResourceData)
+							context, testDB, currentSchema, adminResourceID, adminResourceData)
 						Expect(err).To(HaveOccurred())
 						extErr, ok := err.(extension.Error)
 						Expect(ok).To(BeTrue())
@@ -1648,7 +1648,7 @@ var _ = Describe("Resource manager", func() {
 
 					It("Should not run the extension", func() {
 						err := resources.UpdateResource(
-							context, testDB, fakeIdentity, currentSchema, adminResourceID, adminResourceData)
+							context, testDB, currentSchema, adminResourceID, adminResourceData)
 						Expect(err).To(HaveOccurred())
 						_, ok := err.(resources.ResourceError)
 						Expect(ok).To(BeTrue())
@@ -1662,7 +1662,7 @@ var _ = Describe("Resource manager", func() {
 
 					It("Should not run the extension", func() {
 						err := resources.UpdateResource(
-							context, testDB, fakeIdentity, currentSchema, adminResourceID, adminResourceData)
+							context, testDB, currentSchema, adminResourceID, adminResourceData)
 						Expect(err).To(HaveOccurred())
 						_, ok := err.(resources.ResourceError)
 						Expect(ok).To(BeTrue())
@@ -1676,7 +1676,7 @@ var _ = Describe("Resource manager", func() {
 
 					It("Should not run the extension", func() {
 						err := resources.UpdateResource(
-							context, testDB, fakeIdentity, currentSchema, adminResourceID, adminResourceData)
+							context, testDB, currentSchema, adminResourceID, adminResourceData)
 						Expect(err).To(HaveOccurred())
 						_, ok := err.(resources.ResourceError)
 						Expect(ok).To(BeTrue())
@@ -1695,14 +1695,14 @@ var _ = Describe("Resource manager", func() {
 			})
 			It("Should receive id, tenant_id and domain_id but should not update them", func() {
 				err := resources.CreateResource(
-					context, testDB, fakeIdentity, currentSchema, adminResourceData)
+					context, testDB, currentSchema, adminResourceData)
 				Expect(err).To(Succeed())
 				delete(adminResourceData, "id")
 				delete(adminResourceData, "tenant_id")
 				delete(adminResourceData, "domain_id")
 
 				err = resources.UpdateResource(
-					context, testDB, fakeIdentity, currentSchema, adminResourceID, adminResourceData)
+					context, testDB, currentSchema, adminResourceID, adminResourceData)
 				Expect(err).To(Succeed())
 
 			})
@@ -1745,7 +1745,7 @@ var _ = Describe("Resource manager", func() {
 				It("Should only modify updated fields in subobjects", func() {
 					networkSchema, _ := manager.Schema("network")
 
-					Expect(resources.CreateResource(context, testDB, fakeIdentity, networkSchema, adminNetworkData)).To(Succeed())
+					Expect(resources.CreateResource(context, testDB, networkSchema, adminNetworkData)).To(Succeed())
 
 					result := context["response"].(map[string]interface{})
 					network, found := result["network"].(map[string]interface{})
@@ -1759,7 +1759,7 @@ var _ = Describe("Resource manager", func() {
 					vlanId := defaultVlan["vlan_id"]
 					Expect(vlanId).To(Equal(1)) // default vlan_id value
 
-					Expect(resources.UpdateResource(context, testDB, fakeIdentity, networkSchema, memberResourceID, adminNetworkUpdate)).To(Succeed())
+					Expect(resources.UpdateResource(context, testDB, networkSchema, memberResourceID, adminNetworkUpdate)).To(Succeed())
 
 					result = context["response"].(map[string]interface{})
 					network, found = result["network"].(map[string]interface{})
@@ -1777,7 +1777,7 @@ var _ = Describe("Resource manager", func() {
 				It("Should properly update array values", func() {
 					networkSchema, _ := manager.Schema("network")
 
-					Expect(resources.CreateResource(context, testDB, fakeIdentity, networkSchema, adminNetworkData)).To(Succeed())
+					Expect(resources.CreateResource(context, testDB, networkSchema, adminNetworkData)).To(Succeed())
 
 					result := context["response"].(map[string]interface{})
 					network, found := result["network"].(map[string]interface{})
@@ -1785,7 +1785,7 @@ var _ = Describe("Resource manager", func() {
 					routeTargets := network["route_targets"]
 					Expect(routeTargets).To(Equal([]interface{}{"routeTarget1"}))
 
-					Expect(resources.UpdateResource(context, testDB, fakeIdentity, networkSchema, memberResourceID, map[string]interface{}{
+					Expect(resources.UpdateResource(context, testDB, networkSchema, memberResourceID, map[string]interface{}{
 						"route_targets": []interface{}{"testTarget2", "testTarget3"},
 					})).To(Succeed())
 
@@ -1797,14 +1797,14 @@ var _ = Describe("Resource manager", func() {
 
 				It("Should properly update nil objects", func() {
 					testSchema, _ := manager.Schema("nil_test")
-					Expect(resources.CreateResource(context, testDB, fakeIdentity, testSchema, map[string]interface{}{"id": memberResourceID})).To(Succeed())
+					Expect(resources.CreateResource(context, testDB, testSchema, map[string]interface{}{"id": memberResourceID})).To(Succeed())
 					result := context["response"].(map[string]interface{})
 					mainObject, found := result["nil_test"].(map[string]interface{})
 					Expect(found).To(BeTrue())
 					subObject := mainObject["nested_obj"]
 					Expect(subObject).To(BeNil())
 
-					Expect(resources.UpdateResource(context, testDB, fakeIdentity, testSchema, memberResourceID, map[string]interface{}{
+					Expect(resources.UpdateResource(context, testDB, testSchema, memberResourceID, map[string]interface{}{
 						"nested_obj": map[string]interface{}{
 							"nested_string": "nestedString",
 						}})).To(Succeed())
@@ -1934,7 +1934,7 @@ var _ = Describe("Resource manager", func() {
 					It("should create non-empty resource", func() {
 						context["request_data"] = deepcopy.Copy(requestMap).(map[string]interface{})
 
-						Expect(resources.CreateResource(context, testDB, fakeIdentity, currentSchema, requestMap)).To(Succeed())
+						Expect(resources.CreateResource(context, testDB, currentSchema, requestMap)).To(Succeed())
 						result := context["response"].(map[string]interface{})
 						theResource, ok := result[schemaID]
 						Expect(ok).To(BeTrue())
@@ -1947,7 +1947,7 @@ var _ = Describe("Resource manager", func() {
 						delete(requestMap, "test_string")
 						context["request_data"] = deepcopy.Copy(requestMap).(map[string]interface{})
 
-						Expect(resources.CreateResource(context, testDB, fakeIdentity, currentSchema, requestMap)).To(Succeed())
+						Expect(resources.CreateResource(context, testDB, currentSchema, requestMap)).To(Succeed())
 						result := context["response"].(map[string]interface{})
 						theResource, ok := result[schemaID]
 						Expect(ok).To(BeTrue())
@@ -1961,7 +1961,7 @@ var _ = Describe("Resource manager", func() {
 						context["run_precreate"] = true
 						context["request_data"] = deepcopy.Copy(requestMap).(map[string]interface{})
 
-						Expect(resources.CreateResource(context, testDB, fakeIdentity, currentSchema, requestMap)).To(Succeed())
+						Expect(resources.CreateResource(context, testDB, currentSchema, requestMap)).To(Succeed())
 						result := context["response"].(map[string]interface{})
 						theResource, ok := result[schemaID]
 						Expect(ok).To(BeTrue())
@@ -1973,7 +1973,7 @@ var _ = Describe("Resource manager", func() {
 						context["run_precreate"] = true
 						context["request_data"] = deepcopy.Copy(requestMap).(map[string]interface{})
 
-						Expect(resources.CreateResource(context, testDB, fakeIdentity, currentSchema, requestMap)).To(Succeed())
+						Expect(resources.CreateResource(context, testDB, currentSchema, requestMap)).To(Succeed())
 						result := context["response"].(map[string]interface{})
 						theResource, ok := result[schemaID]
 						Expect(ok).To(BeTrue())
@@ -1996,7 +1996,7 @@ var _ = Describe("Resource manager", func() {
 					})
 					JustBeforeEach(func() {
 						err := resources.UpdateResource(
-							context, testDB, fakeIdentity, currentSchema, adminResourceID,
+							context, testDB, currentSchema, adminResourceID,
 							requestMap)
 						result := context["response"].(map[string]interface{})
 						Expect(err).NotTo(HaveOccurred())
@@ -2012,7 +2012,7 @@ var _ = Describe("Resource manager", func() {
 						context["request_data"] = deepcopy.Copy(requestMap).(map[string]interface{})
 
 						Expect(resources.UpdateResource(
-							context, testDB, fakeIdentity, currentSchema, adminResourceID,
+							context, testDB, currentSchema, adminResourceID,
 							requestMap)).To(Succeed())
 						result := context["response"].(map[string]interface{})
 						theResource, ok := result[schemaID]
@@ -2027,7 +2027,7 @@ var _ = Describe("Resource manager", func() {
 						context["request_data"] = deepcopy.Copy(requestMap).(map[string]interface{})
 
 						Expect(resources.UpdateResource(
-							context, testDB, fakeIdentity, currentSchema, adminResourceID,
+							context, testDB, currentSchema, adminResourceID,
 							requestMap)).To(Succeed())
 						result := context["response"].(map[string]interface{})
 						theResource, ok := result[schemaID]
@@ -2043,7 +2043,7 @@ var _ = Describe("Resource manager", func() {
 						context["request_data"] = deepcopy.Copy(requestMap).(map[string]interface{})
 
 						Expect(resources.UpdateResource(
-							context, testDB, fakeIdentity, currentSchema, adminResourceID,
+							context, testDB, currentSchema, adminResourceID,
 							requestMap)).To(Succeed())
 						result := context["response"].(map[string]interface{})
 						theResource, ok := result[schemaID]
@@ -2057,7 +2057,7 @@ var _ = Describe("Resource manager", func() {
 						context["request_data"] = deepcopy.Copy(requestMap).(map[string]interface{})
 
 						Expect(resources.UpdateResource(
-							context, testDB, fakeIdentity, currentSchema, adminResourceID,
+							context, testDB, currentSchema, adminResourceID,
 							requestMap)).To(Succeed())
 						result := context["response"].(map[string]interface{})
 						theResource, ok := result[schemaID]
@@ -2079,18 +2079,18 @@ var _ = Describe("Resource manager", func() {
 						events["pre_create"] = `if (context.resource.test_string === undefined) { context.resource.test_string = "12345678901234567890123456789012345678901"; }`
 					})
 					It("should run validation after pre_create", func() {
-						err := resources.CreateResource(context, testDB, fakeIdentity, currentSchema, map[string]interface{}{})
+						err := resources.CreateResource(context, testDB, currentSchema, map[string]interface{}{})
 						Expect(err).To(MatchError("Json validation error:\n\ttest_string: String length must be less than or equal to 40,"))
 
-						Expect(resources.CreateResource(context, testDB, fakeIdentity, currentSchema, requestMap)).To(Succeed())
+						Expect(resources.CreateResource(context, testDB, currentSchema, requestMap)).To(Succeed())
 					})
 					It("should run validation after pre_update", func() {
-						Expect(resources.CreateResource(context, testDB, fakeIdentity, currentSchema, deepcopy.Copy(requestMap).(map[string]interface{}))).To(Succeed())
+						Expect(resources.CreateResource(context, testDB, currentSchema, deepcopy.Copy(requestMap).(map[string]interface{}))).To(Succeed())
 
-						err := resources.UpdateResource(context, testDB, fakeIdentity, currentSchema, adminResourceID, map[string]interface{}{})
+						err := resources.UpdateResource(context, testDB, currentSchema, adminResourceID, map[string]interface{}{})
 						Expect(err).To(MatchError("Json validation error:\n\ttest_string: String length must be less than or equal to 40,"))
 
-						Expect(resources.UpdateResource(context, testDB, fakeIdentity, currentSchema, adminResourceID, requestMap)).To(Succeed())
+						Expect(resources.UpdateResource(context, testDB, currentSchema, adminResourceID, requestMap)).To(Succeed())
 					})
 				})
 
@@ -2101,7 +2101,7 @@ var _ = Describe("Resource manager", func() {
 
 					It("Should run the extension", func() {
 						err := resources.UpdateResource(
-							context, testDB, fakeIdentity, currentSchema, adminResourceID,
+							context, testDB, currentSchema, adminResourceID,
 							map[string]interface{}{"test_string": "Steloj ne estas en ordo."})
 						Expect(err).To(HaveOccurred())
 						extErr, ok := err.(extension.Error)
@@ -2119,7 +2119,7 @@ var _ = Describe("Resource manager", func() {
 
 					It("Should run the extension", func() {
 						err := resources.UpdateResource(
-							context, testDB, fakeIdentity, currentSchema, adminResourceID,
+							context, testDB, currentSchema, adminResourceID,
 							map[string]interface{}{"test_string": "Steloj ne estas en ordo."})
 						Expect(err).To(HaveOccurred())
 						extErr, ok := err.(extension.Error)
@@ -2137,7 +2137,7 @@ var _ = Describe("Resource manager", func() {
 
 					It("Should run the extension", func() {
 						err := resources.UpdateResource(
-							context, testDB, fakeIdentity, currentSchema, adminResourceID,
+							context, testDB, currentSchema, adminResourceID,
 							map[string]interface{}{"test_string": "Steloj ne estas en ordo."})
 						Expect(err).To(HaveOccurred())
 						extErr, ok := err.(extension.Error)
@@ -2155,7 +2155,7 @@ var _ = Describe("Resource manager", func() {
 
 					It("Should run the extension", func() {
 						err := resources.UpdateResource(
-							context, testDB, fakeIdentity, currentSchema, adminResourceID,
+							context, testDB, currentSchema, adminResourceID,
 							map[string]interface{}{"test_string": "Steloj ne estas en ordo."})
 						Expect(err).To(HaveOccurred())
 						extErr, ok := err.(extension.Error)
@@ -2377,7 +2377,7 @@ var _ = Describe("Resource manager", func() {
 
 			By("Successfully adding a resource to the database")
 			err = resources.CreateResource(
-				createContext, testDB, fakeIdentity, currentSchema, adminResourceData)
+				createContext, testDB, currentSchema, adminResourceData)
 			result = createContext["response"].(map[string]interface{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(HaveKeyWithValue(schemaID, util.MatchAsJSON(adminResourceData)))
@@ -2394,7 +2394,7 @@ var _ = Describe("Resource manager", func() {
 
 			By("Updating the resource")
 			err = resources.UpdateResource(
-				updateContext, testDB, fakeIdentity, currentSchema, adminResourceID,
+				updateContext, testDB, currentSchema, adminResourceID,
 				map[string]interface{}{"test_string": "Steloj ne estas en ordo."})
 			result = updateContext["response"].(map[string]interface{})
 			Expect(err).NotTo(HaveOccurred())

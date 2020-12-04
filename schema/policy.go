@@ -41,6 +41,7 @@ const (
 
 	conditionIsOwner               = "is_owner"
 	conditionIsDomainOwner         = "is_domain_owner"
+	conditionSameTenancy           = "same_tenancy"
 	conditionSkipTenantDomainCheck = "skip_tenant_domain_check"
 	conditionTypeBelongsTo         = "belongs_to"
 	conditionProperty              = "property"
@@ -94,6 +95,7 @@ const (
 type conditionFilter struct {
 	isOwner       bool
 	isDomainOwner bool
+	sameTenancy   bool
 	matches       []map[string]interface{}
 	orFilters     *conditionFilter
 	andFilters    *conditionFilter
@@ -279,7 +281,7 @@ func (auth *TenantScopedAuthorization) TenantName() string {
 }
 
 func (auth *TenantScopedAuthorization) getTenantCustomFilter(schema *Schema) []filter.FilterElem {
-	return getFilterByPropertyIfPresent(schema, "tenant_id", auth.TenantID())
+	return getFilterByPropertyIfPresent(schema, tenantIDKey, auth.TenantID())
 }
 
 func (auth *TenantScopedAuthorization) checkAccessToResource(cond *ResourceCondition, action string, resource map[string]interface{}) error {
@@ -337,7 +339,7 @@ func (auth *DomainScopedAuthorization) IsAdmin() bool {
 }
 
 func (auth *DomainScopedAuthorization) getDomainCustomFilter(schema *Schema) []filter.FilterElem {
-	return getFilterByPropertyIfPresent(schema, "domain_id", auth.DomainID())
+	return getFilterByPropertyIfPresent(schema, domainIDKey, auth.DomainID())
 }
 
 func (auth *DomainScopedAuthorization) getTenantCustomFilter(schema *Schema) []filter.FilterElem {
@@ -405,7 +407,7 @@ func getFilterByPropertyIfPresent(schema *Schema, propertyName string, propertyV
 }
 
 func checkTenantAccess(cond *ResourceCondition, action string, tenant Tenant, resource map[string]interface{}) error {
-	ownerID, _ := resource["tenant_id"].(string)
+	ownerID, _ := resource[tenantIDKey].(string)
 	ownerName, _ := resource["tenant_name"].(string)
 	owner := newTenantMatcher(ownerID, ownerName)
 	caller := newTenantMatcher(tenant.ID, tenant.Name)
@@ -418,7 +420,7 @@ func checkTenantAccess(cond *ResourceCondition, action string, tenant Tenant, re
 }
 
 func checkDomainAccess(domain Domain, resource map[string]interface{}) error {
-	resourceDomainID, setsDomain := resource["domain_id"].(string)
+	resourceDomainID, setsDomain := resource[domainIDKey].(string)
 	if setsDomain && domain.ID != resourceDomainID {
 		return errors.New("Operating on resources from other domain is prohibited")
 	}
@@ -482,7 +484,7 @@ func (policy *Policy) parseBasicProperties(typeData map[string]interface{}) erro
 }
 
 func (policy *Policy) parseTenant(typeData map[string]interface{}) error {
-	rawTenantID, _ := typeData["tenant_id"].(string)
+	rawTenantID, _ := typeData[tenantIDKey].(string)
 	tenantID, err := getRegexp(rawTenantID)
 	if err != nil {
 		return err
@@ -640,7 +642,7 @@ func NewResourceCondition(rawCondition []interface{}, policyID string) (*Resourc
 					if action, ok := conditionObject["action"]; ok && action != ActionGlob {
 						actions = []string{action.(string)}
 					}
-					rawTenantID, _ := conditionObject["tenant_id"].(string)
+					rawTenantID, _ := conditionObject[tenantIDKey].(string)
 					tenantID, err := getRegexp(rawTenantID)
 					if err != nil {
 						return nil, err
@@ -951,6 +953,8 @@ func precomputeCondition(
 				actionFilter.isOwner = true
 			case conditionIsDomainOwner:
 				actionFilter.isDomainOwner = true
+			case conditionSameTenancy:
+				actionFilter.sameTenancy = true
 			default:
 				return nil, fmt.Errorf("Unknown condition '%s' for policy '%s'", condition, policyID)
 			}
@@ -982,7 +986,11 @@ func precomputeCondition(
 
 // Adds custom filters based on this policy to the `filters` map
 func (policy *ResourceCondition) AddCustomFilters(schema *Schema, filters map[string]interface{}, auth Authorization) {
-	addCustomFilters(schema, filters, auth, policy.actionFilter)
+	addCustomFilters(schema, filters, auth, nil, policy.actionFilter)
+}
+
+func (policy *ResourceCondition) AddCustomFiltersWithTenancy(schema *Schema, filters map[string]interface{}, auth Authorization, tenancy *Tenancy) {
+	addCustomFilters(schema, filters, auth, tenancy, policy.actionFilter)
 }
 
 func (policy *Policy) GetResourcePathRegexp() *regexp.Regexp {
@@ -1001,11 +1009,17 @@ func (policy *Policy) GetOtherResourceCondition() *ResourceCondition {
 	return policy.otherResourceCondition
 }
 
-func addCustomFilters(schema *Schema, f filter.FilterElem, auth Authorization, conditionFilters *conditionFilter) {
+func addCustomFilters(schema *Schema, f filter.FilterElem, auth Authorization, tenancy *Tenancy, conditionFilters *conditionFilter) {
 	if conditionFilters == nil {
 		return
 	}
 	filters := make([]filter.FilterElem, 0)
+	if conditionFilters.sameTenancy {
+		tenantFilter := getFilterByPropertyIfPresent(schema, tenantIDKey, tenancy.TenantID)
+		domainFilter := getFilterByPropertyIfPresent(schema, domainIDKey, tenancy.DomainID)
+		filtersToAdd := filter.MaybeEmptyAndFilter(append(tenantFilter, domainFilter...)...)
+		filters = append(filters, filtersToAdd)
+	}
 	if conditionFilters.isOwner {
 		tenantFilter := auth.getTenantCustomFilter(schema)
 		domainFilter := auth.getDomainCustomFilter(schema)
@@ -1021,12 +1035,12 @@ func addCustomFilters(schema *Schema, f filter.FilterElem, auth Authorization, c
 	}
 	if conditionFilters.andFilters != nil {
 		andFilter := map[string]interface{}{}
-		addCustomFilters(schema, andFilter, auth, conditionFilters.andFilters)
+		addCustomFilters(schema, andFilter, auth, tenancy, conditionFilters.andFilters)
 		filters = append(filters, andFilter)
 	}
 	if conditionFilters.orFilters != nil {
 		orFilter := map[string]interface{}{}
-		addCustomFilters(schema, orFilter, auth, conditionFilters.orFilters)
+		addCustomFilters(schema, orFilter, auth, tenancy, conditionFilters.orFilters)
 		filters = append(filters, orFilter)
 	}
 	if conditionFilters.filterType == orFilter {
