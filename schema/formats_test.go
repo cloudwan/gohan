@@ -100,7 +100,6 @@ var _ = Describe("format checkers", func() {
 			Entry("IPv4 with 1 in last octet", "127.0.0.1"),
 			Entry("IPv4 with 10 in last octet", "127.0.0.10"),
 			Entry("IPv4 with 100 in last octet", "127.0.0.100"),
-
 		)
 
 		DescribeTable("should fail",
@@ -221,6 +220,8 @@ var _ = Describe("format checkers", func() {
 			},
 			Entry("cidr with '1' host bits present", "192.168.0.2/24"),
 			Entry("cidr which is not a broadcast", "192.168.255.2/16"),
+			Entry("broadcast address with /31 mask", "10.0.0.3/31"),
+			Entry("network address with /31 mask", "10.0.0.2/31"),
 		)
 
 		DescribeTable("should fail",
