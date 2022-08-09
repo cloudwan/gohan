@@ -101,7 +101,13 @@ func Logging() martini.Handler {
 
 		response, _ := ioutil.ReadAll(rh.Response)
 		log.Debug("[%s] Response headers: %v", requestContext["trace_id"], rh.Header())
-		log.Debug("[%s] Response body: %s", requestContext["trace_id"], string(response))
+		buffer := &bytes.Buffer{}
+		if err := json.Compact(buffer, response); err != nil {
+			log.Info("[%s] Response body: %s", requestContext["trace_id"], string(response))
+		} else {
+			log.Info("[%s] Response body: %s", requestContext["trace_id"], string(buffer.Bytes()))
+		}
+
 		log.Info("[%s] Completed %v %s in %v", requestContext["trace_id"], rh.Status(), http.StatusText(rh.Status()), time.Since(start))
 	}
 }
