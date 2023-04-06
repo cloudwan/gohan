@@ -106,7 +106,7 @@ func Logging() martini.Handler {
 		if logRequestBodyAsInfo {
 			log.Info("[%s] Request body: %s", requestContext["trace_id"], compactBody)
 		} else {
-			log.Warning("[%s] Request body: %s", requestContext["trace_id"], compactBody)
+			log.Debug("[%s] Request body: %s", requestContext["trace_id"], compactBody)
 		}
 		log.Debug("[%s] Request headers: %v", requestContext["trace_id"], filterHeaders(req.Header))
 		log.Debug("[%s] Request cookies: %v", requestContext["trace_id"], filterCookies(req.Cookies()))
