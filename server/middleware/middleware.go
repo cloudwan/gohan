@@ -101,12 +101,14 @@ func Logging() martini.Handler {
 			compactBody = string(buffer.Bytes())
 		}
 
-		log.Warning("[%s] Started %s %s for client %s",
+		log.Info("[%s] Started %s %s for client %s",
 			requestContext["trace_id"], req.Method, req.URL.String(), addr)
-		if logRequestBodyAsInfo {
-			log.Info("[%s] Request body: %s", requestContext["trace_id"], compactBody)
-		} else {
-			log.Debug("[%s] Request body: %s", requestContext["trace_id"], compactBody)
+		if len(compactBody) > 0 {
+			if logRequestBodyAsInfo {
+				log.Info("[%s] Request body: %s", requestContext["trace_id"], compactBody)
+			} else {
+				log.Debug("[%s] Request body: %s", requestContext["trace_id"], compactBody)
+			}
 		}
 		log.Debug("[%s] Request headers: %v", requestContext["trace_id"], filterHeaders(req.Header))
 		log.Debug("[%s] Request cookies: %v", requestContext["trace_id"], filterCookies(req.Cookies()))
@@ -126,7 +128,9 @@ func Logging() martini.Handler {
 			compactBody = string(buffer.Bytes())
 		}
 
-		log.Debug("[%s] Response body: %s", requestContext["trace_id"], compactBody)
+		if len(compactBody) > 0 {
+			log.Debug("[%s] Response body: %s", requestContext["trace_id"], compactBody)
+		}
 		log.Info("[%s] Completed %v %s in %v", requestContext["trace_id"], rh.Status(), http.StatusText(rh.Status()), time.Since(start))
 	}
 }
