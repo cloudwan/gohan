@@ -3,7 +3,7 @@ version: 2
 jobs:
   build:
     docker:
-      - image: cimg/go:1.20.4
+      - image: cimg/go:1.18
     working_directory: /go/src/github.com/cloudwan/gohan
     environment:
         GO111MODULE: 'on'
@@ -13,7 +13,7 @@ jobs:
       - run: make deps gen lint build
   test:
     docker:
-      - image: cimg/go:1.20.4
+      - image: cimg/go:1.18
       - image: circleci/mariadb:10.2.24-ram
         environment:
           MYSQL_ALLOW_EMPTY_PASSWORD: yes
