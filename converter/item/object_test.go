@@ -565,7 +565,7 @@ var _ = Describe("object tests", func() {
 			properties = make([]*Property, 5)
 
 			for i := 0; i < 4; i++ {
-				objects[i] = &Object{objectType: string(i)}
+				objects[i] = &Object{objectType: fmt.Sprint(i)}
 				properties[i] = &Property{}
 			}
 
