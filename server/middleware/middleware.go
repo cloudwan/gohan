@@ -36,6 +36,7 @@ import (
 )
 
 const webuiPATH = "/webui/"
+const peerSessionsReportPATH = "/v1.0/peer_sessions/report/"
 
 var (
 	adminTenant = schema.Tenant{
@@ -83,15 +84,34 @@ func Logging() martini.Handler {
 			}
 		}
 
+		logRequestBodyAsInfo := true
+		if strings.HasPrefix(req.URL.Path, peerSessionsReportPATH) {
+			logRequestBodyAsInfo = false
+		}
+
 		reqData, _ := ioutil.ReadAll(req.Body)
 		buff := ioutil.NopCloser(bytes.NewBuffer(reqData))
 		req.Body = buff
 
-		log.Info("[%s] Started %s %s for client %s data: %s",
-			requestContext["trace_id"], req.Method, req.URL.String(), addr, string(reqData))
+		var compactBody string
+		buffer := &bytes.Buffer{}
+		if err := json.Compact(buffer, reqData); err != nil {
+			compactBody = string(reqData)
+		} else {
+			compactBody = string(buffer.Bytes())
+		}
+
+		log.Info("[%s] Started %s %s for client %s",
+			requestContext["trace_id"], req.Method, req.URL.String(), addr)
+		if len(compactBody) > 0 {
+			if logRequestBodyAsInfo {
+				log.Info("[%s] Request body: %s", requestContext["trace_id"], compactBody)
+			} else {
+				log.Debug("[%s] Request body: %s", requestContext["trace_id"], compactBody)
+			}
+		}
 		log.Debug("[%s] Request headers: %v", requestContext["trace_id"], filterHeaders(req.Header))
 		log.Debug("[%s] Request cookies: %v", requestContext["trace_id"], filterCookies(req.Cookies()))
-		log.Debug("[%s] Request body: %s", requestContext["trace_id"], string(reqData))
 
 		rh := newResponseHijacker(rw.(martini.ResponseWriter))
 		c.MapTo(rh, (*http.ResponseWriter)(nil))
@@ -101,13 +121,16 @@ func Logging() martini.Handler {
 
 		response, _ := ioutil.ReadAll(rh.Response)
 		log.Debug("[%s] Response headers: %v", requestContext["trace_id"], rh.Header())
-		buffer := &bytes.Buffer{}
+		buffer = &bytes.Buffer{}
 		if err := json.Compact(buffer, response); err != nil {
-			log.Info("[%s] Response body: %s", requestContext["trace_id"], string(response))
+			compactBody = string(response)
 		} else {
-			log.Info("[%s] Response body: %s", requestContext["trace_id"], string(buffer.Bytes()))
+			compactBody = string(buffer.Bytes())
 		}
 
+		if len(compactBody) > 0 {
+			log.Debug("[%s] Response body: %s", requestContext["trace_id"], compactBody)
+		}
 		log.Info("[%s] Completed %v %s in %v", requestContext["trace_id"], rh.Status(), http.StatusText(rh.Status()), time.Since(start))
 	}
 }
