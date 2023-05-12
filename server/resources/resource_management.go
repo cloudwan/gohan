@@ -723,6 +723,7 @@ func CreateResource(
 	if err := ApplyPolicyForResource(context, resourceSchema); err != nil {
 		return ResourceError{err, "", Unauthorized}
 	}
+	log.Info("Created resource %s with id %s", resourceSchema.ID, context["id"])
 	return nil
 }
 
