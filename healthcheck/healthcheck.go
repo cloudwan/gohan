@@ -75,9 +75,13 @@ func (healthCheck *HealthCheck) Run() {
 			w.WriteHeader(http.StatusServiceUnavailable)
 		}
 	}
+	livenessHandler := func(w http.ResponseWriter, req *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthcheck", healthCheckHandler)
+	mux.HandleFunc("/liveness", livenessHandler)
 
 	go func() {
 		for {
