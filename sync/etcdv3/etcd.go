@@ -429,6 +429,7 @@ func (s *Sync) watch(ctx context.Context, path string, responseChan chan *sync.E
 		errorsCh <- err
 	}()
 	defer func() {
+		log.Info("Sync.watch: cancel watch")
 		cancel()
 		wg.Wait()
 	}()
@@ -437,10 +438,12 @@ func (s *Sync) watch(ctx context.Context, path string, responseChan chan *sync.E
 	// it gets an error, we need a side channel to see the connection state.
 	session, err := concurrency.NewSession(s.etcdClient, concurrency.WithTTL(masterTTL))
 	if err != nil {
+		log.Info("Sync.watch: concurrency.NewSession error: %s", err)
 		updateCounter(1, "watch.session.error")
 		return err
 	}
 	defer func() {
+		log.Info("Sync.watch: session.Close")
 		if err := session.Close(); err != nil {
 			log.Notice("Closing session failed: %s", err)
 		}
@@ -448,10 +451,13 @@ func (s *Sync) watch(ctx context.Context, path string, responseChan chan *sync.E
 
 	select {
 	case <-session.Done():
+		log.Info("Sync.watch: session.Done")
 		return fmt.Errorf("Watch aborted by etcd session close")
 	case <-ctx.Done():
+		log.Info("Sync.watch: ctx.Done")
 		return nil
 	case err := <-errorsCh:
+		log.Info("Sync.watch: error: %s", err)
 		return err
 	}
 }
