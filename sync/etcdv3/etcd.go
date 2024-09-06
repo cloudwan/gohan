@@ -478,7 +478,7 @@ func (s *Sync) Watch(ctx context.Context, path string, revision int64) <-chan *s
 		case <-ctx.Done():
 			// don't return without ensuring Watch finished or we risk panic:
 			// send on closed eventCh channel
-			log.Info("Sync.watch: Watch - ctx.Done for %s", path, err)
+			log.Info("Sync.watch: Watch - ctx.Done for %s", path)
 			<-watchDoneCh
 		case err := <-watchDoneCh:
 			if err != nil {
