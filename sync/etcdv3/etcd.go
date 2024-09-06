@@ -397,11 +397,12 @@ func (s *Sync) watch(ctx context.Context, path string, responseChan chan *sync.E
 	wg.Add(1)
 	go func() {
 		updateCounter(1, "watch.active")
-		defer updateCounter(-1, "watch.active")
 
+		defer updateCounter(-1, "watch.active")
 		defer wg.Done()
 		err := func() error {
 			rch := s.etcdClient.Watch(ctx, path, etcd.WithPrefix(), etcd.WithRev(revision))
+			log.Info("Sync.watch: New watch %s", path)
 
 			for wresp := range rch {
 				err := wresp.Err()
@@ -429,7 +430,7 @@ func (s *Sync) watch(ctx context.Context, path string, responseChan chan *sync.E
 		errorsCh <- err
 	}()
 	defer func() {
-		log.Info("Sync.watch: cancel watch")
+		log.Info("Sync.watch: cancel watch %s", path)
 		cancel()
 		wg.Wait()
 	}()
@@ -437,27 +438,28 @@ func (s *Sync) watch(ctx context.Context, path string, responseChan chan *sync.E
 	// since Watch() doesn't close the returning channel even when
 	// it gets an error, we need a side channel to see the connection state.
 	session, err := concurrency.NewSession(s.etcdClient, concurrency.WithTTL(masterTTL))
+	log.Info("Sync.watch: New session %s", path)
 	if err != nil {
 		log.Info("Sync.watch: concurrency.NewSession error: %s", err)
 		updateCounter(1, "watch.session.error")
 		return err
 	}
 	defer func() {
-		log.Info("Sync.watch: session.Close")
+		log.Info("Sync.watch: session.Close %s", path)
 		if err := session.Close(); err != nil {
-			log.Notice("Closing session failed: %s", err)
+			log.Notice("Closing session failed: %s for %s", err, path)
 		}
 	}()
 
 	select {
 	case <-session.Done():
-		log.Info("Sync.watch: session.Done")
+		log.Info("Sync.watch: session.Done for %s", path)
 		return fmt.Errorf("Watch aborted by etcd session close")
 	case <-ctx.Done():
-		log.Info("Sync.watch: ctx.Done")
+		log.Info("Sync.watch: ctx.Done for %s", path)
 		return nil
 	case err := <-errorsCh:
-		log.Info("Sync.watch: error: %s", err)
+		log.Info("Sync.watch: error: %s for %s", err, path)
 		return err
 	}
 }
@@ -476,6 +478,7 @@ func (s *Sync) Watch(ctx context.Context, path string, revision int64) <-chan *s
 		case <-ctx.Done():
 			// don't return without ensuring Watch finished or we risk panic:
 			// send on closed eventCh channel
+			log.Info("Sync.watch: Watch - ctx.Done for %s", path, err)
 			<-watchDoneCh
 		case err := <-watchDoneCh:
 			if err != nil {
@@ -483,6 +486,7 @@ func (s *Sync) Watch(ctx context.Context, path string, revision int64) <-chan *s
 				case eventCh <- &sync.Event{Err: err}:
 				default:
 					updateCounter(1, "watch.eventch_full")
+					log.Info("Sync.watch: Watch - eventCh full error %s for %s", path, err)
 					log.Debug("Unable to send error: '%s' via response chan. Don't linger.", err)
 				}
 			}
