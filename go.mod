@@ -8,7 +8,7 @@ require (
 	github.com/cloudwan/goose v0.0.0-20170411125245-c2d7eac2343d
 	github.com/codegangsta/inject v0.0.0-20150114235600-33e0aa1cb7c0 // indirect
 	github.com/coreos/bbolt v1.3.2 // indirect
-	github.com/coreos/etcd v3.3.18+incompatible
+	github.com/coreos/etcd v3.4.22
 	github.com/coreos/go-semver v0.2.0 // indirect
 	github.com/coreos/go-systemd v0.0.0-20190204112023-081494f7ee4f // indirect
 	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f // indirect
