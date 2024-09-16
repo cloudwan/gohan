@@ -8,7 +8,7 @@ require (
 	github.com/cloudwan/goose v0.0.0-20170411125245-c2d7eac2343d
 	github.com/codegangsta/inject v0.0.0-20150114235600-33e0aa1cb7c0 // indirect
 	github.com/coreos/bbolt v1.3.2 // indirect
-	github.com/etcd-io/etcd v3.4.22
+	github.com/coreos/etcd v3.3.18+incompatible
 	github.com/coreos/go-semver v0.2.0 // indirect
 	github.com/coreos/go-systemd v0.0.0-20190204112023-081494f7ee4f // indirect
 	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f // indirect
@@ -42,8 +42,9 @@ require (
 	github.com/mattn/go-runewidth v0.0.2 // indirect
 	github.com/mattn/go-sqlite3 v1.9.0
 	github.com/mitchellh/hashstructure v0.0.0-20170609045927-2bca23e0e452
+	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
+	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
-	github.com/myesui/uuid v1.0.0 // indirect
 	github.com/nullbio/inflect v0.0.0-20170731032957-3edb4592a77b // indirect
 	github.com/olekukonko/tablewriter v0.0.0-20180506121414-d4647c9c7a84
 	github.com/onsi/ginkgo v1.6.0
@@ -84,6 +85,6 @@ require (
 
 replace github.com/onsi/ginkgo => github.com/cloudwan/ginkgo v1.6.1-0.20190213151947-95174e8d10cd
 
-replace github.com/coreos/etcd => github.com/cloudwan/etcd_for_gohan v3.3.19-0.20200824122433-788f26348f7b+incompatible
+replace github.com/coreos/etcd => github.com/cloudwan/etcd_for_gohan v3.4.12-0.20200824122433-788f26348f7b+incompatible
 
 go 1.13
