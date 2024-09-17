@@ -73,4 +73,4 @@ replace github.com/onsi/ginkgo => github.com/cloudwan/ginkgo v1.6.1-0.2019021315
 
 replace github.com/coreos/etcd v3.3.18+incompatible => go.etcd.io/etcd v0.0.0-20221102000833-1f054980bc27
 
-go 1.13
+go 1.17
