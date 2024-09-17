@@ -23,7 +23,6 @@ require (
 	github.com/golang/mock v1.3.0
 	github.com/google/uuid v1.1.1 // indirect
 	github.com/gophercloud/gophercloud v0.0.0-20190126172459-c818fa66e4c8
-	github.com/gorilla/websocket v1.4.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.1.0 // indirect
 	github.com/jmoiron/sqlx v0.0.0-20180614180643-0dae4fefe7c0
 	github.com/json-iterator/go v1.1.9 // indirect
@@ -49,7 +48,6 @@ require (
 	github.com/robfig/cron v1.2.0
 	github.com/serenize/snaker v0.0.0-20171204205717-a683aaf2d516
 	github.com/streamrail/concurrent-map v0.0.0-20160823150647-8bf1e9bacbf6
-	github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 // indirect
 	github.com/twinj/uuid v1.0.0
 	github.com/tylerb/gls v0.0.0-20150407001822-e606233f194d
 	github.com/tylerb/is v2.1.3+incompatible // indirect
@@ -61,19 +59,18 @@ require (
 	github.com/ziutek/telnet v0.0.0-20180329124119-c3b780dc415b // indirect
 	go.etcd.io/etcd v3.3.27+incompatible // indirect
 	go.uber.org/zap v1.13.0 // indirect
-	golang.org/x/crypto v0.0.0-20190605123033-f99c8df09eb5
+	golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4
 	golang.org/x/time v0.0.0-20181108054448-85acf8d2951c // indirect
 	google.golang.org/appengine v1.6.2 // indirect
 	google.golang.org/grpc v1.26.0
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce // indirect
 	gopkg.in/sourcemap.v1 v1.0.5 // indirect
 	gopkg.in/stretchr/testify.v1 v1.2.2 // indirect
-	gopkg.in/yaml.v2 v2.2.2
+	gopkg.in/yaml.v2 v2.4.0
 )
 
 replace github.com/onsi/ginkgo => github.com/cloudwan/ginkgo v1.6.1-0.20190213151947-95174e8d10cd
 
-replace github.com/coreos/etcd v3.3.18+incompatible => go.etcd.io/etcd v3.4.22-20221102000833-1f054980bc27
-import "go.etcd.io/etcd/clientv3"
+replace github.com/coreos/etcd v3.3.18+incompatible => go.etcd.io/etcd v0.0.0-20221102000833-1f054980bc27
 
 go 1.13
